@@ -55,15 +55,17 @@ const manualLink = z.strictObject({
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const positions = z
   .custom<Record<string, unknown>>(
-    // Checks the raw own keys first: a JSON key named "__proto__" is an own key here,
-    // but a record parser may skip it silently.
-    (v) =>
-      typeof v === 'object' &&
-      v !== null &&
-      !Array.isArray(v) &&
-      Object.keys(v).every((k) => ID_PATTERN.test(k) && k.length <= BOARD_LIMITS.id),
+    (v) => typeof v === 'object' && v !== null && !Array.isArray(v),
     'must be an object keyed by component ID',
   )
+  // Checks the raw own keys: a JSON key named "__proto__" is an own key here, but a record parser may skip it silently.
+  .superRefine((v, ctx) => {
+    const bad = Object.keys(v).find((k) => !ID_PATTERN.test(k) || k.length > BOARD_LIMITS.id)
+    if (bad !== undefined) {
+      const shown = bad.length > 40 ? `${bad.slice(0, 40)}...` : bad
+      ctx.addIssue({ code: 'custom', message: `has a key named "${shown}". Keys must be component IDs such as "rule-check".` })
+    }
+  })
   .pipe(
     z.record(boardId, point).refine((r) => Object.keys(r).length <= OVERLAY_LIMITS.positions, {
       message: `must have at most ${OVERLAY_LIMITS.positions} entries`,

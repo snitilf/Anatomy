@@ -1,6 +1,7 @@
 .panel {
   height: 100%;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--surface);
@@ -10,6 +11,8 @@
 .content {
   padding: 20px 24px 40px;
   max-width: 560px;
+  /* A word with no spaces wraps instead of widening the panel. */
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 760px) {

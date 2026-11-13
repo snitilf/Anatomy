@@ -158,6 +158,18 @@ export function buildGraph(
     if (route.runs) used.push(...route.runs)
   }
 
+  const manualRoutes = new Map<string, Route>()
+  for (const l of drawn) {
+    const plan = plans.get(manualId(l.id))
+    const fromBox = boxOf.get(l.from)
+    const toBox = boxOf.get(l.to)
+    if (!plan || !fromBox || !toBox) continue
+    const route = routeConnection(plan, boxes, [fromBox, toBox], used)
+    manualRoutes.set(l.id, route)
+    if (route.runs) used.push(...route.runs)
+  }
+  const allRoutes = new Map<string, Route>([...routes, ...[...manualRoutes].map(([id, r]): [string, Route] => [manualId(id), r])])
+
   const taken: Rect[] = []
   const edges: Edge<EdgeData>[] = board.relationships.flatMap((r) => {
     const plan = plans.get(r.id)
@@ -168,7 +180,7 @@ export function buildGraph(
     const highlighted = playing && highlight.has(r.id)
     const style = KIND_STYLE[r.kind]
     const text = r.kind === 'unknown' ? `? ${r.label}` : r.label
-    const otherLines = [...routes].flatMap(([id, other]) => (id === r.id ? [] : other.points))
+    const otherLines = [...allRoutes].flatMap(([id, other]) => (id === r.id ? [] : other.points))
     const label = placeLabel(route.points, text, boxes, taken, otherLines)
     const height = pillHeight(label.lines)
     taken.push({ x: label.x - label.width / 2, y: label.y - height / 2, width: label.width, height })
@@ -209,12 +221,12 @@ export function buildGraph(
     const fromBox = boxOf.get(l.from)
     const toBox = boxOf.get(l.to)
     if (!plan || !fromBox || !toBox) return []
-    const route = routeConnection(plan, boxes, [fromBox, toBox], used)
-    if (route.runs) used.push(...route.runs)
+    const route = manualRoutes.get(l.id)
+    if (!route) return []
     const selected = selection?.type === 'link' && selection.id === l.id
     const active = selected || (selectedPart !== undefined && (l.from === selectedPart || l.to === selectedPart))
     const text = l.label === '' ? 'Your link' : l.label
-    const otherLines = [...routes.values()].flatMap((other) => other.points)
+    const otherLines = [...allRoutes].flatMap(([id, other]) => (id === manualId(l.id) ? [] : other.points))
     // The chip adds a few characters, so the width is measured with them.
     const label = placeLabel(route.points, l.label === '' ? text : `You ${text}`, boxes, taken, otherLines)
     const height = pillHeight(label.lines)

@@ -33,7 +33,6 @@ export function Notices() {
             <ul className={styles.list}>
               {warnings.map((w, i) => (
                 <li key={i} className={styles.problem}>
-                  {w.path !== '' && <code className={styles.path}>{w.path}</code>}
                   <span>{w.message}</span>
                 </li>
               ))}

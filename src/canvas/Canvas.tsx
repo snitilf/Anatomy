@@ -72,7 +72,7 @@ function KeepSelectionInView() {
 }
 
 const FIT = { padding: 0.12, maxZoom: 1, duration: 0 }
-const STEP_MS = 400
+const STEP_MS = 220
 const RESIZE_MS = 150
 
 function prefersStillness(): boolean {
@@ -217,7 +217,7 @@ export function Canvas() {
         onPaneClick={() => dispatch({ type: 'select', selection: { type: 'board' } })}
         fitView
         fitViewOptions={FIT}
-        minZoom={0.3}
+        minZoom={0.15}
         maxZoom={1.6}
         nodesConnectable
         connectionMode={ConnectionMode.Loose}

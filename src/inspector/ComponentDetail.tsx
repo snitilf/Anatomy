@@ -56,7 +56,7 @@ export function ComponentDetail({
         </Section>
       )}
       {component.lesson !== undefined && !lesson && (
-        <p className={styles.quiet}>This board names a lesson that this version of Anatomy does not include.</p>
+        <p className={styles.quiet}>This board names a lesson Anatomy does not have.</p>
       )}
 
       {component.explanation && (
