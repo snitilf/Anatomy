@@ -3,12 +3,13 @@ import { useAppDispatch, useAppState } from '../app/appContext'
 import type { Selection } from '../app/state'
 import { ComponentDetail } from './ComponentDetail'
 import styles from './Inspector.module.css'
+import { LinkDetail } from '../notes/Links'
 import { Overview } from './Overview'
 import { PanelContext } from './panelContext'
 import { RelationshipDetail } from './RelationshipDetail'
 
 export function Inspector() {
-  const { board, selection } = useAppState()
+  const { board, selection, overlay } = useAppState()
   const dispatch = useAppDispatch()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const focusNext = useRef(false)
@@ -38,6 +39,9 @@ export function Inspector() {
   } else if (selection?.type === 'relationship') {
     const relationship = board.relationships.find((r) => r.id === selection.id)
     content = relationship ? <RelationshipDetail board={board} relationship={relationship} /> : <Overview board={board} />
+  } else if (selection?.type === 'link') {
+    const link = overlay?.manualLinks.find((l) => l.id === selection.id)
+    content = link ? <LinkDetail key={link.id} board={board} link={link} /> : <Overview board={board} />
   } else {
     content = <Overview board={board} />
   }

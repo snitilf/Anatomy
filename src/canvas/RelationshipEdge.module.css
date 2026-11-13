@@ -64,3 +64,29 @@
   background: var(--soft);
   font-weight: 600;
 }
+
+/* The pill on a link the user drew: a dashed ink border, and "You" when it has a label. */
+.pill.mine {
+  border: 1px dashed var(--ink);
+  background: color-mix(in srgb, var(--paper) 40%, var(--surface));
+}
+
+.pill.mine[data-selected],
+.pill.mine[data-active] {
+  border-color: var(--accent);
+}
+
+.chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 14px;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}

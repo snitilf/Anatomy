@@ -1,8 +1,10 @@
 import {
   Background,
+  ConnectionMode,
   Controls,
   ReactFlow,
   type EdgeChange,
+  type Connection,
   type NodeChange,
   type NodeTypes,
   useReactFlow,
@@ -15,15 +17,17 @@ import { currentStep } from '../scenarios/step'
 import { useAppDispatch, useAppState } from '../app/appContext'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
 import type { Point } from '../overlay/types'
-import { buildGraph } from './buildGraph'
+import { newId } from '../overlay/notes'
+import { buildGraph, MANUAL_PREFIX } from './buildGraph'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
 import { Legend } from './Legend'
+import { ManualEdge } from './ManualEdge'
 import { RelationshipEdge } from './RelationshipEdge'
 
 const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode }
-const edgeTypes: EdgeTypes = { relationship: RelationshipEdge }
+const edgeTypes: EdgeTypes = { relationship: RelationshipEdge, 'manual-link': ManualEdge }
 const ARIA_LABELS = {
   'node.a11yDescription.keyboardDisabled': 'Press Enter to select this part. Then use the arrow keys to move it. Press Escape to go back to the overview.',
   'node.a11yDescription.default': 'Press Enter to select this part. Press Escape to go back to the overview.',
@@ -139,10 +143,19 @@ export function Canvas() {
   }
 
   const step = useMemo(() => currentStep({ board: state.board, scenario: state.scenario }), [state.board, state.scenario])
+  const links = overlay?.manualLinks
+  const noteCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const n of overlay?.notes ?? []) {
+      if (n.target.type === 'component') counts.set(n.target.id, (counts.get(n.target.id) ?? 0) + 1)
+    }
+    return counts
+  }, [overlay?.notes])
   const graph = useMemo(
-    () => (board ? buildGraph(board, live, selection, step?.highlight) : undefined),
-    [board, live, selection, step],
+    () => (board ? buildGraph(board, live, selection, step?.highlight, links, noteCounts) : undefined),
+    [board, live, selection, step, links, noteCounts],
   )
+  const [connecting, setConnecting] = useState(false)
   const stepKey = step ? `${step.scenario.id}:${step.index}` : undefined
 
   const onNodesChange = useCallback(
@@ -165,9 +178,25 @@ export function Canvas() {
     (changes: EdgeChange[]) => {
       for (const change of changes) {
         if (change.type === 'select' && change.selected) {
-          dispatch({ type: 'select', selection: { type: 'relationship', id: change.id } })
+          dispatch({
+            type: 'select',
+            selection: change.id.startsWith(MANUAL_PREFIX)
+              ? { type: 'link', id: change.id.slice(MANUAL_PREFIX.length) }
+              : { type: 'relationship', id: change.id },
+          })
         }
       }
+    },
+    [dispatch],
+  )
+
+  // Dragging from one card's handle to another draws a link. It is always the user's own annotation.
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.source || !connection.target || connection.source === connection.target) return
+      const id = newId('link')
+      dispatch({ type: 'linkAdded', from: connection.source, to: connection.target, label: '', id, now: new Date() })
+      dispatch({ type: 'select', selection: { type: 'link', id } })
     },
     [dispatch],
   )
@@ -175,7 +204,7 @@ export function Canvas() {
   if (!board || !graph) return null
 
   return (
-    <div className={styles.canvas}>
+    <div className={styles.canvas} data-connecting={connecting || undefined}>
       <ReactFlow
         key={board.id}
         nodes={graph.nodes}
@@ -190,7 +219,11 @@ export function Canvas() {
         fitViewOptions={FIT}
         minZoom={0.3}
         maxZoom={1.6}
-        nodesConnectable={false}
+        nodesConnectable
+        connectionMode={ConnectionMode.Loose}
+        onConnect={onConnect}
+        onConnectStart={() => setConnecting(true)}
+        onConnectEnd={() => setConnecting(false)}
         edgesFocusable
         nodesFocusable
         deleteKeyCode={null}

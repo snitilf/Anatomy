@@ -1,5 +1,6 @@
 import type { Board, BoardRelationship } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
+import { NotesSection } from '../notes/NotesSection'
 import { Markdown } from '../text/markdown'
 import { BackButton, Heading, ItemGroups, PartButton, Section, SourceBlock } from './parts'
 import styles from './parts.module.css'
@@ -24,6 +25,8 @@ export function RelationshipDetail({ board, relationship }: { board: Board; rela
         </Section>
       )}
       <ItemGroups items={items} />
+
+      <NotesSection target={{ type: 'relationship', id: relationship.id }} />
     </>
   )
 }
