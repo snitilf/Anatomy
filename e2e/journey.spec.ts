@@ -26,8 +26,8 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(inspector.getByRole('heading', { name: 'Rule check', level: 2 })).toBeVisible()
   await inspector.locator('summary', { hasText: 'Explanation' }).click()
   await expect(inspector.getByText('The rule check only proposes. It does not send anything.')).toBeVisible()
-  // The badge carries what the source means as its tooltip.
-  await expect(inspector.getByText('Agent explanation', { exact: true })).toHaveAttribute('title', 'Your agent describes this as it understands it.')
+  // What the source means is written under the badge, not only in a tooltip.
+  await expect(inspector.getByText('Your agent describes this as it understands it.')).toBeVisible()
 
   // Inspect a connection: its kind in plain English.
   await inspector.getByRole('button', { name: /proposes an action/ }).click()
