@@ -28,9 +28,12 @@ When an updated base board arrives, the overlay stays, and the app compares the 
 | `src/app/` | App state (one reducer), shell, toolbar, dialogs. | all of the above |
 | `src/canvas/` | React Flow map: cards, group areas, connections, manual links. | `@xyflow/react`, `src/app/` |
 | `src/inspector/` | Plain-English panel for the selection. | `src/app/`, `src/text/` |
-| `src/scenarios/` | Scenario player. | `src/app/` |
+| `src/scenarios/` | Walkthrough player: step state, highlights, captions. | `src/app/` |
+| `src/notes/` | Notes, questions, manual links, and the review of notes after an update. | `src/overlay/`, `src/app/` |
 
 Logic lives in pure functions with unit tests.
+The default layout places groups in columns 440 units apart and cards in rows 230 units apart.
+When a board opens, every card position is saved in the overlay, so a later revision never moves an existing card.
 React components read from the app state and dispatch actions.
 
 ## Human overlay, version 1
@@ -86,7 +89,7 @@ For the board it covers title, goal, and scope.
 { "format": "anatomy-export", "schemaVersion": 1, "exportedAt": "...", "board": { }, "overlay": { } }
 ```
 
-The app opens a bare board file or an export file.
+The app opens a bare board file (up to 1,000,000 bytes) or an export file (up to 2,000,000 bytes).
 An export file is valid only if the overlay's `boardId` matches the board's `id`.
 
 ## Opening a board that is already saved
@@ -99,14 +102,16 @@ If the namespace already has a board with the same ID:
 4. Notes on changed parts show as possibly outdated, and notes on removed parts show in a needs-relinking list.
 5. New cards get a free position. Existing cards do not move.
 
-If the opened file is an export file that has an overlay, and the namespace already has an overlay for that board, the app asks which overlay to keep.
+If the opened file is an export file, and the namespace already has a different overlay with notes, links, or moved cards for that board, the app asks which overlay to keep.
+Neither choice merges the two overlays.
 
 ## Storage
 
 Each namespace is a separate IndexedDB database: `anatomy-home` and `anatomy-work`.
 A board saved in one namespace is never visible in the other.
 Saving happens a short time after each change.
-The toolbar shows the save state: saved in this browser, saving, or not saved.
+The toolbar shows the save state: saved in this browser, saving, or not saved, next to the Home and Work switch.
+The Open menu lists the boards saved in the current space, the examples, and a file picker.
 If saving fails, the app keeps the work in memory and offers an export.
 
 ## Safety

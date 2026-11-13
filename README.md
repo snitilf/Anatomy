@@ -27,6 +27,7 @@ The app runs in the browser on your own machine and does not send board data to 
 | `npm run lint` | Runs oxlint. |
 | `npm test` | Runs the unit tests once with Vitest. |
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
+| `npm run test:e2e` | Builds the app and runs the browser journey with the installed Google Chrome. |
 | `npm run schema` | Writes `schema/board.v1.schema.json` from the Zod schema. Run it after a schema change. |
 
 The dev and preview servers listen on the loopback interface only.
@@ -50,10 +51,15 @@ All versions are exact.
 | `@testing-library/jest-dom` | 7.0.1 | DOM assertions for tests |
 | `oxlint` | 1.93.0 | Linting |
 | `ajv` | 8.20.0 | Tests the exported JSON Schema with an independent validator |
+| `fake-indexeddb` | 6.2.8 | IndexedDB in unit tests |
+| `@playwright/test` | 1.65.0 | Browser journey test |
 
 Versions recorded on November 13, 2026.
 
 ## Licenses
+
+The approval-gate lesson uses the Anatomy kit by wheresryan22 (MIT).
+Its license and source commit are in `src/lessons/kit/`.
 
 The production dependency tree is MIT, ISC, and BSD-3-Clause as of November 13, 2026.
 Review the locked tree again before any public release.
