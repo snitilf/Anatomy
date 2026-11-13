@@ -7,12 +7,7 @@ import { Overview } from './Overview'
 import { PanelContext } from './panelContext'
 import { RelationshipDetail } from './RelationshipDetail'
 
-export interface InspectorProps {
-  /** When given, a part that has a lesson shows an "Open lesson" button. */
-  onOpenLesson?: ((lessonId: string) => void) | undefined
-}
-
-export function Inspector({ onOpenLesson }: InspectorProps) {
+export function Inspector() {
   const { board, selection } = useAppState()
   const dispatch = useAppDispatch()
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -39,7 +34,7 @@ export function Inspector({ onOpenLesson }: InspectorProps) {
   let content
   if (selection?.type === 'component') {
     const component = board.components.find((c) => c.id === selection.id)
-    content = component ? <ComponentDetail board={board} component={component} onOpenLesson={onOpenLesson} /> : <Overview board={board} />
+    content = component ? <ComponentDetail board={board} component={component} /> : <Overview board={board} />
   } else if (selection?.type === 'relationship') {
     const relationship = board.relationships.find((r) => r.id === selection.id)
     content = relationship ? <RelationshipDetail board={board} relationship={relationship} /> : <Overview board={board} />

@@ -79,3 +79,51 @@ describe('reducer', () => {
     expect(next.overlay?.positions[id]).toEqual({ x: 12, y: 34 })
   })
 })
+
+describe('reducer: scenarios', () => {
+  const playing = (): AppState => reducer(opened(), { type: 'scenarioStarted', id: 'approve-and-simulate' })
+  const total = nordetBoard().scenarios.find((s) => s.id === 'approve-and-simulate')!.steps.length
+
+  it('starts a scenario at its first step', () => {
+    expect(playing().scenario).toEqual({ id: 'approve-and-simulate', step: 0 })
+  })
+
+  it('ignores a scenario the board does not have', () => {
+    const state = opened()
+    expect(reducer(state, { type: 'scenarioStarted', id: 'nope' })).toBe(state)
+    expect(reducer(initialState, { type: 'scenarioStarted', id: 'approve-and-simulate' }).scenario).toBeUndefined()
+  })
+
+  it('moves to the next and previous step and stops at both ends', () => {
+    let state = playing()
+    expect(reducer(state, { type: 'scenarioPrevious' })).toBe(state)
+    for (let i = 1; i < total; i++) state = reducer(state, { type: 'scenarioNext' })
+    expect(state.scenario?.step).toBe(total - 1)
+    expect(reducer(state, { type: 'scenarioNext' })).toBe(state)
+    expect(reducer(state, { type: 'scenarioPrevious' }).scenario?.step).toBe(total - 2)
+  })
+
+  it('jumps to a step and clamps the index', () => {
+    const state = playing()
+    expect(reducer(state, { type: 'scenarioMoved', index: 2 }).scenario?.step).toBe(2)
+    expect(reducer(state, { type: 'scenarioMoved', index: 99 }).scenario?.step).toBe(total - 1)
+    expect(reducer(state, { type: 'scenarioMoved', index: -4 })).toBe(state)
+  })
+
+  it('does nothing to move when no scenario plays', () => {
+    const state = opened()
+    expect(reducer(state, { type: 'scenarioNext' })).toBe(state)
+    expect(reducer(state, { type: 'scenarioMoved', index: 1 })).toBe(state)
+  })
+
+  it('stops the scenario', () => {
+    expect(reducer(playing(), { type: 'scenarioStopped' }).scenario).toBeUndefined()
+  })
+
+  it('stops the scenario when another board opens', () => {
+    const other = clone(nordetBoard())
+    other.id = 'another-board'
+    expect(reducer(playing(), { type: 'boardOpened', board: other, warnings: [] }).scenario).toBeUndefined()
+    expect(reducer(playing(), { type: 'boardOpened', board: nordetBoard(), warnings: [] }).scenario).toBeUndefined()
+  })
+})

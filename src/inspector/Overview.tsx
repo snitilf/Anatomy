@@ -1,4 +1,6 @@
-import { useAppState } from '../app/appContext'
+import { useContext } from 'react'
+import { useAppDispatch, useAppState } from '../app/appContext'
+import { PlayOriginContext } from '../scenarios/focus'
 import type { Board } from '../board/schema'
 import { SourceBadge } from '../app/SourceBadge'
 import { usePanel } from './panelContext'
@@ -12,6 +14,8 @@ function plural(n: number, one: string, many: string) {
 export function Overview({ board }: { board: Board }) {
   const { changes } = useAppState()
   const { choose } = usePanel()
+  const dispatch = useAppDispatch()
+  const origin = useContext(PlayOriginContext)
   const names = new Map(board.components.map((c) => [c.id, c.label]))
   const groupName = new Map(board.groups.map((g) => [g.id, g.label]))
   const boardItems = board.items.filter((i) => i.about === undefined)
@@ -49,6 +53,33 @@ export function Overview({ board }: { board: Board }) {
       )}
 
       <ItemGroups items={boardItems} />
+
+      {board.scenarios.length > 0 && (
+        <Section title="Walkthroughs">
+          <ul className={styles.plain}>
+            {board.scenarios.map((scenario) => (
+              <li key={scenario.id} className={styles.walk}>
+                <span className={styles.rowMain}>
+                  <span className={styles.rowTitle}>{scenario.title}</span>
+                  {scenario.summary && <span className={styles.rowMeta}>{scenario.summary}</span>}
+                  <span className={styles.rowMeta}>{plural(scenario.steps.length, 'step', 'steps')}</span>
+                </span>
+                <button
+                  type="button"
+                  className={styles.play}
+                  aria-label={`Play ${scenario.title}`}
+                  onClick={(event) => {
+                    origin.current = event.currentTarget
+                    dispatch({ type: 'scenarioStarted', id: scenario.id })
+                  }}
+                >
+                  Play
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title={`Parts (${board.components.length})`}>
         <ul className={styles.plain}>

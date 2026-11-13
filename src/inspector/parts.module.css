@@ -225,7 +225,12 @@
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 6px;
+  gap: 10px;
+}
+
+.refList li {
+  display: grid;
+  gap: 1px;
 }
 
 .refLabel {
@@ -236,12 +241,15 @@
 .path {
   display: block;
   color: var(--muted);
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 
 .refNote {
   display: block;
+  margin-top: 2px;
   color: var(--muted);
+  font-size: 12px;
 }
 
 .prose p,
@@ -279,4 +287,77 @@
 
 .primary:active {
   transform: scale(0.98);
+}
+
+.walk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.play {
+  appearance: none;
+  flex: none;
+  padding: 5px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.play:hover {
+  background: var(--soft);
+}
+
+.play:active {
+  transform: scale(0.97);
+}
+
+.lessonCard {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+}
+
+.lessonTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-weight: 600;
+}
+
+.tag {
+  padding: 0 7px;
+  border-radius: var(--radius-s);
+  background: var(--soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.lessonSummary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.quiet {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
