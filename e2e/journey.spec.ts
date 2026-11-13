@@ -16,17 +16,18 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
 
   // Import a bare board file.
   await page.goto('/')
-  await expect(page.getByText('Open a board file to see how it fits together.')).toBeVisible()
+  await expect(page.getByText('Open a board to see how it fits together.')).toBeVisible()
   await page.getByLabel('Board file').setInputFiles(BOARD_FILE)
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await expect(page.getByRole('status').filter({ hasText: 'Saved in this browser' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
 
   // Inspect a part: its explanation and its source label.
   await inspector.getByRole('button', { name: partRow('Rule check') }).click()
   await expect(inspector.getByRole('heading', { name: 'Rule check', level: 2 })).toBeVisible()
+  await inspector.locator('summary', { hasText: 'Explanation' }).click()
   await expect(inspector.getByText('The rule check only proposes. It does not send anything.')).toBeVisible()
-  await expect(inspector.getByText('Your agent describes this as it understands it.')).toBeVisible()
-  await expect(inspector.getByText('Agent explanation', { exact: true })).toBeVisible()
+  // The badge carries what the source means as its tooltip.
+  await expect(inspector.getByText('Agent explanation', { exact: true })).toHaveAttribute('title', 'Your agent describes this as it understands it.')
 
   // Inspect a connection: its kind in plain English.
   await inspector.getByRole('button', { name: /proposes an action/ }).click()
@@ -62,15 +63,17 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(lesson).toBeHidden()
 
   // Add a note to Approval and wait for it to be saved.
+  await inspector.locator('summary', { hasText: 'Your notes' }).click()
   await inspector.getByRole('textbox', { name: 'Your note' }).fill(noteText)
   await inspector.getByRole('button', { name: 'Add note' }).click()
   await expect(inspector.getByText(noteText)).toBeVisible()
-  await expect(page.getByRole('status').filter({ hasText: 'Saved in this browser' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
 
   // Reload: the board and the note come back from this browser.
   await page.reload()
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
   await inspector.getByRole('button', { name: partRow('Approval') }).click()
+  await inspector.locator('summary', { hasText: 'Your notes' }).click()
   await expect(inspector.getByText(noteText)).toBeVisible()
 
   // Export to a file.
@@ -83,11 +86,12 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
 
   // The Work space is separate and starts empty. Opening the export there brings the note back.
   await page.getByRole('radio', { name: 'Work' }).check({ force: true })
-  await expect(page.getByText('Open a board file to see how it fits together.')).toBeVisible()
+  await expect(page.getByText('Open a board to see how it fits together.')).toBeVisible()
   await expect(page.getByRole('heading', { name: BOARD_TITLE })).toHaveCount(0)
   await page.getByLabel('Board file').setInputFiles(exportPath)
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
   await inspector.getByRole('button', { name: partRow('Approval') }).click()
+  await inspector.locator('summary', { hasText: 'Your notes' }).click()
   await expect(inspector.getByText(noteText)).toBeVisible()
 
   // No request left this machine.
