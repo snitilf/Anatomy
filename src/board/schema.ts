@@ -113,6 +113,8 @@ export const component = z.strictObject({
   outputs: shortList,
   source,
   position: position.optional(),
+  /** ID of a built-in lesson. Unknown IDs produce a warning, not an error. */
+  lesson: id.optional(),
 })
 
 export const relationship = z.strictObject({

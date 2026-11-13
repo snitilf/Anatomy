@@ -34,7 +34,9 @@ Keep IDs stable across revisions, so that notes and card positions stay attached
 ## Components
 
 A component has an `id`, a short `label`, a `summary` of one or two sentences, and a `source`.
-It can also have an `explanation`, a `group`, lists of `inputs` and `outputs`, and a starting `position` (`x`, `y`).
+It can also have an `explanation`, a `group`, lists of `inputs` and `outputs`, a starting `position` (`x`, `y`), and a `lesson`.
+A `lesson` is the ID of a built-in interactive lesson, for example `approval-gate`.
+If Anatomy does not have that lesson, it opens the board and shows a warning.
 
 ## Relationships
 

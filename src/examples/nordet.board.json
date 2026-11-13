@@ -77,6 +77,7 @@
       "group": "portal",
       "inputs": ["The previewed action version", "The user's decision"],
       "outputs": ["Approved or rejected action version"],
+      "lesson": "approval-gate",
       "source": {
         "kind": "documented-intent",
         "references": [{ "label": "Nordet scope", "path": "Nordet/docs/scope.md", "note": "Editing invalidates approval." }]
