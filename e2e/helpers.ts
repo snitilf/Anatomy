@@ -1,0 +1,84 @@
+/// <reference lib="dom" />
+import { expect, type Page } from '@playwright/test'
+
+const STEPS = 60
+
+export interface Spot {
+  id: string
+  x: number
+  y: number
+}
+
+export async function open(page: Page, file: string) {
+  await page.goto('/')
+  await page.getByLabel('Board file').setInputFiles(file)
+  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  // Let the first fit and the first save settle.
+  await page.waitForTimeout(400)
+}
+
+/** A card whose middle is not covered by a label or another card, so a press there grabs it. */
+export async function grabbable(page: Page): Promise<Spot> {
+  const spot = await page.evaluate(() => {
+    const map = document.querySelector('.react-flow')?.getBoundingClientRect()
+    for (const node of document.querySelectorAll<HTMLElement>('.react-flow__node-card')) {
+      const r = node.getBoundingClientRect()
+      const x = r.left + r.width / 2
+      const y = r.top + r.height / 2
+      if (!map || x < map.left + 20 || x > map.right - 120 || y < map.top + 20 || y > map.bottom - 120) continue
+      const hit = document.elementFromPoint(x, y)
+      if (hit && node.contains(hit)) return { id: node.dataset.id ?? '', x, y }
+    }
+    return undefined
+  })
+  if (!spot) throw new Error('no card can be grabbed on this board')
+  return spot
+}
+
+export async function nextFrame(page: Page) {
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+}
+
+export async function startFrameLog(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __frames: number[]; __stop: boolean }
+    w.__frames = []
+    w.__stop = false
+    let last = performance.now()
+    const tick = (now: number) => {
+      w.__frames.push(now - last)
+      last = now
+      if (!w.__stop) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+export async function stopFrameLog(page: Page): Promise<number[]> {
+  return page.evaluate(() => {
+    const w = window as unknown as { __frames: number[]; __stop: boolean }
+    w.__stop = true
+    return w.__frames.slice(1)
+  })
+}
+
+export async function drag(page: Page, from: Spot, dx: number, dy: number) {
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  for (let i = 1; i <= STEPS; i++) {
+    await page.mouse.move(from.x + (dx * i) / STEPS, from.y + (dy * i) / STEPS)
+    await nextFrame(page)
+  }
+  await page.mouse.up()
+}
+
+export const cardCenter = (page: Page, id: string) =>
+  page.evaluate((cardId) => {
+    const r = document.querySelector(`.react-flow__node-card[data-id="${cardId}"]`)?.getBoundingClientRect()
+    return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : undefined
+  }, id)
+
+export const cardTransform = (page: Page, id: string) =>
+  page.evaluate((cardId) => (document.querySelector<HTMLElement>(`.react-flow__node-card[data-id="${cardId}"]`)?.style.transform ?? ''), id)
+
+export const viewport = (page: Page) => page.evaluate(() => document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')
