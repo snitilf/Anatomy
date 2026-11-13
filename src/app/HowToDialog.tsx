@@ -1,8 +1,13 @@
+import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { AppToaster } from './AppToaster'
 import guideText from '../../docs/authoring-guide.md?raw'
 import schemaText from '../../schema/board.v1.schema.json?raw'
 import buttons from './buttons.module.css'
 import styles from './HowToDialog.module.css'
+
+const DIALOG_TOASTER = 'how-to'
 
 export const AGENT_PROMPT = `Write an Anatomy board file that explains: [describe the plan, feature, or project here]
 
@@ -20,8 +25,8 @@ Rules:
 
 export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const [failed, setFailed] = useState(false)
   const prompt = useRef<HTMLTextAreaElement>(null)
-  const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   useEffect(() => {
     const el = dialog.current
@@ -53,8 +58,9 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
         }
       }
     }
-    setCopied(ok ? 'copied' : 'failed')
-    window.setTimeout(() => setCopied('idle'), 2000)
+    setFailed(!ok)
+    // A modal dialog sits above the page, so this toast has its own toaster inside it.
+    if (ok) toast('Copied', { toasterId: DIALOG_TOASTER })
   }
 
   function download(text: string, name: string, type: string) {
@@ -74,7 +80,7 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
       className={styles.dialog}
       aria-labelledby="howto-title"
       onClose={() => {
-        setCopied('idle')
+        setFailed(false)
         onClose()
       }}
       onClick={(event) => {
@@ -86,7 +92,7 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
           <h2 id="howto-title" className={styles.title}>
             How to make a board
           </h2>
-          <button type="button" className={`${buttons.button} ${buttons.quiet}`} onClick={onClose}>
+          <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={onClose}>
             Close
           </button>
         </div>
@@ -121,15 +127,15 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
         </label>
         <textarea id="agent-prompt" ref={prompt} className={styles.prompt} readOnly rows={15} value={AGENT_PROMPT} />
         <div className={styles.row}>
-          <button type="button" className={`${buttons.button} ${buttons.primary}`} onClick={copy}>
+          <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={copy}>
             Copy prompt
           </button>
           <span role="status" className={styles.status}>
-            {copied === 'copied' && 'Copied.'}
-            {copied === 'failed' && 'Could not copy. Select the text and copy it yourself.'}
+            {failed && 'Could not copy. Select the text and copy it yourself.'}
           </span>
         </div>
       </div>
+      <AppToaster id={DIALOG_TOASTER} />
     </dialog>
   )
 }

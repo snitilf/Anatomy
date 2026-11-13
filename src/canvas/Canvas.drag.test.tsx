@@ -1,6 +1,7 @@
 import { act, fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { DispatchContext, StateContext } from '../app/appContext'
+import { createStore } from 'zustand/vanilla'
+import { AppStoreContext } from '../app/store'
 import { initialState, reducer, type Action } from '../app/state'
 import { exampleBoard } from '../overlay/testBoards'
 import { Canvas } from './Canvas'
@@ -12,13 +13,11 @@ function setup(walkthrough = false) {
   if (walkthrough) state = reducer(state, { type: 'scenarioStarted', id: exampleBoard().scenarios[0]!.id })
   const dispatch = vi.fn<(action: Action) => void>()
   const view = render(
-    <StateContext.Provider value={state}>
-      <DispatchContext.Provider value={dispatch}>
-        <div style={{ width: 800, height: 600 }}>
-          <Canvas />
-        </div>
-      </DispatchContext.Provider>
-    </StateContext.Provider>,
+    <AppStoreContext.Provider value={{ store: createStore(() => state), dispatch }}>
+      <div style={{ width: 800, height: 600 }}>
+        <Canvas />
+      </div>
+    </AppStoreContext.Provider>,
   )
   const node = () => view.container.querySelector(`.react-flow__node[data-id="${ID}"]`) as HTMLElement
   // d3-drag reads `view` from the event. jsdom only accepts its own window object there, so it is set afterwards.

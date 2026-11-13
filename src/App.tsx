@@ -1,13 +1,15 @@
-import { AppStateProvider } from './app/AppState'
+import { AppStoreProvider } from './app/AppStoreProvider'
+import { AppToaster } from './app/AppToaster'
 import { PersistenceProvider } from './app/persistence'
 import { Shell } from './app/Shell'
 
 export default function App() {
   return (
-    <AppStateProvider>
+    <AppStoreProvider>
       <PersistenceProvider>
         <Shell />
       </PersistenceProvider>
-    </AppStateProvider>
+      <AppToaster />
+    </AppStoreProvider>
   )
 }

@@ -1,19 +1,21 @@
-import { useAppDispatch, useAppState } from './appContext'
+import clsx from 'clsx'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from './store'
 import buttons from './buttons.module.css'
 import styles from './Notices.module.css'
 
 export function Notices() {
-  const { openErrors, warnings } = useAppState()
+  const { openErrors, warnings } = useAppStore(useShallow((s) => ({ openErrors: s.openErrors, warnings: s.warnings })))
   const dispatch = useAppDispatch()
   return (
     <>
       {openErrors && (
-        <section className={`${styles.panel} ${styles.error}`} role="alert" aria-labelledby="open-error-title">
+        <section className={clsx(styles.panel, styles.error)} role="alert" aria-labelledby="open-error-title">
           <div className={styles.head}>
             <h2 className={styles.title} id="open-error-title">
               <span className={styles.file}>{openErrors.fileName}</span> was not opened
             </h2>
-            <button type="button" className={`${buttons.button} ${buttons.quiet}`} onClick={() => dispatch({ type: 'dismissErrors' })}>
+            <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={() => dispatch({ type: 'dismissErrors' })}>
               Dismiss
             </button>
           </div>
@@ -28,7 +30,7 @@ export function Notices() {
         </section>
       )}
       {warnings.length > 0 && (
-        <section className={`${styles.panel} ${styles.warning}`} role="status" aria-label="Notice">
+        <section className={clsx(styles.panel, styles.warning)} role="status" aria-label="Notice">
           <div className={styles.head}>
             <ul className={styles.list}>
               {warnings.map((w, i) => (
@@ -37,7 +39,7 @@ export function Notices() {
                 </li>
               ))}
             </ul>
-            <button type="button" className={`${buttons.button} ${buttons.quiet}`} onClick={() => dispatch({ type: 'dismissWarnings' })}>
+            <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={() => dispatch({ type: 'dismissWarnings' })}>
               Dismiss
             </button>
           </div>

@@ -1,5 +1,6 @@
 import { useContext } from 'react'
-import { useAppDispatch, useAppState } from '../app/appContext'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from '../app/store'
 import { PlayOriginContext } from '../scenarios/focus'
 import type { Board } from '../board/schema'
 import { SourceBadge } from '../app/SourceBadge'
@@ -14,7 +15,7 @@ function plural(n: number, one: string, many: string) {
 }
 
 export function Overview({ board }: { board: Board }) {
-  const { changes, previousBoard } = useAppState()
+  const { changes, previousBoard } = useAppStore(useShallow((s) => ({ changes: s.changes, previousBoard: s.previousBoard })))
   const { choose } = usePanel()
   const dispatch = useAppDispatch()
   const origin = useContext(PlayOriginContext)

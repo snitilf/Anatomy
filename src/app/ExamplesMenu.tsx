@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { Menu } from '@base-ui/react/menu'
+import clsx from 'clsx'
 import buttons from './buttons.module.css'
 import { EXAMPLES } from './examples'
 import styles from './ExamplesMenu.module.css'
@@ -28,48 +29,30 @@ export function ExampleList({ onChosen }: { onChosen?: () => void }) {
   )
 }
 
+/**
+ * The start screen's list of examples. Every choice is one action, so it is a real menu:
+ * the arrow keys move between examples, Enter opens one, and Escape closes the menu and returns focus to the trigger.
+ */
 export function ExamplesMenu({ label, primary = false }: { label: string; primary?: boolean }) {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  const trigger = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onPointer = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', onPointer)
-    return () => document.removeEventListener('pointerdown', onPointer)
-  }, [open])
-
+  const { openText } = usePersistence()
   return (
-    <div
-      className={styles.root}
-      ref={root}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && open) {
-          event.stopPropagation()
-          setOpen(false)
-          trigger.current?.focus()
-        }
-      }}
-    >
-      <button
-        ref={trigger}
-        type="button"
-        className={`${buttons.button} ${primary ? buttons.primary : ''}`}
-        aria-expanded={open}
-        aria-controls="examples-list"
-        onClick={() => setOpen((v) => !v)}
-      >
+    <Menu.Root>
+      <Menu.Trigger className={clsx(buttons.button, primary && buttons.primary)}>
         {label}
         <span aria-hidden="true" className={styles.caret} />
-      </button>
-      {open && (
-        <div className={styles.list} id="examples-list">
-          <ExampleList onChosen={() => setOpen(false)} />
-        </div>
-      )}
-    </div>
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner className={styles.positioner} side="bottom" align="start" sideOffset={6} collisionPadding={12}>
+          <Menu.Popup className={styles.list} data-dismissible>
+            {EXAMPLES.map((example) => (
+              <Menu.Item key={example.id} className={styles.item} onClick={() => openText(example.fileName, example.raw)}>
+                <span className={styles.itemTitle}>{example.title}</span>
+                <span className={styles.itemText}>{example.description}</span>
+              </Menu.Item>
+            ))}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   )
 }

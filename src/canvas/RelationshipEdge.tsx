@@ -1,6 +1,7 @@
+import clsx from 'clsx'
 import { memo, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
-import { useAppDispatch } from '../app/appContext'
+import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 import styles from './RelationshipEdge.module.css'
@@ -30,7 +31,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
       </g>
       <EdgeLabelRenderer>
         <div
-          className={`${styles.pill} nodrag nopan`}
+          className={clsx(styles.pill, 'nodrag nopan')}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           data-highlighted={data.highlighted || undefined}
