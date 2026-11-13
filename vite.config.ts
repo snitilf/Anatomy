@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react()],
   server: { host: '127.0.0.1', strictPort: true },
   preview: { host: '127.0.0.1', strictPort: true },
+  // The app loads from the local machine, so one main chunk of React, React Flow, and Zod is fine.
+  build: { chunkSizeWarningLimit: 800 },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
