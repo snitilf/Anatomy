@@ -5,7 +5,10 @@ It opens a board file, which is a JSON document that describes the parts of a sy
 The app runs in the browser on your own machine and does not send board data to any server.
 
 The project is at an early stage.
-The current build shows an empty screen and no board features yet.
+The board format and its validator exist.
+The app screen does not open boards yet.
+
+The board format is described in [docs/board-format.md](docs/board-format.md).
 
 ## Requirements
 
@@ -24,6 +27,7 @@ The current build shows an empty screen and no board features yet.
 | `npm run lint` | Runs oxlint. |
 | `npm test` | Runs the unit tests once with Vitest. |
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
+| `npm run schema` | Writes `schema/board.v1.schema.json` from the Zod schema. Run it after a schema change. |
 
 The dev and preview servers listen on the loopback interface only.
 
@@ -45,6 +49,7 @@ All versions are exact.
 | `@testing-library/react` | 16.3.3 | Component tests |
 | `@testing-library/jest-dom` | 7.0.1 | DOM assertions for tests |
 | `oxlint` | 1.93.0 | Linting |
+| `ajv` | 8.20.0 | Tests the exported JSON Schema with an independent validator |
 
 Versions recorded on November 13, 2026.
 
