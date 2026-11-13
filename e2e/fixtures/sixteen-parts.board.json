@@ -1,0 +1,429 @@
+{
+ "format": "anatomy-board",
+ "schemaVersion": 1,
+ "id": "02-sixteen",
+ "revision": 1,
+ "title": "16 components",
+ "goal": "Many parts.",
+ "scope": {
+  "includes": [],
+  "excludes": []
+ },
+ "groups": [
+  {
+   "id": "g-1",
+   "label": "Frontend"
+  },
+  {
+   "id": "g-2",
+   "label": "Backend"
+  },
+  {
+   "id": "g-3",
+   "label": "Data"
+  }
+ ],
+ "components": [
+  {
+   "id": "c-1",
+   "label": "Component number 1 label",
+   "summary": "Summary for part 1.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-1"
+  },
+  {
+   "id": "c-2",
+   "label": "Component number 2 label",
+   "summary": "Summary for part 2.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-2"
+  },
+  {
+   "id": "c-3",
+   "label": "Component number 3 label",
+   "summary": "Summary for part 3.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-3"
+  },
+  {
+   "id": "c-4",
+   "label": "Component number 4 label",
+   "summary": "Summary for part 4.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "c-5",
+   "label": "Component number 5 label",
+   "summary": "Summary for part 5.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-2"
+  },
+  {
+   "id": "c-6",
+   "label": "Component number 6 label",
+   "summary": "Summary for part 6.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-3"
+  },
+  {
+   "id": "c-7",
+   "label": "Component number 7 label",
+   "summary": "Summary for part 7.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-1"
+  },
+  {
+   "id": "c-8",
+   "label": "Component number 8 label",
+   "summary": "Summary for part 8.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "c-9",
+   "label": "Component number 9 label",
+   "summary": "Summary for part 9.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-3"
+  },
+  {
+   "id": "c-10",
+   "label": "Component number 10 label",
+   "summary": "Summary for part 10.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-1"
+  },
+  {
+   "id": "c-11",
+   "label": "Component number 11 label",
+   "summary": "Summary for part 11.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-2"
+  },
+  {
+   "id": "c-12",
+   "label": "Component number 12 label",
+   "summary": "Summary for part 12.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "c-13",
+   "label": "Component number 13 label",
+   "summary": "Summary for part 13.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-1"
+  },
+  {
+   "id": "c-14",
+   "label": "Component number 14 label",
+   "summary": "Summary for part 14.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-2"
+  },
+  {
+   "id": "c-15",
+   "label": "Component number 15 label",
+   "summary": "Summary for part 15.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   },
+   "group": "g-3"
+  },
+  {
+   "id": "c-16",
+   "label": "Component number 16 label",
+   "summary": "Summary for part 16.",
+   "inputs": [],
+   "outputs": [],
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  }
+ ],
+ "relationships": [
+  {
+   "id": "r-0",
+   "from": "c-1",
+   "to": "c-2",
+   "kind": "calls",
+   "label": "step 1 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-1",
+   "from": "c-2",
+   "to": "c-3",
+   "kind": "sends-data-to",
+   "label": "step 2 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-2",
+   "from": "c-3",
+   "to": "c-4",
+   "kind": "stores-in",
+   "label": "step 3 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-3",
+   "from": "c-4",
+   "to": "c-5",
+   "kind": "reads-from",
+   "label": "step 4 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-4",
+   "from": "c-5",
+   "to": "c-6",
+   "kind": "depends-on",
+   "label": "step 5 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-5",
+   "from": "c-6",
+   "to": "c-7",
+   "kind": "triggers",
+   "label": "step 6 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-6",
+   "from": "c-7",
+   "to": "c-8",
+   "kind": "unknown",
+   "label": "step 7 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-7",
+   "from": "c-8",
+   "to": "c-9",
+   "kind": "calls",
+   "label": "step 8 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-8",
+   "from": "c-9",
+   "to": "c-10",
+   "kind": "sends-data-to",
+   "label": "step 9 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-9",
+   "from": "c-10",
+   "to": "c-11",
+   "kind": "stores-in",
+   "label": "step 10 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-10",
+   "from": "c-11",
+   "to": "c-12",
+   "kind": "reads-from",
+   "label": "step 11 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-11",
+   "from": "c-12",
+   "to": "c-13",
+   "kind": "depends-on",
+   "label": "step 12 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-12",
+   "from": "c-13",
+   "to": "c-14",
+   "kind": "triggers",
+   "label": "step 13 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-13",
+   "from": "c-14",
+   "to": "c-15",
+   "kind": "unknown",
+   "label": "step 14 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "r-14",
+   "from": "c-15",
+   "to": "c-16",
+   "kind": "calls",
+   "label": "step 15 output",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "x-0",
+   "from": "c-1",
+   "to": "c-6",
+   "kind": "calls",
+   "label": "skip 0",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "x-3",
+   "from": "c-4",
+   "to": "c-9",
+   "kind": "calls",
+   "label": "skip 3",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "x-6",
+   "from": "c-7",
+   "to": "c-12",
+   "kind": "calls",
+   "label": "skip 6",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  },
+  {
+   "id": "x-9",
+   "from": "c-10",
+   "to": "c-15",
+   "kind": "calls",
+   "label": "skip 9",
+   "source": {
+    "kind": "agent-explanation",
+    "references": []
+   }
+  }
+ ],
+ "items": [],
+ "scenarios": []
+}
