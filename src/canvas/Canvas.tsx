@@ -18,7 +18,9 @@ import { useAppDispatch, useAppState } from '../app/appContext'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
 import type { Point } from '../overlay/types'
 import { newId } from '../overlay/notes'
-import { buildGraph, MANUAL_PREFIX } from './buildGraph'
+import type { Board } from '../board/schema'
+import type { ManualLink } from '../overlay/types'
+import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -35,8 +37,11 @@ const ARIA_LABELS = {
     `Moved ${direction}. Position ${x}, ${y}.`,
   'edge.a11yDescription.default': 'Press Enter to select this connection. Press Escape to go back to the overview.',
 }
-/** Keeps the selected part in view. On a narrow screen the whole map is tiny, so it zooms in on the part. */
-function KeepSelectionInView() {
+/**
+ * Keeps the selected part in view. On a narrow screen the whole map is tiny, so it zooms in on the part.
+ * A part picked on the map itself (a click, or the start of a drag) is under the pointer already, so the view stays put.
+ */
+function KeepSelectionInView({ takePicked }: { takePicked: () => string | undefined }) {
   const { selection, board } = useAppState()
   const flow = useReactFlow()
   const width = useStore((s) => s.width)
@@ -47,6 +52,8 @@ function KeepSelectionInView() {
   useEffect(() => {
     if (previous.current === key) return
     previous.current = key
+    const here = takePicked()
+    if (selection?.type === 'component' && here === selection.id) return
     if (!selection || selection.type === 'board' || !board) return
     const narrow = width > 0 && width < 600
     if (selection.type === 'relationship') {
@@ -66,7 +73,7 @@ function KeepSelectionInView() {
         duration: 0,
       })
     }
-  }, [key, selection, board, flow, width, height])
+  }, [key, selection, board, flow, width, height, takePicked])
 
   return null
 }
@@ -83,13 +90,15 @@ function prefersStillness(): boolean {
  * Frames the map. A walkthrough step frames the parts it is about, and the whole board
  * when it names none. Resizing the window frames it again, so the map never ends up off screen.
  */
-function Camera({ stepKey, focus }: { stepKey: string | undefined; focus: readonly string[] }) {
+function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean }) {
   const flow = useReactFlow()
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
   const latest = useRef({ stepKey, focus })
   const size = useRef({ width, height })
   const shown = useRef<string | undefined>(undefined)
+  const busy = useRef(dragging)
+  const waiting = useRef(false)
 
   useEffect(() => {
     latest.current = { stepKey, focus }
@@ -122,11 +131,75 @@ function Camera({ stepKey, focus }: { stepKey: string | undefined; focus: readon
     if (was.width === width && was.height === height) return
     size.current = { width, height }
     if (was.width === 0 || was.height === 0 || width === 0 || height === 0) return
-    const timer = window.setTimeout(() => fit(false), RESIZE_MS)
+    const timer = window.setTimeout(() => {
+      // Refitting under a held card would move it away from the pointer. It waits for the drop.
+      if (busy.current) waiting.current = true
+      else fit(false)
+    }, RESIZE_MS)
     return () => window.clearTimeout(timer)
   }, [width, height, fit])
 
+  useEffect(() => {
+    busy.current = dragging
+    if (dragging || !waiting.current) return
+    waiting.current = false
+    fit(false)
+  }, [dragging, fit])
+
   return null
+}
+
+/** The map as it is drawn now. While a card moves, the lines are cheap curves. A full build follows the drop. */
+interface View {
+  board: Board
+  links: readonly ManualLink[] | undefined
+  /** The stored positions this view was built from. */
+  base: Record<string, Point> | undefined
+  positions: Record<string, Point>
+  geometry: Geometry
+  /** The card under the pointer. */
+  held?: string
+  /** Set while the lines are cheap curves: milliseconds to wait before the full build. */
+  settle?: number
+}
+
+function fullView(board: Board, base: Record<string, Point> | undefined, links: readonly ManualLink[] | undefined, positions = base ?? {}): View {
+  return { board, links, base, positions, geometry: computeGeometry(board, positions, links ?? []) }
+}
+
+function samePositions(a: Record<string, Point> | undefined, b: Record<string, Point>): boolean {
+  const mine = a ?? {}
+  const keys = Object.keys(mine)
+  return keys.length === Object.keys(b).length && keys.every((k) => b[k]?.x === mine[k]?.x && b[k]?.y === mine[k]?.y)
+}
+
+function moved(view: View, id: string, point: Point, settle: number): View {
+  const at = view.positions[id]
+  if (at && at.x === point.x && at.y === point.y) return view
+  const positions = { ...view.positions, [id]: { x: point.x, y: point.y } }
+  return { ...view, positions, geometry: moveCard(view.board, view.geometry, positions, id), settle }
+}
+
+/** Arrow keys repeat quickly. The full build and the save wait until they stop. */
+const KEY_SETTLE_MS = 250
+
+/** Runs after the next frame has been drawn, so a drop shows before the slow work starts. */
+function afterPaint(run: () => void): () => void {
+  let timer: number | undefined
+  const frame = window.requestAnimationFrame(() => {
+    timer = window.setTimeout(run, 0)
+  })
+  return () => {
+    window.cancelAnimationFrame(frame)
+    if (timer !== undefined) window.clearTimeout(timer)
+  }
+}
+
+interface Drag {
+  id: string
+  /** The map as it was when the card was picked up. Escape puts it back. */
+  before: View
+  cancelled: boolean
 }
 
 export function Canvas() {
@@ -134,16 +207,34 @@ export function Canvas() {
   const { board, overlay, selection } = state
   const dispatch = useAppDispatch()
   const stored = overlay?.positions
-  // Positions follow the pointer while a card is dragged. The app state gets the final spot.
-  const [seen, setSeen] = useState(stored)
-  const [live, setLive] = useState<Record<string, Point>>(stored ?? {})
-  if (seen !== stored) {
-    setSeen(stored)
-    setLive(stored ?? {})
+  const links = overlay?.manualLinks
+  const [view, setView] = useState<View | undefined>(() => (board ? fullView(board, stored, links) : undefined))
+  // The map is rebuilt in full when the board or the links change, or when positions change from outside the map.
+  let shown = view
+  if (board && (!view || view.board !== board || view.links !== links)) {
+    shown = fullView(board, stored, links)
+    setView(shown)
+  } else if (view && stored !== view.base) {
+    shown = samePositions(stored, view.positions) ? { ...view, base: stored } : fullView(view.board, stored, view.links)
+    setView(shown)
   }
+  const viewRef = useRef(shown)
+  const drag = useRef<Drag | undefined>(undefined)
+  const keyMoves = useRef(new Set<string>())
+  const pickedOnMap = useRef<string | undefined>(undefined)
+  const playing = useRef(false)
+  const [cache] = useState(() => new GraphCache())
+  const takePicked = useCallback(() => {
+    const id = pickedOnMap.current
+    pickedOnMap.current = undefined
+    return id
+  }, [])
 
   const step = useMemo(() => currentStep({ board: state.board, scenario: state.scenario }), [state.board, state.scenario])
-  const links = overlay?.manualLinks
+  useEffect(() => {
+    viewRef.current = shown
+    playing.current = step !== undefined
+  })
   const noteCounts = useMemo(() => {
     const counts = new Map<string, number>()
     for (const n of overlay?.notes ?? []) {
@@ -152,8 +243,52 @@ export function Canvas() {
     return counts
   }, [overlay?.notes])
   const graph = useMemo(
-    () => (board ? buildGraph(board, live, selection, step?.highlight, links, noteCounts) : undefined),
-    [board, live, selection, step, links, noteCounts],
+    () => (board && shown ? assembleGraph(board, shown.positions, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held) : undefined),
+    [board, shown, selection, step, links, noteCounts, cache],
+  )
+
+  // The full build comes after the drop, or after the last arrow key, and so does the save of keyboard moves.
+  const settle = shown?.held === undefined ? shown?.settle : undefined
+  useEffect(() => {
+    if (settle === undefined) return
+    const settleNow = () => {
+      const current = viewRef.current
+      if (!current) return
+      for (const id of keyMoves.current) {
+        const point = current.positions[id]
+        if (point) dispatch({ type: 'cardMoved', id, point })
+      }
+      keyMoves.current.clear()
+      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v.links, v.positions) : v))
+    }
+    return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
+  }, [settle, shown, dispatch])
+
+  // Escape while a card is held puts it back and leaves the selection and focus alone.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const held = drag.current
+      if (event.key !== 'Escape' || !held) return
+      event.stopPropagation()
+      event.preventDefault()
+      if (held.cancelled) return
+      held.cancelled = true
+      setView((v) => (v ? { ...v, positions: held.before.positions, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) } : v))
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
+
+  // A keyboard move that has not been saved yet is saved when the map goes away.
+  useEffect(
+    () => () => {
+      const current = viewRef.current
+      for (const id of keyMoves.current) {
+        const point = current?.positions[id]
+        if (point) dispatch({ type: 'cardMoved', id, point })
+      }
+    },
+    [dispatch],
   )
   const [connecting, setConnecting] = useState(false)
   const stepKey = step ? `${step.scenario.id}:${step.index}` : undefined
@@ -161,15 +296,58 @@ export function Canvas() {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       for (const change of changes) {
-        if (change.type === 'position' && change.position && !change.id.startsWith('group:')) {
+        if (!('id' in change) || change.id.startsWith('group:')) continue
+        if (change.type === 'position' && change.position) {
           const { id, position } = change
-          setLive((prev) => ({ ...prev, [id]: position }))
-          // Arrow keys move a card with `dragging` unset. Dragging commits on drag stop.
-          if (change.dragging !== true) dispatch({ type: 'cardMoved', id, point: position })
-        } else if (change.type === 'select' && change.selected && !change.id.startsWith('group:')) {
+          const held = drag.current
+          if (held) {
+            // A drag saves once, when the card is dropped.
+            if (!held.cancelled) setView((v) => (v ? moved(v, id, position, 0) : v))
+          } else {
+            // Arrow keys move a card without a drag.
+            keyMoves.current.add(id)
+            setView((v) => (v ? moved(v, id, position, KEY_SETTLE_MS) : v))
+          }
+        } else if (change.type === 'select' && change.selected) {
+          // While a walkthrough plays, picking up a card must not change what the panel shows. A click still does.
+          if (playing.current) continue
+          pickedOnMap.current = change.id
           dispatch({ type: 'select', selection: { type: 'component', id: change.id } })
         }
       }
+    },
+    [dispatch],
+  )
+
+  const onDragStart = useCallback((_: unknown, node: { id: string }) => {
+    const before = viewRef.current
+    if (!before) return
+    drag.current = { id: node.id, before, cancelled: false }
+    setView((v) => (v ? { ...v, held: node.id } : v))
+  }, [])
+
+  const onDragStop = useCallback(
+    (_: unknown, node: { id: string; position: Point }) => {
+      const held = drag.current
+      drag.current = undefined
+      setView((v) => {
+        if (!v) return v
+        const { held: _dropped, ...rest } = v
+        return rest
+      })
+      if (!held || held.cancelled) return
+      keyMoves.current.delete(node.id)
+      dispatch({ type: 'cardMoved', id: node.id, point: node.position })
+    },
+    [dispatch],
+  )
+
+  // During a walkthrough a click on a part still opens it. Picking a part up does not.
+  const onNodeClick = useCallback(
+    (_: unknown, node: { id: string }) => {
+      if (!playing.current || node.id.startsWith('group:')) return
+      pickedOnMap.current = node.id
+      dispatch({ type: 'select', selection: { type: 'component', id: node.id } })
     },
     [dispatch],
   )
@@ -213,7 +391,14 @@ export function Canvas() {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeDragStop={(_, node) => dispatch({ type: 'cardMoved', id: node.id, point: node.position })}
+        onNodeDragStart={onDragStart}
+        onNodeDragStop={onDragStop}
+        onNodeClick={onNodeClick}
+        autoPanOnNodeDrag={false}
+        panOnScroll
+        panOnScrollSpeed={0.8}
+        zoomOnScroll={false}
+        zoomOnPinch
         onPaneClick={() => dispatch({ type: 'select', selection: { type: 'board' } })}
         fitView
         fitViewOptions={FIT}
@@ -234,11 +419,15 @@ export function Canvas() {
         aria-label="Map of the board"
       >
         <Background gap={24} size={1.2} className={styles.dots ?? ""} />
-        <KeepSelectionInView />
-        <Camera stepKey={stepKey} focus={step?.focusParts ?? []} />
+        <KeepSelectionInView takePicked={takePicked} />
+        <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} />
         <Controls showInteractive={false} fitViewOptions={FIT} position="bottom-right" />
       </ReactFlow>
       <Legend />
     </div>
   )
+}
+
+function cancelTimer(id: number): () => void {
+  return () => window.clearTimeout(id)
 }

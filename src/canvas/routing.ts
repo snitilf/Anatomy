@@ -179,21 +179,10 @@ const TURN_COST = 36
 const RADIUS = 16
 /** Extra cost per unit of a run that lies along a path already drawn, so connections spread over the gaps. */
 const SHARE_COST = 2.5
-
-function sharedLength(p: Point, q: Point, used: readonly (readonly [Point, Point])[]): number {
-  let total = 0
-  const horizontal = p.y === q.y
-  for (const [u, v] of used) {
-    if (horizontal) {
-      if (u.y !== v.y || Math.abs(u.y - p.y) > 6) continue
-      total += Math.max(0, Math.min(Math.max(p.x, q.x), Math.max(u.x, v.x)) - Math.max(Math.min(p.x, q.x), Math.min(u.x, v.x)))
-    } else {
-      if (u.x !== v.x || Math.abs(u.x - p.x) > 6) continue
-      total += Math.max(0, Math.min(Math.max(p.y, q.y), Math.max(u.y, v.y)) - Math.max(Math.min(p.y, q.y), Math.min(u.y, v.y)))
-    }
-  }
-  return total
-}
+/** The search stops after this many steps. A grid of lanes seldom needs a fiftieth of it. */
+const SEARCH_LIMIT = 30000
+const BUCKET = 128
+const bucketKey = (bx: number, by: number) => (bx + 4096) * 8192 + (by + 4096)
 
 function uniqueSorted(values: number[]): number[] {
   const sorted = [...values].sort((a, b) => a - b)
@@ -206,8 +195,8 @@ function uniqueSorted(values: number[]): number[] {
 }
 
 /** Lines worth running along: just off every card, and down the middle of each gap between cards. */
-function lanes(edges: { lo: number; hi: number }[], extra: number[]): number[] {
-  const values = [...extra]
+function laneValues(edges: { lo: number; hi: number }[]): number[] {
+  const values: number[] = []
   for (const e of edges) values.push(e.lo - MARGIN, e.hi + MARGIN)
   for (const p of edges) {
     for (const q of edges) {
@@ -215,27 +204,83 @@ function lanes(edges: { lo: number; hi: number }[], extra: number[]): number[] {
       if (gap > 2 * MARGIN && gap < 240) values.push((p.hi + q.lo) / 2)
     }
   }
-  return uniqueSorted(values)
+  return values
+}
+
+/**
+ * Everything about the cards that routing needs, worked out once per build and shared by every connection:
+ * the keep-out boxes in a bucket grid, and the candidate lines for the path search.
+ */
+export class Obstacles {
+  readonly cards: readonly Rect[]
+  private readonly boxes: Rect[]
+  private readonly buckets = new Map<number, number[]>()
+  private readonly rawX: number[]
+  private readonly rawY: number[]
+
+  constructor(cards: readonly Rect[]) {
+    this.cards = cards
+    this.boxes = cards.map((c) => inflate(c, MARGIN - 2))
+    this.boxes.forEach((box, i) => {
+      for (let bx = Math.floor(box.x / BUCKET); bx <= Math.floor((box.x + box.width) / BUCKET); bx++) {
+        for (let by = Math.floor(box.y / BUCKET); by <= Math.floor((box.y + box.height) / BUCKET); by++) {
+          const key = bucketKey(bx, by)
+          const list = this.buckets.get(key)
+          if (list) list.push(i)
+          else this.buckets.set(key, [i])
+        }
+      }
+    })
+    this.rawX = laneValues(cards.map((c) => ({ lo: c.x, hi: c.x + c.width })))
+    this.rawY = laneValues(cards.map((c) => ({ lo: c.y, hi: c.y + c.height })))
+  }
+
+  /** True when a point lies inside the keep-out zone of any card. */
+  blocksPoint(p: Point): boolean {
+    const list = this.buckets.get(bucketKey(Math.floor(p.x / BUCKET), Math.floor(p.y / BUCKET)))
+    return list !== undefined && list.some((i) => inside(p, this.boxes[i] as Rect))
+  }
+
+  /** True when a straight run crosses the keep-out zone of any card. */
+  blocksRun(p: Point, q: Point): boolean {
+    const x0 = Math.floor(Math.min(p.x, q.x) / BUCKET)
+    const x1 = Math.floor(Math.max(p.x, q.x) / BUCKET)
+    const y0 = Math.floor(Math.min(p.y, q.y) / BUCKET)
+    const y1 = Math.floor(Math.max(p.y, q.y) / BUCKET)
+    for (let bx = x0; bx <= x1; bx++) {
+      for (let by = y0; by <= y1; by++) {
+        const list = this.buckets.get(bucketKey(bx, by))
+        if (list?.some((i) => crosses(p, q, this.boxes[i] as Rect))) return true
+      }
+    }
+    return false
+  }
+
+  /** True when a point lies close to a card other than the two the line joins. */
+  hitsOther(points: readonly Point[], ends: readonly [Rect, Rect]): boolean {
+    const list = this.cards
+    return points.some((p) => {
+      const near = this.buckets.get(bucketKey(Math.floor(p.x / BUCKET), Math.floor(p.y / BUCKET)))
+      return near?.some((i) => {
+        const card = list[i] as Rect
+        return card !== ends[0] && card !== ends[1] && inside(p, inflate(card, 4))
+      })
+    })
+  }
+
+  lanes(extraX: number[], extraY: number[]): [number[], number[]] {
+    return [uniqueSorted([...extraX, ...this.rawX]), uniqueSorted([...extraY, ...this.rawY])]
+  }
 }
 
 /**
  * Finds a path of straight runs that stays out of every card.
  * It searches the lines just off the cards and down the gaps, and charges for each turn.
  */
-function findPath(start: Point, end: Point, cards: readonly Rect[], used: readonly (readonly [Point, Point])[]): Point[] | undefined {
-  const boxes = cards.map((c) => inflate(c, MARGIN - 2))
-  const xs = lanes(
-    cards.map((c) => ({ lo: c.x, hi: c.x + c.width })),
-    [start.x, end.x],
-  )
-  const ys = lanes(
-    cards.map((c) => ({ lo: c.y, hi: c.y + c.height })),
-    [start.y, end.y],
-  )
+function findPath(start: Point, end: Point, obstacles: Obstacles, used: readonly (readonly [Point, Point])[]): Point[] | undefined {
+  const [xs, ys] = obstacles.lanes([start.x, end.x], [start.y, end.y])
   const width = xs.length
-  const index = (i: number, j: number, d: number) => (j * width + i) * 4 + d
-  const free = (p: Point) => !boxes.some((b) => inside(p, b))
-  const clear = (p: Point, q: Point) => !boxes.some((b) => crosses(p, q, b))
+  const height = ys.length
   const DIRS = [
     [1, 0],
     [0, 1],
@@ -249,8 +294,40 @@ function findPath(start: Point, end: Point, cards: readonly Rect[], used: readon
   const ej = ys.findIndex((y) => Math.abs(y - end.y) <= 3)
   if (si < 0 || sj < 0 || ei < 0 || ej < 0) return undefined
 
-  const best = new Map<number, number>()
-  const from = new Map<number, number>()
+  const horizontalUsed = used.filter(([u, v]) => u.y === v.y)
+  const verticalUsed = used.filter(([u, v]) => u.x === v.x)
+  const shared = (p: Point, q: Point): number => {
+    let total = 0
+    if (p.y === q.y) {
+      for (const [u, v] of horizontalUsed) {
+        if (Math.abs(u.y - p.y) > 6) continue
+        total += Math.max(0, Math.min(Math.max(p.x, q.x), Math.max(u.x, v.x)) - Math.max(Math.min(p.x, q.x), Math.min(u.x, v.x)))
+      }
+    } else {
+      for (const [u, v] of verticalUsed) {
+        if (Math.abs(u.x - p.x) > 6) continue
+        total += Math.max(0, Math.min(Math.max(p.y, q.y), Math.max(u.y, v.y)) - Math.max(Math.min(p.y, q.y), Math.min(u.y, v.y)))
+      }
+    }
+    return total
+  }
+
+  // Worked out the first time a spot or a step is looked at. 0 means not yet.
+  const spotState = new Uint8Array(width * height)
+  const stepState = new Uint8Array(width * height * 4)
+  const stepCost = new Float64Array(width * height * 4)
+  const best = new Float64Array(width * height * 4).fill(Infinity)
+  const from = new Int32Array(width * height * 4).fill(-1)
+  const spotFree = (i: number, j: number): boolean => {
+    const at = j * width + i
+    let state = spotState[at] as number
+    if (state === 0) {
+      state = obstacles.blocksPoint({ x: xs[i] as number, y: ys[j] as number }) ? 2 : 1
+      spotState[at] = state
+    }
+    return state === 1
+  }
+
   // A small binary heap of [cost, state].
   const heap: [number, number][] = []
   const push = (item: [number, number]) => {
@@ -285,14 +362,15 @@ function findPath(start: Point, end: Point, cards: readonly Rect[], used: readon
   }
 
   for (let d = 0; d < 4; d++) {
-    best.set(index(si, sj, d), 0)
-    push([0, index(si, sj, d)])
+    const state = (sj * width + si) * 4 + d
+    best[state] = 0
+    push([0, state])
   }
   let goal = -1
   let guard = 0
-  for (let item = pop(); item && guard < 200000; item = pop(), guard++) {
+  for (let item = pop(); item && guard < SEARCH_LIMIT; item = pop(), guard++) {
     const [cost, state] = item
-    if (cost > (best.get(state) ?? Infinity)) continue
+    if (cost > (best[state] as number)) continue
     const d = state % 4
     const cell = (state - d) / 4
     const i = cell % width
@@ -308,16 +386,23 @@ function findPath(start: Point, end: Point, cards: readonly Rect[], used: readon
       const nx = xs[ni]
       const ny = ys[nj]
       if (nx === undefined || ny === undefined) continue
-      const here = { x: xs[i] as number, y: ys[j] as number }
-      const there = { x: nx, y: ny }
-      if (!free(there) || !clear(here, there)) continue
       if (nd !== d && nd === (d + 2) % 4) continue
-      const length = Math.abs(nx - here.x) + Math.abs(ny - here.y)
-      const next = cost + length + (nd === d ? 0 : TURN_COST) + sharedLength(here, there, used) * SHARE_COST
-      const key = index(ni, nj, nd)
-      if (next < (best.get(key) ?? Infinity)) {
-        best.set(key, next)
-        from.set(key, state)
+      const move = cell * 4 + nd
+      if (stepState[move] === 0) {
+        const here = { x: xs[i] as number, y: ys[j] as number }
+        const there = { x: nx, y: ny }
+        if (!spotFree(ni, nj) || obstacles.blocksRun(here, there)) stepState[move] = 2
+        else {
+          stepState[move] = 1
+          stepCost[move] = Math.abs(nx - here.x) + Math.abs(ny - here.y) + shared(here, there) * SHARE_COST
+        }
+      }
+      if (stepState[move] === 2) continue
+      const next = cost + (stepCost[move] as number) + (nd === d ? 0 : TURN_COST)
+      const key = (nj * width + ni) * 4 + nd
+      if (next < (best[key] as number)) {
+        best[key] = next
+        from[key] = state
         push([next, key])
       }
     }
@@ -325,7 +410,7 @@ function findPath(start: Point, end: Point, cards: readonly Rect[], used: readon
   if (goal < 0) return undefined
 
   const cells: Point[] = []
-  for (let s: number | undefined = goal; s !== undefined; s = from.get(s)) {
+  for (let s = goal; s >= 0; s = from[s] as number) {
     const cell = (s - (s % 4)) / 4
     const i = cell % width
     cells.push({ x: xs[i] as number, y: ys[(cell - i) / width] as number })
@@ -381,22 +466,24 @@ function rounded(corners: readonly Point[]): Route {
 /**
  * The line for one connection. It is a plain curve between the two cards.
  * If that curve would pass behind another card, it becomes a path with rounded corners
- * that runs through the gaps instead.
+ * that runs through the gaps instead. Pass the `Obstacles` of the cards when drawing many
+ * connections in one go, so the cards are indexed once.
  */
 export function routeConnection(
   plan: Plan,
   cards: readonly Rect[],
   ends: readonly [Rect, Rect],
   used: readonly (readonly [Point, Point])[] = [],
+  obstacles?: Obstacles,
 ): Route {
   const direct = curve(plan.a, plan.out, plan.b, plan.in, plan.bend)
-  const others = cards.filter((c) => c !== ends[0] && c !== ends[1])
-  if (others.length === 0 || !hitsAnyCard(direct, others)) return direct
+  const grid = obstacles ?? new Obstacles(cards)
+  if (!grid.hitsOther(direct.points, ends)) return direct
   const n1 = NORMAL[plan.out]
   const n2 = NORMAL[plan.in]
   const start = { x: plan.a.x + n1.x * STUB, y: plan.a.y + n1.y * STUB }
   const end = { x: plan.b.x + n2.x * STUB, y: plan.b.y + n2.y * STUB }
-  const middle = findPath(start, end, cards, used)
+  const middle = findPath(start, end, grid, used)
   if (!middle) return direct
   return rounded([plan.a, start, ...middle.slice(1, -1), end, plan.b])
 }

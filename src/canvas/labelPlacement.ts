@@ -85,8 +85,51 @@ export function wrap(text: string, outer: number): { lines: number; width: numbe
   return { lines: Math.min(lines, MAX_LINES), width: Math.min(outer, Math.ceil(widest) + PAD_X * 2 + 2) }
 }
 
-function inside(p: Point, r: Rect): boolean {
-  return p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height
+const CELL = 64
+const cellKey = (cx: number, cy: number) => (cx + 32768) * 65536 + (cy + 32768)
+
+/**
+ * The sampled points of every drawn line, bucketed once per build.
+ * A label asks for the points inside its box and only the buckets under that box are read.
+ */
+export class PointIndex {
+  private readonly cells = new Map<number, number[]>()
+
+  /** Adds the points of one line. `owner` lets a label skip its own line. */
+  add(owner: number, points: readonly Point[]): void {
+    for (const p of points) {
+      const key = cellKey(Math.floor(p.x / CELL), Math.floor(p.y / CELL))
+      const cell = this.cells.get(key)
+      if (cell) cell.push(p.x, p.y, owner)
+      else this.cells.set(key, [p.x, p.y, owner])
+    }
+  }
+
+  /** How many points of lines other than `skip` lie strictly inside the box. */
+  countInside(box: Rect, skip: number): number {
+    const right = box.x + box.width
+    const bottom = box.y + box.height
+    let count = 0
+    for (let cx = Math.floor(box.x / CELL); cx <= Math.floor(right / CELL); cx++) {
+      for (let cy = Math.floor(box.y / CELL); cy <= Math.floor(bottom / CELL); cy++) {
+        const cell = this.cells.get(cellKey(cx, cy))
+        if (!cell) continue
+        for (let i = 0; i < cell.length; i += 3) {
+          const x = cell[i] as number
+          const y = cell[i + 1] as number
+          if (x > box.x && x < right && y > box.y && y < bottom && cell[i + 2] !== skip) count++
+        }
+      }
+    }
+    return count
+  }
+}
+
+/** A label never reaches further than this from the line it sits on. */
+const REACH = 260
+
+function near(r: Rect, around: Rect): boolean {
+  return r.x < around.x + around.width && r.x + r.width > around.x && r.y < around.y + around.height && r.y + r.height > around.y
 }
 
 /**
@@ -94,20 +137,46 @@ function inside(p: Point, r: Rect): boolean {
  * until the pill covers no card text, no other pill, and no other line. A wide pill with
  * two lines is preferred. In a narrow gap it falls back to a narrower pill with more lines,
  * and beside the line when the line is too short to carry the pill without hiding its arrow.
+ *
+ * `otherLines` is the points of the other lines. Pass a `PointIndex` built once per build and
+ * the label's own line number in `own`, or a plain list of points.
  */
 export function placeLabel(
   route: readonly Point[],
   text: string,
   cards: readonly Rect[],
   taken: readonly Rect[],
-  otherLines: readonly Point[] = [],
+  otherLines: readonly Point[] | PointIndex = [],
+  own = -1,
 ): LabelSpot {
-  const areas = cards.map(textArea)
   const last = route.length - 1
   const end = route[last] ?? { x: 0, y: 0 }
   const middle = route[Math.round(last / 2)] ?? { x: 0, y: 0 }
   let best: LabelSpot = { ...middle, width: TIERS[0] as number, lines: 1 }
   let bestCost = Infinity
+
+  // Only cards, pills, and lines near this line can change the cost.
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const p of route) {
+    minX = Math.min(minX, p.x)
+    minY = Math.min(minY, p.y)
+    maxX = Math.max(maxX, p.x)
+    maxY = Math.max(maxY, p.y)
+  }
+  const around: Rect = { x: minX - REACH, y: minY - REACH, width: maxX - minX + REACH * 2, height: maxY - minY + REACH * 2 }
+  const areas = cards.map(textArea).filter((a) => near(a, around))
+  const pills = taken.filter((t) => near(t, around)).map((t) => inflate(t, 3))
+  const raw = taken.filter((t) => near(t, around))
+  let lines: PointIndex
+  if (otherLines instanceof PointIndex) lines = otherLines
+  else {
+    lines = new PointIndex()
+    // Owner -2 is never skipped, so every point of a plain list counts.
+    lines.add(-2, otherLines)
+  }
 
   const tiers = wrap(text, TIERS[0] as number).lines >= MAX_LINES ? [WIDE, ...TIERS] : TIERS
   for (const tier of tiers) {
@@ -119,31 +188,36 @@ export function placeLabel(
       const along = Math.ceil(k / 2) * 0.02 * (k % 2 === 1 ? 1 : -1)
       const fraction = 0.5 + along
       if (fraction < 0.12 || fraction > 0.88) continue
-      const index = Math.round(last * fraction)
-      const p = route[index]
-      const before = route[Math.max(0, index - 2)]
-      const after = route[Math.min(last, index + 2)]
+      const at = Math.round(last * fraction)
+      const p = route[at]
+      const before = route[Math.max(0, at - 2)]
+      const after = route[Math.min(last, at + 2)]
       if (!p || !before || !after) continue
       const tangent = Math.hypot(after.x - before.x, after.y - before.y) || 1
       const normal = { x: -(after.y - before.y) / tangent, y: (after.x - before.x) / tangent }
       const reach = Math.abs(normal.x) * (size.width / 2 + 8) + Math.abs(normal.y) * (height / 2 + 8)
       for (const side of [0, 1, -1]) {
+        // Costs only grow as terms are added, so a candidate stops as soon as it cannot beat the best.
+        const fixed = (side === 0 ? 0 : 24) + tall + (size.lines - 1) * 10 + Math.abs(along) * 120
+        if (fixed >= bestCost) continue
         const c = { x: p.x + normal.x * reach * side, y: p.y + normal.y * reach * side }
         const box = { x: c.x - size.width / 2, y: c.y - height / 2, width: size.width, height }
+        let cost = 0
+        for (const a of areas) cost += overlap(box, a)
+        if (cost + fixed >= bestCost) continue
+        // Two pills must never touch. Sliding along the line is cheap, sharing space is not.
+        for (let i = 0; i < pills.length; i++) {
+          if (overlap(box, pills[i] as Rect) > 0) cost += 5000 + overlap(box, raw[i] as Rect)
+        }
+        if (cost + fixed >= bestCost) continue
+        cost += lines.countInside(box, own) * 10
         const arrow = { x: end.x - 14, y: end.y - 14, width: 28, height: 28 }
-        const cost =
-          areas.reduce((sum, a) => sum + overlap(box, a), 0) +
-          // Two pills must never touch. Sliding along the line is cheap, sharing space is not.
-          taken.reduce((sum, t) => sum + (overlap(box, inflate(t, 3)) > 0 ? 5000 + overlap(box, t) : 0), 0) +
-          otherLines.reduce((sum, q) => sum + (inside(q, box) ? 10 : 0), 0) +
-          (overlap(box, arrow) > 0 ? 300 : 0) +
-          (side === 0 ? 0 : 24) +
-          tall +
-          (size.lines - 1) * 10 +
-          Math.abs(along) * 120
+        if (overlap(box, arrow) > 0) cost += 300
+        cost += fixed
         if (cost < bestCost) {
           bestCost = cost
           best = { x: c.x, y: c.y, width: size.width, lines: size.lines }
+          if (cost === 0) return best
         }
       }
     }
