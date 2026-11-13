@@ -1,0 +1,174 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "id": "anatomy-app",
+  "revision": 1,
+  "title": "Anatomy: how a board gets on screen",
+  "goal": "Understand how a board file written by an agent becomes an interactive map, and where your own notes are kept.",
+  "scope": {
+    "includes": [
+      "Opening, checking, and showing a board file",
+      "Where notes and card positions are kept"
+    ],
+    "excludes": [
+      "Parts that are not built yet are described as planned, not as working code"
+    ]
+  },
+  "groups": [
+    { "id": "outside", "label": "Outside the app", "description": "Things the app reads but does not control." },
+    { "id": "browser-app", "label": "Browser app", "description": "Code that runs in the browser tab." },
+    { "id": "browser-storage", "label": "Browser storage", "description": "Data kept by this browser on this computer." }
+  ],
+  "components": [
+    {
+      "id": "agent",
+      "label": "Your agent",
+      "summary": "An existing coding agent that you ask to explain a plan or feature. It writes a board file.",
+      "group": "outside",
+      "inputs": ["Your request", "Material you allow it to read"],
+      "outputs": ["A board file"],
+      "source": { "kind": "user-stated" }
+    },
+    {
+      "id": "board-file",
+      "label": "Board file",
+      "summary": "A JSON document that lists parts, connections, open questions, and scenarios.",
+      "explanation": "The file is **data only**. The app never runs anything from it, and file paths in it are shown as text.",
+      "group": "outside",
+      "inputs": ["Written by an agent or a person"],
+      "outputs": ["Text for the validator"],
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "validator",
+      "label": "Validator",
+      "summary": "Checks the file's shape, IDs, and references, and rejects a broken file with a clear message.",
+      "explanation": "A rejected file never replaces the board that is already open.",
+      "group": "browser-app",
+      "inputs": ["Board file text"],
+      "outputs": ["A checked board, or a list of problems"],
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "canvas",
+      "label": "Canvas",
+      "summary": "Draws the parts as movable cards and the connections as labeled arrows.",
+      "group": "browser-app",
+      "inputs": ["Checked board", "Saved card positions"],
+      "outputs": ["The map on screen", "The selected part or connection"],
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "inspector",
+      "label": "Inspector",
+      "summary": "Explains the selected part or connection in plain English, with its source label.",
+      "group": "browser-app",
+      "inputs": ["Selected part or connection"],
+      "outputs": ["Explanation, open questions, and references"],
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "human-overlay",
+      "label": "Your notes",
+      "summary": "Your notes, questions, manual arrows, and card positions, kept apart from the agent's explanation.",
+      "explanation": "Keeping your work in a separate layer means an updated board file does not overwrite it.",
+      "group": "browser-app",
+      "inputs": ["What you type and drag"],
+      "outputs": ["Notes and positions to save"],
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "local-storage",
+      "label": "Browser storage",
+      "summary": "Keeps boards and your notes in this browser, so they survive a reload.",
+      "group": "browser-storage",
+      "inputs": ["Checked board", "Notes and positions"],
+      "outputs": ["The same data after a reload"],
+      "source": { "kind": "agent-proposal" }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "agent-writes-file",
+      "from": "agent",
+      "to": "board-file",
+      "kind": "sends-data-to",
+      "label": "writes",
+      "source": { "kind": "user-stated" }
+    },
+    {
+      "id": "file-to-validator",
+      "from": "board-file",
+      "to": "validator",
+      "kind": "sends-data-to",
+      "label": "file text",
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "validator-to-canvas",
+      "from": "validator",
+      "to": "canvas",
+      "kind": "sends-data-to",
+      "label": "checked board",
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "canvas-to-inspector",
+      "from": "canvas",
+      "to": "inspector",
+      "kind": "triggers",
+      "label": "selection",
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "overlay-to-storage",
+      "from": "human-overlay",
+      "to": "local-storage",
+      "kind": "stores-in",
+      "label": "notes and positions",
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "canvas-reads-storage",
+      "from": "canvas",
+      "to": "local-storage",
+      "kind": "reads-from",
+      "label": "saved positions",
+      "source": { "kind": "agent-proposal" }
+    }
+  ],
+  "items": [
+    {
+      "id": "u-reimport-merge",
+      "kind": "unknown",
+      "text": "The exact rules for keeping notes when an updated board file is opened are not designed yet.",
+      "about": "human-overlay"
+    },
+    {
+      "id": "a-browser-data-can-vanish",
+      "kind": "assumption",
+      "text": "Browser data can be cleared, so an exported file is the only safe backup.",
+      "about": "local-storage"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "open-a-board",
+      "title": "Open a board",
+      "steps": [
+        { "caption": "Your agent writes a board file.", "highlight": ["agent", "board-file", "agent-writes-file"] },
+        { "caption": "You open the file. The validator checks it.", "highlight": ["validator", "file-to-validator"] },
+        { "caption": "The canvas draws the map, using any positions you saved earlier.", "highlight": ["canvas", "validator-to-canvas", "canvas-reads-storage"] },
+        { "caption": "You click a card, and the inspector explains it.", "highlight": ["inspector", "canvas-to-inspector"] }
+      ]
+    },
+    {
+      "id": "reject-a-broken-file",
+      "title": "A broken file is rejected",
+      "steps": [
+        { "caption": "You open a file with a connection that points at a part that does not exist.", "highlight": ["board-file"] },
+        { "caption": "The validator lists the problem and stops. The board that was already open stays on screen.", "highlight": ["validator", "canvas"] }
+      ]
+    }
+  ]
+}
