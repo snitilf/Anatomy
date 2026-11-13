@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { open, viewport } from './helpers.ts'
+import { grabbable, open, viewport } from './helpers.ts'
 
 const NORDET = 'src/examples/nordet.board.json'
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
@@ -13,7 +13,7 @@ test('the map opens at a readable zoom, and Fit still shows the whole board', as
   await page.setViewportSize({ width: 1024, height: 768 })
   await open(page, FORTY)
   // The whole board would need far less than the readable zoom, so the first view is its top-left corner.
-  expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.54)
+  expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.79)
   const first = await page.locator('.react-flow__node-card').first().boundingBox()
   expect(first?.x).toBeGreaterThanOrEqual(0)
   expect(first?.y).toBeGreaterThanOrEqual(0)
@@ -41,6 +41,52 @@ test('the map hint shows once, until the first click, and stays gone after a rel
   await page.reload()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await expect(hint).toBeHidden()
+})
+
+test('the map hint is not shown on a narrow screen and is not used up there', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 800 })
+  await open(page, NORDET)
+  await expect(page.getByRole('note')).toHaveCount(0)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await expect(page.getByRole('note').filter({ hasText: 'Drag a card to move it' })).toBeVisible()
+})
+
+test('Ctrl and wheel changes the zoom by at most about 20 per cent per event', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await open(page, NORDET)
+  const before = await zoomOf(page)
+  const box = (await page.locator('.react-flow__pane').boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.keyboard.down('Control')
+  await page.mouse.wheel(0, 400)
+  await page.keyboard.up('Control')
+  await expect.poll(() => zoomOf(page)).toBeLessThan(before)
+  const after = await zoomOf(page)
+  expect(after / before).toBeGreaterThanOrEqual(1 / 1.21)
+})
+
+test('a card dropped under the inspector is brought back into view', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await open(page, NORDET)
+  const spot = await grabbable(page)
+  const map = (await page.locator('.react-flow__pane').boundingBox())!
+  await page.mouse.move(spot.x, spot.y)
+  await page.mouse.down()
+  // Out past the right edge of the map, over the inspector.
+  await page.mouse.move(map.x + map.width + 120, spot.y, { steps: 12 })
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  const card = (await page.locator(`.react-flow__node-card[data-id="${spot.id}"]`).boundingBox())!
+  expect(card.x).toBeGreaterThanOrEqual(map.x)
+  expect(card.x + card.width).toBeLessThanOrEqual(map.x + map.width + 1)
+})
+
+test('an example chosen from the start screen moves focus to the inspector heading', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load an example' }).click()
+  await page.getByRole('menuitem').first().click()
+  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Details' }).getByRole('heading', { level: 2 }).first()).toBeFocused()
 })
 
 test('the map hint can be closed with its button', async ({ page }) => {
