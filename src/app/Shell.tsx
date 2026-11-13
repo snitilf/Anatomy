@@ -154,7 +154,7 @@ export function Shell() {
         onKeyDown={onKeyDown}
         onFocus={onFocus}
       >
-        <div className={styles.notices}>
+        <div className={styles.notices} data-notices="">
           <Notices />
         </div>
         {hasBoard ? (
@@ -177,7 +177,7 @@ export function Shell() {
       <HowToDialog open={howTo} onClose={() => setHowTo(false)} />
       {dragging && (
         <div className={styles.drop} aria-hidden="true">
-          <p>Drop a board file to open it</p>
+          <p>Drop to open</p>
         </div>
       )}
     </div>

@@ -12,7 +12,7 @@ export function Dialogs() {
       {deleting && (
         <Modal title={`Delete ${deleting.title}?`} onCancel={() => askDelete(undefined)}>
           <p className={styles.text}>
-            This removes the board and your notes from this browser. Only an export file keeps them.
+            Removes the board and your notes from this browser. Exported files are not affected.
           </p>
           <div className={styles.actions}>
             <button type="button" className={buttons.button} onClick={() => askDelete(undefined)}>
@@ -25,9 +25,9 @@ export function Dialogs() {
         </Modal>
       )}
       {choice && (
-        <Modal title={`This file has its own notes and layout for ${choice.title}.`} onCancel={() => resolveChoice(undefined)}>
+        <Modal title={`Notes and layout for ${choice.title}`} onCancel={() => resolveChoice(undefined)}>
           <p className={styles.text}>
-            This browser has notes and layout for it too. Choose which to keep. The board comes from the file either way.
+            The file and this browser each have their own. Which should the board use?
           </p>
           <div className={styles.actions}>
             <button type="button" className={buttons.button} onClick={() => resolveChoice(undefined)}>

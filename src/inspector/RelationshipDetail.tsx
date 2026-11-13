@@ -2,7 +2,7 @@ import type { Board, BoardRelationship } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
 import { NotesSection } from '../notes/NotesSection'
 import { Markdown } from '../text/markdown'
-import { BackButton, Heading, ItemGroups, PartButton, Section, SourceBlock } from './parts'
+import { BackButton, CitedSection, Disclosure, Heading, OpenItems, PartButton, SourcePill } from './parts'
 import styles from './parts.module.css'
 
 export function RelationshipDetail({ board, relationship }: { board: Board; relationship: BoardRelationship }) {
@@ -18,13 +18,15 @@ export function RelationshipDetail({ board, relationship }: { board: Board; rela
         <PartButton board={board} id={relationship.to} />
       </div>
       {unknown && <p className={styles.notice}>{KIND_WORDS.unknown}.</p>}
-      <SourceBlock source={relationship.source} />
+      <SourcePill source={relationship.source} />
+      {/* A connection has no summary, so its explanation is the first thing to read. */}
       {relationship.explanation && (
-        <Section title="Explanation">
-          <Markdown source={relationship.explanation} className={styles.prose ?? ""} />
-        </Section>
+        <Disclosure title="Explanation" open>
+          <Markdown source={relationship.explanation} className={styles.prose ?? ''} />
+        </Disclosure>
       )}
-      <ItemGroups items={items} />
+      <OpenItems items={items} />
+      <CitedSection source={relationship.source} />
 
       <NotesSection target={{ type: 'relationship', id: relationship.id }} />
     </>

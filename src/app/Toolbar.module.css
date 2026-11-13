@@ -41,6 +41,17 @@
   gap: 8px;
 }
 
+/* Help, not a task: it sits back until the pointer is on it. */
+.howTo {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 450;
+}
+
+.howTo:hover {
+  color: var(--ink);
+}
+
 @media (max-width: 760px) {
   .bar {
     flex-wrap: wrap;

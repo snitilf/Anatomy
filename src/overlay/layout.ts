@@ -2,9 +2,9 @@ import type { Board } from '../board/schema'
 import type { Overlay, Point } from './types'
 
 export const COLUMN_WIDTH = 440
-export const ROW_HEIGHT = 230
+export const ROW_HEIGHT = 240
 export const CARD_WIDTH = 260
-export const CARD_HEIGHT = 140
+export const CARD_HEIGHT = 150
 export const CARD_GAP = 20
 
 /** Column index per component: groups with members in file order, then ungrouped. */

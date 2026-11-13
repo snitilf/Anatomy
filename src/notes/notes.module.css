@@ -238,7 +238,7 @@
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
-  transition: background-color 120ms var(--ease-out);
+  transition: background-color 80ms var(--ease-out);
 }
 
 .kindInput:checked + .kindFace {
@@ -270,7 +270,6 @@
   background: none;
   text-align: left;
   cursor: pointer;
-  transition: background-color 120ms var(--ease-out);
 }
 
 .linkRow:hover {
@@ -367,7 +366,6 @@
   font-size: 14px;
   font-weight: 550;
   cursor: pointer;
-  transition: background-color 120ms var(--ease-out);
 }
 
 .changeButton:hover {

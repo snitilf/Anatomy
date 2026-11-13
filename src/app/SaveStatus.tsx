@@ -12,11 +12,11 @@ export function SaveStatus() {
   return (
     <div className={styles.root}>
       {save.kind === 'error' ? (
-        <div className={styles.failed} role="alert">
+        <div className={styles.failed} role="alert" title={storageProblem(save.error)}>
           <span className={styles.dot} aria-hidden="true" />
           <span className={styles.text}>
             <strong>Not saved</strong>
-            <span className={styles.reason}>{storageProblem(save.error)}</span>
+            <span className="sr-only">. {storageProblem(save.error)}</span>
           </span>
           {save.error.kind !== 'unavailable' && (
             <button type="button" className={clsx(buttons.button, buttons.quiet, styles.small)} onClick={retrySave}>
@@ -28,9 +28,9 @@ export function SaveStatus() {
           </button>
         </div>
       ) : (
-        <p className={styles.line} role="status" data-state={save.kind}>
+        <p className={styles.line} role="status" data-state={save.kind} title={save.kind === 'saved' ? 'Saved in this browser' : undefined}>
           <span className={styles.dot} aria-hidden="true" />
-          {save.kind === 'saving' ? 'Saving' : 'Saved in this browser'}
+          {save.kind === 'saving' ? 'Saving' : 'Saved'}
         </p>
       )}
     </div>

@@ -27,3 +27,6 @@ export const TONE_COLOR: Record<KindStyle['tone'], string> = {
 
 /** The links the user draws. A dash and dot pattern in full ink, unlike any connection from the agent. */
 export const MANUAL_STYLE = { dash: '9 4 2 4', width: 2 } as const
+
+/** A selected connection is drawn in full accent at this width. */
+export const SELECTED_WIDTH = 3

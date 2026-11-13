@@ -3,7 +3,7 @@ import { memo, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
-import { KIND_STYLE, TONE_COLOR } from './kinds'
+import { KIND_STYLE, SELECTED_WIDTH, TONE_COLOR } from './kinds'
 import styles from './RelationshipEdge.module.css'
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
@@ -15,7 +15,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
   const emphasized = selected || data.active || data.highlighted
   return (
     <>
-      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-highlighted={data.highlighted || undefined}>
+      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined}>
         <BaseEdge
           id={id}
           path={data.path}
@@ -23,7 +23,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           interactionWidth={interactionWidth ?? 28}
           style={{
             stroke: emphasized ? 'var(--accent)' : TONE_COLOR[style.tone],
-            strokeWidth: selected || data.highlighted ? style.width + 1 : style.width,
+            strokeWidth: selected ? SELECTED_WIDTH : data.highlighted ? style.width + 1 : style.width,
             strokeDasharray: style.dash || undefined,
             strokeLinecap: style.dash.startsWith('1.5') ? 'round' : 'butt',
           }}
@@ -36,6 +36,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-active={data.active || undefined}
           data-highlighted={data.highlighted || undefined}
           data-dimmed={data.dimmed || undefined}
+          data-faded={data.faded || undefined}
           data-kind={data.kind}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
           title={text}

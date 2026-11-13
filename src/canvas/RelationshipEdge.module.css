@@ -2,6 +2,15 @@
   transition: opacity 120ms var(--ease-out);
 }
 
+/* A part is selected: the lines that are not its own step back. */
+.line[data-faded] {
+  opacity: 0.35;
+}
+
+.line[data-faded]:hover {
+  opacity: 1;
+}
+
 .line[data-dimmed] {
   opacity: 0.28;
 }
@@ -64,6 +73,14 @@
 }
 
 .pill[data-dimmed]:hover {
+  opacity: 1;
+}
+
+.pill[data-faded] {
+  opacity: 0.35;
+}
+
+.pill[data-faded]:hover {
   opacity: 1;
 }
 

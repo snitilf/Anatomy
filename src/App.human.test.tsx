@@ -80,7 +80,7 @@ function positionOf(stored: { overlay?: unknown } | undefined, id: string): { x:
   const positions = (stored as { overlay: { positions: Record<string, { x: number; y: number }> } }).overlay.positions
   return positions[id]!
 }
-const links = () => within(screen.getByTestId('inspector')).getByRole('heading', { name: 'Your links' }).closest('section')!
+const links = () => within(screen.getByTestId('inspector')).getByText('Your links').closest('details')!
 const panel = () => within(screen.getByTestId('inspector'))
 
 function selectPart(id: string) {
@@ -96,7 +96,7 @@ function addNote(text: string, kind: 'Note' | 'Question' = 'Note') {
 }
 
 async function saved() {
-  await screen.findByText('Saved in this browser', {}, { timeout: 3000 })
+  await screen.findByText('Saved', {}, { timeout: 3000 })
 }
 
 async function openFile(container: HTMLElement, text: string, name = 'board.json') {
@@ -181,8 +181,8 @@ describe('your links', () => {
     render(<App />)
     await loadNordet()
     selectPart('preview')
-    fireEvent.change(panel().getByLabelText('Draw a link to'), { target: { value: 'saved-record' } })
-    fireEvent.change(panel().getByLabelText('Label (optional)'), { target: { value: 'I would check this' } })
+    fireEvent.change(panel().getByLabelText('Link to'), { target: { value: 'saved-record' } })
+    fireEvent.change(panel().getByLabelText('Label'), { target: { value: 'I would check this' } })
     fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
     expect(await screen.findByText('Link added')).toBeInTheDocument()
     const row = panel().getByRole('button', { name: /Saved record/ })
@@ -206,7 +206,7 @@ describe('saving', () => {
     await loadNordet()
     selectPart('approval')
     addNote('Survives a reload')
-    fireEvent.change(panel().getByLabelText('Draw a link to'), { target: { value: 'saved-record' } })
+    fireEvent.change(panel().getByLabelText('Link to'), { target: { value: 'saved-record' } })
     fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
 
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
@@ -259,7 +259,7 @@ describe('saving', () => {
     expect(within(alert).getByText('Not saved')).toBeInTheDocument()
     expect(within(alert).getByText(/out of storage space/)).toBeInTheDocument()
     expect(within(alert).getByRole('button', { name: 'Export' })).toBeInTheDocument()
-    expect(screen.queryByText(/Saved in this browser/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument()
     expect(panel().getByText('Still here')).toBeInTheDocument()
     expect(new StorageError('quota', 'x').kind).toBe('quota')
   })
@@ -274,7 +274,7 @@ describe('saving', () => {
     expect(within(dialog).getByText(/notes from this browser/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete board' }))
     expect(await screen.findByRole('button', { name: 'Load an example' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText(/Saved in this browser/)).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Saved')).not.toBeInTheDocument())
   })
 })
 
@@ -284,7 +284,7 @@ describe('export and open', () => {
     await loadNordet()
     selectPart('approval')
     addNote('Travels with the file')
-    fireEvent.change(panel().getByLabelText('Draw a link to'), { target: { value: 'saved-record' } })
+    fireEvent.change(panel().getByLabelText('Link to'), { target: { value: 'saved-record' } })
     fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
@@ -318,7 +318,7 @@ describe('export and open', () => {
     await saved()
 
     await openFile(first.container, text, 'export.json')
-    const dialog = await screen.findByRole('dialog', { name: /This file has its own notes and layout for/ })
+    const dialog = await screen.findByRole('dialog', { name: /Notes and layout for/ })
     fireEvent.click(within(dialog).getByRole('button', { name: "Use the file's notes" }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(panel().getByText('In the file')).toBeInTheDocument()
@@ -327,7 +327,7 @@ describe('export and open', () => {
     addNote('Newer')
     await saved()
     await openFile(first.container, text, 'export.json')
-    const again = await screen.findByRole('dialog', { name: /This file has its own notes and layout for/ })
+    const again = await screen.findByRole('dialog', { name: /Notes and layout for/ })
     fireEvent.click(within(again).getByRole('button', { name: 'Keep the notes in this browser' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(panel().getByText('Newer')).toBeInTheDocument()

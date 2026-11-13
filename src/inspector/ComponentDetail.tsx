@@ -5,7 +5,7 @@ import { LessonDialog } from '../lessons/LessonDialog'
 import { LinksSection } from '../notes/Links'
 import { NotesSection } from '../notes/NotesSection'
 import { Markdown } from '../text/markdown'
-import { BackButton, BulletList, ConnectionButton, Heading, ItemGroups, Section, SourceBlock } from './parts'
+import { BackButton, BulletList, CitedSection, ConnectionButton, Disclosure, Heading, OpenItems, Section, SourcePill } from './parts'
 import styles from './parts.module.css'
 
 export function ComponentDetail({
@@ -28,9 +28,26 @@ export function ComponentDetail({
       <BackButton />
       <Heading>{component.label}</Heading>
       {group && <p className={styles.meta}>In {group.label}</p>}
-      <SourceBlock source={component.source} />
+      <SourcePill source={component.source} />
 
       <p className={styles.lead}>{component.summary}</p>
+
+      {(component.inputs.length > 0 || component.outputs.length > 0) && (
+        <div className={styles.io}>
+          {component.inputs.length > 0 && (
+            <div>
+              <h3 className={styles.sectionTitle}>Takes in</h3>
+              <BulletList items={component.inputs} />
+            </div>
+          )}
+          {component.outputs.length > 0 && (
+            <div>
+              <h3 className={styles.sectionTitle}>Hands out</h3>
+              <BulletList items={component.outputs} />
+            </div>
+          )}
+        </div>
+      )}
 
       {component.lesson !== undefined && lesson && (
         <Section title="Interactive lesson">
@@ -55,26 +72,7 @@ export function ComponentDetail({
           )}
         </Section>
       )}
-      {component.lesson !== undefined && !lesson && (
-        <p className={styles.quiet}>This board names a lesson Anatomy does not have.</p>
-      )}
-
-      {component.explanation && (
-        <Section title="Explanation">
-          <Markdown source={component.explanation} className={styles.prose ?? ""} />
-        </Section>
-      )}
-
-      {component.inputs.length > 0 && (
-        <Section title="Takes in">
-          <BulletList items={component.inputs} />
-        </Section>
-      )}
-      {component.outputs.length > 0 && (
-        <Section title="Hands out">
-          <BulletList items={component.outputs} />
-        </Section>
-      )}
+      {component.lesson !== undefined && !lesson && <p className={styles.quiet}>Lesson not available</p>}
 
       {outgoing.length > 0 && (
         <Section title="Goes to">
@@ -95,8 +93,13 @@ export function ComponentDetail({
         </Section>
       )}
 
-      <ItemGroups items={items} />
-
+      {component.explanation && (
+        <Disclosure title="Explanation">
+          <Markdown source={component.explanation} className={styles.prose ?? ''} />
+        </Disclosure>
+      )}
+      <OpenItems items={items} />
+      <CitedSection source={component.source} />
       <LinksSection componentId={component.id} />
       <NotesSection target={{ type: 'component', id: component.id }} />
     </>

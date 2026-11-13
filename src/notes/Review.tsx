@@ -55,7 +55,7 @@ export function WhatChanged({ board, previous, changes }: { board: Board; previo
   return (
     <Section title="What changed">
       <div className={styles.changed}>
-        {changes.boardChanged && <p className={styles.changeLine}>The title, goal, or scope of the board changed.</p>}
+        {changes.boardChanged && <p className={styles.changeLine}>Board details changed</p>}
         {added.components.length + added.relationships.length > 0 && (
           <ChangeGroup title="Added">
             <ul className={styles.changeList}>

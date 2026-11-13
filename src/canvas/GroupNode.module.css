@@ -1,9 +1,10 @@
 .area {
   width: 100%;
   height: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
   border-radius: 16px;
-  background: color-mix(in srgb, var(--faint) 62%, transparent);
+  /* A light wash, so two areas that overlap show a darker patch where they do. */
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
   pointer-events: none;
 }
 
