@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import buttons from './buttons.module.css'
 import { Modal } from './Modal'
 import styles from './Modal.module.css'
@@ -17,7 +18,7 @@ export function Dialogs() {
             <button type="button" className={buttons.button} onClick={() => askDelete(undefined)}>
               Cancel
             </button>
-            <button type="button" className={`${buttons.button} ${styles.danger}`} onClick={confirmDelete}>
+            <button type="button" className={clsx(buttons.button, styles.danger)} onClick={confirmDelete}>
               Delete board
             </button>
           </div>
@@ -35,7 +36,7 @@ export function Dialogs() {
             <button type="button" className={buttons.button} onClick={() => resolveChoice('browser')}>
               Keep the notes in this browser
             </button>
-            <button type="button" className={`${buttons.button} ${buttons.primary}`} onClick={() => resolveChoice('file')}>
+            <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={() => resolveChoice('file')}>
               Use the file's notes
             </button>
           </div>

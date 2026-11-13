@@ -1,5 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react'
-import { useAppDispatch, useAppState } from '../app/appContext'
+import clsx from 'clsx'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from '../app/store'
 import styles from './ScenarioPlayer.module.css'
 import { currentStep } from './step'
 
@@ -8,7 +10,7 @@ import { currentStep } from './step'
  * A scenario is a written sequence. Playing it moves the highlight on the map and runs nothing.
  */
 export function ScenarioPlayer({ onClose }: { onClose: () => void }) {
-  const { board, scenario } = useAppState()
+  const { board, scenario } = useAppStore(useShallow((s) => ({ board: s.board, scenario: s.scenario })))
   const dispatch = useAppDispatch()
   const next = useRef<HTMLButtonElement>(null)
   const step = currentStep({ board, scenario })
@@ -62,7 +64,7 @@ export function ScenarioPlayer({ onClose }: { onClose: () => void }) {
           <button
             ref={next}
             type="button"
-            className={`${styles.step} ${styles.forward}`}
+            className={clsx(styles.step, styles.forward)}
             aria-disabled={atEnd || undefined}
             onClick={() => dispatch({ type: 'scenarioNext' })}
           >

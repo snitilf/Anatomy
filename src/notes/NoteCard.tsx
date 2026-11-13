@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { OVERLAY_LIMITS } from '../overlay/schema'
 import type { Note, NoteStatus } from '../overlay/types'
-import { useAppDispatch } from '../app/appContext'
+import { useAppDispatch } from '../app/store'
 import styles from './notes.module.css'
 import { YouTag } from './YouTag'
 

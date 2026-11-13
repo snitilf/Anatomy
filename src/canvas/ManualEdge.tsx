@@ -1,6 +1,7 @@
+import clsx from 'clsx'
 import { memo, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
-import { useAppDispatch } from '../app/appContext'
+import { useAppDispatch } from '../app/store'
 import type { ManualEdgeData } from './buildGraph'
 import { MANUAL_STYLE } from './kinds'
 import styles from './RelationshipEdge.module.css'
@@ -29,7 +30,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
       </g>
       <EdgeLabelRenderer>
         <div
-          className={`${styles.pill} ${styles.mine} nodrag nopan`}
+          className={clsx(styles.pill, styles.mine, 'nodrag nopan')}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}

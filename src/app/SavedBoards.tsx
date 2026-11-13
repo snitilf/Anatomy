@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import type { BoardSummary } from '../persistence/store'
 import buttons from './buttons.module.css'
 import { usePersistence } from './persistenceContext'
@@ -26,7 +27,7 @@ export function SavedBoardList({ onChosen }: { onChosen?: () => void }) {
           <span className={styles.actions}>
             <button
               type="button"
-              className={`${buttons.button} ${styles.small}`}
+              className={clsx(buttons.button, styles.small)}
               aria-label={`Open ${board.title}`}
               onClick={() => {
                 onChosen?.()
@@ -37,7 +38,7 @@ export function SavedBoardList({ onChosen }: { onChosen?: () => void }) {
             </button>
             <button
               type="button"
-              className={`${buttons.button} ${buttons.quiet} ${styles.small}`}
+              className={clsx(buttons.button, buttons.quiet, styles.small)}
               aria-label={`Delete ${board.title}`}
               onClick={() => {
                 onChosen?.()

@@ -1,5 +1,8 @@
+import clsx from 'clsx'
 import { useState } from 'react'
-import { useAppDispatch, useAppState } from '../app/appContext'
+import { toast } from 'sonner'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
 import { BackButton, Heading, PartButton, Section } from '../inspector/parts'
 import { usePanel } from '../inspector/panelContext'
@@ -17,19 +20,20 @@ function partName(board: Board, id: string): string {
 
 /** The links the user drew at one part, and a keyboard-friendly form to draw another. */
 export function LinksSection({ componentId }: { componentId: string }) {
-  const { board, overlay } = useAppState()
+  const { board, manualLinks } = useAppStore(useShallow((s) => ({ board: s.board, manualLinks: s.overlay?.manualLinks })))
   const dispatch = useAppDispatch()
   const { choose } = usePanel()
   const [to, setTo] = useState('')
   const [label, setLabel] = useState('')
-  if (!board || !overlay) return null
-  const mine = overlay.manualLinks.filter((l) => l.from === componentId || l.to === componentId)
+  if (!board || !manualLinks) return null
+  const mine = manualLinks.filter((l) => l.from === componentId || l.to === componentId)
 
   function add() {
     if (to === '') return
     dispatch({ type: 'linkAdded', from: componentId, to, label: label.trim(), id: newId('link'), now: new Date() })
     setTo('')
     setLabel('')
+    toast('Link added')
   }
 
   return (
@@ -154,7 +158,7 @@ export function LinkDetail({ board, link }: { board: Board; link: ManualLink }) 
           </span>
         )}
       </div>
-      <div className={`${styles.route}`}>
+      <div className={styles.route}>
         {ids.has(link.from) ? <PartButton board={board} id={link.from} /> : <span className={styles.gone}>{link.from}</span>}
         <span aria-hidden="true">→</span>
         <span className="sr-only">to</span>
@@ -197,7 +201,7 @@ export function LinkDetail({ board, link }: { board: Board; link: ManualLink }) 
           </div>
         </form>
       </div>
-      <div className={`${styles.row} ${styles.spaced}`}>
+      <div className={clsx(styles.row, styles.spaced)}>
         <DeleteLink id={link.id} />
       </div>
     </>

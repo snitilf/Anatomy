@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useAppDispatch, useAppState } from '../app/appContext'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from '../app/store'
 import type { Selection } from '../app/state'
 import { ComponentDetail } from './ComponentDetail'
 import styles from './Inspector.module.css'
@@ -9,7 +10,9 @@ import { PanelContext } from './panelContext'
 import { RelationshipDetail } from './RelationshipDetail'
 
 export function Inspector() {
-  const { board, selection, overlay } = useAppState()
+  const { board, selection, manualLinks } = useAppStore(
+    useShallow((s) => ({ board: s.board, selection: s.selection, manualLinks: s.overlay?.manualLinks })),
+  )
   const dispatch = useAppDispatch()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const panelRef = useRef<HTMLElement>(null)
@@ -46,7 +49,7 @@ export function Inspector() {
     const relationship = board.relationships.find((r) => r.id === selection.id)
     content = relationship ? <RelationshipDetail board={board} relationship={relationship} /> : <Overview board={board} />
   } else if (selection?.type === 'link') {
-    const link = overlay?.manualLinks.find((l) => l.id === selection.id)
+    const link = manualLinks?.find((l) => l.id === selection.id)
     content = link ? <LinkDetail key={link.id} board={board} link={link} /> : <Overview board={board} />
   } else {
     content = <Overview board={board} />

@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
-import { useAppDispatch, useAppState } from '../app/appContext'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from '../app/store'
 import { Section } from '../inspector/parts'
 import { newId } from '../overlay/notes'
 import { OVERLAY_LIMITS } from '../overlay/schema'
@@ -72,9 +73,9 @@ function NoteForm({ target }: { target: Target }) {
 
 /** The user's own notes and questions about one target, and a form to add more. */
 export function NotesSection({ target }: { target: Target }) {
-  const { board, overlay } = useAppState()
-  if (!board || !overlay) return null
-  const notes = overlay.notes.filter((n) => sameTarget(n.target, target))
+  const { board, allNotes } = useAppStore(useShallow((s) => ({ board: s.board, allNotes: s.overlay?.notes })))
+  if (!board || !allNotes) return null
+  const notes = allNotes.filter((n) => sameTarget(n.target, target))
   return (
     <Section title="Your notes">
       {notes.length > 0 && (

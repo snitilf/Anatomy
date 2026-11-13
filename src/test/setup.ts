@@ -20,6 +20,19 @@ globalThis.DOMMatrixReadOnly = DOMMatrixStub
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 600 })
 Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, value: 800 })
 
+// jsdom has no matchMedia. Sonner reads the color scheme and the motion setting from it.
+window.matchMedia = (query: string) =>
+  ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  }) as MediaQueryList
+
 afterEach(() => {
   cleanup()
 })

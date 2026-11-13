@@ -26,8 +26,6 @@ export interface PersistenceApi {
   unavailable: StorageError | undefined
   save: SaveState
   saved: readonly BoardSummary[]
-  /** True for a few seconds after an export. */
-  exported: boolean
   deleting: BoardSummary | undefined
   choice: FileChoice | undefined
   switchSpace: (space: Namespace) => void
@@ -46,7 +44,6 @@ export const PersistenceContext = createContext<PersistenceApi>({
   unavailable: undefined,
   save: { kind: 'none' },
   saved: [],
-  exported: false,
   deleting: undefined,
   choice: undefined,
   switchSpace: () => {},
