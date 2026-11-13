@@ -1,0 +1,282 @@
+.title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.title:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.lead {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.meta {
+  margin: -2px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.changes {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: var(--radius-s);
+  background: var(--soft);
+  font-size: 13px;
+}
+
+.notice {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-s);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.section {
+  margin-top: 22px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bullets {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.bullets li {
+  margin-bottom: 6px;
+  padding-left: 2px;
+  text-wrap: pretty;
+}
+
+.bullets li::marker {
+  color: var(--muted);
+}
+
+.plain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.stack {
+  display: grid;
+  gap: 4px;
+}
+
+.back {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 4px 8px 4px 0;
+  margin: -4px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.back:hover {
+  color: var(--accent);
+}
+
+.row,
+.connection {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.row:hover,
+.connection:hover {
+  background: var(--faint);
+}
+
+.row:active,
+.connection:active {
+  background: var(--soft);
+}
+
+.connection {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  border-color: var(--line);
+}
+
+.connectionTitle {
+  font-weight: 600;
+}
+
+.arrow {
+  color: var(--accent);
+}
+
+.connectionLabel {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rowMain {
+  display: grid;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-weight: 550;
+}
+
+.rowMeta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+
+.route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.routeKind {
+  color: var(--muted);
+}
+
+.source {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  margin: 0 0 16px;
+}
+
+.route + .source,
+.notice + .source {
+  margin-top: 14px;
+}
+
+.sourceText {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.refs {
+  margin-top: 2px;
+  padding: 8px 12px;
+  width: 100%;
+  border-left: 2px solid var(--line);
+  font-size: 13px;
+}
+
+.refsTitle {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.refList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.refLabel {
+  display: block;
+  font-weight: 600;
+}
+
+.path {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.refNote {
+  display: block;
+  color: var(--muted);
+}
+
+.prose p,
+.prose ul,
+.prose ol {
+  margin: 0 0 10px;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 20px;
+}
+
+.prose code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--faint);
+}
+
+.prose > :last-child {
+  margin-bottom: 0;
+}
+
+.primary {
+  appearance: none;
+  margin: 0 0 8px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:active {
+  transform: scale(0.98);
+}

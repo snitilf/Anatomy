@@ -1,0 +1,57 @@
+.button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.button:hover {
+  background: var(--faint);
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+}
+
+.quiet {
+  border-color: transparent;
+  background: transparent;
+}
+
+.quiet:hover {
+  background: var(--faint);
+}
+
+@media (hover: none) {
+  .button:hover {
+    background: var(--surface);
+  }
+
+  .primary:hover {
+    background: var(--accent);
+  }
+}

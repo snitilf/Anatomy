@@ -1,0 +1,24 @@
+.panel {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+}
+
+.content {
+  padding: 20px 24px 40px;
+  max-width: 560px;
+}
+
+@media (max-width: 760px) {
+  .panel {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .content {
+    padding: 16px 16px 32px;
+  }
+}

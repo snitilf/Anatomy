@@ -1,8 +1,10 @@
+import { AppStateProvider } from './app/AppState'
+import { Shell } from './app/Shell'
+
 export default function App() {
   return (
-    <main>
-      <h1>Anatomy</h1>
-      <p>No board is open.</p>
-    </main>
+    <AppStateProvider>
+      <Shell />
+    </AppStateProvider>
   )
 }
