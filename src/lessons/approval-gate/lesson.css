@@ -1,0 +1,244 @@
+@import '../kit/iso.css';
+
+/* Theme tokens for the lesson. They follow the app palette. */
+.iso.ag[data-theme='light'] {
+  --ag-paper: #f4f3ed;
+  --ag-ink: #252d29;
+  --ag-accent: #26745f;
+  --ag-on-accent: #f4f3ed;
+  --anatomy-page: #f4f3ed;
+  --anatomy-card: #f4f3ed;
+  --anatomy-text: #4d5953;
+  --anatomy-strong: #252d29;
+  --anatomy-muted: #6c7770;
+  --anatomy-paper: #f4f3ed;
+  --anatomy-face: #fcfcf8;
+  --anatomy-top: #fcfcf8;
+  --anatomy-shade-0: #c6c9bd;
+  --anatomy-shade-1: #d3d6ca;
+  --anatomy-shade-2: #dfe1d6;
+  --anatomy-shade-3: #e9eae0;
+  --anatomy-lit-top: #e1efe8;
+  --anatomy-lit-shade: #cfe4d9;
+  --anatomy-hi: #252d29;
+  --anatomy-mid: #6b7771;
+  --anatomy-lo: #99a39c;
+  --anatomy-faint: #c4cabf;
+  --anatomy-lit: #26745f;
+  --anatomy-halo: #7b8279;
+  --anatomy-halo-opacity: 0.32;
+  --anatomy-dot: #3a4540;
+}
+
+.iso.ag[data-theme='dark'] {
+  --ag-paper: #171d1a;
+  --ag-ink: #edf1e7;
+  --ag-accent: #9bcfb6;
+  --ag-on-accent: #171d1a;
+  --anatomy-page: #171d1a;
+  --anatomy-card: #171d1a;
+  --anatomy-text: #a6b0a9;
+  --anatomy-strong: #edf1e7;
+  --anatomy-muted: #8a958e;
+  --anatomy-paper: #171d1a;
+  --anatomy-face: #222b27;
+  --anatomy-top: #2b3631;
+  --anatomy-shade-0: #0e1310;
+  --anatomy-shade-1: #131815;
+  --anatomy-shade-2: #1a211d;
+  --anatomy-shade-3: #212a26;
+  --anatomy-lit-top: #2b463a;
+  --anatomy-lit-shade: #223830;
+  --anatomy-hi: #edf1e7;
+  --anatomy-mid: #7d8982;
+  --anatomy-lo: #4b5751;
+  --anatomy-faint: #323c37;
+  --anatomy-lit: #9bcfb6;
+  --anatomy-halo: #050706;
+  --anatomy-halo-opacity: 0.9;
+  --anatomy-dot: #dfe6dc;
+}
+
+.ag {
+  color: var(--ag-ink);
+  background: var(--ag-paper);
+  font: 15px/1.55 system-ui, sans-serif;
+  padding: 4px 0 8px;
+}
+
+.ag:focus-visible {
+  outline: 1px solid var(--anatomy-muted);
+  outline-offset: 4px;
+}
+
+.ag .iso-figure {
+  margin: 0;
+}
+
+.ag .iso-stage {
+  position: relative;
+}
+
+.ag .iso-caption {
+  min-height: 3.1em;
+  color: var(--anatomy-text);
+}
+
+.ag-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.ag-controls button {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--anatomy-mid);
+  background: transparent;
+  color: var(--ag-ink);
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--anatomy-ease),
+    border-color 140ms var(--anatomy-ease);
+}
+
+.ag-controls button:hover:not(:disabled) {
+  background: var(--anatomy-face);
+  border-color: var(--ag-ink);
+}
+
+.ag-controls button:active:not(:disabled) {
+  background: var(--anatomy-shade-2);
+}
+
+.ag-controls button:focus-visible {
+  outline: 2px solid var(--ag-accent);
+  outline-offset: 2px;
+}
+
+.ag-controls button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ag-controls button[data-primary] {
+  background: var(--ag-accent);
+  border-color: var(--ag-accent);
+  color: var(--ag-on-accent);
+}
+
+.ag-controls button[data-primary]:hover:not(:disabled) {
+  background: var(--ag-accent);
+  filter: brightness(1.08);
+}
+
+.ag-controls kbd {
+  margin-left: 6px;
+  font: 11px/1 var(--anatomy-mono);
+  opacity: 0.65;
+}
+
+.ag-controls .ag-spacer {
+  flex: 1 1 24px;
+}
+
+.ag-notes {
+  margin-top: 22px;
+  display: grid;
+  gap: 18px;
+  max-width: 68ch;
+}
+
+.ag-label {
+  display: inline-block;
+  justify-self: start;
+  font: 600 11px/1 var(--anatomy-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 9px;
+  border: 1px solid var(--ag-accent);
+  border-radius: 999px;
+  color: var(--ag-accent);
+}
+
+.ag-notes h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.ag-notes p {
+  margin: 0;
+  color: var(--anatomy-text);
+}
+
+.ag-map {
+  margin: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--anatomy-faint);
+}
+
+.ag-map > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) 2fr;
+  gap: 4px 18px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--anatomy-faint);
+}
+
+.ag-map dt {
+  font-weight: 600;
+}
+
+.ag-map dt span {
+  display: block;
+  font-weight: 400;
+  color: var(--anatomy-muted);
+}
+
+.ag-map dd {
+  margin: 0;
+  color: var(--anatomy-text);
+}
+
+.ag-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .ag-map > div {
+    grid-template-columns: 1fr;
+  }
+
+  .ag-controls .ag-spacer {
+    display: none;
+  }
+
+  .ag .iso-plate-corner[data-corner='hint'] {
+    white-space: normal;
+    max-width: 62%;
+    line-height: 1.5;
+  }
+
+  .ag .iso-svg {
+    width: 118%;
+    margin-left: -9%;
+  }
+
+  .ag .iso-stage {
+    overflow: hidden;
+  }
+}
