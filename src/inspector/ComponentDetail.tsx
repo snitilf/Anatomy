@@ -1,0 +1,74 @@
+import type { Board, BoardComponent } from '../board/schema'
+import { Markdown } from '../text/markdown'
+import { BackButton, BulletList, ConnectionButton, Heading, ItemGroups, Section, SourceBlock } from './parts'
+import styles from './parts.module.css'
+
+export function ComponentDetail({
+  board,
+  component,
+  onOpenLesson,
+}: {
+  board: Board
+  component: BoardComponent
+  onOpenLesson: ((lessonId: string) => void) | undefined
+}) {
+  const outgoing = board.relationships.filter((r) => r.from === component.id)
+  const incoming = board.relationships.filter((r) => r.to === component.id)
+  const items = board.items.filter((i) => i.about === component.id)
+  const group = board.groups.find((g) => g.id === component.group)
+
+  return (
+    <>
+      <BackButton />
+      <Heading>{component.label}</Heading>
+      {group && <p className={styles.meta}>In {group.label}</p>}
+      <SourceBlock source={component.source} />
+
+      <p className={styles.lead}>{component.summary}</p>
+
+      {component.lesson && onOpenLesson && (
+        <button type="button" className={styles.primary} onClick={() => onOpenLesson(component.lesson as string)}>
+          Open lesson
+        </button>
+      )}
+
+      {component.explanation && (
+        <Section title="Explanation">
+          <Markdown source={component.explanation} className={styles.prose ?? ""} />
+        </Section>
+      )}
+
+      {component.inputs.length > 0 && (
+        <Section title="Takes in">
+          <BulletList items={component.inputs} />
+        </Section>
+      )}
+      {component.outputs.length > 0 && (
+        <Section title="Hands out">
+          <BulletList items={component.outputs} />
+        </Section>
+      )}
+
+      {outgoing.length > 0 && (
+        <Section title="Goes to">
+          <div className={styles.stack}>
+            {outgoing.map((r) => (
+              <ConnectionButton key={r.id} relationship={r} board={board} direction="out" />
+            ))}
+          </div>
+        </Section>
+      )}
+      {incoming.length > 0 && (
+        <Section title="Comes from">
+          <div className={styles.stack}>
+            {incoming.map((r) => (
+              <ConnectionButton key={r.id} relationship={r} board={board} direction="in" />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      <ItemGroups items={items} />
+    </>
+  )
+}
