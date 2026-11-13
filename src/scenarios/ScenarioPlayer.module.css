@@ -1,0 +1,142 @@
+.bar {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  animation: rise 200ms var(--ease-out);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.caption {
+  margin: 0;
+  max-width: 64ch;
+  font-size: 19px;
+  line-height: 1.4;
+  font-weight: 500;
+  text-wrap: pretty;
+  min-height: 2.8em;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.step,
+.close {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease-out),
+    transform 120ms var(--ease-out),
+    opacity 120ms var(--ease-out);
+}
+
+.step:hover,
+.close:hover {
+  background: var(--faint);
+}
+
+.step:active,
+.close:active {
+  transform: scale(0.97);
+}
+
+.forward {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.forward:hover {
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+.step[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.step[aria-disabled='true']:active {
+  transform: none;
+}
+
+.close {
+  min-height: 28px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 760px) {
+  .bar {
+    padding: 10px 14px 10px;
+    gap: 6px;
+  }
+
+  .caption {
+    font-size: 16px;
+    min-height: 0;
+  }
+
+  .foot {
+    flex-wrap: wrap;
+  }
+}
