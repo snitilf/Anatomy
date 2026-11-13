@@ -107,7 +107,7 @@ describe('export files', () => {
   it('applies the size limit', () => {
     const r = parseOpenedFile('x'.repeat(2_000_001))
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.errors[0]!.message).toContain('limit')
+    if (!r.ok) expect(r.errors[0]!.message).toContain('Anatomy opens files up to 2 MB')
     const small = parseOpenedFile('{}', { maxExportBytes: 1 })
     expect(small.ok).toBe(false)
   })

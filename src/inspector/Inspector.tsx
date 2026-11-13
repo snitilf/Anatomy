@@ -12,6 +12,7 @@ export function Inspector() {
   const { board, selection, overlay } = useAppState()
   const dispatch = useAppDispatch()
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const focusNext = useRef(false)
   const key = selection ? (selection.type === 'board' ? 'board' : `${selection.type}:${selection.id}`) : 'board'
 
@@ -23,6 +24,11 @@ export function Inspector() {
     },
     [dispatch],
   )
+
+  // A new selection or a new board starts at the top of the panel, not where the last one was scrolled.
+  useEffect(() => {
+    panelRef.current?.scrollTo?.({ top: 0 })
+  }, [key, board?.id])
 
   useEffect(() => {
     if (!focusNext.current) return
@@ -48,7 +54,7 @@ export function Inspector() {
 
   return (
     <PanelContext.Provider value={{ choose, headingRef }}>
-      <aside className={styles.panel} aria-label="Details" data-testid="inspector">
+      <aside ref={panelRef} className={styles.panel} aria-label="Details" data-testid="inspector">
         <div key={key} className={styles.content}>
           {content}
         </div>

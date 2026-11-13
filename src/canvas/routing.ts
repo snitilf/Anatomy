@@ -23,6 +23,8 @@ export interface Plan {
   in: Side
   a: Point
   b: Point
+  /** Pushes the middle of the curve sideways, so connections between the same two cards do not run together. */
+  bend?: Point
 }
 
 const NORMAL: Record<Side, Point> = {
@@ -39,7 +41,9 @@ export function pickSides(from: Point, to: Point): { out: Side; in: Side } {
   return to.y >= from.y ? { out: 'bottom', in: 'top' } : { out: 'top', in: 'bottom' }
 }
 
-const SPREAD = 24
+const SPREAD = 28
+/** How far apart, across the middle, connections between the same two cards are drawn. */
+const BUNDLE_GAP = 46
 
 function sideMiddle(p: Point, side: Side): Point {
   if (side === 'left') return { x: p.x, y: p.y + CARD_HEIGHT / 2 }
@@ -98,18 +102,45 @@ export function planEdges(positions: Readonly<Record<string, Point>>, edges: rea
       point[along] += (i - (list.length - 1) / 2) * gap
     })
   }
+
+  // Connections between the same two cards leave and arrive side by side, then bow apart in the middle.
+  const pairs = new Map<string, string[]>()
+  for (const e of edges) {
+    if (!plans.has(e.id)) continue
+    const key = e.from < e.to ? `${e.from}|${e.to}` : `${e.to}|${e.from}`
+    const list = pairs.get(key)
+    if (list) list.push(e.id)
+    else pairs.set(key, [e.id])
+  }
+  for (const ids of pairs.values()) {
+    if (ids.length < 2) continue
+    // Same order as the meeting points along the card side (by ID), so the curves never cross.
+    ids.sort()
+    ids.forEach((id, i) => {
+      const plan = plans.get(id)
+      if (!plan) return
+      const amount = (i - (ids.length - 1) / 2) * BUNDLE_GAP
+      // Push across the line, towards the side where the meeting points of later IDs sit.
+      const toward = plan.out === 'left' || plan.out === 'right' ? { x: 0, y: 1 } : { x: 1, y: 0 }
+      const length = Math.hypot(plan.b.x - plan.a.x, plan.b.y - plan.a.y) || 1
+      let normal = { x: -(plan.b.y - plan.a.y) / length, y: (plan.b.x - plan.a.x) / length }
+      if (normal.x * toward.x + normal.y * toward.y < 0) normal = { x: -normal.x, y: -normal.y }
+      plan.bend = { x: normal.x * amount, y: normal.y * amount }
+    })
+  }
   return plans
 }
 
 const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
 
 /** A cubic curve that leaves one side straight out and arrives at the other straight in. */
-export function curve(a: Point, sideA: Side, b: Point, sideB: Side): Route {
+export function curve(a: Point, sideA: Side, b: Point, sideB: Side, bend: Point = { x: 0, y: 0 }): Route {
   const reach = Math.max(28, (Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2)
   const na = NORMAL[sideA]
   const nb = NORMAL[sideB]
-  const c1 = { x: a.x + na.x * reach, y: a.y + na.y * reach }
-  const c2 = { x: b.x + nb.x * reach, y: b.y + nb.y * reach }
+  // The curve peaks at three quarters of the control offset, so the push is scaled up to move the middle by `bend`.
+  const c1 = { x: a.x + na.x * reach + bend.x * 1.33, y: a.y + na.y * reach + bend.y * 1.33 }
+  const c2 = { x: b.x + nb.x * reach + bend.x * 1.33, y: b.y + nb.y * reach + bend.y * 1.33 }
   const points: Point[] = []
   const steps = 48
   for (let i = 0; i <= steps; i++) {
@@ -358,7 +389,7 @@ export function routeConnection(
   ends: readonly [Rect, Rect],
   used: readonly (readonly [Point, Point])[] = [],
 ): Route {
-  const direct = curve(plan.a, plan.out, plan.b, plan.in)
+  const direct = curve(plan.a, plan.out, plan.b, plan.in, plan.bend)
   const others = cards.filter((c) => c !== ends[0] && c !== ends[1])
   if (others.length === 0 || !hitsAnyCard(direct, others)) return direct
   const n1 = NORMAL[plan.out]

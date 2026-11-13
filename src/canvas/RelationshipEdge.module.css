@@ -24,6 +24,11 @@
   text-align: center;
   text-wrap: balance;
   overflow-wrap: anywhere;
+  /* A long label stops after three lines. The whole text shows once the connection is selected. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   pointer-events: all;
   cursor: pointer;
   box-shadow: 0 1px 2px var(--shadow);
@@ -35,6 +40,11 @@
 .pill:hover,
 .pill[data-selected] {
   z-index: 1;
+}
+
+.pill[data-selected] {
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 
 .pill[data-kind='unknown'] {

@@ -11,7 +11,7 @@ export function Dialogs() {
       {deleting && (
         <Modal title={`Delete ${deleting.title}?`} onCancel={() => askDelete(undefined)}>
           <p className={styles.text}>
-            This deletes the board and your notes from this browser. After that, an export file is the only copy.
+            This removes the board and your notes from this browser. Only an export file keeps them.
           </p>
           <div className={styles.actions}>
             <button type="button" className={buttons.button} onClick={() => askDelete(undefined)}>
@@ -26,7 +26,7 @@ export function Dialogs() {
       {choice && (
         <Modal title={`This file has its own notes and layout for ${choice.title}.`} onCancel={() => resolveChoice(undefined)}>
           <p className={styles.text}>
-            This browser has notes and layout for it too. Choose which to keep. Either way, the board comes from the file.
+            This browser has notes and layout for it too. Choose which to keep. The board comes from the file either way.
           </p>
           <div className={styles.actions}>
             <button type="button" className={buttons.button} onClick={() => resolveChoice(undefined)}>

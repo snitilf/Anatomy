@@ -33,6 +33,7 @@ export function ManualEdge(props: EdgeProps<Edge<ManualEdgeData>>) {
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
+          title={data.hasLabel ? data.text : undefined}
           onClick={() => dispatch({ type: 'select', selection: { type: 'link', id: data.linkId } })}
         >
           {data.hasLabel && <span className={styles.chip}>You</span>}

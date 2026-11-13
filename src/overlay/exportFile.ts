@@ -47,13 +47,19 @@ export function parseOpenedFile(text: string, options: OpenOptions = {}): Opened
   }
 }
 
+/** Whole megabytes when they are whole, one decimal otherwise, rounded up so a file over the limit never reads as equal to it. */
+function megabytes(bytes: number): string {
+  const tenths = Math.ceil(bytes / 100_000)
+  return tenths % 10 === 0 ? String(tenths / 10) : (tenths / 10).toFixed(1)
+}
+
 function open(text: string, options: OpenOptions): OpenedFile {
   if (text.startsWith('﻿')) text = text.slice(1)
 
   const maxBytes = options.maxExportBytes ?? LIMITS.fileBytes * 2
   const bytes = new TextEncoder().encode(text).length
   if (bytes > maxBytes) {
-    return fail('', `The file is ${(bytes / 1_000_000).toFixed(1)} MB. The limit is ${(maxBytes / 1_000_000).toFixed(1)} MB.`)
+    return fail('', `This file is ${megabytes(bytes)} MB. Anatomy opens files up to ${megabytes(maxBytes)} MB.`)
   }
 
   let data: unknown
@@ -67,6 +73,9 @@ function open(text: string, options: OpenOptions): OpenedFile {
     typeof data === 'object' && data !== null && !Array.isArray(data) && (data as Record<string, unknown>).format === 'anatomy-export'
   if (!isExport) {
     // A bare board file keeps the board limit.
+    if (bytes > LIMITS.fileBytes) {
+      return fail('', `This file is ${megabytes(bytes)} MB. Anatomy opens boards up to ${megabytes(LIMITS.fileBytes)} MB.`)
+    }
     const parsed = parseBoard(text)
     return parsed.ok ? { ok: true, kind: 'board', board: parsed.board, warnings: parsed.warnings } : parsed
   }

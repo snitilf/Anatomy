@@ -163,7 +163,7 @@ export function LinkDetail({ board, link }: { board: Board; link: ManualLink }) 
       {broken && (
         <>
           <p className={styles.notice}>
-            A part this link joined is no longer in the board. The link stays until you attach it to another part or delete it.
+            A part this link joined was removed. Attach the link to another part, or delete it.
           </p>
           {!ids.has(link.from) && <RelinkLinkEnd link={link} end="from" board={board} />}
           {!ids.has(link.to) && <RelinkLinkEnd link={link} end="to" board={board} />}

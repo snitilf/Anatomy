@@ -37,6 +37,7 @@ export function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
           data-dimmed={data.dimmed || undefined}
           data-kind={data.kind}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
+          title={text}
           onClick={() => dispatch({ type: 'select', selection: { type: 'relationship', id: data.relationshipId } })}
         >
           {text}

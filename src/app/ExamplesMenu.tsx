@@ -4,8 +4,31 @@ import { EXAMPLES } from './examples'
 import styles from './ExamplesMenu.module.css'
 import { usePersistence } from './persistenceContext'
 
-export function ExamplesMenu({ label, primary = false }: { label: string; primary?: boolean }) {
+/** The built-in example boards, as a list of buttons. */
+export function ExampleList({ onChosen }: { onChosen?: () => void }) {
   const { openText } = usePersistence()
+  return (
+    <ul className={styles.plain}>
+      {EXAMPLES.map((example) => (
+        <li key={example.id}>
+          <button
+            type="button"
+            className={styles.item}
+            onClick={() => {
+              onChosen?.()
+              openText(example.fileName, example.raw)
+            }}
+          >
+            <span className={styles.itemTitle}>{example.title}</span>
+            <span className={styles.itemText}>{example.description}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function ExamplesMenu({ label, primary = false }: { label: string; primary?: boolean }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -43,23 +66,9 @@ export function ExamplesMenu({ label, primary = false }: { label: string; primar
         <span aria-hidden="true" className={styles.caret} />
       </button>
       {open && (
-        <ul className={styles.list} id="examples-list">
-          {EXAMPLES.map((example) => (
-            <li key={example.id}>
-              <button
-                type="button"
-                className={styles.item}
-                onClick={() => {
-                  setOpen(false)
-                  openText(example.fileName, example.raw)
-                }}
-              >
-                <span className={styles.itemTitle}>{example.title}</span>
-                <span className={styles.itemText}>{example.description}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className={styles.list} id="examples-list">
+          <ExampleList onChosen={() => setOpen(false)} />
+        </div>
       )}
     </div>
   )
