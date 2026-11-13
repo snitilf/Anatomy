@@ -65,6 +65,40 @@ test('dragging a card during a walkthrough keeps the panel and never dims the he
   await expect(player).toBeVisible()
 })
 
+const EDGE_BOARDS = [
+  { name: 'Nordet example', file: 'src/examples/nordet.board.json' },
+  { name: 'Anatomy example', file: 'src/examples/anatomy.board.json' },
+  { name: 'URL shortener', file: 'src/examples/external/url-shortener.board.json' },
+]
+
+for (const board of EDGE_BOARDS) {
+  test(`no connection disappears for a frame while a card is held: ${board.name}`, async ({ page }) => {
+    await open(page, board.file)
+    const edges = page.locator('.react-flow__edge')
+    const total = await edges.count()
+    expect(total).toBeGreaterThan(0)
+    const spot = await grabbable(page)
+
+    await page.mouse.move(spot.x, spot.y)
+    await page.mouse.down()
+    // Sweep the card around so that every one of its lines changes the side it leaves from, more than once.
+    const counts: number[] = []
+    const path = (i: number) => {
+      const t = (i / 90) * Math.PI * 2
+      return { x: spot.x + Math.sin(t) * 260, y: spot.y + (1 - Math.cos(t)) * 110 }
+    }
+    for (let i = 1; i <= 90; i++) {
+      const at = path(i)
+      await page.mouse.move(at.x, at.y)
+      counts.push(await page.evaluate(() => new Promise<number>((resolve) => requestAnimationFrame(() => resolve(document.querySelectorAll('.react-flow__edge').length)))))
+    }
+    await page.mouse.up()
+    expect(Math.min(...counts)).toBe(total)
+    await nextFrame(page)
+    await expect(edges).toHaveCount(total)
+  })
+}
+
 interface Pair {
   from: { id: string; x: number; y: number }
   to: { id: string; x: number; y: number }
