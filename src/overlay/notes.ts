@@ -134,5 +134,7 @@ export function setPosition(overlay: Overlay, componentId: string, point: Point)
   if (!Object.hasOwn(overlay.positions, componentId) && Object.keys(overlay.positions).length >= OVERLAY_LIMITS.positions) {
     return overlay
   }
+  const current = Object.hasOwn(overlay.positions, componentId) ? overlay.positions[componentId] : undefined
+  if (current && current.x === point.x && current.y === point.y) return overlay
   return { ...overlay, positions: { ...overlay.positions, [componentId]: { x: point.x, y: point.y } } }
 }
