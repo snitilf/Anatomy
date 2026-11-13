@@ -11,10 +11,18 @@
   border-radius: var(--radius-m);
   box-shadow: var(--lift);
   cursor: grab;
-  transition:
-    border-color 150ms var(--ease-out),
-    box-shadow 150ms var(--ease-out),
-    opacity 200ms var(--ease-out);
+  /* A card never changes the layout or paint outside itself, so moving one repaints only that card. */
+  contain: layout paint style;
+  transition: opacity 120ms var(--ease-out);
+}
+
+/* A held card lifts. The shadow is fixed, so nothing is animated while it moves. */
+:global(.react-flow__node.dragging) .card {
+  cursor: grabbing;
+  transition: none;
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--ink) 14%, transparent),
+    0 16px 30px -10px color-mix(in srgb, var(--ink) 34%, transparent);
 }
 
 .card[data-highlighted] {
@@ -152,14 +160,15 @@
   background: var(--accent);
 }
 
-.card:hover .drawHandle,
+/* The dots are beside the card, inside the same map node, so the node is what the pointer is on. */
+:global(.react-flow__node:hover) .drawHandle,
 :global(.react-flow__node:focus-within) .drawHandle,
 :global([data-connecting]) .drawHandle {
   opacity: 1;
 }
 
 @media (hover: none) {
-  .card[data-selected] .drawHandle {
+  :global(.react-flow__node.selected) .drawHandle {
     opacity: 1;
   }
 }

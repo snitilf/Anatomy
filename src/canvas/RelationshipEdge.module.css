@@ -1,5 +1,5 @@
 .line {
-  transition: opacity 200ms var(--ease-out);
+  transition: opacity 120ms var(--ease-out);
 }
 
 .line[data-dimmed] {
@@ -32,9 +32,7 @@
   pointer-events: all;
   cursor: pointer;
   box-shadow: 0 1px 2px var(--shadow);
-  transition:
-    background-color 120ms var(--ease-out),
-    opacity 200ms var(--ease-out);
+  transition: opacity 120ms var(--ease-out);
 }
 
 .pill:hover,
