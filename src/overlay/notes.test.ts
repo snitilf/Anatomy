@@ -97,6 +97,12 @@ describe('setPosition and newId', () => {
     expect(setPosition(p, 'api', { x: 1e9, y: 0 })).toBe(p)
   })
 
+  it('returns the same overlay when the card is already there', () => {
+    const p = setPosition(emptyOverlay('x'), 'api', { x: 1, y: 2 })
+    expect(setPosition(p, 'api', { x: 1, y: 2 })).toBe(p)
+    expect(setPosition(p, 'api', { x: 1, y: 3 })).not.toBe(p)
+  })
+
   it('makes valid unique ids', () => {
     const ids = new Set(Array.from({ length: 200 }, () => newId('note')))
     expect(ids.size).toBe(200)
