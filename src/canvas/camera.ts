@@ -1,10 +1,12 @@
 import { getViewportForBounds, type ReactFlowInstance } from '@xyflow/react'
+import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
+import type { Point } from '../overlay/types'
 
 /** Space around the framed parts, as a share of the free area. */
 export const FIT_PADDING = 0.08
 export const FIT_MAX_ZOOM = 1.25
-/** Below this zoom card text is too small to read. */
-export const READABLE_ZOOM = 0.55
+/** Below this zoom card text is too small to read. At 0.8 a card title is 12 px. */
+export const READABLE_ZOOM = 0.8
 const WIDEST_VIEW = 0.15
 /** Keeps the legend and the zoom buttons off the bottom row of cards. */
 const CORNER_ROOM = 44
@@ -60,4 +62,36 @@ export function frame(flow: ReactFlowInstance, map: HTMLElement | null, options:
   }
   void flow.setViewport({ x, y: y + free.top, zoom }, { duration })
   return { width: free.width, height: map.getBoundingClientRect().height }
+}
+
+/** Space kept between a card that was brought back into view and the edge of the map. */
+const DROP_ROOM = 16
+
+/**
+ * A card dropped where it cannot be seen, such as under the inspector or past the edge of the map, is panned back.
+ * The card's middle must be inside the free area to leave it alone. Otherwise the view moves just far enough
+ * to show the whole card, and no further. Returns true when it moved the view.
+ */
+export function keepDroppedCardInView(flow: ReactFlowInstance, map: HTMLElement | null, at: Point, duration: number): boolean {
+  if (!map) return false
+  const free = freeArea(map)
+  const height = map.getBoundingClientRect().height
+  if (free.width <= 0 || height <= 0) return false
+  const { x, y, zoom } = flow.getViewport()
+  const left = at.x * zoom + x
+  const top = at.y * zoom + y
+  const right = left + CARD_WIDTH * zoom
+  const bottom = top + CARD_HEIGHT * zoom
+  const middleX = (left + right) / 2
+  const middleY = (top + bottom) / 2
+  if (middleX >= 0 && middleX <= free.width && middleY >= free.top && middleY <= height) return false
+  const shift = (low: number, high: number, min: number, max: number) => {
+    if (high - low > max - min || low < min) return min - low
+    return high > max ? max - high : 0
+  }
+  const dx = shift(left, right, DROP_ROOM, free.width - DROP_ROOM)
+  const dy = shift(top, bottom, free.top + DROP_ROOM, height - DROP_ROOM)
+  if (dx === 0 && dy === 0) return false
+  void flow.setViewport({ x: x + dx, y: y + dy, zoom }, { duration })
+  return true
 }

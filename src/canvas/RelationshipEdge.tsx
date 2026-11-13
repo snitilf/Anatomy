@@ -37,6 +37,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-highlighted={data.highlighted || undefined}
           data-dimmed={data.dimmed || undefined}
           data-faded={data.faded || undefined}
+          data-moving={data.moving || undefined}
           data-kind={data.kind}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
           title={text}

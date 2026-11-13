@@ -1,4 +1,3 @@
-import clsx from 'clsx'
 import buttons from './buttons.module.css'
 import { ExamplesMenu } from './ExamplesMenu'
 import styles from './EmptyState.module.css'
@@ -26,7 +25,7 @@ function Sketch() {
   )
 }
 
-export function EmptyState({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: () => void }) {
+export function EmptyState({ onOpen }: { onOpen: () => void }) {
   const { saved, space, unavailable } = usePersistence()
   return (
     <div className={styles.empty}>
@@ -37,9 +36,6 @@ export function EmptyState({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: (
         <ExamplesMenu label="Load an example" primary />
         <button type="button" className={buttons.button} onClick={onOpen}>
           Open board
-        </button>
-        <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={onHowTo}>
-          How to make a board
         </button>
       </div>
       {unavailable && (

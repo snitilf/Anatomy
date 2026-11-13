@@ -84,6 +84,14 @@
   opacity: 1;
 }
 
+/* While a card moves, its labels have no place yet. They are gone at once and fade in at the final place. */
+.pill[data-moving],
+.pill[data-moving]:hover {
+  opacity: 0;
+  transition: none;
+  pointer-events: none;
+}
+
 .pill[data-selected] {
   border-color: var(--accent);
   background: var(--soft);

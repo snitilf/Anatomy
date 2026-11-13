@@ -4,14 +4,21 @@ import { KIND_WORDS } from '../app/labels'
 import type { Selection } from '../app/state'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
 import type { ManualLink, Point } from '../overlay/types'
-import { pillHeight, placeLabel, PointIndex } from './labelPlacement'
-import { curve, Obstacles, planEdges, routeConnection, type EdgeEnds, type Rect, type Route, type Side } from './routing'
+import { pillHeight, placeLabel, PointIndex, textArea } from './labelPlacement'
+import { curve, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Rect, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
 
 export const GROUP_PADDING = { side: 24, top: 46, bottom: 24 }
+
+/**
+ * Every connection joins the same two hidden handles on its cards. The line is drawn from its own path, so it never
+ * depends on which side it leaves from. A handle that changed while a card moved made React Flow drop the edge for a frame.
+ */
+export const EDGE_OUT_HANDLE = 'edge-out'
+export const EDGE_IN_HANDLE = 'edge-in'
 
 export type { Side }
 export const SIDE_POSITION: Record<Side, Position> = {
@@ -47,6 +54,8 @@ export interface ManualEdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
+  /** The line is a cheap curve while a card moves, so the label has no place yet and stays hidden. */
+  moving: boolean
 }
 export interface GroupData extends Record<string, unknown> {
   label: string
@@ -67,6 +76,8 @@ export interface EdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
+  /** The line is a cheap curve while a card moves, so the label has no place yet and stays hidden. */
+  moving: boolean
 }
 
 export interface GroupBox {
@@ -107,8 +118,6 @@ export interface EdgeShape {
   id: string
   from: string
   to: string
-  sourceHandle: string
-  targetHandle: string
   /** The drawn line. It leaves each card from a side and keeps out of the other cards. */
   path: string
   /** Where the label sits and how wide it is. Chosen to stay off card text and off other labels. */
@@ -116,6 +125,11 @@ export interface EdgeShape {
   labelY: number
   labelWidth: number
   labelLines: number
+  /** The sampled points of the drawn line, kept so a later build can check that the line still keeps clear of the cards. */
+  points: readonly Point[]
+  runs?: readonly (readonly [Point, Point])[]
+  /** Drawn as a plain curve with the label at the middle while a card moves. Never kept by a later build. */
+  cheap?: true
 }
 
 /** Everything the map draws that depends on where the cards are. The slow part of a build. */
@@ -124,12 +138,34 @@ export interface Geometry {
   groups: readonly GroupBox[]
   /** Both ends of every drawn connection, in drawing order. */
   ends: readonly EdgeEnds[]
+  /** Where the cards were when the lines were last fully solved. A card that has since moved is the one that changes the picture. */
+  solved: Readonly<Record<string, Point>>
+}
+
+/** A pill box, as it is drawn. */
+function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>): Rect {
+  const height = pillHeight(shape.labelLines)
+  return { x: shape.labelX - shape.labelWidth / 2, y: shape.labelY - height / 2, width: shape.labelWidth, height }
+}
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+}
+
+function around(r: Rect, by: number): Rect {
+  return { x: r.x - by, y: r.y - by, width: r.width + by * 2, height: r.height + by * 2 }
 }
 
 const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
 
-/** Routes every line, then places every label so it keeps off all of them. */
-export function computeGeometry(board: Board, positions: Record<string, Point>, links: readonly ManualLink[] = []): Geometry {
+/**
+ * Routes every line, then places every label so it keeps off all of them.
+ *
+ * Pass the `previous` geometry of the same board and links to keep the picture steady: a connection whose two cards
+ * did not move keeps its line, and its label keeps its place, as long as they are still clear of the moved cards and
+ * every other label. Only the connections of moved cards, and those that a moved card now covers, are solved again.
+ */
+export function computeGeometry(board: Board, positions: Record<string, Point>, links: readonly ManualLink[] = [], previous?: Geometry): Geometry {
   const boxOf = new Map<string, Rect>()
   for (const c of board.components) {
     const p = positions[c.id]
@@ -140,49 +176,91 @@ export function computeGeometry(board: Board, positions: Record<string, Point>, 
   const drawn = links.filter((l) => boxOf.has(l.from) && boxOf.has(l.to))
   const ends: EdgeEnds[] = [...board.relationships, ...drawn.map((l) => ({ id: manualId(l.id), from: l.from, to: l.to }))]
   const plans = planEdges(positions, ends)
+  const texts = new Map<string, string>()
+  for (const r of board.relationships) texts.set(r.id, r.kind === 'unknown' ? `? ${r.label}` : r.label)
+  // The chip adds a few characters, so the width is measured with them.
+  for (const l of drawn) texts.set(manualId(l.id), l.label === '' ? 'Your link' : `You ${l.label}`)
 
-  // Draw every line first, so each label can keep off all of them.
+  // The cards that moved since the lines were last solved.
+  const movedBoxes: Rect[] = []
+  const movedIds = new Set<string>()
+  if (previous) {
+    for (const [id, box] of boxOf) {
+      const was = previous.solved[id]
+      if (!was || was.x !== box.x || was.y !== box.y) {
+        movedIds.add(id)
+        movedBoxes.push(box)
+      }
+    }
+  }
+  const kept = (end: EdgeEnds): EdgeShape | undefined => {
+    const shape = previous?.edges.get(end.id)
+    if (!shape || shape.cheap || shape.from !== end.from || shape.to !== end.to) return undefined
+    if (movedIds.has(end.from) || movedIds.has(end.to)) return undefined
+    return lineHitsCards(shape.points, movedBoxes) ? undefined : shape
+  }
+
+  // Draw every line first, so each label can keep off all of them. Lines that stay come first, so the rest route around them.
   const used: [Point, Point][] = []
-  const routes: { id: string; from: string; to: string; text: string; route: Route }[] = []
-  const route = (id: string, from: string, to: string, text: string) => {
-    const plan = plans.get(id)
-    const fromBox = boxOf.get(from)
-    const toBox = boxOf.get(to)
+  const slots: ({ id: string; from: string; to: string; text: string; route: Route; stays: EdgeShape | undefined } | undefined)[] = ends.map(() => undefined)
+  ends.forEach((end, i) => {
+    const stays = kept(end)
+    if (!stays) return
+    const route: Route = { d: stays.path, points: stays.points as Point[], ...(stays.runs ? { runs: stays.runs as [Point, Point][] } : {}) }
+    slots[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays }
+    if (route.runs) used.push(...route.runs)
+  })
+  ends.forEach((end, i) => {
+    if (slots[i]) return
+    const plan = plans.get(end.id)
+    const fromBox = boxOf.get(end.from)
+    const toBox = boxOf.get(end.to)
     if (!plan || !fromBox || !toBox) return
-    const drawnRoute = routeConnection(plan, boxes, [fromBox, toBox], used, obstacles)
-    routes.push({ id, from, to, text, route: drawnRoute })
-    if (drawnRoute.runs) used.push(...drawnRoute.runs)
-  }
-  for (const r of board.relationships) route(r.id, r.from, r.to, r.kind === 'unknown' ? `? ${r.label}` : r.label)
-  for (const l of drawn) {
-    // The chip adds a few characters, so the width is measured with them.
-    route(manualId(l.id), l.from, l.to, l.label === '' ? 'Your link' : `You ${l.label}`)
-  }
+    const route = routeConnection(plan, boxes, [fromBox, toBox], used, obstacles)
+    slots[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays: undefined }
+    if (route.runs) used.push(...route.runs)
+  })
+  const routes = slots.filter((r) => r !== undefined)
 
   const lines = new PointIndex()
   routes.forEach((r, i) => lines.add(i, r.route.points))
+  const movedAreas = movedBoxes.map(textArea)
   const taken: Rect[] = []
   const edges = new Map<string, EdgeShape>()
-  routes.forEach((r, i) => {
-    const plan = plans.get(r.id)
-    if (!plan) return
-    const label = placeLabel(r.route.points, r.text, boxes, taken, lines, i)
-    const height = pillHeight(label.lines)
-    taken.push({ x: label.x - label.width / 2, y: label.y - height / 2, width: label.width, height })
-    edges.set(r.id, {
-      id: r.id,
-      from: r.from,
-      to: r.to,
-      sourceHandle: `out-${plan.out}`,
-      targetHandle: `in-${plan.in}`,
-      path: r.route.d,
-      labelX: label.x,
-      labelY: label.y,
-      labelWidth: label.width,
-      labelLines: label.lines,
-    })
+  const shapeOf = (r: (typeof routes)[number], label: { x: number; y: number; width: number; lines: number }): EdgeShape => ({
+    id: r.id,
+    from: r.from,
+    to: r.to,
+    path: r.route.d,
+    labelX: label.x,
+    labelY: label.y,
+    labelWidth: label.width,
+    labelLines: label.lines,
+    points: r.route.points,
+    ...(r.route.runs ? { runs: r.route.runs } : {}),
   })
-  return { edges, groups: groupBounds(board, positions), ends }
+  const place = (r: (typeof routes)[number], i: number) => {
+    const label = placeLabel(r.route.points, r.text, boxes, taken, lines, i)
+    taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
+    edges.set(r.id, shapeOf(r, label))
+  }
+  // A label stays where it was while no moved card's text and no label placed before it is under it.
+  const later: number[] = []
+  routes.forEach((r, i) => {
+    const old = r.stays
+    if (old) {
+      const box = pillBox(old)
+      const clear = !movedAreas.some((a) => overlaps(box, a)) && !taken.some((t) => overlaps(box, around(t, 3)))
+      if (clear) {
+        taken.push(box)
+        edges.set(r.id, old)
+        return
+      }
+    }
+    later.push(i)
+  })
+  for (const i of later) place(routes[i] as (typeof routes)[number], i)
+  return { edges, groups: groupBounds(board, positions), ends, solved: positions }
 }
 
 /**
@@ -200,11 +278,11 @@ export function moveCard(board: Board, geometry: Geometry, positions: Record<str
     const middle = line.points[Math.floor(line.points.length / 2)] ?? plan.a
     const next: EdgeShape = {
       ...shape,
-      sourceHandle: `out-${plan.out}`,
-      targetHandle: `in-${plan.in}`,
       path: line.d,
       labelX: middle.x,
       labelY: middle.y,
+      points: line.points,
+      cheap: true,
     }
     edges ??= new Map(geometry.edges)
     edges.set(edgeId, next)
@@ -216,7 +294,7 @@ export function moveCard(board: Board, geometry: Geometry, positions: Record<str
     const box = def ? groupBox(board, def, positions) : undefined
     if (box) groups = geometry.groups.map((g) => (g.id === group ? box : g))
   }
-  return { edges: edges ?? geometry.edges, groups, ends: geometry.ends }
+  return { edges: edges ?? geometry.edges, groups, ends: geometry.ends, solved: geometry.solved }
 }
 
 /** Reuses the previous object when nothing in it changed, so React and React Flow skip the work. */
@@ -299,6 +377,9 @@ export function assembleGraph(
       position: positions[c.id] ?? { x: 0, y: 0 },
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
+      // The map never applies measured sizes back to its nodes. Without this React Flow forgets the card's handles each
+      // time the card object changes, and every line of a held card is gone until the next measurement.
+      measured: { width: CARD_WIDTH, height: CARD_HEIGHT },
       data: {
         componentId: c.id,
         highlighted: playing && highlight.has(c.id),
@@ -330,8 +411,8 @@ export function assembleGraph(
         type: 'relationship',
         source: r.from,
         target: r.to,
-        sourceHandle: shape.sourceHandle,
-        targetHandle: shape.targetHandle,
+        sourceHandle: EDGE_OUT_HANDLE,
+        targetHandle: EDGE_IN_HANDLE,
         selected,
         focusable: true,
         deletable: false,
@@ -351,6 +432,7 @@ export function assembleGraph(
           labelY: shape.labelY,
           labelWidth: shape.labelWidth,
           labelLines: shape.labelLines,
+          moving: shape.cheap === true,
         },
       } satisfies Edge<EdgeData>),
     )
@@ -366,8 +448,8 @@ export function assembleGraph(
         type: 'manual-link',
         source: l.from,
         target: l.to,
-        sourceHandle: shape.sourceHandle,
-        targetHandle: shape.targetHandle,
+        sourceHandle: EDGE_OUT_HANDLE,
+        targetHandle: EDGE_IN_HANDLE,
         selected,
         focusable: true,
         deletable: false,
@@ -385,6 +467,7 @@ export function assembleGraph(
           labelY: shape.labelY,
           labelWidth: shape.labelWidth,
           labelLines: shape.labelLines,
+          moving: shape.cheap === true,
         },
       } satisfies Edge<ManualEdgeData>),
     )
