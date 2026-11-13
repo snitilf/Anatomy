@@ -25,13 +25,16 @@ When an updated base board arrives, the overlay stays, and the app compares the 
 | `src/persistence/` | IndexedDB storage per namespace (home, work). | `src/board/`, `src/overlay/` |
 | `src/text/` | Safe renderer for the Markdown subset. | `react` |
 | `src/lessons/` | Built-in lesson catalog and lesson components. | `react` |
-| `src/app/` | App state (one reducer), shell, toolbar, dialogs. | all of the above |
+| `src/app/` | App state (one pure reducer in a zustand store, read through selectors), shell, toolbar, dialogs. | all of the above |
 | `src/canvas/` | React Flow map: cards, group areas, connections, manual links. | `@xyflow/react`, `src/app/` |
 | `src/inspector/` | Plain-English panel for the selection. | `src/app/`, `src/text/` |
 | `src/scenarios/` | Walkthrough player: step state, highlights, captions. | `src/app/` |
 | `src/notes/` | Notes, questions, manual links, and the review of notes after an update. | `src/overlay/`, `src/app/` |
 
 Logic lives in pure functions with unit tests.
+While a card is dragged, only the connections of that card are redrawn with simple curves.
+After the drop, one full layout pass routes the connections and places the labels.
+Connections whose cards did not move keep their route and label when those are still clear.
 The default layout places groups in columns 440 units apart and cards in rows 230 units apart.
 When a board opens, every card position is saved in the overlay, so a later revision never moves an existing card.
 React components read from the app state and dispatch actions.
