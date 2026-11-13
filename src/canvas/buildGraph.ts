@@ -3,10 +3,13 @@ import type { Board, BoardRelationship } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
 import type { Selection } from '../app/state'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
-import type { Point } from '../overlay/types'
+import type { ManualLink, Point } from '../overlay/types'
 import { pillHeight, placeLabel } from './labelPlacement'
 import { planEdges, routeConnection, type Rect, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
+
+/** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
+export const MANUAL_PREFIX = 'manual:'
 
 export const GROUP_PADDING = { side: 24, top: 46, bottom: 24 }
 
@@ -24,6 +27,20 @@ export interface CardData extends Record<string, unknown> {
   highlighted: boolean
   /** A walkthrough is playing and this part is not in the step. */
   dimmed: boolean
+  /** How many of the user's notes and questions are attached to this part. */
+  noteCount: number
+}
+export interface ManualEdgeData extends Record<string, unknown> {
+  linkId: string
+  /** The words on the pill: the link's label, or "Your link". */
+  text: string
+  hasLabel: boolean
+  active: boolean
+  path: string
+  labelX: number
+  labelY: number
+  labelWidth: number
+  labelLines: number
 }
 export interface GroupData extends Record<string, unknown> {
   label: string
@@ -74,6 +91,10 @@ export function buildGraph(
   selection: Selection | undefined,
   /** IDs of the parts and connections a walkthrough step is about. Undefined or empty shows everything. */
   highlight?: ReadonlySet<string>,
+  /** Links the user drew. A link whose end is missing is not drawn. */
+  links: readonly ManualLink[] = [],
+  /** Notes and questions per part ID. */
+  noteCounts: ReadonlyMap<string, number> = new Map(),
 ): { nodes: Node[]; edges: Edge[] } {
   const playing = highlight !== undefined && highlight.size > 0
   const boxOf = new Map<string, Rect>()
@@ -105,15 +126,25 @@ export function buildGraph(
     position: positions[c.id] ?? { x: 0, y: 0 },
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    data: { componentId: c.id, highlighted: playing && highlight.has(c.id), dimmed: playing && !highlight.has(c.id) },
+    data: {
+      componentId: c.id,
+      highlighted: playing && highlight.has(c.id),
+      dimmed: playing && !highlight.has(c.id),
+      noteCount: noteCounts.get(c.id) ?? 0,
+    },
     selected: selection?.type === 'component' && selection.id === c.id,
-    connectable: false,
+    connectable: true,
     deletable: false,
     ariaLabel: `${c.label}. ${c.summary}`,
   }))
 
   const selectedPart = selection?.type === 'component' ? selection.id : undefined
-  const plans = planEdges(positions, board.relationships)
+  const drawn = links.filter((l) => boxOf.has(l.from) && boxOf.has(l.to))
+  const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
+  const plans = planEdges(positions, [
+    ...board.relationships,
+    ...drawn.map((l) => ({ id: manualId(l.id), from: l.from, to: l.to })),
+  ])
   // Draw every line first, so each label can keep off all of them.
   const used: [Point, Point][] = []
   const routes = new Map<string, Route>()
@@ -173,5 +204,50 @@ export function buildGraph(
     ]
   })
 
-  return { nodes: [...groups, ...cards], edges }
+  const manual: Edge<ManualEdgeData>[] = drawn.flatMap((l) => {
+    const plan = plans.get(manualId(l.id))
+    const fromBox = boxOf.get(l.from)
+    const toBox = boxOf.get(l.to)
+    if (!plan || !fromBox || !toBox) return []
+    const route = routeConnection(plan, boxes, [fromBox, toBox], used)
+    if (route.runs) used.push(...route.runs)
+    const selected = selection?.type === 'link' && selection.id === l.id
+    const active = selected || (selectedPart !== undefined && (l.from === selectedPart || l.to === selectedPart))
+    const text = l.label === '' ? 'Your link' : l.label
+    const otherLines = [...routes.values()].flatMap((other) => other.points)
+    // The chip adds a few characters, so the width is measured with them.
+    const label = placeLabel(route.points, l.label === '' ? text : `You ${text}`, boxes, taken, otherLines)
+    const height = pillHeight(label.lines)
+    taken.push({ x: label.x - label.width / 2, y: label.y - height / 2, width: label.width, height })
+    const color = active ? 'var(--accent)' : 'var(--ink)'
+    return [
+      {
+        id: manualId(l.id),
+        type: 'manual-link',
+        source: l.from,
+        target: l.to,
+        sourceHandle: `out-${plan.out}`,
+        targetHandle: `in-${plan.in}`,
+        selected,
+        focusable: true,
+        deletable: false,
+        interactionWidth: 28,
+        markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
+        ariaLabel: `Your link from ${names.get(l.from) ?? l.from} to ${names.get(l.to) ?? l.to}${l.label === '' ? '' : `: ${l.label}`}`,
+        data: {
+          linkId: l.id,
+          text,
+          hasLabel: l.label !== '',
+          active,
+          path: route.d,
+          labelX: label.x,
+          labelY: label.y,
+          labelWidth: label.width,
+          labelLines: label.lines,
+        },
+      },
+    ]
+  })
+
+  return { nodes: [...groups, ...cards], edges: [...edges, ...manual] }
 }

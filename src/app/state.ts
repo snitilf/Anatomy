@@ -2,10 +2,20 @@ import type { Board } from '../board/schema'
 import type { BoardProblem } from '../board/validate'
 import { diffBoards } from '../overlay/diff'
 import { resolvePositions } from '../overlay/layout'
-import { setPosition } from '../overlay/notes'
-import { emptyOverlay, type Overlay, type Point } from '../overlay/types'
+import {
+  addManualLink,
+  addNote,
+  confirmNote,
+  deleteManualLink,
+  deleteNote,
+  editManualLink,
+  editNote,
+  relinkNote,
+  setPosition,
+} from '../overlay/notes'
+import { emptyOverlay, type Note, type Overlay, type Point, type Target } from '../overlay/types'
 
-export type Selection = { type: 'board' } | { type: 'component' | 'relationship'; id: string }
+export type Selection = { type: 'board' } | { type: 'component' | 'relationship' | 'link'; id: string }
 
 export interface AppState {
   board?: Board
@@ -22,7 +32,25 @@ export interface AppState {
 }
 
 export type Action =
-  | { type: 'boardOpened'; board: Board; overlay?: Overlay | undefined; warnings: BoardProblem[] }
+  | {
+      type: 'boardOpened'
+      board: Board
+      overlay?: Overlay | undefined
+      warnings: BoardProblem[]
+      /** The saved version of this board, when it is not the one open now. The changes are measured from it. */
+      previous?: Board | undefined
+    }
+  | { type: 'closed' }
+  | { type: 'noticeShown'; message: string }
+  | { type: 'changesDismissed' }
+  | { type: 'noteAdded'; kind: Note['kind']; text: string; target: Target; id: string; now: Date }
+  | { type: 'noteEdited'; id: string; text: string; now: Date }
+  | { type: 'noteDeleted'; id: string }
+  | { type: 'noteConfirmed'; id: string; now: Date }
+  | { type: 'noteRelinked'; id: string; target: Target; now: Date }
+  | { type: 'linkAdded'; from: string; to: string; label: string; id: string; now: Date }
+  | { type: 'linkEdited'; id: string; change: { from?: string; to?: string; label?: string } }
+  | { type: 'linkDeleted'; id: string }
   | { type: 'openFailed'; fileName: string; errors: BoardProblem[] }
   | { type: 'dismissErrors' }
   | { type: 'dismissWarnings' }
@@ -36,9 +64,10 @@ export type Action =
 
 export const initialState: AppState = { warnings: [] }
 
-function selectionExists(board: Board, selection: Selection | undefined): boolean {
+function selectionExists(board: Board, selection: Selection | undefined, overlay?: Overlay): boolean {
   if (!selection) return false
   if (selection.type === 'board') return true
+  if (selection.type === 'link') return overlay?.manualLinks.some((l) => l.id === selection.id) ?? false
   const list = selection.type === 'component' ? board.components : board.relationships
   return list.some((x) => x.id === selection.id)
 }
@@ -51,11 +80,17 @@ function withStep(state: AppState, index: number): AppState {
   return step === scenario.step ? state : { ...state, scenario: { ...scenario, step } }
 }
 
+function withOverlay(state: AppState, change: (overlay: Overlay, board: Board) => Overlay): AppState {
+  if (!state.board || !state.overlay) return state
+  const overlay = change(state.overlay, state.board)
+  return overlay === state.overlay ? state : { ...state, overlay }
+}
+
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'boardOpened': {
       const { board } = action
-      const old = state.board
+      const old = action.previous ?? state.board
       const sameBoard = old !== undefined && old.id === board.id
       const keptOverlay = sameBoard && state.overlay?.boardId === board.id ? state.overlay : undefined
       const base = action.overlay ?? keptOverlay ?? emptyOverlay(board.id)
@@ -65,7 +100,37 @@ export function reducer(state: AppState, action: Action): AppState {
       if (sameBoard) {
         next.previousBoard = old
         next.changes = diffBoards(old, board)
-        if (selectionExists(board, state.selection)) next.selection = state.selection as Selection
+        if (selectionExists(board, state.selection, overlay)) next.selection = state.selection as Selection
+      }
+      return next
+    }
+    case 'closed':
+      return initialState
+    case 'noticeShown':
+      return { ...state, warnings: [{ path: '', message: action.message }] }
+    case 'changesDismissed': {
+      const { changes: _c, ...rest } = state
+      return rest
+    }
+    case 'noteAdded':
+      return withOverlay(state, (o, b) => addNote(o, b, { kind: action.kind, text: action.text, target: action.target }, action.now, action.id))
+    case 'noteEdited':
+      return withOverlay(state, (o) => editNote(o, action.id, action.text, action.now))
+    case 'noteDeleted':
+      return withOverlay(state, (o) => deleteNote(o, action.id))
+    case 'noteConfirmed':
+      return withOverlay(state, (o, b) => confirmNote(o, b, action.id, action.now))
+    case 'noteRelinked':
+      return withOverlay(state, (o, b) => relinkNote(o, b, action.id, action.target, action.now))
+    case 'linkAdded':
+      return withOverlay(state, (o, b) => addManualLink(o, { from: action.from, to: action.to, label: action.label }, action.now, action.id, b).overlay)
+    case 'linkEdited':
+      return withOverlay(state, (o, b) => editManualLink(o, action.id, action.change, b).overlay)
+    case 'linkDeleted': {
+      const next = withOverlay(state, (o) => deleteManualLink(o, action.id))
+      if (state.selection?.type === 'link' && state.selection.id === action.id) {
+        const { selection: _s, ...rest } = next
+        return rest
       }
       return next
     }

@@ -24,3 +24,29 @@
   justify-content: center;
   gap: 8px;
 }
+
+.problem {
+  margin: 0;
+  max-width: 44ch;
+  padding: 8px 12px;
+  border: 1px dashed var(--ink);
+  border-radius: var(--radius-s);
+  color: var(--ink);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+
+.saved {
+  width: min(460px, 100%);
+  margin-top: 12px;
+  text-align: left;
+}
+
+.savedTitle {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { KIND_ORDER, KIND_WORDS } from '../app/labels'
-import { KIND_STYLE, TONE_COLOR } from './kinds'
+import { KIND_STYLE, MANUAL_STYLE, TONE_COLOR } from './kinds'
 import styles from './Legend.module.css'
 
 const SHORT: Record<(typeof KIND_ORDER)[number], string> = {
@@ -78,6 +78,12 @@ export function Legend() {
               </li>
             )
           })}
+          <li className={styles.row} title="An arrow you drew. It is your note, not something your agent said.">
+            <svg width="36" height="10" viewBox="0 0 36 10" aria-hidden="true">
+              <line x1="2" y1="5" x2="34" y2="5" stroke="var(--ink)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={MANUAL_STYLE.dash} strokeLinecap="round" />
+            </svg>
+            <span>Your link</span>
+          </li>
         </ul>
       )}
     </div>

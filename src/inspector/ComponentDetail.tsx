@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import type { Board, BoardComponent } from '../board/schema'
 import { findLesson } from '../lessons/catalog'
 import { LessonDialog } from '../lessons/LessonDialog'
+import { LinksSection } from '../notes/Links'
+import { NotesSection } from '../notes/NotesSection'
 import { Markdown } from '../text/markdown'
 import { BackButton, BulletList, ConnectionButton, Heading, ItemGroups, Section, SourceBlock } from './parts'
 import styles from './parts.module.css'
@@ -94,6 +96,9 @@ export function ComponentDetail({
       )}
 
       <ItemGroups items={items} />
+
+      <LinksSection componentId={component.id} />
+      <NotesSection target={{ type: 'component', id: component.id }} />
     </>
   )
 }
