@@ -19,7 +19,12 @@ const MAX_REPORTED_ERRORS = 25
  * Never throws for bad input. A failed result lists every problem found,
  * so the caller can keep the current board and show the list.
  */
-export function parseBoard(fileText: string): ParseResult {
+export interface ParseOptions {
+  /** Lesson IDs this app can show. A board that names another lesson still opens, with a warning. */
+  knownLessons?: readonly string[]
+}
+
+export function parseBoard(fileText: string, options: ParseOptions = {}): ParseResult {
   // Some editors start a file with a byte order mark. JSON.parse rejects it.
   if (fileText.startsWith('\uFEFF')) fileText = fileText.slice(1)
 
@@ -47,7 +52,7 @@ export function parseBoard(fileText: string): ParseResult {
   const errors = checkReferences(parsed.data)
   if (errors.length > 0) return { ok: false, errors: limit(errors) }
 
-  return { ok: true, board: parsed.data, warnings: collectWarnings(parsed.data) }
+  return { ok: true, board: parsed.data, warnings: collectWarnings(parsed.data, options) }
 }
 
 /** Gives a clear message for files that are not boards, or boards from another version. */
@@ -139,8 +144,19 @@ function checkReferences(board: Board): BoardProblem[] {
   return errors
 }
 
-function collectWarnings(board: Board): BoardProblem[] {
+function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
   const warnings: BoardProblem[] = []
+  if (options.knownLessons) {
+    const known = new Set(options.knownLessons)
+    board.components.forEach((c, i) => {
+      if (c.lesson !== undefined && !known.has(c.lesson)) {
+        warnings.push({
+          path: `components[${i}].lesson`,
+          message: `Component "${c.id}" names the lesson "${c.lesson}", which this version of Anatomy does not have.`,
+        })
+      }
+    })
+  }
   if (board.components.length > LIMITS.componentsWarn) {
     warnings.push({
       path: 'components',

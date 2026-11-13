@@ -212,6 +212,23 @@ describe('unexpected or unsafe content', () => {
   })
 })
 
+describe('lessons', () => {
+  it('warns about a lesson this app does not have, but still opens the board', () => {
+    const data = minimalBoard()
+    data.components[0].lesson = 'flux-capacitor'
+    const result = parseBoard(JSON.stringify(data), { knownLessons: ['approval-gate'] })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.warnings).toEqual([{ path: 'components[0].lesson', message: expect.stringMatching(/flux-capacitor/) }])
+  })
+
+  it('accepts a known lesson without warnings', () => {
+    const data = minimalBoard()
+    data.components[0].lesson = 'approval-gate'
+    const result = parseBoard(JSON.stringify(data), { knownLessons: ['approval-gate'] })
+    expect(result.ok && result.warnings).toEqual([])
+  })
+})
+
 describe('size', () => {
   function withComponents(count: number) {
     const data = minimalBoard()
