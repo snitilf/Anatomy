@@ -90,6 +90,35 @@ describe('App', () => {
     expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
   })
 
+  it('groups every way to open a board under one Open menu, and Escape closes it', () => {
+    render(<App />)
+    loadNordet()
+    const header = within(screen.getByRole('banner'))
+    expect(header.queryByRole('button', { name: 'Examples' })).not.toBeInTheDocument()
+    expect(header.queryByRole('button', { name: 'Saved boards' })).not.toBeInTheDocument()
+    const trigger = header.getByRole('button', { name: 'Open' })
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(trigger)
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    const menu = within(document.getElementById('open-menu')!)
+    expect(menu.getByRole('button', { name: 'Open a file' })).toBeInTheDocument()
+    expect(menu.getByRole('button', { name: /Anatomy itself/ })).toBeInTheDocument()
+    trigger.focus()
+    fireEvent.keyDown(menu.getByRole('button', { name: 'Open a file' }), { key: 'Escape' })
+    expect(document.getElementById('open-menu')).toBeNull()
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('opens another example from the Open menu', () => {
+    render(<App />)
+    loadNordet()
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Open' }))
+    fireEvent.click(within(document.getElementById('open-menu')!).getByRole('button', { name: /Anatomy itself/ }))
+    expect(document.getElementById('open-menu')).toBeNull()
+    expect(screen.queryByRole('heading', { name: nordet.title })).not.toBeInTheDocument()
+  })
+
   it('opens the how-to dialog with a copyable prompt', () => {
     render(<App />)
     fireEvent.click(screen.getAllByRole('button', { name: 'How to make a board' })[0]!)

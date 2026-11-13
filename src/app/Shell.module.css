@@ -5,15 +5,34 @@
 }
 
 .main {
+  --inspector-width: clamp(320px, 31vw, 380px);
+  position: relative;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
 
 .main[data-empty] {
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* Notices float over the top of the map. They never move the toolbar or the map. */
+.notices {
+  position: absolute;
+  z-index: 40;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.main:not([data-empty]) .notices {
+  right: calc(var(--inspector-width) + 12px);
 }
 
 .canvas {
@@ -53,12 +72,16 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .main:not([data-empty]) .notices {
+    right: 12px;
+  }
+
   .main:not([data-empty]) {
     grid-template-rows: minmax(220px, 42%) minmax(0, 1fr);
   }
 
   /* The player needs room for its caption, so the map area grows while a walkthrough plays. */
   .main[data-playing]:not([data-empty]) {
-    grid-template-rows: minmax(330px, 64%) minmax(0, 1fr);
+    grid-template-rows: minmax(330px, 68%) minmax(0, 1fr);
   }
 }

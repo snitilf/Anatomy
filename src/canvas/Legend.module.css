@@ -35,6 +35,12 @@
   color: var(--ink);
 }
 
+.button:focus-visible {
+  box-shadow:
+    var(--ring),
+    var(--lift);
+}
+
 .button:active {
   transform: scale(0.97);
 }
@@ -54,8 +60,6 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-m);
   box-shadow: var(--lift);
-  transform-origin: bottom left;
-  animation: pop 140ms var(--ease-out);
 }
 
 .row {
@@ -63,13 +67,6 @@
   align-items: center;
   gap: 10px;
   color: var(--ink);
-}
-
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
 }
 
 /* On a narrow screen the key is an icon in the top corner. The map keeps a margin there when it fits. */

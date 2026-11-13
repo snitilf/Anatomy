@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
-import { placeLabel, wrap } from './labelPlacement'
+import { pillHeight, placeLabel, wrap } from './labelPlacement'
 import { hitsAnyCard, pickSides, planEdges, routeConnection, type Rect } from './routing'
 
 const at = (x: number, y: number): Rect => ({ x, y, width: CARD_WIDTH, height: CARD_HEIGHT })
@@ -80,5 +80,41 @@ describe('labels', () => {
     const bottom = spot.y + (spot.lines * 16 + 6) / 2
     expect(top).toBeGreaterThan(a.y + CARD_HEIGHT - 34 + 8 - 1)
     expect(bottom).toBeLessThan(b.y + 8 + 1)
+  })
+})
+
+describe('connections between the same two cards', () => {
+  const a = at(0, 0)
+  const b = at(400, 300)
+  const ends = [
+    { id: 'one', from: 'a', to: 'b' },
+    { id: 'two', from: 'a', to: 'b' },
+    { id: 'back', from: 'b', to: 'a' },
+  ]
+  const plans = planEdges({ a, b }, ends)
+  const routes = ends.map((e) => routeConnection(plans.get(e.id)!, [a, b], [a, b]))
+
+  it('draw curves that stay visibly apart in the middle', () => {
+    for (let i = 0; i < routes.length; i++) {
+      for (let j = i + 1; j < routes.length; j++) {
+        const p = routes[i]!.points[24]!
+        const q = routes[j]!.points[24]!
+        expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(30)
+      }
+    }
+  })
+
+  it('get labels that never overlap each other', () => {
+    const taken: Rect[] = []
+    const lines = routes.flatMap((r) => r.points)
+    for (const route of routes) {
+      const spot = placeLabel(route.points, 'was this already sent?', [a, b], taken, lines)
+      const box = { x: spot.x - spot.width / 2, y: spot.y - pillHeight(spot.lines) / 2, width: spot.width, height: pillHeight(spot.lines) }
+      for (const t of taken) {
+        const apart = box.x >= t.x + t.width || t.x >= box.x + box.width || box.y >= t.y + t.height || t.y >= box.y + box.height
+        expect(apart).toBe(true)
+      }
+      taken.push(box)
+    }
   })
 })

@@ -1,9 +1,16 @@
 .panel {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-  max-height: 38vh;
+  box-sizing: border-box;
+  width: min(640px, 100%);
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  max-height: min(40dvh, 320px);
   overflow-y: auto;
   font-size: 14px;
+  pointer-events: auto;
+  box-shadow:
+    0 2px 4px var(--shadow),
+    0 12px 28px -8px var(--shadow);
 }
 
 .error {
@@ -12,8 +19,8 @@
 }
 
 .warning {
-  background: var(--faint);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 13px;
 }
 
@@ -25,7 +32,9 @@
 }
 
 .title {
+  min-width: 0;
   margin: 4px 0 0;
+  overflow-wrap: anywhere;
   font-size: 16px;
   font-weight: 650;
 }
@@ -36,6 +45,7 @@
 }
 
 .list {
+  flex: 1;
   margin: 8px 0 4px;
   padding: 0;
   list-style: none;
@@ -58,11 +68,21 @@
 .path {
   color: var(--ink);
   background: var(--faint);
+  max-width: 100%;
   padding: 0 6px;
   border-radius: 4px;
   overflow-wrap: anywhere;
 }
 
 .warning .path {
-  background: var(--surface);
+  background: var(--faint);
+}
+
+.problem > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.head > button {
+  flex: none;
 }

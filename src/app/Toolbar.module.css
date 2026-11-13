@@ -78,3 +78,14 @@
     flex: none;
   }
 }
+
+@media (max-width: 420px) {
+  .actions {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .actions button {
+    padding: 0 8px;
+  }
+}

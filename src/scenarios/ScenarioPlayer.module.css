@@ -1,6 +1,8 @@
 .bar {
   flex: none;
+  min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   padding: 14px 20px 12px;
   border-top: 1px solid var(--line);
@@ -43,7 +45,11 @@
   line-height: 1.4;
   font-weight: 500;
   text-wrap: pretty;
+  overflow-wrap: anywhere;
   min-height: 2.8em;
+  /* A long caption scrolls instead of taking the map's room. */
+  max-height: 7.5em;
+  overflow-y: auto;
 }
 
 .foot {
@@ -134,6 +140,7 @@
   .caption {
     font-size: 16px;
     min-height: 0;
+    max-height: 4.5em;
   }
 
   .foot {

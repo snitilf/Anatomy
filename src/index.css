@@ -41,7 +41,6 @@ samp {
 :focus-visible {
   outline: none;
   box-shadow: var(--ring);
-  border-radius: var(--radius-s);
 }
 
 .sr-only {

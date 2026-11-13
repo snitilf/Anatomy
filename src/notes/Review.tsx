@@ -160,7 +160,7 @@ export function NotesToReview({ board, previous }: { board: Board; previous: Boa
                   key={note.id}
                   note={note}
                   status="needs-relinking"
-                  context={<p className={styles.on}>Was on {targetName(was, note.target)}, which is no longer in the board.</p>}
+                  context={<p className={styles.on}>Was on {targetName(was, note.target)}, which was removed.</p>}
                   actions={<RelinkNote note={note} board={board} />}
                 />
               ))}
@@ -174,7 +174,7 @@ export function NotesToReview({ board, previous }: { board: Board; previous: Boa
                 <li key={link.id} className={styles.note} data-status="needs-relinking">
                   <p className={styles.text}>
                     Your link from {componentName(was, link.from)} to {componentName(was, link.to)}
-                    {link.label !== '' && <>, "{link.label}"</>}, joins a part that is no longer in the board.
+                    {link.label !== '' && <>, "{link.label}"</>}, joins a part that was removed.
                   </p>
                   {!ids.has(link.from) && <RelinkLinkEnd link={link} end="from" board={board} />}
                   {!ids.has(link.to) && <RelinkLinkEnd link={link} end="to" board={board} />}

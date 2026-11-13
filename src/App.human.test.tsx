@@ -94,8 +94,8 @@ function addNote(text: string, kind: 'Note' | 'Question' = 'Note') {
   fireEvent.click(panel().getByRole('button', { name: `Add ${kind.toLowerCase()}` }))
 }
 
-async function saved(space = 'Home') {
-  await screen.findByText(`Saved in this browser, ${space}`, {}, { timeout: 3000 })
+async function saved() {
+  await screen.findByText('Saved in this browser', {}, { timeout: 3000 })
 }
 
 async function openFile(container: HTMLElement, text: string, name = 'board.json') {
@@ -264,13 +264,13 @@ describe('saving', () => {
     render(<App />)
     loadNordet()
     await saved()
-    fireEvent.click(screen.getByRole('button', { name: 'Saved boards' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
     fireEvent.click(screen.getByRole('button', { name: `Delete ${nordet.title}` }))
     const dialog = screen.getByRole('dialog', { name: `Delete ${nordet.title}?` })
     expect(within(dialog).getByText(/notes from this browser/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete board' }))
     expect(await screen.findByRole('button', { name: 'Load an example' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText(/Saved in this browser, Home/)).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText(/Saved in this browser/)).not.toBeInTheDocument())
   })
 })
 
@@ -285,7 +285,7 @@ describe('export and open', () => {
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
     const text = await exportText()
-    expect(await screen.findByText('Exported to a file')).toBeInTheDocument()
+    expect(await screen.findByText('Exported')).toBeInTheDocument()
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled()
     const file = JSON.parse(text) as { overlay: { positions: Record<string, { y: number }> } }
     first.unmount()
