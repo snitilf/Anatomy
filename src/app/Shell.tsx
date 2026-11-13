@@ -3,7 +3,7 @@ import { Canvas } from '../canvas/Canvas'
 import { Inspector } from '../inspector/Inspector'
 import { PlayOriginContext } from '../scenarios/focus'
 import { ScenarioPlayer } from '../scenarios/ScenarioPlayer'
-import { useAppDispatch, useAppState } from './appContext'
+import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
 import { EmptyState } from './EmptyState'
 import { HowToDialog } from './HowToDialog'
 import { Notices } from './Notices'
@@ -16,8 +16,26 @@ import { Toolbar } from './Toolbar'
 /** Elements on the map that can hold keyboard focus. */
 const MAP_FOCUS = '.react-flow__node, .react-flow__edge'
 
+/**
+ * After Escape clears the selection, focus must not fall to the page. It returns to the last map element, or the panel heading.
+ * It lives apart so that Shell itself does not render again for every selection.
+ */
+function RestoreFocus({ pending, restore }: { pending: { current: boolean }; restore: () => void }) {
+  const selection = useAppStore((s) => s.selection)
+  useEffect(() => {
+    if (!pending.current) return
+    pending.current = false
+    restore()
+    // The selection is the only trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection])
+  return null
+}
+
 export function Shell() {
-  const { board, selection, scenario } = useAppState()
+  const hasBoard = useAppStore((s) => s.board !== undefined)
+  const store = useAppStoreApi()
+  const scenario = useAppStore((s) => s.scenario !== undefined)
   const dispatch = useAppDispatch()
   const { openText } = usePersistence()
   const input = useRef<HTMLInputElement>(null)
@@ -52,12 +70,6 @@ export function Shell() {
     else inspectorHeading()?.focus()
   }, [scenario])
 
-  // After Escape clears the selection, focus must not fall to the page. It returns to the last map element, or the panel heading.
-  useEffect(() => {
-    if (!restoreFocus.current) return
-    restoreFocus.current = false
-    focusIfLost(lastOnMap.current)
-  }, [selection])
 
   async function openFile(file: File | undefined) {
     if (!file) return
@@ -115,9 +127,12 @@ export function Shell() {
   }
 
   function onKeyDown(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || !board) return
+    if (event.key !== 'Escape' || !hasBoard) return
     // A dialog handles its own Escape.
     if ((event.target as HTMLElement).closest('dialog')) return
+    // So does an open menu or popover: Escape closes it and leaves the selection alone.
+    if ((event.target as HTMLElement).closest('[data-dismissible], [data-popup-open]')) return
+    const selection = store.getState().selection
     if (scenario) {
       closePlayer()
     } else if (selection && selection.type !== 'board') {
@@ -134,7 +149,7 @@ export function Shell() {
       <main
         ref={main}
         className={styles.main}
-        data-empty={board ? undefined : ''}
+        data-empty={hasBoard ? undefined : ''}
         data-playing={scenario ? '' : undefined}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
@@ -142,7 +157,7 @@ export function Shell() {
         <div className={styles.notices}>
           <Notices />
         </div>
-        {board ? (
+        {hasBoard ? (
           <PlayOriginContext.Provider value={playOrigin}>
             <div className={styles.canvas}>
               <div className={styles.map}>
@@ -157,6 +172,7 @@ export function Shell() {
         )}
       </main>
       <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
+      <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
       <Dialogs />
       <HowToDialog open={howTo} onClose={() => setHowTo(false)} />
       {dragging && (

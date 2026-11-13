@@ -10,11 +10,14 @@ import {
   useReactFlow,
   useStore,
   type EdgeTypes,
+  type FinalConnectionState,
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { currentStep } from '../scenarios/step'
-import { useAppDispatch, useAppState } from '../app/appContext'
+import { toast } from 'sonner'
+import { useShallow } from 'zustand/react/shallow'
+import { useAppDispatch, useAppStore } from '../app/store'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
 import type { Point } from '../overlay/types'
 import { newId } from '../overlay/notes'
@@ -42,7 +45,7 @@ const ARIA_LABELS = {
  * A part picked on the map itself (a click, or the start of a drag) is under the pointer already, so the view stays put.
  */
 function KeepSelectionInView({ takePicked }: { takePicked: () => string | undefined }) {
-  const { selection, board } = useAppState()
+  const { selection, board } = useAppStore(useShallow((s) => ({ selection: s.selection, board: s.board })))
   const flow = useReactFlow()
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
@@ -203,11 +206,17 @@ interface Drag {
 }
 
 export function Canvas() {
-  const state = useAppState()
-  const { board, overlay, selection } = state
+  const { board, stored, links, notes, selection, scenario } = useAppStore(
+    useShallow((s) => ({
+      board: s.board,
+      stored: s.overlay?.positions,
+      links: s.overlay?.manualLinks,
+      notes: s.overlay?.notes,
+      selection: s.selection,
+      scenario: s.scenario,
+    })),
+  )
   const dispatch = useAppDispatch()
-  const stored = overlay?.positions
-  const links = overlay?.manualLinks
   const [view, setView] = useState<View | undefined>(() => (board ? fullView(board, stored, links) : undefined))
   // The map is rebuilt in full when the board or the links change, or when positions change from outside the map.
   let shown = view
@@ -230,18 +239,18 @@ export function Canvas() {
     return id
   }, [])
 
-  const step = useMemo(() => currentStep({ board: state.board, scenario: state.scenario }), [state.board, state.scenario])
+  const step = useMemo(() => currentStep({ board, scenario }), [board, scenario])
   useEffect(() => {
     viewRef.current = shown
     playing.current = step !== undefined
   })
   const noteCounts = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const n of overlay?.notes ?? []) {
+    for (const n of notes ?? []) {
       if (n.target.type === 'component') counts.set(n.target.id, (counts.get(n.target.id) ?? 0) + 1)
     }
     return counts
-  }, [overlay?.notes])
+  }, [notes])
   const graph = useMemo(
     () => (board && shown ? assembleGraph(board, shown.positions, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held) : undefined),
     [board, shown, selection, step, links, noteCounts, cache],
@@ -291,6 +300,7 @@ export function Canvas() {
     [dispatch],
   )
   const [connecting, setConnecting] = useState(false)
+  const connectEndedAt = useRef(-Infinity)
   const stepKey = step ? `${step.scenario.id}:${step.index}` : undefined
 
   const onNodesChange = useCallback(
@@ -368,16 +378,46 @@ export function Canvas() {
     [dispatch],
   )
 
+  const addLink = useCallback(
+    (from: string, to: string) => {
+      const id = newId('link')
+      dispatch({ type: 'linkAdded', from, to, label: '', id, now: new Date() })
+      dispatch({ type: 'select', selection: { type: 'link', id } })
+      toast('Link added')
+    },
+    [dispatch],
+  )
+
   // Dragging from one card's handle to another draws a link. It is always the user's own annotation.
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target || connection.source === connection.target) return
-      const id = newId('link')
-      dispatch({ type: 'linkAdded', from: connection.source, to: connection.target, label: '', id, now: new Date() })
-      dispatch({ type: 'select', selection: { type: 'link', id } })
+      addLink(connection.source, connection.target)
     },
-    [dispatch],
+    [addLink],
   )
+
+  // A line dropped anywhere on another card joins the two, not only one dropped on a dot.
+  // A drop on empty space, or back on the first card, does nothing, and the click that follows keeps the selection.
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      setConnecting(false)
+      connectEndedAt.current = performance.now()
+      if (state.isValid) return
+      const from = state.fromNode?.id
+      if (!from) return
+      const point = 'changedTouches' in event ? event.changedTouches[0] : event
+      if (!point) return
+      const target = cardUnder(point.clientX, point.clientY)
+      if (target && target !== from) addLink(from, target)
+    },
+    [addLink],
+  )
+
+  const onPaneClick = useCallback(() => {
+    if (performance.now() - connectEndedAt.current < PANE_CLICK_GUARD_MS) return
+    dispatch({ type: 'select', selection: { type: 'board' } })
+  }, [dispatch])
 
   if (!board || !graph) return null
 
@@ -399,7 +439,7 @@ export function Canvas() {
         panOnScrollSpeed={0.8}
         zoomOnScroll={false}
         zoomOnPinch
-        onPaneClick={() => dispatch({ type: 'select', selection: { type: 'board' } })}
+        onPaneClick={onPaneClick}
         fitView
         fitViewOptions={FIT}
         minZoom={0.15}
@@ -408,7 +448,7 @@ export function Canvas() {
         connectionMode={ConnectionMode.Loose}
         onConnect={onConnect}
         onConnectStart={() => setConnecting(true)}
-        onConnectEnd={() => setConnecting(false)}
+        onConnectEnd={onConnectEnd}
         edgesFocusable
         nodesFocusable
         deleteKeyCode={null}
@@ -426,6 +466,19 @@ export function Canvas() {
       <Legend />
     </div>
   )
+}
+
+/** The click that ends a connection drag arrives within a frame or two of the drop. */
+const PANE_CLICK_GUARD_MS = 150
+
+/** The part card under a screen point. Group areas do not count. */
+function cardUnder(x: number, y: number): string | undefined {
+  for (const el of document.elementsFromPoint(x, y)) {
+    const node = el.closest<HTMLElement>('.react-flow__node')
+    if (!node || node.classList.contains('react-flow__node-group-area')) continue
+    return node.dataset.id
+  }
+  return undefined
 }
 
 function cancelTimer(id: number): () => void {

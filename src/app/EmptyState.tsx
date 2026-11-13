@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import buttons from './buttons.module.css'
 import { ExamplesMenu } from './ExamplesMenu'
 import styles from './EmptyState.module.css'
@@ -11,11 +12,11 @@ export function EmptyState({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: (
     <div className={styles.empty}>
       <p className={styles.line}>Open a board file to see how it fits together.</p>
       <div className={styles.actions}>
-        <button type="button" className={`${buttons.button} ${buttons.primary}`} onClick={onOpen}>
+        <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={onOpen}>
           Open board
         </button>
         <ExamplesMenu label="Load an example" />
-        <button type="button" className={`${buttons.button} ${buttons.quiet}`} onClick={onHowTo}>
+        <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={onHowTo}>
           How to make a board
         </button>
       </div>

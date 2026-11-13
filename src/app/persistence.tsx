@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Board } from '../board/schema'
 import { parseBoard, type BoardProblem } from '../board/validate'
@@ -13,11 +14,10 @@ import {
   type BoardSummary,
   type Namespace,
 } from '../persistence/store'
-import { useAppDispatch, useAppState } from './appContext'
 import { hasHumanWork } from './humanWork'
 import { openFromText } from './openFile'
 import { PersistenceContext, type FileChoice, type PersistenceApi, type SaveState } from './persistenceContext'
-import type { AppState } from './state'
+import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
 
 const SPACE_KEY = 'anatomy.namespace'
 
@@ -77,15 +77,16 @@ function asStorageError(error: unknown): StorageError {
  * The reducer stays pure. Everything that waits on the browser lives here.
  */
 export function PersistenceProvider({ children }: { children: ReactNode }) {
-  const state = useAppState()
+  const appStore = useAppStoreApi()
   const dispatch = useAppDispatch()
+  const board = useAppStore((s) => s.board)
+  const overlay = useAppStore((s) => s.overlay)
   const [space, setSpace] = useState<Namespace>(readSpace)
   const [phase, setPhase] = useState<'starting' | 'ready' | 'unavailable'>('starting')
   const [unavailable, setUnavailable] = useState<StorageError | undefined>()
   const [saved, setSaved] = useState<readonly BoardSummary[]>([])
   const [queueStatus, setQueueStatus] = useState<SaveStatus>('idle')
   const [persisted, setPersisted] = useState<{ board: Board; json: string } | undefined>()
-  const [exported, setExported] = useState(false)
   const [deleting, setDeleting] = useState<BoardSummary | undefined>()
   const [choice, setChoice] = useState<FileChoice | undefined>()
 
@@ -93,20 +94,17 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
   const storeRef = useRef<BoardStore | undefined>(undefined)
   const queueRef = useRef<SaveQueue<Job> | undefined>(undefined)
   const persistedRef = useRef<{ board: Board; json: string } | undefined>(undefined)
-  const latest = useRef<AppState>(state)
   const savedRef = useRef<readonly BoardSummary[]>(saved)
   const spaceRef = useRef(space)
   const statusRef = useRef<SaveStatus>('idle')
   const switchWarned = useRef(false)
-  const exportTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
-    latest.current = state
     savedRef.current = saved
     spaceRef.current = space
   })
 
-  const overlayJson = useMemo(() => (state.overlay ? JSON.stringify(state.overlay) : ''), [state.overlay])
+  const overlayJson = useMemo(() => (overlay ? JSON.stringify(overlay) : ''), [overlay])
 
   const notice = useCallback((message: string) => dispatch({ type: 'noticeShown', message }), [dispatch])
 
@@ -212,11 +210,11 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
         return
       }
       // A board the user opened while storage was starting wins over the last one.
-      if (last !== undefined && gen === generation.current && latest.current.board === undefined) {
+      if (last !== undefined && gen === generation.current && appStore.getState().board === undefined) {
         await openStored(last, { quiet: true })
       }
     },
-    [openStored, refreshList],
+    [appStore, openStored, refreshList],
   )
 
   // Connect once. A second run (React strict mode) closes the first connection and opens its own.
@@ -234,13 +232,12 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
   }, [activate, shutdown])
 
   // Save after every change to the board or the overlay.
-  const { board, overlay } = state
   useEffect(() => {
     const queue = queueRef.current
     if (!board || !overlay || !queue || phase !== 'ready') return
     const done = persistedRef.current
     if (done?.board === board && done.json === overlayJson) return
-    const job = () => latest.current
+    const job = () => appStore.getState()
     if (done?.board !== board) {
       // A new board or a new version: write it now, after any older board's changes are written.
       void queue.flush().then(() => {
@@ -253,7 +250,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
     } else {
       queue.schedule({ board, overlay })
     }
-  }, [board, overlay, overlayJson, phase])
+  }, [appStore, board, overlay, overlayJson, phase])
 
   // Write what is waiting when the page is hidden or closed.
   useEffect(() => {
@@ -276,7 +273,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
       void (async () => {
         await queue?.flush()
         // Switching drops what is in memory. If the last save failed, say so once before it happens.
-        if (typeof statusRef.current === 'object' && latest.current.board && !switchWarned.current) {
+        if (typeof statusRef.current === 'object' && appStore.getState().board && !switchWarned.current) {
           switchWarned.current = true
           notice('This board is not saved in this browser. Export it first, or switch again to leave it behind.')
           return
@@ -292,7 +289,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
         await activate(next, true)
       })()
     },
-    [activate, dispatch, notice],
+    [activate, appStore, dispatch, notice],
   )
 
   const finishOpen = useCallback(
@@ -310,7 +307,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
         return
       }
       const id = action.board.id
-      const current = latest.current
+      const current = appStore.getState()
       const open = current.board?.id === id && current.board && current.overlay ? { board: current.board, overlay: current.overlay } : undefined
       const knownInSpace = open !== undefined || savedRef.current.some((b) => b.id === id)
       if (!knownInSpace || !storeRef.current) {
@@ -354,7 +351,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
           if (gen === generation.current) dispatch(action)
         })
     },
-    [dispatch, finishOpen, notice],
+    [appStore, dispatch, finishOpen, notice],
   )
 
   const resolveChoice = useCallback(
@@ -381,7 +378,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
     const store = storeRef.current
     if (!target || !store) return
     const gen = generation.current
-    if (latest.current.board?.id === target.id) {
+    if (appStore.getState().board?.id === target.id) {
       queueRef.current?.cancel()
       persistedRef.current = undefined
       setPersisted(undefined)
@@ -393,10 +390,10 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
       .catch((error: unknown) => {
         if (gen === generation.current) notice(`The board could not be deleted. ${asStorageError(error).message}`)
       })
-  }, [deleting, dispatch, notice, refreshList])
+  }, [appStore, deleting, dispatch, notice, refreshList])
 
   const exportNow = useCallback(() => {
-    const { board: b, overlay: o } = latest.current
+    const { board: b, overlay: o } = appStore.getState()
     if (!b || !o) return
     try {
       const now = new Date()
@@ -409,15 +406,11 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
       link.click()
       link.remove()
       setTimeout(() => URL.revokeObjectURL(url), 0)
-      setExported(true)
-      clearTimeout(exportTimer.current)
-      exportTimer.current = setTimeout(() => setExported(false), 6000)
+      toast('Exported')
     } catch {
       notice('The export file could not be made. Try again.')
     }
-  }, [notice])
-
-  useEffect(() => () => clearTimeout(exportTimer.current), [])
+  }, [appStore, notice])
 
   const retrySave = useCallback(() => {
     void queueRef.current?.retry()
@@ -437,7 +430,6 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
     unavailable,
     save,
     saved,
-    exported,
     deleting,
     choice,
     switchSpace,

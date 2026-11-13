@@ -1,7 +1,3 @@
-.root {
-  position: relative;
-}
-
 .caret {
   width: 6px;
   height: 6px;
@@ -11,16 +7,17 @@
   transform: translateY(-2px) rotate(45deg);
 }
 
-.panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+.positioner {
   z-index: 30;
+}
+
+.panel {
   display: grid;
   gap: 10px;
+  box-sizing: border-box;
   width: 380px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100dvh - 80px);
+  max-width: calc(100vw - 24px);
+  max-height: min(var(--available-height), calc(100dvh - 80px));
   overflow-y: auto;
   padding: 8px;
   background: var(--surface);
@@ -29,6 +26,26 @@
   box-shadow:
     0 2px 4px var(--shadow),
     0 12px 28px -8px var(--shadow);
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.panel[data-starting-style],
+.panel[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.panel:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
 }
 
 .file {
@@ -62,18 +79,4 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-/* On a narrow screen the panel spans the toolbar, whatever the button's position. */
-@media (max-width: 760px) {
-  .root {
-    position: static;
-  }
-
-  .panel {
-    right: 12px;
-    left: 12px;
-    width: auto;
-    max-width: none;
-  }
 }

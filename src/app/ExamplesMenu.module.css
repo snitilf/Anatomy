@@ -1,7 +1,3 @@
-.root {
-  position: relative;
-}
-
 .caret {
   width: 6px;
   height: 6px;
@@ -11,22 +7,44 @@
   transform: translateY(-2px) rotate(45deg);
 }
 
-.list {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+.positioner {
   z-index: 20;
+}
+
+.list {
+  box-sizing: border-box;
+  display: grid;
+  gap: 2px;
   width: 300px;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 24px);
   margin: 0;
   padding: 6px;
-  list-style: none;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-m);
   box-shadow:
     0 2px 4px var(--shadow),
     0 12px 28px -8px var(--shadow);
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.list[data-starting-style],
+.list[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.list:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list {
+    transition: none;
+  }
 }
 
 .plain {
@@ -49,7 +67,8 @@
   cursor: pointer;
 }
 
-.item:hover {
+.item:hover,
+.item[data-highlighted] {
   background: var(--faint);
 }
 
@@ -60,10 +79,4 @@
 .itemText {
   color: var(--muted);
   font-size: 13px;
-}
-
-@media (max-width: 760px) {
-  .list {
-    right: auto;
-  }
 }

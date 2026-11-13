@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 import shortenerRaw from './examples/external/url-shortener.board.json?raw'
 import nordetRaw from './examples/nordet.board.json?raw'
+import { press } from './test/press'
 
-function loadNordet() {
-  fireEvent.click(screen.getByRole('button', { name: 'Load an example' }))
-  fireEvent.click(screen.getByRole('button', { name: /Nordet follow-up/ }))
+async function loadNordet() {
+  press(screen.getByRole('button', { name: 'Load an example' }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: /Nordet follow-up/ }))
 }
 
 const nordet = JSON.parse(nordetRaw) as {
@@ -16,7 +17,7 @@ const nordet = JSON.parse(nordetRaw) as {
 }
 
 describe('App', () => {
-  it('shows three actions when no board is open', () => {
+  it('shows three actions when no board is open', async () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Anatomy' })).toBeInTheDocument()
     const main = within(screen.getByRole('main'))
@@ -25,18 +26,18 @@ describe('App', () => {
     expect(main.getByRole('button', { name: 'How to make a board' })).toBeInTheDocument()
   })
 
-  it('opens an example and shows the overview', () => {
+  it('opens an example and shows the overview', async () => {
     render(<App />)
-    loadNordet()
+    await loadNordet()
     expect(screen.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
     const panel = screen.getByTestId('inspector')
     expect(within(panel).getByText('Covers')).toBeInTheDocument()
     expect(within(panel).getByText('Does not cover')).toBeInTheDocument()
   })
 
-  it('shows a part with its explanation and source label', () => {
+  it('shows a part with its explanation and source label', async () => {
     render(<App />)
-    loadNordet()
+    await loadNordet()
     const part = nordet.components.find((c) => c.explanation)!
     const panel = screen.getByTestId('inspector')
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${part.label}`) })[0]!)
@@ -45,9 +46,9 @@ describe('App', () => {
     expect(within(panel).getByText('Explanation')).toBeInTheDocument()
   })
 
-  it('shows a connection in plain words', () => {
+  it('shows a connection in plain words', async () => {
     render(<App />)
-    loadNordet()
+    await loadNordet()
     const rel = nordet.relationships.find((r) => r.kind === 'sends-data-to')!
     const panel = screen.getByTestId('inspector')
     const buttons = within(panel).getAllByRole('button', { name: new RegExp(rel.label) })
@@ -56,9 +57,9 @@ describe('App', () => {
     expect(within(panel).getByText('sends data to')).toBeInTheDocument()
   })
 
-  it('returns to the overview when Escape is pressed', () => {
+  it('returns to the overview when Escape is pressed', async () => {
     render(<App />)
-    loadNordet()
+    await loadNordet()
     const panel = screen.getByTestId('inspector')
     const first = nordet.components[0]!
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${first.label}`) })[0]!)
@@ -69,7 +70,7 @@ describe('App', () => {
 
   it('shows the problems for a bad file and keeps the open board', async () => {
     const { container } = render(<App />)
-    loadNordet()
+    await loadNordet()
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     const bad = new File(['{ "format": "anatomy-board" '], 'broken.json', { type: 'application/json' })
     fireEvent.change(input, { target: { files: [bad] } })
@@ -90,40 +91,73 @@ describe('App', () => {
     expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
   })
 
-  it('groups every way to open a board under one Open menu, and Escape closes it', () => {
+  it('groups every way to open a board under one Open popover, and Escape closes it', async () => {
     render(<App />)
-    loadNordet()
+    await loadNordet()
     const header = within(screen.getByRole('banner'))
     expect(header.queryByRole('button', { name: 'Examples' })).not.toBeInTheDocument()
     expect(header.queryByRole('button', { name: 'Saved boards' })).not.toBeInTheDocument()
     const trigger = header.getByRole('button', { name: 'Open' })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(trigger)
+    press(trigger)
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    const menu = within(document.getElementById('open-menu')!)
-    expect(menu.getByRole('button', { name: 'Open a file' })).toBeInTheDocument()
-    expect(menu.getByRole('button', { name: /Anatomy itself/ })).toBeInTheDocument()
-    trigger.focus()
-    fireEvent.keyDown(menu.getByRole('button', { name: 'Open a file' }), { key: 'Escape' })
-    expect(document.getElementById('open-menu')).toBeNull()
+    const panel = within(await screen.findByRole('dialog', { name: 'Open a board' }))
+    expect(panel.getByRole('button', { name: 'Open a file' })).toBeInTheDocument()
+    expect(panel.getByRole('button', { name: /Anatomy itself/ })).toBeInTheDocument()
+    fireEvent.keyDown(panel.getByRole('button', { name: 'Open a file' }), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open a board' })).not.toBeInTheDocument())
     expect(trigger).toHaveFocus()
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    // Escape in the popover must not clear what is selected on the map.
+    expect(screen.getByTestId('inspector')).toBeInTheDocument()
   })
 
-  it('opens another example from the Open menu', () => {
+  it('closes the Open popover with a press outside it', async () => {
     render(<App />)
-    loadNordet()
-    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Open' }))
-    fireEvent.click(within(document.getElementById('open-menu')!).getByRole('button', { name: /Anatomy itself/ }))
-    expect(document.getElementById('open-menu')).toBeNull()
+    await loadNordet()
+    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Open' }))
+    await screen.findByRole('dialog', { name: 'Open a board' })
+    press(document.body)
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open a board' })).not.toBeInTheDocument())
+  })
+
+  it('opens another example from the Open popover', async () => {
+    render(<App />)
+    await loadNordet()
+    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Open' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Open a board' })).getByRole('button', { name: /Anatomy itself/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open a board' })).not.toBeInTheDocument())
     expect(screen.queryByRole('heading', { name: nordet.title })).not.toBeInTheDocument()
   })
 
-  it('opens the how-to dialog with a copyable prompt', () => {
+  it('moves through the examples on the start screen with the arrow keys, and Escape returns focus', async () => {
+    render(<App />)
+    const trigger = screen.getByRole('button', { name: 'Load an example' })
+    press(trigger)
+    const items = await screen.findAllByRole('menuitem')
+    expect(items.length).toBeGreaterThan(1)
+    fireEvent.keyDown(items[0]!, { key: 'ArrowDown' })
+    await waitFor(() => expect(items[1]).toHaveFocus())
+    fireEvent.keyDown(items[1]!, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    expect(trigger).toHaveFocus()
+  })
+
+  it('opens the how-to dialog with a copyable prompt', async () => {
     render(<App />)
     fireEvent.click(screen.getAllByRole('button', { name: 'How to make a board' })[0]!)
     expect(screen.getByRole('dialog', { name: 'How to make a board', hidden: true })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Download JSON Schema', hidden: true })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy prompt', hidden: true })).toBeInTheDocument()
+  })
+
+  it('says Copied in a toast after the prompt is copied', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    render(<App />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'How to make a board' })[0]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy prompt', hidden: true }))
+    expect(await screen.findByText('Copied')).toBeInTheDocument()
+    expect(writeText).toHaveBeenCalled()
   })
 })
