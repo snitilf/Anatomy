@@ -18,10 +18,10 @@ function percentile(values: number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)] ?? 0
 }
 
-// A frame can stall for reasons outside the page, such as the machine doing other work.
-// A drag gets up to three tries and passes on the first that meets both limits.
-// A real slowdown misses on every try.
-const TRIES = 3
+// One frame can stall for reasons outside the page, such as the machine doing other work.
+// A drag may have at most one frame over the hard limit. A real slowdown stalls many frames.
+const SLOW_MS = 50
+const SLOW_FRAMES_ALLOWED = 1
 
 for (const board of BOARDS) {
   test(`dragging a card stays smooth and lands under the pointer: ${board.name}`, async ({ page }) => {
@@ -29,38 +29,31 @@ for (const board of BOARDS) {
     const first = await grabbable(page)
     const before = await cardTransform(page, first.id)
 
-    let spot = first
-    let passed = false
-    const tries: string[] = []
-    for (let attempt = 0; attempt < TRIES && !passed; attempt++) {
-      // Every other try drags the card back, so it stays on the map.
-      const sign = attempt % 2 === 0 ? 1 : -1
-      await startFrameLog(page)
-      await drag(page, spot, sign * 90, sign * 60)
-      await nextFrame(page)
-      const frames = await stopFrameLog(page)
-      await page.waitForTimeout(300)
+    await startFrameLog(page)
+    await drag(page, first, 90, 60)
+    await nextFrame(page)
+    const frames = await stopFrameLog(page)
+    await page.waitForTimeout(300)
 
-      const p50 = percentile(frames, 0.5)
-      const p95 = percentile(frames, 0.95)
-      const max = Math.max(...frames)
-      tries.push(`p95=${p95.toFixed(1)}ms max=${max.toFixed(1)}ms`)
-      console.log(`[drag] ${board.name} try ${attempt + 1}: frames=${frames.length} p50=${p50.toFixed(1)}ms p95=${p95.toFixed(1)}ms max=${max.toFixed(1)}ms`)
+    const p50 = percentile(frames, 0.5)
+    const p95 = percentile(frames, 0.95)
+    const max = Math.max(...frames)
+    const slow = frames.filter((f) => f > SLOW_MS).length
+    console.log(`[drag] ${board.name}: frames=${frames.length} p50=${p50.toFixed(1)}ms p95=${p95.toFixed(1)}ms max=${max.toFixed(1)}ms slow=${slow}`)
+    expect(p95, `p95 frame on ${board.name}`).toBeLessThanOrEqual(P95_MS)
+    expect(slow, `frames over ${SLOW_MS} ms on ${board.name} (max ${max.toFixed(1)} ms)`).toBeLessThanOrEqual(SLOW_FRAMES_ALLOWED)
+    expect(max, `worst frame on ${board.name}`).toBeLessThanOrEqual(MAX_MS * 3)
 
-      // The card ends where the pointer let go.
-      const after = await cardCenter(page, first.id)
-      expect(after).toBeDefined()
-      expect(Math.abs((after?.x ?? 0) - (spot.x + sign * 90))).toBeLessThanOrEqual(LAND_PX)
-      expect(Math.abs((after?.y ?? 0) - (spot.y + sign * 60))).toBeLessThanOrEqual(LAND_PX)
-      spot = { ...spot, x: after?.x ?? spot.x, y: after?.y ?? spot.y }
-      passed = p95 <= P95_MS && max <= MAX_MS
-    }
-    expect(passed, `frames on ${board.name}: ${tries.join('; ')} (limits: p95 ${P95_MS} ms, max ${MAX_MS} ms)`).toBe(true)
+    // The card ends where the pointer let go.
+    const after = await cardCenter(page, first.id)
+    expect(after).toBeDefined()
+    expect(Math.abs((after?.x ?? 0) - (first.x + 90))).toBeLessThanOrEqual(LAND_PX)
+    expect(Math.abs((after?.y ?? 0) - (first.y + 60))).toBeLessThanOrEqual(LAND_PX)
 
     // The new place is saved and comes back after a reload.
     const moved = await cardTransform(page, first.id)
-    if (tries.length % 2 === 1) expect(moved).not.toBe(before)
-    await expect(page.getByRole('status').filter({ hasText: 'Saved in this browser' })).toBeVisible()
+    expect(moved).not.toBe(before)
+    await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
     await page.reload()
     await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
     expect(await cardTransform(page, first.id)).toBe(moved)
