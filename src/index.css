@@ -1,0 +1,12 @@
+/* Minimal base styles. The visual design comes later. */
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
