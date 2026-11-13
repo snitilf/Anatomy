@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
+import guideText from '../../docs/authoring-guide.md?raw'
 import schemaText from '../../schema/board.v1.schema.json?raw'
 import buttons from './buttons.module.css'
 import styles from './HowToDialog.module.css'
 
-export const AGENT_PROMPT = `Write an Anatomy board file: one JSON file that follows the attached JSON Schema (board.v1.schema.json).
+export const AGENT_PROMPT = `Write an Anatomy board file that explains: [describe the plan, feature, or project here]
 
-Explain: [describe the plan, feature, or project here]
+Follow the attached guide (authoring-guide.md) and JSON Schema (board.v1.schema.json).
+Read only this material: [list the files or notes you allow].
 
 Rules:
-- Split it into parts and connections that a student could follow. Use 15 parts or fewer.
-- Give every part and connection a source. Use agent-explanation for what you understand, agent-proposal for what you suggest, documented-intent only when a written document says it (cite its path in references), and user-stated for what I told you.
-- Do not claim that anything was checked against code or seen running.
-- List what you assumed, what you do not know, and open questions as items.
+- Use 6 to 12 parts. Group them as Frontend, Backend, Infrastructure, or similar, one level only.
+- Give every part and connection an honest source: user-stated for what I told you, agent-explanation for what you understood, agent-proposal for what you suggest, documented-intent only with a cited document.
+- Never claim that you checked code or saw it running. Cited paths are shown as "cited, not checked".
+- If a consequential detail is unknown, ask me first. Record what stays unknown as "unknown" or "question" items.
+- Add 1 to 4 walkthroughs. Highlights name parts and connections only.
+- Every ID is unique across the whole board, and every reference must point at something that exists.
 - Return only the JSON.`
 
 export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -53,11 +57,11 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
     window.setTimeout(() => setCopied('idle'), 2000)
   }
 
-  function download() {
-    const url = URL.createObjectURL(new Blob([schemaText], { type: 'application/json' }))
+  function download(text: string, name: string, type: string) {
+    const url = URL.createObjectURL(new Blob([text], { type }))
     const link = document.createElement('a')
     link.href = url
-    link.download = 'board.v1.schema.json'
+    link.download = name
     document.body.append(link)
     link.click()
     link.remove()
@@ -89,7 +93,7 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
 
         <ol className={styles.steps}>
           <li>
-            <strong>Give your agent the schema.</strong> It describes the file Anatomy opens.
+            <strong>Give your agent the guide and the schema.</strong> They describe the file Anatomy opens.
           </li>
           <li>
             <strong>Paste the prompt below,</strong> and say what you want explained.
@@ -100,7 +104,14 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
         </ol>
 
         <div className={styles.row}>
-          <button type="button" className={buttons.button} onClick={download}>
+          <button type="button" className={buttons.button} onClick={() => download(guideText, 'authoring-guide.md', 'text/markdown')}>
+            Download the guide
+          </button>
+          <button
+            type="button"
+            className={buttons.button}
+            onClick={() => download(schemaText, 'board.v1.schema.json', 'application/json')}
+          >
             Download JSON Schema
           </button>
         </div>

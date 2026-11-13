@@ -4,11 +4,11 @@ Anatomy is a local browser app that turns a plan, feature, or project into a vis
 It opens a board file, which is a JSON document that describes the parts of a system, how they connect, and named scenarios that walk through a journey.
 The app runs in the browser on your own machine and does not send board data to any server.
 
-The project is at an early stage.
-The board format and its validator exist.
-The app screen does not open boards yet.
+## Documentation
 
-The board format is described in [docs/board-format.md](docs/board-format.md).
+- [Board format](docs/board-format.md): every field of a board file and what Anatomy checks.
+- [Authoring guide](docs/authoring-guide.md): give this and the JSON Schema to your coding agent so it can write a board.
+- [Architecture](docs/architecture.md): modules, the human overlay, storage, and safety.
 
 ## Requirements
 
