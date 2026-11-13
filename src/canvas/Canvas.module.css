@@ -57,9 +57,10 @@
   box-shadow: none;
 }
 
+/* The edge sets its stroke inline, so the focus style must win over it. */
 .canvas :global(.react-flow__edge:focus-visible .react-flow__edge-path) {
-  stroke: var(--accent);
-  stroke-width: 3;
+  stroke: var(--accent) !important;
+  stroke-width: 3px !important;
 }
 
 .canvas :global(.react-flow__pane) {

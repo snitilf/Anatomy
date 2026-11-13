@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import App from './App'
+import shortenerRaw from './examples/external/url-shortener.board.json?raw'
 import nordetRaw from './examples/nordet.board.json?raw'
 
 function loadNordet() {
@@ -76,6 +77,16 @@ describe('App', () => {
     expect(screen.getByText('broken.json')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
+  })
+
+  it('opens a board written outside the app by another agent', async () => {
+    const { container } = render(<App />)
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File([shortenerRaw], 'url-shortener.board.json', { type: 'application/json' })
+    fireEvent.change(input, { target: { files: [file] } })
+    const title = (JSON.parse(shortenerRaw) as { title: string }).title
+    await waitFor(() => expect(screen.getByRole('heading', { name: title })).toBeInTheDocument())
     expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
   })
 
