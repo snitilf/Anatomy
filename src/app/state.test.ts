@@ -6,6 +6,14 @@ import { initialState, reducer, type AppState } from './state'
 const opened = (): AppState => reducer(initialState, { type: 'boardOpened', board: exampleBoard(), warnings: [] })
 
 describe('reducer', () => {
+  it('does not change the state when a card is dropped where it already is', () => {
+    const state = opened()
+    const id = exampleBoard().components[0]!.id
+    const at = state.overlay!.positions[id]!
+    expect(reducer(state, { type: 'cardMoved', id, point: { x: at.x, y: at.y } })).toBe(state)
+    expect(reducer(state, { type: 'cardMoved', id, point: { x: at.x + 5, y: at.y } })).not.toBe(state)
+  })
+
   it('opens a board with an empty overlay and frozen positions', () => {
     const state = opened()
     const board = exampleBoard()

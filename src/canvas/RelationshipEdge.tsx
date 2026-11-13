@@ -1,11 +1,11 @@
-import type { CSSProperties } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/appContext'
 import type { EdgeData } from './buildGraph'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 import styles from './RelationshipEdge.module.css'
 
-export function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
+export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
   const { id, data, selected, markerEnd, interactionWidth } = props
   const dispatch = useAppDispatch()
   if (!data) return null
@@ -45,4 +45,4 @@ export function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
       </EdgeLabelRenderer>
     </>
   )
-}
+})

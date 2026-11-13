@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/appContext'
 import type { ManualEdgeData } from './buildGraph'
@@ -6,7 +6,7 @@ import { MANUAL_STYLE } from './kinds'
 import styles from './RelationshipEdge.module.css'
 
 /** An arrow the user drew. It never looks like a connection the agent supplied. */
-export function ManualEdge(props: EdgeProps<Edge<ManualEdgeData>>) {
+export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualEdgeData>>) {
   const { id, data, selected, markerEnd, interactionWidth } = props
   const dispatch = useAppDispatch()
   if (!data) return null
@@ -42,4 +42,4 @@ export function ManualEdge(props: EdgeProps<Edge<ManualEdgeData>>) {
       </EdgeLabelRenderer>
     </>
   )
-}
+})

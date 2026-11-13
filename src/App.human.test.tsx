@@ -209,6 +209,8 @@ describe('saving', () => {
 
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowRight', shiftKey: true })
+    // A keyboard move is saved once the keys stop, a quarter of a second later.
+    await new Promise((resolve) => setTimeout(resolve, 350))
     await saved()
     first.unmount()
 
