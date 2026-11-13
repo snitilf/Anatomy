@@ -168,6 +168,20 @@ function crosses(p: Point, q: Point, r: Rect): boolean {
   return maxX > r.x && minX < r.x + r.width && maxY > r.y && minY < r.y + r.height
 }
 
+/**
+ * True when a line comes within the keep-out margin of any of these cards.
+ * It is the check for a line drawn earlier: it stays valid while no card has moved into its way.
+ */
+export function lineHitsCards(points: readonly Point[], cards: readonly Rect[]): boolean {
+  const zones = cards.map((c) => inflate(c, MARGIN - 2))
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i] as Point
+    const q = points[i + 1] ?? p
+    for (const zone of zones) if (crosses(p, q, zone)) return true
+  }
+  return false
+}
+
 export function hitsAnyCard(route: Route, cards: readonly Rect[]): boolean {
   const boxes = cards.map((c) => inflate(c, 4))
   return route.points.some((p) => boxes.some((b) => inside(p, b)))

@@ -22,3 +22,11 @@
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/*
+ * A group area can be taller than the screen and it is resized on every frame of a drag.
+ * Without a paint boundary Chrome leaves stale bands of its old top edge behind. Containment gives it its own paint scope.
+ */
+:global(.react-flow__node-group-area) {
+  contain: layout paint;
+}

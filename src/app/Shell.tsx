@@ -56,6 +56,17 @@ export function Shell() {
     else inspectorHeading()?.focus()
   }
 
+  // Focus that sat in the start screen is lost when a board replaces it. It goes to the panel heading.
+  const usedStart = useRef(false)
+  useEffect(() => {
+    if (!hasBoard || !usedStart.current) return
+    usedStart.current = false
+    const timer = window.setTimeout(() => focusIfLost(null), 50)
+    return () => window.clearTimeout(timer)
+    // focusIfLost only reads refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasBoard])
+
   const closePlayer = () => {
     wasPlaying.current = true
     dispatch({ type: 'scenarioStopped' })
@@ -122,6 +133,7 @@ export function Shell() {
   }, [])
 
   function onFocus(event: FocusEvent<HTMLElement>) {
+    if (!hasBoard) usedStart.current = true
     const el = (event.target as HTMLElement).closest<HTMLElement>(MAP_FOCUS)
     if (el) lastOnMap.current = el
   }
@@ -168,7 +180,7 @@ export function Shell() {
             <Inspector />
           </PlayOriginContext.Provider>
         ) : (
-          <EmptyState onOpen={openPicker} onHowTo={() => setHowTo(true)} />
+          <EmptyState onOpen={openPicker} />
         )}
       </main>
       <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />

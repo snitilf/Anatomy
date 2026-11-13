@@ -11,6 +11,7 @@ import {
   useStore,
   type EdgeTypes,
   type FinalConnectionState,
+  type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -24,7 +25,7 @@ import { newId } from '../overlay/notes'
 import type { Board } from '../board/schema'
 import type { ManualLink } from '../overlay/types'
 import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
-import { frame } from './camera'
+import { frame, keepDroppedCardInView } from './camera'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -85,6 +86,7 @@ function KeepSelectionInView({ takePicked }: { takePicked: () => string | undefi
 
 const STEP_MS = 220
 const RESIZE_MS = 150
+const DROP_PAN_MS = 160
 
 function prefersStillness(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -114,6 +116,23 @@ function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; foc
     latest.current = { stepKey, focus }
   })
 
+  // A step chosen with the keyboard moves the camera at once: arrow keys repeat, and a glide would lag behind them.
+  const byKeyboard = useRef(false)
+  useEffect(() => {
+    const key = () => {
+      byKeyboard.current = true
+    }
+    const pointer = () => {
+      byKeyboard.current = false
+    }
+    window.addEventListener('keydown', key, true)
+    window.addEventListener('pointerdown', pointer, true)
+    return () => {
+      window.removeEventListener('keydown', key, true)
+      window.removeEventListener('pointerdown', pointer, true)
+    }
+  }, [])
+
   const fit = useCallback(
     (animate: boolean) => {
       const { stepKey: key, focus: parts } = latest.current
@@ -139,7 +158,7 @@ function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; foc
     shown.current = stepKey
     // A walkthrough that ends frames the whole board.
     if (before === undefined && stepKey === undefined) return
-    fit(true)
+    fit(!byKeyboard.current)
   }, [stepKey, fit])
 
   useEffect(() => {
@@ -164,6 +183,45 @@ function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; foc
   return null
 }
 
+/** The most one wheel event may change the zoom: a share of 20 per cent either way. */
+const WHEEL_STEP = 1.2
+const MIN_ZOOM = 0.15
+const MAX_ZOOM = 1.6
+
+/**
+ * Ctrl and wheel zooms, and so does a pinch on a trackpad. A mouse wheel notch sends a large delta, and React Flow
+ * turns the largest ones into a jump of several times the size. This takes those events first and keeps each one to
+ * a step of about 20 per cent. Small pinch deltas are not changed.
+ */
+function WheelZoom() {
+  const flow = useReactFlow()
+  const map = useStore((s) => s.domNode)
+  useEffect(() => {
+    if (!map) return
+    const mac = /Mac/i.test(navigator.platform)
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey || (event.target as Element | null)?.closest('.nowheel')) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      const unit = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002
+      const octaves = -event.deltaY * unit * (mac ? 10 : 1)
+      const limit = Math.log2(WHEEL_STEP)
+      const { x, y, zoom } = flow.getViewport()
+      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * 2 ** Math.max(-limit, Math.min(limit, octaves))))
+      if (next === zoom) return
+      // The point under the pointer stays where it is.
+      const box = map.getBoundingClientRect()
+      const px = event.clientX - box.left
+      const py = event.clientY - box.top
+      const ratio = next / zoom
+      void flow.setViewport({ x: px - (px - x) * ratio, y: py - (py - y) * ratio, zoom: next }, { duration: 0 })
+    }
+    map.addEventListener('wheel', onWheel, { capture: true, passive: false })
+    return () => map.removeEventListener('wheel', onWheel, { capture: true })
+  }, [map, flow])
+  return null
+}
+
 /** The fit button shows the whole board, however small that makes the text. */
 function FitButton() {
   const flow = useReactFlow()
@@ -185,8 +243,15 @@ interface View {
   settle?: number
 }
 
-function fullView(board: Board, base: Record<string, Point> | undefined, links: readonly ManualLink[] | undefined, positions = base ?? {}): View {
-  return { board, links, base, positions, geometry: computeGeometry(board, positions, links ?? []) }
+/** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
+function fullView(
+  board: Board,
+  base: Record<string, Point> | undefined,
+  links: readonly ManualLink[] | undefined,
+  positions = base ?? {},
+  previous?: Geometry,
+): View {
+  return { board, links, base, positions, geometry: computeGeometry(board, positions, links ?? [], previous) }
 }
 
 function samePositions(a: Record<string, Point> | undefined, b: Record<string, Point>): boolean {
@@ -243,7 +308,7 @@ export function Canvas() {
     shown = fullView(board, stored, links)
     setView(shown)
   } else if (view && stored !== view.base) {
-    shown = samePositions(stored, view.positions) ? { ...view, base: stored } : fullView(view.board, stored, view.links)
+    shown = samePositions(stored, view.positions) ? { ...view, base: stored } : fullView(view.board, stored, view.links, undefined, view.geometry)
     setView(shown)
   }
   const viewRef = useRef(shown)
@@ -252,6 +317,8 @@ export function Canvas() {
   const pickedOnMap = useRef<string | undefined>(undefined)
   const playing = useRef(false)
   const [cache] = useState(() => new GraphCache())
+  const mapBox = useRef<HTMLDivElement>(null)
+  const flowRef = useRef<ReactFlowInstance | undefined>(undefined)
   const takePicked = useCallback(() => {
     const id = pickedOnMap.current
     pickedOnMap.current = undefined
@@ -287,7 +354,7 @@ export function Canvas() {
         if (point) dispatch({ type: 'cardMoved', id, point })
       }
       keyMoves.current.clear()
-      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v.links, v.positions) : v))
+      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v.links, v.positions, v.geometry) : v))
     }
     return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
   }, [settle, shown, dispatch])
@@ -367,6 +434,8 @@ export function Canvas() {
       if (!held || held.cancelled) return
       keyMoves.current.delete(node.id)
       dispatch({ type: 'cardMoved', id: node.id, point: node.position })
+      // The card is not held back while it moves. After the drop, a card that landed out of sight is brought back.
+      if (flowRef.current) keepDroppedCardInView(flowRef.current, mapBox.current, node.position, prefersStillness() ? 0 : DROP_PAN_MS)
     },
     [dispatch],
   )
@@ -441,9 +510,12 @@ export function Canvas() {
   if (!board || !graph) return null
 
   return (
-    <div className={styles.canvas} data-connecting={connecting || undefined}>
+    <div ref={mapBox} className={styles.canvas} data-connecting={connecting || undefined}>
       <ReactFlow
         key={board.id}
+        onInit={(instance) => {
+          flowRef.current = instance
+        }}
         nodes={graph.nodes}
         edges={graph.edges}
         nodeTypes={nodeTypes}
@@ -459,8 +531,8 @@ export function Canvas() {
         zoomOnScroll={false}
         zoomOnPinch
         onPaneClick={onPaneClick}
-        minZoom={0.15}
-        maxZoom={1.6}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
         nodesConnectable
         connectionMode={ConnectionMode.Loose}
         onConnect={onConnect}
@@ -479,9 +551,10 @@ export function Canvas() {
         <KeepSelectionInView takePicked={takePicked} />
         <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} />
         <FitButton />
+        <WheelZoom />
+        <MapHint />
       </ReactFlow>
       <Legend />
-      <MapHint />
     </div>
   )
 }

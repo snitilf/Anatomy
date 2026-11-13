@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fortyText from '../../e2e/fixtures/forty-parts.board.json?raw'
 import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
-import { resolvePositions } from '../overlay/layout'
+import { CARD_HEIGHT, CARD_WIDTH, resolvePositions } from '../overlay/layout'
 import { exampleBoard } from '../overlay/testBoards'
 import { emptyOverlay, type Point } from '../overlay/types'
 import { assembleGraph, buildGraph, computeGeometry, GraphCache, moveCard } from './buildGraph'
@@ -168,5 +168,88 @@ describe('PointIndex', () => {
       })
       expect(index.countInside(box, skip)).toBe(expected)
     }
+  })
+})
+
+describe.each([
+  ['a small board', exampleBoard],
+  ['a large board', forty],
+])('the full build after a card is dropped on %s', (_name, load) => {
+  const board = load()
+  const touching = (id: string) => board.relationships.filter((r) => r.from === id || r.to === id).map((r) => r.id)
+  const id = [...board.components].sort((a, b) => touching(b.id).length - touching(a.id).length)[0]!.id
+  const mine = new Set(touching(id))
+  const start = () => {
+    const positions = resolvePositions(board, emptyOverlay(board.id))
+    return { positions, solved: computeGeometry(board, positions) }
+  }
+  const drop = (to: Point) => {
+    const { positions, solved } = start()
+    const next = { ...positions, [id]: to }
+    // What the map shows during the drag, and then the build that follows the drop.
+    const cheap = moveCard(board, solved, next, id)
+    return { solved, next, cheap, after: computeGeometry(board, next, [], cheap) }
+  }
+
+  it('leaves every unrelated connection exactly where it was when the card lands in free space', () => {
+    const far = drop({ x: 6000, y: 6000 })
+    for (const [edgeId, shape] of far.solved.edges) {
+      if (mine.has(edgeId)) continue
+      expect(far.after.edges.get(edgeId)).toBe(shape)
+    }
+  })
+
+  it('solves the connections of the moved card again, with a placed label', () => {
+    const far = drop({ x: 6000, y: 6000 })
+    for (const edgeId of mine) {
+      const shape = far.after.edges.get(edgeId)!
+      expect(shape.cheap).toBeUndefined()
+      expect(shape).not.toBe(far.solved.edges.get(edgeId))
+    }
+  })
+
+  it('gives a label a new place when the moved card now covers it, and keeps the others', () => {
+    const { solved, positions } = start()
+    // Land the card on the label of a connection that is not its own.
+    const victim = [...solved.edges.values()].find((s) => !mine.has(s.id) && s.from !== id && s.to !== id)!
+    const to = { x: victim.labelX - CARD_WIDTH / 2, y: victim.labelY - CARD_HEIGHT / 2 + 20 }
+    const next = { ...positions, [id]: to }
+    const after = computeGeometry(board, next, [], moveCard(board, solved, next, id))
+    const label = after.edges.get(victim.id)!
+    // The label that sat under the landed card gets a new place. The pill is not drawn where the old one was.
+    expect(label).not.toBe(victim)
+    expect(label.labelX !== victim.labelX || label.labelY !== victim.labelY).toBe(true)
+    // Every unrelated connection that the card did not touch is the same object as before.
+    let kept = 0
+    for (const [edgeId, shape] of solved.edges) {
+      if (mine.has(edgeId)) continue
+      if (after.edges.get(edgeId) === shape) kept++
+    }
+    expect(kept).toBeGreaterThan(0)
+  })
+
+  it('draws the same picture as a first build when nothing moved', () => {
+    const { positions, solved } = start()
+    const again = computeGeometry(board, positions, [], solved)
+    for (const [edgeId, shape] of solved.edges) expect(again.edges.get(edgeId)).toBe(shape)
+  })
+
+  it('never keeps a plain curve from the drag, even when the card returns to its start', () => {
+    const { positions, solved } = start()
+    const away = { ...positions, [id]: { x: positions[id]!.x + 30, y: positions[id]!.y + 30 } }
+    const cheap = moveCard(board, solved, away, id)
+    const back = moveCard(board, cheap, positions, id)
+    const after = computeGeometry(board, positions, [], back)
+    for (const edgeId of mine) expect(after.edges.get(edgeId)!.cheap).toBeUndefined()
+  })
+
+  it('marks the labels of the moved card as moving until the full build', () => {
+    const { positions, solved } = start()
+    const away = { ...positions, [id]: { x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
+    const cheap = moveCard(board, solved, away, id)
+    const build = (geometry: typeof cheap) =>
+      assembleGraph(board, away, geometry, undefined, undefined, [], new Map(), new GraphCache(), id).edges
+    for (const edge of build(cheap)) expect((edge.data as { moving: boolean }).moving).toBe(mine.has(edge.id))
+    for (const edge of build(computeGeometry(board, away, [], cheap))) expect((edge.data as { moving: boolean }).moving).toBe(false)
   })
 })

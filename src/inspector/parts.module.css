@@ -180,8 +180,17 @@
 }
 
 .source {
-  display: flex;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
   margin: 0 0 12px;
+}
+
+.meaning {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .route + .source,

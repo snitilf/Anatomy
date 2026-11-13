@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { Board, BoardItem, BoardRelationship, Source } from '../board/schema'
-import { ITEM_LABEL } from '../app/labels'
+import { ITEM_LABEL, SOURCE_MEANING } from '../app/labels'
 import { SourceBadge } from '../app/SourceBadge'
 import styles from './parts.module.css'
 import { usePanel } from './panelContext'
@@ -52,11 +52,12 @@ export function PartButton({ board, id }: { board: Board; id: string }) {
   )
 }
 
-/** The source label of a part or connection. Its meaning is the tooltip. */
+/** The source label of a part or connection, with its meaning in words under it. */
 export function SourcePill({ source }: { source: Source }) {
   return (
     <div className={styles.source}>
-      <SourceBadge kind={source.kind} explain />
+      <SourceBadge kind={source.kind} />
+      <p className={styles.meaning}>{SOURCE_MEANING[source.kind]}</p>
     </div>
   )
 }

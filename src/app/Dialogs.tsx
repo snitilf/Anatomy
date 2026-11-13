@@ -27,7 +27,7 @@ export function Dialogs() {
       {choice && (
         <Modal title={`Notes and layout for ${choice.title}`} onCancel={() => resolveChoice(undefined)}>
           <p className={styles.text}>
-            The file and this browser each have their own. Which should the board use?
+            The file and this browser have different notes and layout. Which should the board use?
           </p>
           <div className={styles.actions}>
             <button type="button" className={buttons.button} onClick={() => resolveChoice(undefined)}>
