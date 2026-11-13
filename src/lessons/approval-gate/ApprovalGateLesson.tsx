@@ -414,7 +414,7 @@ export default function ApprovalGateLesson() {
         title="Approval gate"
         hint="Keys: A approve · R reject · E edit · S send"
         readout={readout(state)}
-        keys={[{ mark: 'lit', label: 'The part that explains the latest result' }]}
+        keys={[{ mark: 'lit', label: 'The lit part shows why' }]}
         caption={caption(state)}
       >
         <div className="iso-stage" ref={stage}>
@@ -464,7 +464,6 @@ export default function ApprovalGateLesson() {
       <section className="ag-notes" aria-label="About this model">
         <span className="ag-label">Teaching model, not live execution</span>
         <div>
-          <h2>How the press maps to the app</h2>
           <dl className="ag-map">
             <div>
               <dt>
@@ -491,10 +490,7 @@ export default function ApprovalGateLesson() {
         </div>
         <div>
           <h2>Where the analogy stops</h2>
-          <p>
-            This is a drawing driven by a small model. It does not run an app, and it does not show that Example&apos;s future code handles these rules, because Example has no code yet. A real app must
-            store each decision and each sent result durably. The ledger pins stand for that saved record.
-          </p>
+          <p>This is a drawing of a rule. It does not show that any real app follows the rule.</p>
         </div>
       </section>
     </div>

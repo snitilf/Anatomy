@@ -79,6 +79,11 @@
   position: relative;
 }
 
+/* The drawing never pushes the text below the fold. */
+.ag .iso-svg {
+  max-height: 55vh;
+}
+
 .ag .iso-caption {
   min-height: 3.1em;
   color: var(--anatomy-text);
