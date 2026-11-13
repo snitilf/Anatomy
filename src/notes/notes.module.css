@@ -1,0 +1,387 @@
+/* Everything the user wrote looks different from agent content: a dashed border and a "You" label. */
+
+.you {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 18px;
+  text-transform: uppercase;
+}
+
+.list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.note {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--paper) 55%, var(--surface));
+}
+
+.note[data-status='needs-relinking'] {
+  border-style: dotted;
+  border-color: var(--ink);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag {
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.tag[data-warn] {
+  border-color: var(--ink);
+  border-style: dashed;
+}
+
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.meta,
+.on {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.on {
+  font-size: 13px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 8px;
+}
+
+.spaced {
+  margin-top: 22px;
+}
+
+.solid,
+.plain {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.solid {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.solid:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+}
+
+.solid:disabled {
+  border-color: var(--line);
+  background: var(--faint);
+  color: var(--muted);
+  cursor: default;
+}
+
+.plain {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--accent);
+}
+
+.plain:hover {
+  background: var(--soft);
+}
+
+.solid:active:not(:disabled),
+.plain:active {
+  transform: scale(0.97);
+}
+
+.inline {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+
+/* Forms */
+
+.form {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.field {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.fieldLabel {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.select,
+.input,
+.textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.textarea {
+  display: block;
+  min-height: 76px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.select:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible {
+  border-color: var(--accent);
+}
+
+.formFoot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.counter {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kinds {
+  display: inline-flex;
+  justify-self: start;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--faint);
+}
+
+.kind {
+  position: relative;
+  display: inline-flex;
+}
+
+.kindInput {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.kindFace {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.kindInput:checked + .kindFace {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.kindInput:focus-visible + .kindFace {
+  box-shadow: var(--ring);
+}
+
+.editor {
+  display: grid;
+  gap: 8px;
+}
+
+/* Links */
+
+.linkRow {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: var(--radius-s);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.linkRow:hover {
+  background: var(--faint);
+}
+
+.linkText {
+  display: block;
+  min-width: 0;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.linkLabel {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 10px;
+}
+
+.gone {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.notice {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-s);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.relink {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* What changed and Notes to review */
+
+.changed,
+.review {
+  display: grid;
+  gap: 12px;
+}
+
+.changeGroup {
+  display: grid;
+  gap: 4px;
+}
+
+.changeTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.changeLine {
+  margin: 0;
+  font-size: 14px;
+}
+
+.changeList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.changeButton {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  background: none;
+  text-align: left;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.changeButton:hover {
+  background: var(--faint);
+}
+
+.removed {
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 14px;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.labelBlock {
+  margin-top: 18px;
+}

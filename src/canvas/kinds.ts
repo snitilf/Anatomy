@@ -24,3 +24,6 @@ export const TONE_COLOR: Record<KindStyle['tone'], string> = {
   light: 'color-mix(in srgb, var(--ink) 52%, transparent)',
   faint: 'color-mix(in srgb, var(--ink) 34%, transparent)',
 }
+
+/** The links the user draws. A dash and dot pattern in full ink, unlike any connection from the agent. */
+export const MANUAL_STYLE = { dash: '9 4 2 4', width: 2 } as const

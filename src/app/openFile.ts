@@ -15,10 +15,10 @@ export function openFromText(fileName: string, text: string): Action {
     : { type: 'boardOpened', board: opened.board, warnings }
 }
 
-export async function openFromFile(file: File): Promise<Action> {
+export async function readFileText(file: File): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
   try {
-    return openFromText(file.name, await file.text())
+    return { ok: true, text: await file.text() }
   } catch {
-    return { type: 'openFailed', fileName: file.name, errors: [{ path: '', message: 'The file could not be read.' }] }
+    return { ok: false, message: 'The file could not be read.' }
   }
 }

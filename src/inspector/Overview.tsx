@@ -3,6 +3,8 @@ import { useAppDispatch, useAppState } from '../app/appContext'
 import { PlayOriginContext } from '../scenarios/focus'
 import type { Board } from '../board/schema'
 import { SourceBadge } from '../app/SourceBadge'
+import { NotesSection } from '../notes/NotesSection'
+import { NotesToReview, WhatChanged } from '../notes/Review'
 import { usePanel } from './panelContext'
 import { BulletList, Heading, ItemGroups, Section } from './parts'
 import styles from './parts.module.css'
@@ -12,7 +14,7 @@ function plural(n: number, one: string, many: string) {
 }
 
 export function Overview({ board }: { board: Board }) {
-  const { changes } = useAppState()
+  const { changes, previousBoard } = useAppState()
   const { choose } = usePanel()
   const dispatch = useAppDispatch()
   const origin = useContext(PlayOriginContext)
@@ -20,26 +22,19 @@ export function Overview({ board }: { board: Board }) {
   const groupName = new Map(board.groups.map((g) => [g.id, g.label]))
   const boardItems = board.items.filter((i) => i.about === undefined)
 
-  const changed = changes
-    ? [
-        changes.added.components.length + changes.added.relationships.length,
-        changes.changed.components.length + changes.changed.relationships.length,
-        changes.removed.components.length + changes.removed.relationships.length,
-      ]
-    : undefined
-  const hasChanges = changed !== undefined && (changed.some((n) => n > 0) || changes?.boardChanged)
+  const diff = changes
+  const hasChanges =
+    diff !== undefined &&
+    (diff.boardChanged ||
+      [diff.added, diff.removed, diff.changed].some((c) => c.components.length + c.relationships.length > 0))
 
   return (
     <>
       <Heading>{board.title}</Heading>
       <p className={styles.lead}>{board.goal}</p>
 
-      {hasChanges && changed && (
-        <p className={styles.changes}>
-          Since the version you had open: {plural(changed[0] ?? 0, 'part or connection', 'parts or connections')} added,{' '}
-          {changed[1] ?? 0} changed, {changed[2] ?? 0} removed.
-        </p>
-      )}
+      {hasChanges && diff && <WhatChanged board={board} previous={previousBoard} changes={diff} />}
+      <NotesToReview board={board} previous={previousBoard} />
 
       {board.scope.includes.length > 0 && (
         <Section title="Covers">
@@ -53,6 +48,8 @@ export function Overview({ board }: { board: Board }) {
       )}
 
       <ItemGroups items={boardItems} />
+
+      <NotesSection target={{ type: 'board' }} />
 
       {board.scenarios.length > 0 && (
         <Section title="Walkthroughs">

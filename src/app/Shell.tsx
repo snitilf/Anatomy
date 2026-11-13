@@ -7,7 +7,9 @@ import { useAppDispatch, useAppState } from './appContext'
 import { EmptyState } from './EmptyState'
 import { HowToDialog } from './HowToDialog'
 import { Notices } from './Notices'
-import { openFromFile } from './openFile'
+import { Dialogs } from './Dialogs'
+import { readFileText } from './openFile'
+import { usePersistence } from './persistenceContext'
 import styles from './Shell.module.css'
 import { Toolbar } from './Toolbar'
 
@@ -17,6 +19,7 @@ const MAP_FOCUS = '.react-flow__node, .react-flow__edge'
 export function Shell() {
   const { board, selection, scenario } = useAppState()
   const dispatch = useAppDispatch()
+  const { openText } = usePersistence()
   const input = useRef<HTMLInputElement>(null)
   const [howTo, setHowTo] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -57,7 +60,10 @@ export function Shell() {
   }, [selection])
 
   async function openFile(file: File | undefined) {
-    if (file) dispatch(await openFromFile(file))
+    if (!file) return
+    const read = await readFileText(file)
+    if (read.ok) openText(file.name, read.text)
+    else dispatch({ type: 'openFailed', fileName: file.name, errors: [{ path: '', message: read.message }] })
   }
 
   function onPicked(event: ChangeEvent<HTMLInputElement>) {
@@ -149,6 +155,7 @@ export function Shell() {
         )}
       </main>
       <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
+      <Dialogs />
       <HowToDialog open={howTo} onClose={() => setHowTo(false)} />
       {dragging && (
         <div className={styles.drop} aria-hidden="true">

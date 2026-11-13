@@ -28,14 +28,6 @@
   font-size: 13px;
 }
 
-.changes {
-  margin: 0 0 16px;
-  padding: 8px 12px;
-  border-radius: var(--radius-s);
-  background: var(--soft);
-  font-size: 13px;
-}
-
 .notice {
   margin: 8px 0 0;
   padding: 8px 12px;

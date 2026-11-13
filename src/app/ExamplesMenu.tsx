@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAppDispatch } from './appContext'
 import buttons from './buttons.module.css'
 import { EXAMPLES } from './examples'
 import styles from './ExamplesMenu.module.css'
-import { openFromText } from './openFile'
+import { usePersistence } from './persistenceContext'
 
 export function ExamplesMenu({ label, primary = false }: { label: string; primary?: boolean }) {
-  const dispatch = useAppDispatch()
+  const { openText } = usePersistence()
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -52,7 +51,7 @@ export function ExamplesMenu({ label, primary = false }: { label: string; primar
                 className={styles.item}
                 onClick={() => {
                   setOpen(false)
-                  dispatch(openFromText(example.fileName, example.raw))
+                  openText(example.fileName, example.raw)
                 }}
               >
                 <span className={styles.itemTitle}>{example.title}</span>

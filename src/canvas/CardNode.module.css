@@ -97,3 +97,67 @@
   border: 0;
   pointer-events: none;
 }
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* How many of the user's own notes sit on this part. Dashed, like the notes themselves. */
+.mine {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px 0 4px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 60%, transparent);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.mine span {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+.mine b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Handles for drawing a link. They show when the pointer is on the card, the card has focus, or a link is being drawn. */
+.drawHandle {
+  width: 12px;
+  height: 12px;
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.drawHandle:hover {
+  background: var(--accent);
+}
+
+.card:hover .drawHandle,
+:global(.react-flow__node:focus-within) .drawHandle,
+:global([data-connecting]) .drawHandle {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .card[data-selected] .drawHandle {
+    opacity: 1;
+  }
+}
