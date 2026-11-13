@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 
 // Anatomy is a local tool. The dev and preview servers listen on loopback only.
 export default defineConfig({
@@ -11,6 +12,7 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 800 },
   test: {
     environment: 'jsdom',
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     setupFiles: ['./src/test/setup.ts'],
   },
 })
