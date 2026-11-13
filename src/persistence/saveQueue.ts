@@ -36,6 +36,8 @@ export function createSaveQueue<T>(save: (value: T) => Promise<void>, delayMs = 
 
   function drain(): Promise<void> {
     if (running) return running
+    // With nothing waiting, the loop below would finish before `running` is assigned and leave it set for good.
+    if (!latest) return Promise.resolve()
     running = (async () => {
       try {
         while (latest) {
