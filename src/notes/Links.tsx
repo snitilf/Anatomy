@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
-import { BackButton, Heading, PartButton, Section } from '../inspector/parts'
+import { BackButton, Disclosure, Heading, PartButton } from '../inspector/parts'
 import { usePanel } from '../inspector/panelContext'
 import { newId } from '../overlay/notes'
 import { OVERLAY_LIMITS } from '../overlay/schema'
@@ -27,6 +27,7 @@ export function LinksSection({ componentId }: { componentId: string }) {
   const [label, setLabel] = useState('')
   if (!board || !manualLinks) return null
   const mine = manualLinks.filter((l) => l.from === componentId || l.to === componentId)
+  const broken = mine.some((l) => manualLinkStatus(board, l) === 'needs-relinking')
 
   function add() {
     if (to === '') return
@@ -37,7 +38,7 @@ export function LinksSection({ componentId }: { componentId: string }) {
   }
 
   return (
-    <Section title="Your links">
+    <Disclosure title="Your links" count={mine.length} open={broken}>
       {mine.length > 0 && (
         <ul className={styles.list}>
           {mine.map((link) => {
@@ -64,10 +65,10 @@ export function LinksSection({ componentId }: { componentId: string }) {
           add()
         }}
       >
-        <PartSelect board={board} label="Draw a link to" value={to} exclude={componentId} onChange={setTo} />
+        <PartSelect board={board} label="Link to" value={to} exclude={componentId} onChange={setTo} />
         <span className={styles.field}>
           <label htmlFor={`link-label-${componentId}`} className={styles.fieldLabel}>
-            Label (optional)
+            Label
           </label>
           <input
             id={`link-label-${componentId}`}
@@ -83,7 +84,7 @@ export function LinksSection({ componentId }: { componentId: string }) {
           </button>
         </div>
       </form>
-    </Section>
+    </Disclosure>
   )
 }
 

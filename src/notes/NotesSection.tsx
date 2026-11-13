@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
-import { Section } from '../inspector/parts'
+import { Disclosure } from '../inspector/parts'
 import { newId } from '../overlay/notes'
 import { OVERLAY_LIMITS } from '../overlay/schema'
 import { noteStatus } from '../overlay/status'
@@ -45,7 +45,6 @@ function NoteForm({ target }: { target: Target }) {
       <textarea
         className={styles.textarea}
         aria-label={kind === 'note' ? 'Your note' : 'Your question'}
-        placeholder={kind === 'note' ? 'What do you want to remember?' : 'What do you want to find out?'}
         value={text}
         maxLength={OVERLAY_LIMITS.noteText}
         rows={3}
@@ -76,8 +75,9 @@ export function NotesSection({ target }: { target: Target }) {
   const { board, allNotes } = useAppStore(useShallow((s) => ({ board: s.board, allNotes: s.overlay?.notes })))
   if (!board || !allNotes) return null
   const notes = allNotes.filter((n) => sameTarget(n.target, target))
+  const needsReview = notes.some((n) => noteStatus(board, n) !== 'current')
   return (
-    <Section title="Your notes">
+    <Disclosure title="Your notes" count={notes.length} open={needsReview}>
       {notes.length > 0 && (
         <ul className={styles.list}>
           {notes.map((note) => {
@@ -98,6 +98,6 @@ export function NotesSection({ target }: { target: Target }) {
         </ul>
       )}
       <NoteForm target={target} />
-    </Section>
+    </Disclosure>
   )
 }

@@ -1,0 +1,91 @@
+import { expect, test, type Page } from '@playwright/test'
+import { open, viewport } from './helpers.ts'
+
+const NORDET = 'src/examples/nordet.board.json'
+const FORTY = 'e2e/fixtures/forty-parts.board.json'
+
+const zoomOf = async (page: Page) => {
+  const match = /scale\(([\d.]+)\)/.exec(await viewport(page))
+  return match ? Number(match[1]) : 0
+}
+
+test('the map opens at a readable zoom, and Fit still shows the whole board', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await open(page, FORTY)
+  // The whole board would need far less than the readable zoom, so the first view is its top-left corner.
+  expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.54)
+  const first = await page.locator('.react-flow__node-card').first().boundingBox()
+  expect(first?.x).toBeGreaterThanOrEqual(0)
+  expect(first?.y).toBeGreaterThanOrEqual(0)
+
+  await page.getByRole('button', { name: 'fit view' }).click()
+  await expect.poll(() => zoomOf(page)).toBeLessThan(0.5)
+})
+
+test('a small board is framed larger than before, and cards hold a title, three summary lines, and the badge row', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, NORDET)
+  expect(await zoomOf(page)).toBeGreaterThan(0.6)
+  const fits = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('.react-flow__node-card > div')].every((card) => card.scrollHeight <= card.clientHeight + 1),
+  )
+  expect(fits).toBe(true)
+})
+
+test('the map hint shows once, until the first click, and stays gone after a reload', async ({ page }) => {
+  await open(page, NORDET)
+  const hint = page.getByRole('note').filter({ hasText: 'Drag a card to move it' })
+  await expect(hint).toBeVisible()
+  await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
+  await expect(hint).toBeHidden()
+  await page.reload()
+  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  await expect(hint).toBeHidden()
+})
+
+test('the map hint can be closed with its button', async ({ page }) => {
+  await open(page, NORDET)
+  await page.getByRole('button', { name: 'Dismiss hint' }).click()
+  await expect(page.getByRole('note')).toHaveCount(0)
+})
+
+test('selecting a part softens the other lines, and a selected connection is drawn at 3px', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, NORDET)
+  const inspector = page.getByRole('complementary', { name: 'Details' })
+  const opacities = () =>
+    page.evaluate(() => [...document.querySelectorAll<SVGElement>('.react-flow__edge g[data-faded]')].length)
+  expect(await opacities()).toBe(0)
+
+  await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
+  expect(await opacities()).toBeGreaterThan(0)
+
+  await inspector.getByRole('button', { name: /^Simulated send/ }).click()
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const path = document.querySelector<SVGPathElement>('.react-flow__edge.selected .react-flow__edge-path')
+        return path ? getComputedStyle(path).strokeWidth : ''
+      }),
+    )
+    .toBe('3px')
+})
+
+test('the panel starts at the top for every new selection', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 700 })
+  await open(page, NORDET)
+  const inspector = page.getByRole('complementary', { name: 'Details' })
+  await inspector.evaluate((el) => el.scrollTo({ top: 400 }))
+  expect(await inspector.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+  await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
+  await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
+  expect(await inspector.evaluate((el) => el.scrollTop)).toBe(0)
+})
+
+test('a part opens on its summary, with the longer sections closed', async ({ page }) => {
+  await open(page, NORDET)
+  const inspector = page.getByRole('complementary', { name: 'Details' })
+  await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
+  await expect(inspector.locator('details')).not.toHaveCount(0)
+  await expect(inspector.locator('details[open]')).toHaveCount(0)
+})

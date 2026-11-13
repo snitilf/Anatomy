@@ -110,6 +110,29 @@ describe('a walkthrough', () => {
   })
 })
 
+describe('softening the lines while a part is selected', () => {
+  const board = nordetBoard()
+  const positions = resolvePositions(board, emptyOverlay(board.id))
+  const geometry = computeGeometry(board, positions)
+  const part = board.components.find((c) => board.relationships.some((r) => r.from === c.id || r.to === c.id))!
+  const build = (selection: Parameters<typeof assembleGraph>[3], held?: string, highlight?: ReadonlySet<string>) =>
+    assembleGraph(board, positions, geometry, selection, highlight, [], new Map(), new GraphCache(), held)
+  const faded = (graph: ReturnType<typeof build>) => new Map(graph.edges.map((e) => [e.id, (e.data as { faded: boolean }).faded]))
+
+  it('keeps the lines of the selected part strong and softens the rest', () => {
+    const result = faded(build({ type: 'component', id: part.id }))
+    for (const r of board.relationships) expect(result.get(r.id)).toBe(r.from !== part.id && r.to !== part.id)
+    expect([...result.values()].some(Boolean)).toBe(true)
+  })
+
+  it('softens nothing without a selected part, while a card is held, or during a walkthrough', () => {
+    expect([...faded(build(undefined)).values()].every((f) => !f)).toBe(true)
+    expect([...faded(build({ type: 'relationship', id: board.relationships[0]!.id })).values()].every((f) => !f)).toBe(true)
+    expect([...faded(build({ type: 'component', id: part.id }, part.id)).values()].every((f) => !f)).toBe(true)
+    expect([...faded(build({ type: 'component', id: part.id }, undefined, new Set([part.id]))).values()].every((f) => !f)).toBe(true)
+  })
+})
+
 describe('arrowheads', () => {
   it('share one marker object per color', () => {
     const { edges } = buildGraph(forty(), resolvePositions(forty(), emptyOverlay('x')), undefined)

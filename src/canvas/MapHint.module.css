@@ -1,0 +1,47 @@
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  max-width: min(520px, calc(100% - 24px));
+  padding: 4px 4px 4px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--lift);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  transform: translateX(-50%);
+  text-wrap: balance;
+}
+
+.close {
+  appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--faint);
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  /* Clear of the legend and the fit button. */
+  .hint {
+    bottom: 54px;
+  }
+}

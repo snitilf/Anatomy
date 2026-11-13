@@ -24,10 +24,12 @@ import { newId } from '../overlay/notes'
 import type { Board } from '../board/schema'
 import type { ManualLink } from '../overlay/types'
 import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
+import { frame } from './camera'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
 import { Legend } from './Legend'
+import { MapHint } from './MapHint'
 import { ManualEdge } from './ManualEdge'
 import { RelationshipEdge } from './RelationshipEdge'
 
@@ -81,7 +83,6 @@ function KeepSelectionInView({ takePicked }: { takePicked: () => string | undefi
   return null
 }
 
-const FIT = { padding: 0.12, maxZoom: 1, duration: 0 }
 const STEP_MS = 220
 const RESIZE_MS = 150
 
@@ -89,17 +90,23 @@ function prefersStillness(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+const sameSize = (a: { width: number; height: number } | undefined, b: { width: number; height: number }) =>
+  a !== undefined && Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height)
+
 /**
- * Frames the map. A walkthrough step frames the parts it is about, and the whole board
- * when it names none. Resizing the window frames it again, so the map never ends up off screen.
+ * Frames the map in the room that notices and the walkthrough player leave free. The first frame, and every later
+ * resize, shows the whole board, or its top-left corner at a readable zoom when the whole board would be too small to read.
+ * A walkthrough step frames the parts it is about, and the whole board when it names none.
  */
 function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean }) {
   const flow = useReactFlow()
+  const map = useStore((s) => s.domNode)
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
   const latest = useRef({ stepKey, focus })
-  const size = useRef({ width, height })
   const shown = useRef<string | undefined>(undefined)
+  const framed = useRef<{ width: number; height: number } | undefined>(undefined)
+  const started = useRef(false)
   const busy = useRef(dragging)
   const waiting = useRef(false)
 
@@ -111,36 +118,41 @@ function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; foc
     (animate: boolean) => {
       const { stepKey: key, focus: parts } = latest.current
       const duration = animate && !prefersStillness() ? STEP_MS : 0
-      if (key !== undefined && parts.length > 0) {
-        void flow.fitView({ nodes: parts.map((id) => ({ id })), padding: 0.25, maxZoom: 1.1, duration })
-      } else {
-        void flow.fitView({ ...FIT, duration })
-      }
+      framed.current =
+        key !== undefined && parts.length > 0
+          ? frame(flow, map, { ids: parts, padding: 0.25, maxZoom: 1.1, duration })
+          : frame(flow, map, { readable: true, duration })
     },
-    [flow],
+    [flow, map],
   )
+
+  // The first frame waits for the map to have a size.
+  useEffect(() => {
+    if (started.current || !map || width === 0 || height === 0) return
+    started.current = true
+    fit(false)
+  }, [map, width, height, fit])
 
   useEffect(() => {
     if (shown.current === stepKey) return
     const before = shown.current
     shown.current = stepKey
-    // The first frame belongs to the `fitView` prop. A walkthrough that ends frames the whole board.
+    // A walkthrough that ends frames the whole board.
     if (before === undefined && stepKey === undefined) return
     fit(true)
   }, [stepKey, fit])
 
   useEffect(() => {
-    const was = size.current
-    if (was.width === width && was.height === height) return
-    size.current = { width, height }
-    if (was.width === 0 || was.height === 0 || width === 0 || height === 0) return
+    if (!started.current) return
     const timer = window.setTimeout(() => {
+      // A step that framed the map has already used the new size.
+      if (map && sameSize(framed.current, map.getBoundingClientRect())) return
       // Refitting under a held card would move it away from the pointer. It waits for the drop.
       if (busy.current) waiting.current = true
       else fit(false)
     }, RESIZE_MS)
     return () => window.clearTimeout(timer)
-  }, [width, height, fit])
+  }, [width, height, fit, map])
 
   useEffect(() => {
     busy.current = dragging
@@ -150,6 +162,13 @@ function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; foc
   }, [dragging, fit])
 
   return null
+}
+
+/** The fit button shows the whole board, however small that makes the text. */
+function FitButton() {
+  const flow = useReactFlow()
+  const map = useStore((s) => s.domNode)
+  return <Controls showInteractive={false} position="bottom-right" onFitView={() => frame(flow, map, { duration: prefersStillness() ? 0 : STEP_MS })} />
 }
 
 /** The map as it is drawn now. While a card moves, the lines are cheap curves. A full build follows the drop. */
@@ -440,8 +459,6 @@ export function Canvas() {
         zoomOnScroll={false}
         zoomOnPinch
         onPaneClick={onPaneClick}
-        fitView
-        fitViewOptions={FIT}
         minZoom={0.15}
         maxZoom={1.6}
         nodesConnectable
@@ -461,9 +478,10 @@ export function Canvas() {
         <Background gap={24} size={1.2} className={styles.dots ?? ""} />
         <KeepSelectionInView takePicked={takePicked} />
         <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} />
-        <Controls showInteractive={false} fitViewOptions={FIT} position="bottom-right" />
+        <FitButton />
       </ReactFlow>
       <Legend />
+      <MapHint />
     </div>
   )
 }

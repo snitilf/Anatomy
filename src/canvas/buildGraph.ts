@@ -40,6 +40,8 @@ export interface ManualEdgeData extends Record<string, unknown> {
   text: string
   hasLabel: boolean
   active: boolean
+  /** A part is selected and this link is not one of its own. */
+  faded: boolean
   path: string
   labelX: number
   labelY: number
@@ -56,6 +58,8 @@ export interface EdgeData extends Record<string, unknown> {
   active: boolean
   highlighted: boolean
   dimmed: boolean
+  /** A part is selected and this connection is not one of its own. */
+  faded: boolean
   /** The drawn line. It leaves each card from a side and keeps out of the other cards. */
   path: string
   /** Where the label sits and how wide it is. Chosen to stay off card text and off other labels. */
@@ -268,6 +272,8 @@ export function assembleGraph(
   const playing = highlight !== undefined && highlight.size > 0
   const names = new Map(board.components.map((c) => [c.id, c.label]))
   const selectedPart = selection?.type === 'component' ? selection.id : undefined
+  // Picking a part leaves its own lines strong and softens the rest. Not while a card is held, and not during a walkthrough.
+  const softening = selectedPart !== undefined && !playing && held === undefined
 
   const groups = geometry.groups.map((g) =>
     stable(cache.nodes, {
@@ -331,7 +337,7 @@ export function assembleGraph(
         deletable: false,
         interactionWidth: 28,
         markerEnd: markerFor(color),
-        ariaLabel: `${names.get(r.from) ?? r.from} ${KIND_WORDS[r.kind]} ${names.get(r.to) ?? r.to}: ${r.label}`,
+        ariaLabel: `${names.get(r.from) ?? r.from} ${r.kind === 'unknown' ? 'connects to' : KIND_WORDS[r.kind]} ${names.get(r.to) ?? r.to}: ${r.label}`,
         data: {
           relationshipId: r.id,
           label: r.label,
@@ -339,6 +345,7 @@ export function assembleGraph(
           active,
           highlighted,
           dimmed: playing && !highlighted,
+          faded: softening && !active,
           path: shape.path,
           labelX: shape.labelX,
           labelY: shape.labelY,
@@ -372,6 +379,7 @@ export function assembleGraph(
           text: l.label === '' ? 'Your link' : l.label,
           hasLabel: l.label !== '',
           active,
+          faded: softening && !active,
           path: shape.path,
           labelX: shape.labelX,
           labelY: shape.labelY,
