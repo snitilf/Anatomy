@@ -101,4 +101,13 @@ describe('save queue', () => {
     await vi.advanceTimersByTimeAsync(1000)
     expect(save).toHaveBeenCalledTimes(1)
   })
+
+  it('still writes after a flush that found nothing to write', async () => {
+    const save = vi.fn(() => Promise.resolve())
+    const queue = createSaveQueue<number>(save, 400)
+    await queue.flush()
+    queue.schedule(3)
+    await queue.flush()
+    expect(save).toHaveBeenCalledWith(3)
+  })
 })
