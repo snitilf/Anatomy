@@ -1,23 +1,29 @@
-export interface Rect {
-  x: number
-  y: number
-  width: number
-  height: number
-}
+import type { Point } from '../overlay/types'
+import type { Rect } from './routing'
 
 export interface LabelSpot {
   x: number
   y: number
-  /** Width the label may use. */
+  /** Width of the pill. The text wraps inside it. */
   width: number
+  lines: number
 }
 
-export const LABEL_HEIGHT = 22
-/** Cards keep this much padding. A label may overlap it, but never the text inside. */
-const CARD_INSET = 14
-/** Width of a label squeezed into the gap between two columns. */
-export const NARROW_LABEL = 84
-export const WIDE_LABEL = 150
+const CHAR_WIDTH = 6.4
+const PAD_X = 10
+const LINE_HEIGHT = 16
+const PAD_Y = 3
+/** Widest first. A label tries the wide pill and falls back to narrower, taller ones. */
+const TIERS = [150, 116, 88]
+
+export function pillHeight(lines: number): number {
+  return lines * LINE_HEIGHT + PAD_Y * 2
+}
+
+/** Cards keep a quiet margin. Only the part where text sits counts as covered. */
+export function textArea(card: Rect): Rect {
+  return { x: card.x + 10, y: card.y + 8, width: card.width - 20, height: card.height - 34 }
+}
 
 function overlap(a: Rect, b: Rect): number {
   const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
@@ -25,67 +31,86 @@ function overlap(a: Rect, b: Rect): number {
   return w > 0 && h > 0 ? w * h : 0
 }
 
-/** Reads points along an SVG path. Undefined where the browser cannot measure paths. */
-function sampler(path: string): ((fraction: number) => { x: number; y: number }) | undefined {
-  try {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    el.setAttribute('d', path)
-    if (typeof el.getTotalLength !== 'function') return undefined
-    const length = el.getTotalLength()
-    if (!Number.isFinite(length) || length === 0) return undefined
-    return (fraction) => {
-      const p = el.getPointAtLength(length * fraction)
-      return { x: p.x, y: p.y }
+/** Estimates how the text wraps in a pill of the given outer width. */
+export function wrap(text: string, outer: number): { lines: number; width: number } {
+  const room = outer - PAD_X * 2
+  let lines = 1
+  let line = 0
+  let widest = 0
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const w = word.length * CHAR_WIDTH
+    if (line === 0) line = w
+    else if (line + CHAR_WIDTH + w <= room) line += CHAR_WIDTH + w
+    else {
+      widest = Math.max(widest, line)
+      lines++
+      line = w
     }
-  } catch {
-    return undefined
   }
+  widest = Math.max(widest, line)
+  return { lines, width: Math.min(outer, Math.ceil(widest) + PAD_X * 2 + 2) }
+}
+
+function inside(p: Point, r: Rect): boolean {
+  return p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height
 }
 
 /**
- * Picks where a connection's label goes. It starts at the middle of the line and
- * slides along it until the label covers neither the text of a card nor another label.
- * A label that fits nowhere at full width shrinks to fit the gap between columns.
+ * Picks where a connection's label goes. It slides along the line, away from the middle,
+ * until the pill covers no card text, no other pill, and no other line. A wide pill with
+ * two lines is preferred. In a narrow gap it falls back to a narrower pill with more lines,
+ * and beside the line when the line is too short to carry the pill without hiding its arrow.
  */
 export function placeLabel(
-  path: string,
-  textWidth: number,
+  route: readonly Point[],
+  text: string,
   cards: readonly Rect[],
   taken: readonly Rect[],
-  middle: { x: number; y: number },
+  otherLines: readonly Point[] = [],
 ): LabelSpot {
-  const inner = cards.map((c) => ({
-    x: c.x + CARD_INSET,
-    y: c.y + CARD_INSET,
-    width: c.width - CARD_INSET * 2,
-    height: c.height - CARD_INSET * 2,
-  }))
-  const cost = (p: { x: number; y: number }, width: number) => {
-    const box = { x: p.x - width / 2, y: p.y - LABEL_HEIGHT / 2, width, height: LABEL_HEIGHT }
-    return (
-      inner.reduce((sum, c) => sum + overlap(box, c), 0) +
-      taken.reduce((sum, t) => sum + overlap(box, t) * 4, 0)
-    )
-  }
+  const areas = cards.map(textArea)
+  const last = route.length - 1
+  const end = route[last] ?? { x: 0, y: 0 }
+  const middle = route[Math.round(last / 2)] ?? { x: 0, y: 0 }
+  let best: LabelSpot = { ...middle, width: TIERS[0] as number, lines: 1 }
+  let bestCost = Infinity
 
-  const at = sampler(path)
-  const fractions = [0.5]
-  for (let step = 1; step <= 16; step++) fractions.push(0.5 + step * 0.025, 0.5 - step * 0.025)
-
-  let fallback: LabelSpot = { ...middle, width: Math.min(textWidth, NARROW_LABEL) }
-  let fallbackCost = Infinity
-  for (const width of [Math.min(textWidth, WIDE_LABEL), Math.min(textWidth, NARROW_LABEL)]) {
-    for (const fraction of fractions) {
-      const spot = fraction === 0.5 ? middle : at?.(fraction)
-      if (!spot) break
-      const c = cost(spot, width)
-      if (c === 0) return { ...spot, width }
-      if (c < fallbackCost) {
-        fallback = { ...spot, width }
-        fallbackCost = c
+  for (const tier of TIERS) {
+    const size = wrap(text, tier)
+    const height = pillHeight(size.lines)
+    const tall = size.lines > 2 ? 400 : 0
+    for (let k = 0; k <= 34; k++) {
+      // 0.5, 0.52, 0.48, 0.54, ... but never right at the arrowheads.
+      const along = Math.ceil(k / 2) * 0.02 * (k % 2 === 1 ? 1 : -1)
+      const fraction = 0.5 + along
+      if (fraction < 0.14 || fraction > 0.86) continue
+      const index = Math.round(last * fraction)
+      const p = route[index]
+      const before = route[Math.max(0, index - 2)]
+      const after = route[Math.min(last, index + 2)]
+      if (!p || !before || !after) continue
+      const tangent = Math.hypot(after.x - before.x, after.y - before.y) || 1
+      const normal = { x: -(after.y - before.y) / tangent, y: (after.x - before.x) / tangent }
+      const reach = Math.abs(normal.x) * (size.width / 2 + 8) + Math.abs(normal.y) * (height / 2 + 8)
+      for (const side of [0, 1, -1]) {
+        const c = { x: p.x + normal.x * reach * side, y: p.y + normal.y * reach * side }
+        const box = { x: c.x - size.width / 2, y: c.y - height / 2, width: size.width, height }
+        const arrow = { x: end.x - 14, y: end.y - 14, width: 28, height: 28 }
+        const cost =
+          areas.reduce((sum, a) => sum + overlap(box, a), 0) +
+          taken.reduce((sum, t) => sum + overlap(box, t), 0) * 3 +
+          otherLines.reduce((sum, q) => sum + (inside(q, box) ? 6 : 0), 0) +
+          (overlap(box, arrow) > 0 ? 300 : 0) +
+          (side === 0 ? 0 : 14) +
+          tall +
+          (size.lines - 1) * 10 +
+          Math.abs(along) * 120
+        if (cost < bestCost) {
+          bestCost = cost
+          best = { x: c.x, y: c.y, width: size.width, lines: size.lines }
+        }
       }
     }
-    if (!at) break
   }
-  return fallback
+  return best
 }

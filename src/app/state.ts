@@ -17,6 +17,8 @@ export interface AppState {
   warnings: BoardProblem[]
   openErrors?: { fileName: string; errors: BoardProblem[] }
   selection?: Selection
+  /** The walkthrough that is playing, and the step it shows. */
+  scenario?: { id: string; step: number }
 }
 
 export type Action =
@@ -26,6 +28,11 @@ export type Action =
   | { type: 'dismissWarnings' }
   | { type: 'select'; selection: Selection | undefined }
   | { type: 'cardMoved'; id: string; point: Point }
+  | { type: 'scenarioStarted'; id: string }
+  | { type: 'scenarioMoved'; index: number }
+  | { type: 'scenarioNext' }
+  | { type: 'scenarioPrevious' }
+  | { type: 'scenarioStopped' }
 
 export const initialState: AppState = { warnings: [] }
 
@@ -34,6 +41,14 @@ function selectionExists(board: Board, selection: Selection | undefined): boolea
   if (selection.type === 'board') return true
   const list = selection.type === 'component' ? board.components : board.relationships
   return list.some((x) => x.id === selection.id)
+}
+
+function withStep(state: AppState, index: number): AppState {
+  const { board, scenario } = state
+  const total = board?.scenarios.find((s) => s.id === scenario?.id)?.steps.length
+  if (!scenario || total === undefined) return state
+  const step = Math.min(Math.max(Math.trunc(index), 0), total - 1)
+  return step === scenario.step ? state : { ...state, scenario: { ...scenario, step } }
 }
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -70,6 +85,21 @@ export function reducer(state: AppState, action: Action): AppState {
       if (!state.overlay) return state
       const overlay = setPosition(state.overlay, action.id, action.point)
       return overlay === state.overlay ? state : { ...state, overlay }
+    }
+    case 'scenarioStarted': {
+      if (!state.board?.scenarios.some((s) => s.id === action.id)) return state
+      return { ...state, scenario: { id: action.id, step: 0 } }
+    }
+    case 'scenarioMoved':
+      return withStep(state, action.index)
+    case 'scenarioNext':
+      return state.scenario ? withStep(state, state.scenario.step + 1) : state
+    case 'scenarioPrevious':
+      return state.scenario ? withStep(state, state.scenario.step - 1) : state
+    case 'scenarioStopped': {
+      if (!state.scenario) return state
+      const { scenario: _dropped, ...rest } = state
+      return rest
     }
   }
 }

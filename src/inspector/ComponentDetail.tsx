@@ -1,4 +1,7 @@
+import { useRef, useState } from 'react'
 import type { Board, BoardComponent } from '../board/schema'
+import { findLesson } from '../lessons/catalog'
+import { LessonDialog } from '../lessons/LessonDialog'
 import { Markdown } from '../text/markdown'
 import { BackButton, BulletList, ConnectionButton, Heading, ItemGroups, Section, SourceBlock } from './parts'
 import styles from './parts.module.css'
@@ -6,12 +9,13 @@ import styles from './parts.module.css'
 export function ComponentDetail({
   board,
   component,
-  onOpenLesson,
 }: {
   board: Board
   component: BoardComponent
-  onOpenLesson: ((lessonId: string) => void) | undefined
 }) {
+  const [lessonOpen, setLessonOpen] = useState(false)
+  const opener = useRef<HTMLButtonElement>(null)
+  const lesson = component.lesson === undefined ? undefined : findLesson(component.lesson)
   const outgoing = board.relationships.filter((r) => r.from === component.id)
   const incoming = board.relationships.filter((r) => r.to === component.id)
   const items = board.items.filter((i) => i.about === component.id)
@@ -26,10 +30,31 @@ export function ComponentDetail({
 
       <p className={styles.lead}>{component.summary}</p>
 
-      {component.lesson && onOpenLesson && (
-        <button type="button" className={styles.primary} onClick={() => onOpenLesson(component.lesson as string)}>
-          Open lesson
-        </button>
+      {component.lesson !== undefined && lesson && (
+        <Section title="Interactive lesson">
+          <div className={styles.lessonCard}>
+            <span className={styles.lessonTitle}>
+              {lesson.title}
+              <span className={styles.tag}>Teaching model</span>
+            </span>
+            <p className={styles.lessonSummary}>{lesson.summary}</p>
+            <button ref={opener} type="button" className={styles.primary} onClick={() => setLessonOpen(true)}>
+              Open lesson
+            </button>
+          </div>
+          {lessonOpen && (
+            <LessonDialog
+              lessonId={lesson.id}
+              onClose={() => {
+                setLessonOpen(false)
+                requestAnimationFrame(() => opener.current?.focus())
+              }}
+            />
+          )}
+        </Section>
+      )}
+      {component.lesson !== undefined && !lesson && (
+        <p className={styles.quiet}>This board names a lesson that this version of Anatomy does not include.</p>
       )}
 
       {component.explanation && (

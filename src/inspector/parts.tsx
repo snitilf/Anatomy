@@ -65,7 +65,7 @@ export function SourceBlock({ source }: { source: Source }) {
               <li key={i}>
                 <span className={styles.refLabel}>{r.label}</span>
                 {r.path && <code className={styles.path}>{r.path}</code>}
-                {r.note && <span className={styles.refNote}>{r.note}</span>}
+                {r.note && <span className={styles.refNote}>Note: {r.note}</span>}
               </li>
             ))}
           </ul>

@@ -11,7 +11,12 @@ export function CardNode({ data, selected }: NodeProps<Node<CardData>>) {
   const component = board?.components.find((c) => c.id === data.componentId)
   if (!component) return null
   return (
-    <div className={styles.card} data-selected={selected || undefined}>
+    <div
+      className={styles.card}
+      data-selected={selected || undefined}
+      data-highlighted={data.highlighted ? 'true' : undefined}
+      data-dimmed={data.dimmed ? 'true' : undefined}
+    >
       {SIDES.map((side) => (
         <Handle key={`in-${side}`} id={`in-${side}`} type="target" position={SIDE_POSITION[side]} isConnectable={false} className={styles.handle} />
       ))}

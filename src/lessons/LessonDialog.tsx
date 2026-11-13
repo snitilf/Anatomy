@@ -16,9 +16,8 @@ export function LessonDialog({ lessonId, onClose }: Props) {
   useEffect(() => {
     const dialog = ref.current
     if (dialog && !dialog.open) dialog.showModal()
-    return () => {
-      if (dialog?.open) dialog.close()
-    }
+    // No cleanup. Removing the element ends the modal. A `close()` here would fire a close event
+    // after a development remount and shut the dialog that just opened.
   }, [])
 
   return (

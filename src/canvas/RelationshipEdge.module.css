@@ -1,25 +1,39 @@
+.line {
+  transition: opacity 200ms var(--ease-out);
+}
+
+.line[data-dimmed] {
+  opacity: 0.28;
+}
+
+.line[data-dimmed]:hover {
+  opacity: 1;
+}
+
 .pill {
   position: absolute;
-  max-width: var(--label-width, 150px);
-  padding: 1px 9px;
+  box-sizing: border-box;
+  width: var(--label-width, 150px);
+  padding: 3px 9px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--ink);
   font-size: 12px;
-  line-height: 18px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 16px;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
   pointer-events: all;
   cursor: pointer;
   box-shadow: 0 1px 2px var(--shadow);
-  transition: background-color 120ms var(--ease-out);
+  transition:
+    background-color 120ms var(--ease-out),
+    opacity 200ms var(--ease-out);
 }
 
 .pill:hover,
 .pill[data-selected] {
-  max-width: 280px;
   z-index: 1;
 }
 
@@ -30,6 +44,19 @@
 
 .pill[data-active] {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.pill[data-highlighted] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.pill[data-dimmed] {
+  opacity: 0.28;
+}
+
+.pill[data-dimmed]:hover {
+  opacity: 1;
 }
 
 .pill[data-selected] {

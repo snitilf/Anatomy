@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { currentStep } from '../scenarios/step'
 import { useAppDispatch, useAppState } from '../app/appContext'
 import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
 import type { Point } from '../overlay/types'
@@ -67,9 +68,66 @@ function KeepSelectionInView() {
 }
 
 const FIT = { padding: 0.12, maxZoom: 1, duration: 0 }
+const STEP_MS = 400
+const RESIZE_MS = 150
+
+function prefersStillness(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/**
+ * Frames the map. A walkthrough step frames the parts it is about, and the whole board
+ * when it names none. Resizing the window frames it again, so the map never ends up off screen.
+ */
+function Camera({ stepKey, focus }: { stepKey: string | undefined; focus: readonly string[] }) {
+  const flow = useReactFlow()
+  const width = useStore((s) => s.width)
+  const height = useStore((s) => s.height)
+  const latest = useRef({ stepKey, focus })
+  const size = useRef({ width, height })
+  const shown = useRef<string | undefined>(undefined)
+
+  useEffect(() => {
+    latest.current = { stepKey, focus }
+  })
+
+  const fit = useCallback(
+    (animate: boolean) => {
+      const { stepKey: key, focus: parts } = latest.current
+      const duration = animate && !prefersStillness() ? STEP_MS : 0
+      if (key !== undefined && parts.length > 0) {
+        void flow.fitView({ nodes: parts.map((id) => ({ id })), padding: 0.25, maxZoom: 1.1, duration })
+      } else {
+        void flow.fitView({ ...FIT, duration })
+      }
+    },
+    [flow],
+  )
+
+  useEffect(() => {
+    if (shown.current === stepKey) return
+    const before = shown.current
+    shown.current = stepKey
+    // The first frame belongs to the `fitView` prop. A walkthrough that ends frames the whole board.
+    if (before === undefined && stepKey === undefined) return
+    fit(true)
+  }, [stepKey, fit])
+
+  useEffect(() => {
+    const was = size.current
+    if (was.width === width && was.height === height) return
+    size.current = { width, height }
+    if (was.width === 0 || was.height === 0 || width === 0 || height === 0) return
+    const timer = window.setTimeout(() => fit(false), RESIZE_MS)
+    return () => window.clearTimeout(timer)
+  }, [width, height, fit])
+
+  return null
+}
 
 export function Canvas() {
-  const { board, overlay, selection } = useAppState()
+  const state = useAppState()
+  const { board, overlay, selection } = state
   const dispatch = useAppDispatch()
   const stored = overlay?.positions
   // Positions follow the pointer while a card is dragged. The app state gets the final spot.
@@ -80,7 +138,12 @@ export function Canvas() {
     setLive(stored ?? {})
   }
 
-  const graph = useMemo(() => (board ? buildGraph(board, live, selection) : undefined), [board, live, selection])
+  const step = useMemo(() => currentStep({ board: state.board, scenario: state.scenario }), [state.board, state.scenario])
+  const graph = useMemo(
+    () => (board ? buildGraph(board, live, selection, step?.highlight) : undefined),
+    [board, live, selection, step],
+  )
+  const stepKey = step ? `${step.scenario.id}:${step.index}` : undefined
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -139,6 +202,7 @@ export function Canvas() {
       >
         <Background gap={24} size={1.2} className={styles.dots ?? ""} />
         <KeepSelectionInView />
+        <Camera stepKey={stepKey} focus={step?.focusParts ?? []} />
         <Controls showInteractive={false} fitViewOptions={FIT} position="bottom-right" />
       </ReactFlow>
       <Legend />
