@@ -7,7 +7,7 @@ import { SourceBadge } from '../app/SourceBadge'
 import { NotesSection } from '../notes/NotesSection'
 import { NotesToReview, WhatChanged } from '../notes/Review'
 import { usePanel } from './panelContext'
-import { BulletList, Heading, ItemGroups, Section } from './parts'
+import { Heading, OpenItems, Section, ShortList } from './parts'
 import styles from './parts.module.css'
 
 function plural(n: number, one: string, many: string) {
@@ -37,21 +37,6 @@ export function Overview({ board }: { board: Board }) {
       {hasChanges && diff && <WhatChanged board={board} previous={previousBoard} changes={diff} />}
       <NotesToReview board={board} previous={previousBoard} />
 
-      {board.scope.includes.length > 0 && (
-        <Section title="Covers">
-          <BulletList items={board.scope.includes} />
-        </Section>
-      )}
-      {board.scope.excludes.length > 0 && (
-        <Section title="Does not cover">
-          <BulletList items={board.scope.excludes} />
-        </Section>
-      )}
-
-      <ItemGroups items={boardItems} />
-
-      <NotesSection target={{ type: 'board' }} />
-
       {board.scenarios.length > 0 && (
         <Section title="Walkthroughs">
           <ul className={styles.plain}>
@@ -76,6 +61,17 @@ export function Overview({ board }: { board: Board }) {
               </li>
             ))}
           </ul>
+        </Section>
+      )}
+
+      {board.scope.includes.length > 0 && (
+        <Section title="Covers">
+          <ShortList items={board.scope.includes} />
+        </Section>
+      )}
+      {board.scope.excludes.length > 0 && (
+        <Section title="Does not cover">
+          <ShortList items={board.scope.excludes} />
         </Section>
       )}
 
@@ -114,6 +110,9 @@ export function Overview({ board }: { board: Board }) {
           </ul>
         </Section>
       )}
+
+      <OpenItems items={boardItems} />
+      <NotesSection target={{ type: 'board' }} />
     </>
   )
 }

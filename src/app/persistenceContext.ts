@@ -70,6 +70,6 @@ export function storageProblem(error: StorageError): string {
     case 'blocked':
       return 'Another tab is holding this storage'
     case 'failed':
-      return 'The browser could not write the data'
+      return 'The browser could not save'
   }
 }

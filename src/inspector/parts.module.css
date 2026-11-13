@@ -108,7 +108,6 @@
   background: none;
   text-align: left;
   cursor: pointer;
-  transition: background-color 120ms var(--ease-out);
 }
 
 .row:hover,
@@ -181,35 +180,13 @@
 }
 
 .source {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-  margin: 0 0 16px;
+  display: flex;
+  margin: 0 0 12px;
 }
 
 .route + .source,
 .notice + .source {
   margin-top: 14px;
-}
-
-.sourceText {
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.refs {
-  margin-top: 2px;
-  padding: 8px 12px;
-  width: 100%;
-  border-left: 2px solid var(--line);
-  font-size: 13px;
-}
-
-.refsTitle {
-  margin: 0 0 4px;
-  font-weight: 600;
-  color: var(--muted);
 }
 
 .refList {
@@ -218,6 +195,7 @@
   list-style: none;
   display: grid;
   gap: 10px;
+  font-size: 13px;
 }
 
 .refList li {
@@ -352,4 +330,129 @@
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+/* Takes in, hands out: two short lists side by side. */
+.io {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px 20px;
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--paper);
+  font-size: 13px;
+}
+
+.io .sectionTitle {
+  margin-bottom: 4px;
+}
+
+.io .bullets li {
+  margin-bottom: 3px;
+}
+
+.io .bullets li:last-child {
+  margin-bottom: 0;
+}
+
+/* Sections that start closed. */
+.disclosure {
+  border-top: 1px solid var(--line);
+}
+
+.disclosure:first-of-type {
+  margin-top: 22px;
+}
+
+.disclosure:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+
+.disclosureTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosureTitle::-webkit-details-marker {
+  display: none;
+}
+
+.disclosureTitle::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 4px 0 2px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.disclosure[open] > .disclosureTitle::before {
+  transform: rotate(45deg);
+}
+
+.disclosureTitle:hover {
+  color: var(--ink);
+}
+
+.disclosureTitle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-s);
+}
+
+.count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--faint);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 18px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.disclosureBody {
+  padding: 2px 2px 16px;
+}
+
+.itemGroup + .itemGroup {
+  margin-top: 12px;
+}
+
+.itemTitle {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.more {
+  appearance: none;
+  margin: 2px 0 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

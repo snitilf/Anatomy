@@ -24,7 +24,7 @@ export const KIND_WORDS: Record<RelationshipKind, string> = {
   'reads-from': 'reads data from',
   'depends-on': 'depends on',
   triggers: 'triggers',
-  unknown: 'The meaning of this connection is not known',
+  unknown: 'Meaning unknown',
 }
 
 export const KIND_ORDER: readonly RelationshipKind[] = [

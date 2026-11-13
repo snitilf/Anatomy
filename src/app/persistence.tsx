@@ -275,7 +275,7 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
         // Switching drops what is in memory. If the last save failed, say so once before it happens.
         if (typeof statusRef.current === 'object' && appStore.getState().board && !switchWarned.current) {
           switchWarned.current = true
-          notice('This board is not saved in this browser. Export it first, or switch again to leave it behind.')
+          notice('Not saved in this browser. Export it first, or switch again to leave it.')
           return
         }
         switchWarned.current = false

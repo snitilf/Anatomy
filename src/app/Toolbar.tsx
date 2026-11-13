@@ -26,11 +26,11 @@ export function Toolbar({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: () =
         <OpenMenu onOpenFile={onOpen} />
         {/* While saving fails, the status shows Export beside the reason. */}
         {title !== undefined && save.kind !== 'error' && (
-          <button type="button" className={buttons.button} onClick={exportNow} title="Download the board with your notes">
+          <button type="button" className={buttons.button} onClick={exportNow}>
             Export
           </button>
         )}
-        <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={onHowTo}>
+        <button type="button" className={clsx(buttons.button, buttons.quiet, styles.howTo)} onClick={onHowTo}>
           How to make a board
         </button>
       </div>

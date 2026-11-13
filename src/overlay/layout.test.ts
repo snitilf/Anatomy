@@ -17,7 +17,7 @@ describe('defaultLayout', () => {
     expect(new Set(pts.map((p) => `${p.x},${p.y}`)).size).toBe(pts.length)
   })
 
-  it('uses columns of 440 and rows of 230, groups in file order, ungrouped last', () => {
+  it('uses columns of 440 and rows of 240, groups in file order, ungrouped last', () => {
     const b = clone(anatomyBoard())
     b.groups = [{ id: 'g1', label: 'One' }, { id: 'g2', label: 'Two' }]
     b.components = b.components.slice(0, 4).map((c, i) => {
@@ -28,7 +28,7 @@ describe('defaultLayout', () => {
     const ids = b.components.map((c) => c.id)
     expect(l[ids[1]!]).toEqual({ x: 0, y: 0 })
     expect(l[ids[0]!]).toEqual({ x: 440, y: 0 })
-    expect(l[ids[2]!]).toEqual({ x: 440, y: 230 })
+    expect(l[ids[2]!]).toEqual({ x: 440, y: 240 })
     expect(l[ids[3]!]).toEqual({ x: 880, y: 0 })
   })
 })
@@ -73,7 +73,7 @@ describe('resolvePositions', () => {
     const [a] = b.components
     const overlay = { ...emptyOverlay(b.id), positions: { [a!.id]: { x: 0, y: 0 } } }
     const r = resolvePositions(b, overlay)
-    expect(r[b.components[1]!.id]).toEqual({ x: 0, y: 230 })
-    expect(r[b.components[2]!.id]).toEqual({ x: 0, y: 460 })
+    expect(r[b.components[1]!.id]).toEqual({ x: 0, y: 240 })
+    expect(r[b.components[2]!.id]).toEqual({ x: 0, y: 480 })
   })
 })

@@ -8,6 +8,32 @@
   text-align: center;
 }
 
+.sketch {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--muted);
+}
+
+.sketch .card {
+  fill: var(--surface);
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.sketch .link {
+  stroke: var(--accent);
+}
+
+.sketch .bars {
+  opacity: 0.28;
+}
+
+.space {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .line {
   margin: 0;
   max-width: 28ch;

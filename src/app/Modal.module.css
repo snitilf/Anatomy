@@ -10,7 +10,7 @@
 }
 
 .dialog::backdrop {
-  background: color-mix(in srgb, var(--ink) 38%, transparent);
+  background: var(--scrim);
 }
 
 .dialog[open] {
