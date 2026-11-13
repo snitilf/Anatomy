@@ -1,7 +1,7 @@
-import { Handle, type Node, type NodeProps } from '@xyflow/react'
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { memo } from 'react'
 import { SourceBadge } from '../app/SourceBadge'
-import { SIDE_POSITION, type CardData, type Side } from './buildGraph'
+import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
@@ -11,9 +11,8 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
     <>
-      {SIDES.map((side) => (
-        <Handle key={`in-${side}`} id={`in-${side}`} type="target" position={SIDE_POSITION[side]} isConnectable={false} className={styles.handle} />
-      ))}
+      <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={styles.handle} />
+      <Handle id={EDGE_OUT_HANDLE} type="source" position={Position.Top} isConnectable={false} className={styles.handle} />
       {SIDES.map((side) => (
         <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={styles.drawHandle} />
       ))}

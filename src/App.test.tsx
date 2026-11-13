@@ -17,13 +17,14 @@ const nordet = JSON.parse(nordetRaw) as {
 }
 
 describe('App', () => {
-  it('shows three actions when no board is open', async () => {
+  it('shows the open and example actions when no board is open', async () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Anatomy' })).toBeInTheDocument()
     const main = within(screen.getByRole('main'))
     expect(main.getByRole('button', { name: 'Open board' })).toBeInTheDocument()
     expect(main.getByRole('button', { name: 'Load an example' })).toBeInTheDocument()
-    expect(main.getByRole('button', { name: 'How to make a board' })).toBeInTheDocument()
+    // The toolbar has the how-to button, so the start screen does not repeat it.
+    expect(main.queryByRole('button', { name: 'How to make a board' })).not.toBeInTheDocument()
   })
 
   it('opens an example and shows the overview', async () => {
