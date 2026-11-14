@@ -90,7 +90,7 @@ export function formatKeys(keys: Keys, mac = isMac): string {
 }
 
 /**
- * Single keys the whiteboard tools of a later version take: Select, Hand, Pen, Rectangle, Ellipse, Arrow, Text,
- * Sticky note, and New part. No other command may use them.
+ * Single keys the whiteboard tools take: Select, Hand, Pen, Rectangle, Ellipse, Arrow, Text, Sticky note, and New part.
+ * No other command may use them.
  */
 export const TOOL_KEYS: readonly Keys[] = ['V', 'H', 'P', 'R', 'O', 'A', 'T', 'S', 'N']
