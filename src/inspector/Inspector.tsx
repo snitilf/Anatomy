@@ -10,8 +10,8 @@ import { PanelContext } from './panelContext'
 import { RelationshipDetail } from './RelationshipDetail'
 
 export function Inspector() {
-  const { board, selection, manualLinks } = useAppStore(
-    useShallow((s) => ({ board: s.board, selection: s.selection, manualLinks: s.overlay?.manualLinks })),
+  const { board, selection, links } = useAppStore(
+    useShallow((s) => ({ board: s.board, selection: s.selection, links: s.layer?.links })),
   )
   const dispatch = useAppDispatch()
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -49,7 +49,7 @@ export function Inspector() {
     const relationship = board.relationships.find((r) => r.id === selection.id)
     content = relationship ? <RelationshipDetail board={board} relationship={relationship} /> : <Overview board={board} />
   } else if (selection?.type === 'link') {
-    const link = manualLinks?.find((l) => l.id === selection.id)
+    const link = links?.find((l) => l.id === selection.id)
     content = link ? <LinkDetail key={link.id} board={board} link={link} /> : <Overview board={board} />
   } else {
     content = <Overview board={board} />

@@ -1,5 +1,4 @@
-import type { Point } from '../overlay/types'
-import type { Rect } from './routing'
+import { inflate, type Point, type Rect } from '../layout/geometry'
 
 export interface LabelSpot {
   x: number
@@ -25,10 +24,6 @@ export function pillHeight(lines: number): number {
 /** Cards keep a quiet margin. Only the part where text sits counts as covered. */
 export function textArea(card: Rect): Rect {
   return { x: card.x + 10, y: card.y + 8, width: card.width - 20, height: card.height - 34 }
-}
-
-function inflate(r: Rect, by: number): Rect {
-  return { x: r.x - by, y: r.y - by, width: r.width + by * 2, height: r.height + by * 2 }
 }
 
 function overlap(a: Rect, b: Rect): number {

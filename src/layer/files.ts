@@ -1,34 +1,43 @@
 import { z } from 'zod'
 import { LIMITS, type Board } from '../board/schema'
 import { formatPath, parseBoard, type BoardProblem } from '../board/validate'
-import { overlaySchema } from './schema'
-import type { ExportFile, Overlay } from './types'
+import type { Layer } from './model'
+import { readLayer } from './upgrade'
 
 export type OpenedFile =
   | { ok: true; kind: 'board'; board: Board; warnings: BoardProblem[] }
-  | { ok: true; kind: 'export'; board: Board; overlay: Overlay; warnings: BoardProblem[] }
+  | { ok: true; kind: 'export'; board: Board; layer: Layer; warnings: BoardProblem[] }
   | { ok: false; errors: BoardProblem[] }
+
+/**
+ * A board and the user's layer in one portable file. Version 2 holds a layer; version 1 held a human overlay,
+ * which is upgraded when it is opened.
+ */
+export interface ExportFile {
+  format: 'anatomy-export'
+  schemaVersion: 2
+  exportedAt: string
+  board: Board
+  layer: Layer
+}
 
 export interface OpenOptions {
   /** Byte limit for an export file. Defaults to twice the board file limit. */
   maxExportBytes?: number
 }
 
-export function makeExport(board: Board, overlay: Overlay, now: Date): ExportFile {
-  return { format: 'anatomy-export', schemaVersion: 1, exportedAt: now.toISOString(), board, overlay }
+export function makeExport(board: Board, layer: Layer, now: Date): ExportFile {
+  return { format: 'anatomy-export', schemaVersion: 2, exportedAt: now.toISOString(), board, layer }
 }
 
 export function serializeExport(file: ExportFile): string {
   return `${JSON.stringify(file, null, 2)}\n`
 }
 
-const shell = z.strictObject({
-  format: z.literal('anatomy-export'),
-  schemaVersion: z.literal(1),
-  exportedAt: z.iso.datetime(),
-  board: z.unknown(),
-  overlay: z.unknown(),
-})
+const shell = z.discriminatedUnion('schemaVersion', [
+  z.strictObject({ format: z.literal('anatomy-export'), schemaVersion: z.literal(1), exportedAt: z.iso.datetime(), board: z.unknown(), overlay: z.unknown() }),
+  z.strictObject({ format: z.literal('anatomy-export'), schemaVersion: z.literal(2), exportedAt: z.iso.datetime(), board: z.unknown(), layer: z.unknown() }),
+])
 
 function fail(path: string, message: string): OpenedFile {
   return { ok: false, errors: [{ path, message }] }
@@ -91,29 +100,16 @@ function open(text: string, options: OpenOptions): OpenedFile {
   const boardResult = parseBoard(JSON.stringify(top.data.board))
   if (!boardResult.ok) return { ok: false, errors: prefixed('board', boardResult.errors) }
 
-  const overlayResult = overlaySchema.safeParse(top.data.overlay)
-  if (!overlayResult.success) {
-    return {
-      ok: false,
-      errors: prefixed(
-        'overlay',
-        overlayResult.error.issues.map((i) => ({ path: formatPath(i.path), message: i.message })),
-      ),
-    }
-  }
+  const key = top.data.schemaVersion === 1 ? 'overlay' : 'layer'
+  const layerResult = readLayer(top.data.schemaVersion === 1 ? top.data.overlay : top.data.layer, boardResult.board)
+  if (!layerResult.ok) return { ok: false, errors: prefixed(key, layerResult.errors) }
 
-  if (overlayResult.data.boardId !== boardResult.board.id) {
+  if (layerResult.layer.boardId !== boardResult.board.id) {
     return fail(
-      'overlay.boardId',
-      `The notes in this file belong to the board "${overlayResult.data.boardId}", but the board in the file is "${boardResult.board.id}".`,
+      `${key}.boardId`,
+      `The notes in this file belong to the board "${layerResult.layer.boardId}", but the board in the file is "${boardResult.board.id}".`,
     )
   }
 
-  return {
-    ok: true,
-    kind: 'export',
-    board: boardResult.board,
-    overlay: overlayResult.data,
-    warnings: boardResult.warnings,
-  }
+  return { ok: true, kind: 'export', board: boardResult.board, layer: layerResult.layer, warnings: boardResult.warnings }
 }

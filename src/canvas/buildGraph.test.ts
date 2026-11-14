@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import fortyText from '../../e2e/fixtures/forty-parts.board.json?raw'
 import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
-import { CARD_HEIGHT, CARD_WIDTH, resolvePositions } from '../overlay/layout'
-import { exampleBoard } from '../overlay/testBoards'
-import { emptyOverlay, type Point } from '../overlay/types'
+import { CARD_SIZE, placeCards } from '../layout/cards'
+import type { Point, Rect } from '../layout/geometry'
+import { exampleBoard } from '../layer/testBoards'
 import { assembleGraph, buildGraph, computeGeometry, GraphCache, moveCard } from './buildGraph'
 import { PointIndex } from './labelPlacement'
 
@@ -15,11 +15,11 @@ const forty = (): Board => {
 }
 
 function setup(board: Board) {
-  const positions = resolvePositions(board, emptyOverlay(board.id))
+  const positions = placeCards(board, { positions: {}, sizes: {} })
   const geometry = computeGeometry(board, positions)
   const cache = new GraphCache()
   const noCounts = new Map<string, number>()
-  const build = (pos: Record<string, Point>, geo = geometry, held?: string) =>
+  const build = (pos: Record<string, Rect>, geo = geometry, held?: string) =>
     assembleGraph(board, pos, geo, undefined, undefined, [], noCounts, cache, held)
   return { positions, geometry, build }
 }
@@ -35,7 +35,7 @@ describe.each([
 
   it('redraws only the connections of that card and its group', () => {
     const { positions, geometry } = setup(board)
-    const next = { ...positions, [id]: { x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
+    const next = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
     const after = moveCard(board, geometry, next, id)
     const mine = new Set(touching(id))
     expect(mine.size).toBeGreaterThan(0)
@@ -52,7 +52,7 @@ describe.each([
 
   it('keeps the labels of a moved connection on its line', () => {
     const { positions, geometry } = setup(board)
-    const next = { ...positions, [id]: { x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
+    const next = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
     const after = moveCard(board, geometry, next, id)
     for (const edgeId of touching(id)) {
       const before = geometry.edges.get(edgeId)!
@@ -67,7 +67,7 @@ describe.each([
   it('hands React Flow the same objects for everything that did not change', () => {
     const { positions, geometry, build } = setup(board)
     const first = build(positions)
-    const next = { ...positions, [id]: { x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
+    const next = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
     const second = build(next, moveCard(board, geometry, next, id), id)
     const mine = new Set(touching(id))
     const group = board.components.find((c) => c.id === id)?.group
@@ -95,7 +95,7 @@ describe('a walkthrough', () => {
   it('never dims the selected card or the card being held', () => {
     const board = exampleBoard()
     const [a, b, c] = board.components
-    const positions = resolvePositions(board, emptyOverlay(board.id))
+    const positions = placeCards(board, { positions: {}, sizes: {} })
     const geometry = computeGeometry(board, positions)
     const highlight = new Set([a!.id])
     const build = (selection: Parameters<typeof assembleGraph>[3], held?: string) =>
@@ -112,7 +112,7 @@ describe('a walkthrough', () => {
 
 describe('softening the lines while a part is selected', () => {
   const board = exampleBoard()
-  const positions = resolvePositions(board, emptyOverlay(board.id))
+  const positions = placeCards(board, { positions: {}, sizes: {} })
   const geometry = computeGeometry(board, positions)
   const part = board.components.find((c) => board.relationships.some((r) => r.from === c.id || r.to === c.id))!
   const build = (selection: Parameters<typeof assembleGraph>[3], held?: string, highlight?: ReadonlySet<string>) =>
@@ -135,7 +135,7 @@ describe('softening the lines while a part is selected', () => {
 
 describe('arrowheads', () => {
   it('share one marker object per color', () => {
-    const { edges } = buildGraph(forty(), resolvePositions(forty(), emptyOverlay('x')), undefined)
+    const { edges } = buildGraph(forty(), placeCards(forty(), { positions: {}, sizes: {} }), undefined)
     const byColor = new Map<string, unknown>()
     for (const e of edges) {
       const marker = e.markerEnd as { color: string }
@@ -180,12 +180,12 @@ describe.each([
   const id = [...board.components].sort((a, b) => touching(b.id).length - touching(a.id).length)[0]!.id
   const mine = new Set(touching(id))
   const start = () => {
-    const positions = resolvePositions(board, emptyOverlay(board.id))
+    const positions = placeCards(board, { positions: {}, sizes: {} })
     return { positions, solved: computeGeometry(board, positions) }
   }
   const drop = (to: Point) => {
     const { positions, solved } = start()
-    const next = { ...positions, [id]: to }
+    const next = { ...positions, [id]: { ...positions[id]!, ...to } }
     // What the map shows during the drag, and then the build that follows the drop.
     const cheap = moveCard(board, solved, next, id)
     return { solved, next, cheap, after: computeGeometry(board, next, [], cheap) }
@@ -212,8 +212,8 @@ describe.each([
     const { solved, positions } = start()
     // Land the card on the label of a connection that is not its own.
     const victim = [...solved.edges.values()].find((s) => !mine.has(s.id) && s.from !== id && s.to !== id)!
-    const to = { x: victim.labelX - CARD_WIDTH / 2, y: victim.labelY - CARD_HEIGHT / 2 + 20 }
-    const next = { ...positions, [id]: to }
+    const to = { x: victim.labelX - CARD_SIZE.width / 2, y: victim.labelY - CARD_SIZE.height / 2 + 20 }
+    const next = { ...positions, [id]: { ...positions[id]!, ...to } }
     const after = computeGeometry(board, next, [], moveCard(board, solved, next, id))
     const label = after.edges.get(victim.id)!
     // The label that sat under the landed card gets a new place. The pill is not drawn where the old one was.
@@ -236,7 +236,7 @@ describe.each([
 
   it('never keeps a plain curve from the drag, even when the card returns to its start', () => {
     const { positions, solved } = start()
-    const away = { ...positions, [id]: { x: positions[id]!.x + 30, y: positions[id]!.y + 30 } }
+    const away = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 30, y: positions[id]!.y + 30 } }
     const cheap = moveCard(board, solved, away, id)
     const back = moveCard(board, cheap, positions, id)
     const after = computeGeometry(board, positions, [], back)
@@ -245,11 +245,29 @@ describe.each([
 
   it('marks the labels of the moved card as moving until the full build', () => {
     const { positions, solved } = start()
-    const away = { ...positions, [id]: { x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
+    const away = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
     const cheap = moveCard(board, solved, away, id)
     const build = (geometry: typeof cheap) =>
       assembleGraph(board, away, geometry, undefined, undefined, [], new Map(), new GraphCache(), id).edges
     for (const edge of build(cheap)) expect((edge.data as { moving: boolean }).moving).toBe(mine.has(edge.id))
     for (const edge of build(computeGeometry(board, away, [], cheap))) expect((edge.data as { moving: boolean }).moving).toBe(false)
+  })
+})
+
+describe('card sizes', () => {
+  it('draws a resized card at its size, grows its group, and solves its lines again', () => {
+    const board = exampleBoard()
+    const grouped = board.components.find((c) => c.group !== undefined)!
+    const rects = placeCards(board, { positions: {}, sizes: {} })
+    const before = computeGeometry(board, rects)
+    const big = { ...rects, [grouped.id]: { ...rects[grouped.id]!, width: 480, height: 320 } }
+    const after = computeGeometry(board, big, [], before)
+    const node = assembleGraph(board, big, after, undefined, undefined, [], new Map(), new GraphCache()).nodes.find((n) => n.id === grouped.id)!
+    expect(node).toMatchObject({ width: 480, height: 320, measured: { width: 480, height: 320 } })
+    const group = after.groups.find((g) => g.id === grouped.group)!
+    expect(group.x + group.width).toBeGreaterThanOrEqual(big[grouped.id]!.x + 480)
+    expect(group.y + group.height).toBeGreaterThanOrEqual(big[grouped.id]!.y + 320)
+    const own = board.relationships.find((r) => r.from === grouped.id || r.to === grouped.id)
+    if (own) expect(after.edges.get(own.id)).not.toBe(before.edges.get(own.id))
   })
 })
