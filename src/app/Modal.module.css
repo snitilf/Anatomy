@@ -55,7 +55,7 @@
 .danger {
   background: var(--danger-fill);
   border-color: transparent;
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .danger:hover {
