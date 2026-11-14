@@ -38,8 +38,9 @@
 }
 
 
-/* The card in hand sits above every connection label, so nothing covers what you are moving. */
-.canvas :global(.react-flow__node.dragging) {
+/* The card in hand, moved or resized, sits above every connection label, so nothing covers what you are moving. */
+.canvas :global(.react-flow__node.dragging),
+.canvas :global(.react-flow__node.held) {
   z-index: 1200 !important;
 }
 

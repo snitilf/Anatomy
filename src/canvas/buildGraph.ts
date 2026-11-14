@@ -406,7 +406,7 @@ export function assembleGraph(
         summaryLines: summaryLinesFor(c, rect),
       },
       selected: c.id === selectedPart,
-      ...(pushed?.has(c.id) ? { className: 'pushed' } : {}),
+      ...(c.id === held ? { className: 'held' } : pushed?.has(c.id) ? { className: 'pushed' } : {}),
       connectable: true,
       deletable: false,
       ariaLabel: `${c.label}. ${c.summary}`,

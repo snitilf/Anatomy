@@ -21,9 +21,9 @@ export function pillHeight(lines: number): number {
   return lines * LINE_HEIGHT + PAD_Y * 2
 }
 
-/** Cards keep a quiet margin. Only the part where text sits counts as covered. */
+/** A label never sits on a card: cards are sized to their text, so the whole card and a thin margin count as covered. */
 export function textArea(card: Rect): Rect {
-  return { x: card.x + 10, y: card.y + 8, width: card.width - 20, height: card.height - 34 }
+  return { x: card.x - 4, y: card.y - 4, width: card.width + 8, height: card.height + 8 }
 }
 
 function overlap(a: Rect, b: Rect): number {
