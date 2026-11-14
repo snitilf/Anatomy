@@ -1,9 +1,11 @@
 import clsx from 'clsx'
+import { CircleHelp, Download } from 'lucide-react'
 import { useAppStore } from './store'
 import buttons from './buttons.module.css'
 import { OpenMenu } from './OpenMenu'
 import { usePersistence } from './persistenceContext'
 import { SaveStatus } from './SaveStatus'
+import { SettingsMenu } from './SettingsMenu'
 import { SpaceSwitch } from './SpaceSwitch'
 import styles from './Toolbar.module.css'
 
@@ -27,12 +29,20 @@ export function Toolbar({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: () =
         {/* While saving fails, the status shows Export beside the reason. */}
         {title !== undefined && save.kind !== 'error' && (
           <button type="button" className={buttons.button} onClick={exportNow}>
+            <Download size={16} strokeWidth={1.5} aria-hidden="true" />
             Export
           </button>
         )}
-        <button type="button" className={clsx(buttons.button, buttons.quiet, styles.howTo)} onClick={onHowTo}>
-          How to make a board
+        <button
+          type="button"
+          className={clsx(buttons.button, buttons.quiet, buttons.icon)}
+          onClick={onHowTo}
+          aria-label="How to make a board"
+          title="How to make a board"
+        >
+          <CircleHelp size={16} strokeWidth={1.5} aria-hidden="true" />
         </button>
+        <SettingsMenu />
       </div>
     </header>
   )
