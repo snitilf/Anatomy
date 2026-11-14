@@ -30,6 +30,7 @@ When a new revision arrives, the layer stays, and the app compares the layer wit
 | `src/app/` | App state (one pure reducer in a zustand store, with undo history), the screen state (sidebar, menus), the workspace provider, shell, top bar, empty states, dialogs. | all of the above |
 | `src/commands/` | The one list of commands, their keys, the command menu, and the single key listener. | `src/app/`, `src/canvas/` |
 | `src/canvas/` | React Flow map: cards, group areas, connections, user links. | `@xyflow/react`, `src/app/` |
+| `src/whiteboard/` | The tool bar, the draw surface, the ink layer, text and sticky notes, proposed parts, the in-place editor, and the end handles that move line ends. Arrow geometry and end drops are pure functions. | `@xyflow/react`, `perfect-freehand`, `src/app/`, `src/layer/` |
 | `src/inspector/` | The sidebar: the overview, a view for every kind of selection, the flow block, notes and the agent's answers, the Review tab, and the bottom sheet on a phone. | `src/app/`, `src/commands/`, `src/text/` |
 | `src/scenarios/` | The walkthrough bar: step state, highlights, captions. | `src/app/`, `src/commands/` |
 | `src/notes/` | Note targets in words, the review counts after an update, and the undo toast. | `src/layer/`, `src/app/` |
@@ -135,8 +136,36 @@ The command menu (Cmd or Ctrl with K), the top bar buttons, the tooltips, and th
 `useCommand(id)` gives a button the label, the printed shortcut, the state, and a way to run it.
 One `keydown` listener, in the capture phase on the document, runs the shortcuts.
 A single key does nothing while a text field, a dialog, a menu, or a popover has focus, and Cmd or Ctrl shortcuts leave text fields to their own keys.
-The single keys of the whiteboard tools (V, H, P, R, O, A, T, S, N) are kept free for them.
+The single keys of the whiteboard tools (V, H, P, R, O, A, T, S, N) belong to the tools alone, and Escape leaves a tool before it clears the selection.
 Commands made from what is open, such as one per example, walkthrough, part, and connection, come from `boardCommands`.
+
+## The whiteboard
+
+The tool bar at the bottom of the map holds Select (V), Hand (H, or hold Space), Pen (P), Rectangle (R), Ellipse (O), Arrow (A), Text (T), Sticky note (S), and New part (N).
+The tool in use is screen state, not part of the history, and Escape or V returns to Select.
+Every tool but the pen returns to Select after one use, and a walkthrough or a phone screen leaves only Select.
+Under Select the map behaves as before; under Hand it pans from anywhere; under a drawing tool nothing on the map moves or takes the pointer.
+
+A drawing tool puts a surface over the map (`DrawSurface`) that captures the pointer.
+The line or shape in progress lives in a ref and is drawn once per frame by setting SVG attributes, never through React state.
+Letting go saves one mark: a pen line simplified to 0.75 screen pixels, a rectangle or ellipse (Shift keeps it square; a click with no drag makes a default size), or an arrow.
+A click with Text, Sticky note, or New part opens an editor in place; what is typed is saved as one change when the editor loses focus or on Escape, and nothing is saved when nothing was typed.
+Scrolling over the surface pans, and a pinch zooms.
+
+Pen lines, rectangles, ellipses, and arrows are one SVG in board coordinates, above the cards and the labels (`InkLayer`).
+Only a wide invisible copy of each line takes the pointer, so the cards under a shape stay reachable.
+Text, sticky notes, and proposed parts are React Flow nodes: they are selected, moved, and resized like cards and pass through the same cache.
+A proposed part is a card in every way: links join it, the lines route around it, and a drop or resize pushes it and is pushed by it, in the same undo step.
+Marks are never obstacles for the lines and never pushed.
+
+An arrow end is attached to a part, to a connection at a place along its drawn line (`t` from 0 to 1), or to a free point (`attachAt` in `src/whiteboard/geometry.ts`).
+An attached end follows its part or line when that moves, and stops at the edge of a part.
+
+A selected connection, link, or arrow shows a handle at each drawn end.
+`useEndDrag` captures the pointer, draws a straight ghost from the end that stays, and outlines the part under the pointer, all on the DOM.
+Letting go becomes one action through `endDropAction`: a connection end moved to another part (`reconnected`), a link end moved, or an arrow end attached again.
+A connection with a moved end is drawn where the user put it, in the user's color, over its original at 35% opacity; dropping the end back on its original part removes the edit.
+The connection view in the sidebar has the same moves as pickers, for the keyboard.
 
 ## The sidebar
 

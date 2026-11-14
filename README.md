@@ -49,6 +49,7 @@ All versions are exact.
 | `clsx` | 2.1.1 | Conditional class names |
 | `lucide-react` | 1.72.0 | Icons |
 | `@dagrejs/dagre` | 3.1.3 | Layered layout of the cards (MIT) |
+| `perfect-freehand` | 1.2.3 | Smooth outlines for pen lines on the whiteboard (MIT) |
 | `@fontsource-variable/inter` | 5.3.0 | Inter, bundled with the app so no font loads from the network |
 | `typescript` | 7.0.2 | Type checking, strict mode |
 | `vite` | 8.3.8 | Dev server and build |
