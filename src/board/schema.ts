@@ -21,6 +21,7 @@ export const LIMITS = {
   relationships: 200,
   groups: 12,
   items: 100,
+  responses: 300,
   scenarios: 20,
   steps: 50,
   highlights: 30,
@@ -149,6 +150,29 @@ export const scenario = z.strictObject({
   steps: z.array(step).min(1, 'needs at least one step').max(LIMITS.steps),
 })
 
+export const RESPONSE_STATUSES = ['adopted', 'declined', 'answered'] as const
+
+/**
+ * The agent's answer to one item of the user's feedback.
+ * - adopted: the change is now part of the board. The user's item leaves their layer.
+ * - declined: the agent did not make the change, and says why.
+ * - answered: a question or note, answered in `text`.
+ */
+export const response = z.strictObject({
+  /** The `id` of the item in the feedback file. */
+  feedbackId: id,
+  status: z.enum(RESPONSE_STATUSES),
+  text: text(LIMITS.shortText),
+  /** IDs of the components and relationships this revision changed for the item. */
+  changed: z.array(id).max(LIMITS.listEntries).default([]),
+})
+
+export const responses = z.strictObject({
+  /** The `id` of the feedback file this revision answers. */
+  respondsTo: id,
+  items: z.array(response).max(LIMITS.responses).default([]),
+})
+
 export const board = z.strictObject({
   format: z.literal(BOARD_FORMAT),
   schemaVersion: z.literal(SCHEMA_VERSION),
@@ -168,6 +192,8 @@ export const board = z.strictObject({
   relationships: z.array(relationship).max(LIMITS.relationships).default([]),
   items: z.array(item).max(LIMITS.items).default([]),
   scenarios: z.array(scenario).max(LIMITS.scenarios).default([]),
+  /** Answers to the user's feedback. Optional; boards without it stay valid. */
+  responses: responses.optional(),
 })
 
 export type Board = z.infer<typeof board>
@@ -176,6 +202,8 @@ export type BoardRelationship = z.infer<typeof relationship>
 export type BoardGroup = z.infer<typeof group>
 export type BoardItem = z.infer<typeof item>
 export type BoardScenario = z.infer<typeof scenario>
+export type BoardResponses = z.infer<typeof responses>
+export type BoardResponse = z.infer<typeof response>
 export type Source = z.infer<typeof source>
 export type SourceKind = (typeof SOURCE_KINDS)[number]
 export type RelationshipKind = (typeof RELATIONSHIP_KINDS)[number]

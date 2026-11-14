@@ -157,6 +157,17 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
       }
     })
   }
+  const targets = new Set([...board.components.map((c) => c.id), ...board.relationships.map((r) => r.id)])
+  board.responses?.items.forEach((r, i) => {
+    r.changed.forEach((changedId, j) => {
+      if (!targets.has(changedId)) {
+        warnings.push({
+          path: `responses.items[${i}].changed[${j}]`,
+          message: `The answer to "${r.feedbackId}" says it changed "${changedId}", which is not a component or relationship on this board.`,
+        })
+      }
+    })
+  })
   if (board.components.length > LIMITS.componentsWarn) {
     warnings.push({
       path: 'components',
