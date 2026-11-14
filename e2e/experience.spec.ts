@@ -18,7 +18,7 @@ test('the map opens at a readable zoom, and Fit still shows the whole board', as
   expect(first?.x).toBeGreaterThanOrEqual(0)
   expect(first?.y).toBeGreaterThanOrEqual(0)
 
-  await page.getByRole('button', { name: 'Fit to screen' }).click()
+  await page.getByRole('button', { name: 'Fit board' }).click()
   await expect.poll(() => zoomOf(page)).toBeLessThan(0.5)
 })
 
@@ -81,12 +81,11 @@ test('a card dropped under the inspector is brought back into view', async ({ pa
   expect(card.x + card.width).toBeLessThanOrEqual(map.x + map.width + 1)
 })
 
-test('an example chosen from the start screen moves focus to the inspector heading', async ({ page }) => {
+test('an example chosen from the start screen moves focus to the sidebar heading', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Load an example' }).click()
-  await page.getByRole('menuitem').first().click()
+  await page.getByRole('button', { name: /Example check-in/ }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
-  await expect(page.getByRole('complementary', { name: 'Details' }).getByRole('heading', { level: 2 }).first()).toBeFocused()
+  await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByRole('heading', { level: 2 }).first()).toBeFocused()
 })
 
 test('the map hint can be closed with its button', async ({ page }) => {
@@ -98,7 +97,7 @@ test('the map hint can be closed with its button', async ({ page }) => {
 test('selecting a part softens the other lines, and a selected connection is drawn at 1.5px', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, EXAMPLE)
-  const inspector = page.getByRole('complementary', { name: 'Details' })
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const opacities = () =>
     page.evaluate(() => [...document.querySelectorAll<SVGElement>('.react-flow__edge g[data-faded]')].length)
   expect(await opacities()).toBe(0)
@@ -106,7 +105,7 @@ test('selecting a part softens the other lines, and a selected connection is dra
   await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
   expect(await opacities()).toBeGreaterThan(0)
 
-  await inspector.getByRole('button', { name: /^Simulated send/ }).click()
+  await inspector.getByRole('region', { name: 'Flow' }).getByRole('button', { name: 'approved action version' }).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -120,18 +119,20 @@ test('selecting a part softens the other lines, and a selected connection is dra
 test('the panel starts at the top for every new selection', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 700 })
   await open(page, EXAMPLE)
-  const inspector = page.getByRole('complementary', { name: 'Details' })
-  await inspector.evaluate((el) => el.scrollTo({ top: 400 }))
-  expect(await inspector.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
+  const scroller = inspector.locator('[data-scroll]')
+  await scroller.evaluate((el) => el.scrollTo({ top: 400 }))
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
   await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
   await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
-  expect(await inspector.evaluate((el) => el.scrollTop)).toBe(0)
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(0)
 })
 
-test('a part opens on its summary, with the longer sections closed', async ({ page }) => {
+test('a part opens on its summary and flow, with the citations closed', async ({ page }) => {
   await open(page, EXAMPLE)
-  const inspector = page.getByRole('complementary', { name: 'Details' })
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
+  await expect(inspector.getByRole('region', { name: 'Flow' })).toBeVisible()
   await expect(inspector.locator('details')).not.toHaveCount(0)
   await expect(inspector.locator('details[open]')).toHaveCount(0)
 })

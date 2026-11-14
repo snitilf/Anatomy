@@ -197,6 +197,7 @@ function ShellBody() {
           className={styles.main}
           data-empty={hasBoard ? undefined : ''}
           data-sidebar={hasBoard && sidebar.open ? '' : undefined}
+          data-playing={scenario ? '' : undefined}
           style={{ '--sidebar-width': `${sidebar.width}px` } as CSSProperties}
           onFocus={onFocus}
         >

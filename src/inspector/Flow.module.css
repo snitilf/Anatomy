@@ -141,9 +141,23 @@ button.what {
   color: var(--yours);
 }
 
-/* A moved end: the new part in amber. */
+/* A moved end: the new part in amber, with the part it left struck through, on a line of its own. */
+.row[data-yours='moved'] {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.row[data-yours='moved'] .end {
+  flex-basis: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  margin-top: -6px;
+  padding-left: var(--space-2);
+}
+
 .row[data-yours='moved'] .part {
   color: var(--yours-text);
+  text-align: left;
 }
 
 .what:focus-visible,

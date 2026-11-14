@@ -22,7 +22,7 @@ test('folder mode: open the repository, move a card, reload, the place is kept, 
     [KEY, board] as const,
   )
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open repository folder' }).click()
+  await page.getByRole('button', { name: 'Open folder' }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await page.waitForTimeout(400)
   expect(await storedLayer(page)).toBeUndefined()
@@ -32,8 +32,9 @@ test('folder mode: open the repository, move a card, reload, the place is kept, 
   await drag(page, spot, 120, 60)
   const moved = await cardTransform(page, spot.id)
   expect(moved).not.toBe(start)
-  const saved = page.getByRole('status').filter({ hasText: /^Saved$/ })
-  await expect(saved).toHaveAttribute('title', 'Saved to .anatomy/layer.json')
+  await expect(page.locator('[role="status"][data-state="saved"]')).toBeVisible()
+  // The crumb names the folder the board came from.
+  await expect(page.getByRole('banner').getByRole('button', { name: 'shortener' })).toBeVisible()
   // A card the drop covered steps aside and is saved with it.
   await expect.poll(async () => Object.keys((await storedLayer(page))?.positions ?? {})).toContain(spot.id)
 

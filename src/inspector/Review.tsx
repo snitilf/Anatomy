@@ -3,6 +3,7 @@ import { ArrowRight, Unlink } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
+import type { Selection } from '../app/state'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
 import { itemsOf, type Item, type Layer } from '../layer/model'
@@ -35,6 +36,29 @@ function itemWords(board: Board, layer: Layer, entry: Item): string {
   }
 }
 
+/** Where an item sits, so a press on it selects that on the map. */
+function selectionOf(entry: Item): Selection {
+  switch (entry.type) {
+    case 'note':
+      return entry.item.target.type === 'board' ? { type: 'board' } : { type: entry.item.target.type, id: entry.item.target.id }
+    case 'reconnect':
+      return { type: 'relationship', id: entry.item.relationshipId }
+    default:
+      return { type: entry.type, id: entry.item.id }
+  }
+}
+
+function ItemRow({ board, layer, entry }: { board: Board; layer: Layer; entry: Item }) {
+  const { choose } = usePanel()
+  return (
+    <button type="button" className={clsx(styles.row, styles.yours)} onClick={() => choose(selectionOf(entry))}>
+      <span className={styles.rowMain}>
+        <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
+      </span>
+    </button>
+  )
+}
+
 function Answers({ board, layer }: { board: Board; layer: Layer }) {
   const dispatch = useAppDispatch()
   const answered = itemsOf(layer).filter((e) => answerFor(board, e.item.id))
@@ -47,14 +71,14 @@ function Answers({ board, layer }: { board: Board; layer: Layer }) {
           const answer = answerFor(board, entry.item.id)
           return (
             <li key={entry.item.id} className={notes.item}>
-              <p className={notes.text}>{itemWords(board, layer, entry)}</p>
+              <ItemRow board={board} layer={layer} entry={entry} />
               {answer && <AgentAnswer board={board} answer={answer} />}
             </li>
           )
         })}
         {adopted.map((entry) => (
           <li key={entry.item.id} className={notes.item}>
-            <p className={notes.text}>{itemWords(board, layer, entry)}</p>
+            <p className={clsx(styles.row, styles.yours)}>{itemWords(board, layer, { type: entry.type, item: entry.item } as Item)}</p>
             <AgentAnswer board={board} answer={{ feedbackId: entry.item.id, status: 'adopted', text: entry.response.text, changed: entry.response.changed }} />
             <div className={notes.stateActions}>
               <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
