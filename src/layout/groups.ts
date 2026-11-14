@@ -120,5 +120,6 @@ export function settleMoves(board: Board, rects: Readonly<Record<string, Rect>>,
       }
     }
   }
-  return { ...aside, ...separateGroups(board, pushed, pinned) }
+  // A pushed card is an anchor too: a group it landed on or beside gives way to it.
+  return { ...aside, ...separateGroups(board, pushed, new Set([...pinned, ...Object.keys(aside)])) }
 }

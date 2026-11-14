@@ -141,6 +141,16 @@ describe('settleMoves keeps other groups rigid', () => {
     expect(clashes(b, apply(rects, moves))).toEqual([])
   })
 
+  it('moves a group away from an ungrouped card that was pushed onto it', () => {
+    const b = board({ h: ['c'] }, ['a', 'b'])
+    const rects = { a: card(0, 0), b: card(200, 0), c: card(500, 0) }
+    const moves = settleMoves(b, rects, ['a'])
+    const after = apply(rects, moves)
+    expect(clashes(b, after)).toEqual([])
+    const ids = Object.keys(after)
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) expect(overlaps(after[ids[i]!]!, after[ids[j]!]!)).toBe(false)
+  })
+
   it('still pushes cards apart inside one group', () => {
     const b = board({ g: ['a', 'x'] })
     const rects = { a: card(0, 0), x: card(40, 80) }
