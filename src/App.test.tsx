@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { SOURCE_LABEL } from './app/labels'
@@ -8,8 +8,8 @@ import nordetRaw from './examples/nordet.board.json?raw'
 import { press } from './test/press'
 
 async function loadNordet() {
-  press(screen.getByRole('button', { name: 'Load an example' }))
-  fireEvent.click(await screen.findByRole('menuitem', { name: /Nordet follow-up/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Nordet follow-up/ }))
+  await screen.findByTestId('inspector')
 }
 
 const nordet = JSON.parse(nordetRaw) as {
@@ -18,24 +18,36 @@ const nordet = JSON.parse(nordetRaw) as {
   relationships: { id: string; from: string; to: string; kind: string; label: string }[]
 }
 
+const key = (k: string, mods: { meta?: boolean; shift?: boolean } = {}, target: Element = document.body) =>
+  act(() => {
+    fireEvent.keyDown(target, { key: k, metaKey: mods.meta ?? false, shiftKey: mods.shift ?? false })
+  })
+
 describe('App', () => {
-  it('shows the open and example actions when no board is open', async () => {
+  it('shows the open actions and the examples when no board is open', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Anatomy' })).toBeInTheDocument()
     const main = within(screen.getByRole('main'))
-    expect(main.getByRole('button', { name: 'Open board file' })).toBeInTheDocument()
-    expect(main.getByRole('button', { name: 'Load an example' })).toBeInTheDocument()
-    // The toolbar has the how-to button, so the start screen does not repeat it.
-    expect(main.queryByRole('button', { name: 'How to make a board' })).not.toBeInTheDocument()
+    expect(main.getByRole('heading', { name: 'Open a repository to see its anatomy.' })).toBeInTheDocument()
+    // jsdom has no folder picker, so the start screen says so and leads with a file.
+    expect(main.getByText('This browser cannot open folders. Chrome and Edge can.')).toBeInTheDocument()
+    expect(main.getByRole('button', { name: 'Open file' })).toBeInTheDocument()
+    expect(main.queryByRole('button', { name: 'Open folder' })).not.toBeInTheDocument()
+    // Examples are plain rows, each one action.
+    expect(main.getByRole('button', { name: /Nordet follow-up/ })).toBeInTheDocument()
+    expect(main.getByRole('button', { name: /Anatomy itself/ })).toBeInTheDocument()
   })
 
   it('opens an example and shows the overview', async () => {
     render(<App />)
     await loadNordet()
-    expect(screen.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
-    const panel = screen.getByTestId('inspector')
-    expect(within(panel).getByText('Covers')).toBeInTheDocument()
-    expect(within(panel).getByText('Does not cover')).toBeInTheDocument()
+    const panel = within(screen.getByTestId('inspector'))
+    expect(panel.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
+    expect(panel.getByText('Revision 1')).toBeInTheDocument()
+    expect(panel.getByText('Covers')).toBeInTheDocument()
+    expect(panel.getByText('Does not cover')).toBeInTheDocument()
+    // The crumb names where the board came from.
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' })).toBeInTheDocument()
   })
 
   it('shows a part with its explanation and source label', async () => {
@@ -47,6 +59,7 @@ describe('App', () => {
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
     expect(within(panel).getByText(SOURCE_LABEL[part.source.kind])).toBeInTheDocument()
     expect(within(panel).getByText('Explanation')).toBeInTheDocument()
+    expect(within(panel).getByRole('region', { name: 'Flow' })).toBeInTheDocument()
   })
 
   it('shows no source line for the default, the agent explanation', async () => {
@@ -64,10 +77,9 @@ describe('App', () => {
     await loadNordet()
     const rel = nordet.relationships.find((r) => r.kind === 'sends-data-to')!
     const panel = screen.getByTestId('inspector')
-    const buttons = within(panel).getAllByRole('button', { name: new RegExp(rel.label) })
-    fireEvent.click(buttons[0]!)
+    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${rel.label}`) })[0]!)
     expect(within(panel).getByRole('heading', { name: rel.label })).toBeInTheDocument()
-    expect(within(panel).getByText('sends data to')).toBeInTheDocument()
+    expect(within(panel).getByText(/sends data to/)).toBeInTheDocument()
   })
 
   it('returns to the overview when Escape is pressed', async () => {
@@ -77,7 +89,7 @@ describe('App', () => {
     const first = nordet.components[0]!
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${first.label}`) })[0]!)
     expect(within(panel).getByRole('heading', { name: first.label })).toBeInTheDocument()
-    fireEvent.keyDown(panel, { key: 'Escape' })
+    key('Escape', {}, panel)
     expect(within(panel).getByRole('heading', { name: nordet.title })).toBeInTheDocument()
   })
 
@@ -89,7 +101,7 @@ describe('App', () => {
     fireEvent.change(input, { target: { files: [bad] } })
     await waitFor(() => expect(screen.getByText('was not opened')).toBeInTheDocument())
     expect(screen.getByText('broken.json')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
+    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: nordet.title })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
   })
@@ -100,66 +112,45 @@ describe('App', () => {
     const file = new File([shortenerRaw], 'url-shortener.board.json', { type: 'application/json' })
     fireEvent.change(input, { target: { files: [file] } })
     const title = (JSON.parse(shortenerRaw) as { title: string }).title
-    await waitFor(() => expect(screen.getByRole('heading', { name: title })).toBeInTheDocument())
+    await waitFor(() => expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: title })).toBeInTheDocument())
     expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Local file' })).toBeInTheDocument()
   })
 
-  it('groups every way to open a board under one Open popover, and Escape closes it', async () => {
+  it('opens every way to open a board from the folder crumb, and Escape closes it', async () => {
     render(<App />)
     await loadNordet()
     const header = within(screen.getByRole('banner'))
-    expect(header.queryByRole('button', { name: 'Examples' })).not.toBeInTheDocument()
-    expect(header.queryByRole('button', { name: 'Saved boards' })).not.toBeInTheDocument()
-    const trigger = header.getByRole('button', { name: 'Open' })
-    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    // Export, Open, and the help icon left the top bar.
+    expect(header.queryByRole('button', { name: /Export/ })).not.toBeInTheDocument()
+    expect(header.queryByRole('button', { name: 'How to make a board' })).not.toBeInTheDocument()
+    const trigger = header.getByRole('button', { name: 'Example' })
     press(trigger)
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    const panel = within(await screen.findByRole('dialog', { name: 'Open a board' }))
-    expect(panel.getByRole('button', { name: 'Open a file' })).toBeInTheDocument()
+    const panel = within(await screen.findByRole('dialog', { name: 'Open' }))
+    expect(panel.getByRole('button', { name: 'Open file' })).toBeInTheDocument()
     expect(panel.getByRole('button', { name: /Anatomy itself/ })).toBeInTheDocument()
-    fireEvent.keyDown(panel.getByRole('button', { name: 'Open a file' }), { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open a board' })).not.toBeInTheDocument())
+    fireEvent.keyDown(panel.getByRole('button', { name: 'Open file' }), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open' })).not.toBeInTheDocument())
     expect(trigger).toHaveFocus()
-    expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    // Escape in the popover must not clear what is selected on the map.
-    expect(screen.getByTestId('inspector')).toBeInTheDocument()
-  })
-
-  it('closes the Open popover with a press outside it', async () => {
-    render(<App />)
-    await loadNordet()
-    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Open' }))
-    await screen.findByRole('dialog', { name: 'Open a board' })
-    press(document.body)
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open a board' })).not.toBeInTheDocument())
+    // Escape in the popover must not clear what the sidebar shows.
+    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: nordet.title })).toBeInTheDocument()
   })
 
   it('opens another example from the Open popover', async () => {
     render(<App />)
     await loadNordet()
-    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Open' }))
-    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Open a board' })).getByRole('button', { name: /Anatomy itself/ }))
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open a board' })).not.toBeInTheDocument())
+    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Open' })).getByRole('button', { name: /Anatomy itself/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open' })).not.toBeInTheDocument())
     expect(screen.queryByRole('heading', { name: nordet.title })).not.toBeInTheDocument()
   })
 
-  it('moves through the examples on the start screen with the arrow keys, and Escape returns focus', async () => {
+  it('opens the how-to dialog from the settings menu', async () => {
     render(<App />)
-    const trigger = screen.getByRole('button', { name: 'Load an example' })
-    press(trigger)
-    const items = await screen.findAllByRole('menuitem')
-    expect(items.length).toBeGreaterThan(1)
-    fireEvent.keyDown(items[0]!, { key: 'ArrowDown' })
-    await waitFor(() => expect(items[1]).toHaveFocus())
-    fireEvent.keyDown(items[1]!, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
-    expect(trigger).toHaveFocus()
-  })
-
-  it('opens the how-to dialog with a copyable prompt', async () => {
-    render(<App />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'How to make a board' })[0]!)
-    expect(screen.getByRole('dialog', { name: 'How to make a board', hidden: true })).toBeInTheDocument()
+    press(screen.getByRole('button', { name: 'Settings' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'How to make a board' }))
+    expect(await screen.findByRole('dialog', { name: 'How to make a board', hidden: true })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Download JSON Schema', hidden: true })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy prompt', hidden: true })).toBeInTheDocument()
   })
@@ -168,9 +159,70 @@ describe('App', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     render(<App />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'How to make a board' })[0]!)
-    fireEvent.click(screen.getByRole('button', { name: 'Copy prompt', hidden: true }))
+    press(screen.getByRole('button', { name: 'Settings' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'How to make a board' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy prompt', hidden: true }))
     expect(await screen.findByText('Copied')).toBeInTheDocument()
     expect(writeText).toHaveBeenCalled()
+  })
+})
+
+describe('the command menu', () => {
+  it('opens with Cmd+K, finds commands and parts, and runs one', async () => {
+    render(<App />)
+    await loadNordet()
+    key('k', { meta: true })
+    const menu = within(await screen.findByRole('dialog', { name: 'Command menu' }))
+    // Parts show only once something is typed.
+    expect(menu.queryByRole('option', { name: new RegExp(`^${nordet.components[1]!.label}`) })).not.toBeInTheDocument()
+    fireEvent.change(menu.getByRole('combobox'), { target: { value: nordet.components[1]!.label } })
+    fireEvent.click(await menu.findByRole('option', { name: new RegExp(`^${nordet.components[1]!.label}`) }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument())
+    await waitFor(() => expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: nordet.components[1]!.label })).toBeInTheDocument())
+  })
+
+  it('says when nothing matches', async () => {
+    render(<App />)
+    key('k', { meta: true })
+    const menu = within(await screen.findByRole('dialog', { name: 'Command menu' }))
+    fireEvent.change(menu.getByRole('combobox'), { target: { value: 'zzzz' } })
+    expect(await menu.findByText('Nothing matches "zzzz".')).toBeInTheDocument()
+  })
+
+  it('switches the theme and marks the one in use', async () => {
+    render(<App />)
+    key('k', { meta: true })
+    const menu = within(await screen.findByRole('dialog', { name: 'Command menu' }))
+    fireEvent.click(menu.getByRole('option', { name: /Theme: Dark/ }))
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'))
+    key('k', { meta: true })
+    const again = within(await screen.findByRole('dialog', { name: 'Command menu' }))
+    expect(again.getByRole('option', { name: /Theme: Dark/ })).toHaveTextContent('in use')
+    fireEvent.click(again.getByRole('option', { name: /Theme: System/ }))
+  })
+})
+
+describe('the sidebar', () => {
+  it('hides and shows with ] and the top bar button', async () => {
+    render(<App />)
+    await loadNordet()
+    key(']')
+    expect(screen.queryByTestId('inspector')).not.toBeInTheDocument()
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Show sidebar' }))
+    expect(screen.getByTestId('inspector')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('anatomy:sidebar') ?? '{}')).toMatchObject({ open: true })
+  })
+
+  it('resizes from its edge with the keyboard and keeps the width', async () => {
+    render(<App />)
+    await loadNordet()
+    const edge = screen.getByRole('separator', { name: 'Sidebar width' })
+    expect(edge).toHaveAttribute('aria-valuenow', '360')
+    fireEvent.keyDown(edge, { key: 'ArrowLeft' })
+    expect(edge).toHaveAttribute('aria-valuenow', '376')
+    fireEvent.keyDown(edge, { key: 'Home' })
+    expect(edge).toHaveAttribute('aria-valuenow', '520')
+    fireEvent.doubleClick(edge)
+    expect(edge).toHaveAttribute('aria-valuenow', '360')
   })
 })

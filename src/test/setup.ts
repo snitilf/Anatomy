@@ -20,6 +20,9 @@ globalThis.DOMMatrixReadOnly = DOMMatrixStub
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 600 })
 Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, value: 800 })
 
+// jsdom has no scrollIntoView. cmdk keeps the active row in view with it.
+Element.prototype.scrollIntoView = function scrollIntoView() {}
+
 // jsdom has no matchMedia. Sonner reads the color scheme and the motion setting from it.
 window.matchMedia = (query: string) =>
   ({
@@ -35,4 +38,6 @@ window.matchMedia = (query: string) =>
 
 afterEach(() => {
   cleanup()
+  // The sidebar's width and collapse are kept per browser. Each test starts from the default.
+  localStorage.removeItem('anatomy:sidebar')
 })
