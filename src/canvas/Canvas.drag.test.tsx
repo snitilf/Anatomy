@@ -6,6 +6,7 @@ import { AppStoreContext } from '../app/store'
 import { initialState, reducer, type Action } from '../app/state'
 import { nordetBoard } from '../layer/testBoards'
 import { Canvas } from './Canvas'
+import { Shellless } from '../test/Shellless'
 
 const ID = nordetBoard().components[0]!.id
 
@@ -15,9 +16,11 @@ function setup(walkthrough = false) {
   const dispatch = vi.fn<(action: Action) => void>()
   const view = render(
     <AppStoreContext.Provider value={{ store: createStore(() => state), dispatch }}>
-      <div style={{ width: 800, height: 600 }}>
-        <Canvas />
-      </div>
+      <Shellless>
+        <div style={{ width: 800, height: 600 }}>
+          <Canvas />
+        </div>
+      </Shellless>
     </AppStoreContext.Provider>,
   )
   const node = () => view.container.querySelector(`.react-flow__node[data-id="${ID}"]`) as HTMLElement

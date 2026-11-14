@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { SettingsMenu } from '../app/SettingsMenu'
 import { press } from '../test/press'
+import { Shellless } from '../test/Shellless'
+import { AppStoreProvider } from '../app/AppStoreProvider'
 import { afterEach, describe, expect, it } from 'vitest'
 import { THEME_KEY, getThemeMode, initTheme, setThemeMode, useTheme } from './theme'
 
@@ -42,8 +44,14 @@ describe('theme', () => {
 })
 
 describe('settings menu', () => {
-  it('switches the theme from the toolbar menu', async () => {
-    render(<SettingsMenu />)
+  it('switches the theme from the settings menu', async () => {
+    render(
+      <AppStoreProvider>
+        <Shellless>
+          <SettingsMenu />
+        </Shellless>
+      </AppStoreProvider>,
+    )
     press(screen.getByRole('button', { name: 'Settings' }))
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Dark' }))
     expect(document.documentElement.dataset.theme).toBe('dark')

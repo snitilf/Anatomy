@@ -2,7 +2,6 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import nordetRaw from '../examples/nordet.board.json?raw'
-import { press } from '../test/press'
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
@@ -20,8 +19,8 @@ const nordet = JSON.parse(nordetRaw) as {
 const walk = nordet.scenarios[0]!
 
 async function loadNordet() {
-  press(screen.getByRole('button', { name: 'Load an example' }))
-  fireEvent.click(await screen.findByRole('menuitem', { name: /Nordet follow-up/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Nordet follow-up/ }))
+  await screen.findByTestId('inspector')
 }
 
 function play() {
@@ -38,7 +37,7 @@ describe('walkthroughs', () => {
     render(<App />)
     await loadNordet()
     const panel = screen.getByTestId('inspector')
-    expect(within(panel).getByRole('heading', { name: 'Walkthroughs' })).toBeInTheDocument()
+    expect(within(panel).getByRole('heading', { name: /^Walkthroughs/ })).toBeInTheDocument()
     for (const s of nordet.scenarios) expect(within(panel).getByText(s.title)).toBeInTheDocument()
     expect(within(panel).getByText(`${walk.steps.length} steps`)).toBeInTheDocument()
   })
@@ -51,6 +50,8 @@ describe('walkthroughs', () => {
     expect(player.getByText(`Step 1 of ${walk.steps.length}`)).toBeInTheDocument()
     expect(player.getByText(walk.steps[0]!.caption)).toBeInTheDocument()
     expect(player.getByText(walk.steps[0]!.caption)).toHaveAttribute('aria-live', 'polite')
+    // The controls name their keys in their tooltips, and Previous is off at the first step.
+    expect(player.getByRole('button', { name: 'Previous' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('moves with Next, Previous, and the arrow keys, and stops at both ends', async () => {
@@ -81,7 +82,7 @@ describe('walkthroughs', () => {
     const button = play()
     await waitFor(() => expect(bar().contains(document.activeElement)).toBe(true))
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
-    expect(screen.queryByRole('region', { name: /Walkthrough/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /^Walkthrough:/ })).not.toBeInTheDocument()
     await waitFor(() => expect(button).toHaveFocus())
   })
 
@@ -90,7 +91,7 @@ describe('walkthroughs', () => {
     await loadNordet()
     play()
     fireEvent.click(within(bar()).getByRole('button', { name: 'Close' }))
-    expect(screen.queryByRole('region', { name: /Walkthrough/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /^Walkthrough:/ })).not.toBeInTheDocument()
   })
 
   it('marks the highlighted parts and dims the others', async () => {
@@ -120,7 +121,7 @@ describe('walkthroughs', () => {
   })
 })
 
-describe('lessons in the inspector', () => {
+describe('lessons in the sidebar', () => {
   it('offers the lesson for Approval and opens it, then returns focus to the button', async () => {
     render(<App />)
     await loadNordet()
@@ -128,7 +129,7 @@ describe('lessons in the inspector', () => {
     const panel = screen.getByTestId('inspector')
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${approval.label}`) })[0]!)
     expect(within(panel).getByRole('heading', { name: 'Lesson' })).toBeInTheDocument()
-    const open = within(panel).getByRole('button', { name: 'Open lesson' })
+    const open = within(panel).getByRole('button', { name: /^Approval gate/ })
     open.focus()
     fireEvent.click(open)
     const dialog = await screen.findByRole('dialog', { name: 'Approval gate', hidden: true })
@@ -141,7 +142,7 @@ describe('lessons in the inspector', () => {
     })
     expect(screen.queryByRole('dialog', { name: 'Approval gate', hidden: true })).not.toBeInTheDocument()
     expect(within(panel).getByRole('heading', { name: approval.label })).toBeInTheDocument()
-    await waitFor(() => expect(within(panel).getByRole('button', { name: 'Open lesson' })).toHaveFocus())
+    await waitFor(() => expect(within(panel).getByRole('button', { name: /^Approval gate/ })).toHaveFocus())
   })
 
   it('shows no lesson section for a part without one', async () => {
@@ -155,7 +156,7 @@ describe('lessons in the inspector', () => {
 })
 
 describe('Escape on the map', () => {
-  it('gives focus back to the card that was focused when the inspector button disappears', async () => {
+  it('gives focus back to the card that was focused when the sidebar button disappears', async () => {
     const { container } = render(<App />)
     await loadNordet()
     const card = container.querySelector<HTMLElement>('.react-flow__node[data-id="preview"]')
@@ -166,7 +167,7 @@ describe('Escape on the map', () => {
     const row = within(panel).getAllByRole('button', { name: /^Approval/ })[0]!
     row.focus()
     fireEvent.click(row)
-    const back = within(panel).getByRole('button', { name: /Board overview/ })
+    const back = within(panel).getByRole('button', { name: 'Overview' })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
     await waitFor(() => expect(within(panel).getByRole('heading', { name: /Nordet/ })).toBeInTheDocument())
@@ -181,7 +182,7 @@ describe('Escape on the map', () => {
     const row = within(panel).getAllByRole('button', { name: /^Approval/ })[0]!
     row.focus()
     fireEvent.click(row)
-    const back = within(panel).getByRole('button', { name: /Board overview/ })
+    const back = within(panel).getByRole('button', { name: 'Overview' })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
     await waitFor(() => expect(within(panel).getByRole('heading', { name: /Nordet/ })).toHaveFocus())

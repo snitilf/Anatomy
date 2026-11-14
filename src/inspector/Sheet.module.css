@@ -65,3 +65,13 @@
 .sheet[data-stop='0'] > :not(.header) {
   visibility: hidden;
 }
+
+/* Above the lowest stop the view's own heading names it, so the header is only the handle. */
+.sheet:not([data-stop='0']) .title {
+  display: none;
+}
+
+.sheet:not([data-stop='0']) .header {
+  min-height: 24px;
+  padding-bottom: 4px;
+}

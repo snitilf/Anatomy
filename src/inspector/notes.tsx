@@ -134,7 +134,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
   }
 
   return (
-    <li className={styles.item} data-status={status}>
+    <li className={styles.item} data-status={status} data-yours="">
       <div className={styles.note}>
         <Icon className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
         <span className="sr-only">{kind}: </span>
