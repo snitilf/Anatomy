@@ -1,4 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
+import { ChevronDown, FileUp } from 'lucide-react'
 import { useState } from 'react'
 import { NAMESPACES } from '../persistence/store'
 import buttons from './buttons.module.css'
@@ -29,7 +30,7 @@ export function OpenMenu({ onOpenFile }: { onOpenFile: () => void }) {
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger className={buttons.button}>
         Open
-        <span aria-hidden="true" className={styles.caret} />
+        <ChevronDown className={styles.caret} size={16} strokeWidth={1.5} aria-hidden="true" />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner className={styles.positioner} side="bottom" align="end" sideOffset={6} collisionPadding={12}>
@@ -42,6 +43,7 @@ export function OpenMenu({ onOpenFile }: { onOpenFile: () => void }) {
                 onOpenFile()
               }}
             >
+              <FileUp size={16} strokeWidth={1.5} aria-hidden="true" />
               Open a file
             </button>
             {saved.length > 0 && (

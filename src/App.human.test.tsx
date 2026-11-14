@@ -129,7 +129,7 @@ describe('your notes', () => {
     selectPart('approval')
     addNote('Ask legal who signs off')
     const item = panel().getByText('Ask legal who signs off').closest('li')!
-    expect(within(item).getByText('You')).toBeInTheDocument()
+    expect(item).toHaveAttribute('data-yours')
     expect(within(item).getByText('Note')).toBeInTheDocument()
 
     fireEvent.click(within(item).getByRole('button', { name: 'Edit' }))

@@ -31,7 +31,6 @@ export function EmptyState({ onOpen }: { onOpen: () => void }) {
     <div className={styles.empty}>
       <Sketch />
       <p className={styles.line}>Open a board to see how it fits together.</p>
-      {space === 'work' && <p className={styles.space}>Work is kept apart from Home.</p>}
       <div className={styles.actions}>
         <ExamplesMenu label="Load an example" primary />
         <button type="button" className={buttons.button} onClick={onOpen}>
@@ -40,7 +39,7 @@ export function EmptyState({ onOpen }: { onOpen: () => void }) {
       </div>
       {unavailable && (
         <p className={styles.problem} role="status">
-          {storageProblem(unavailable)}, so nothing you open will be saved. Export keeps your work.
+          {storageProblem(unavailable)}, so nothing you open is saved. Export keeps your work.
         </p>
       )}
       {saved.length > 0 && (

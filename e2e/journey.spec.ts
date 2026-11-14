@@ -26,8 +26,8 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(inspector.getByRole('heading', { name: 'Rule check', level: 2 })).toBeVisible()
   await inspector.locator('summary', { hasText: 'Explanation' }).click()
   await expect(inspector.getByText('The rule check only proposes. It does not send anything.')).toBeVisible()
-  // What the source means is written under the badge, not only in a tooltip.
-  await expect(inspector.getByText('Your agent describes this as it understands it.')).toBeVisible()
+  // The default source, the agent's own explanation, shows no source line.
+  await expect(inspector.locator('[data-source]')).toHaveCount(0)
 
   // Inspect a connection: its kind in plain English.
   await inspector.getByRole('button', { name: /proposes an action/ }).click()
@@ -42,13 +42,13 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await player.getByRole('button', { name: 'Next' }).click()
   await expect(player.getByText('Step 2 of 5')).toBeVisible()
   await expect(player.getByText('The rule check finds that the rule matches and proposes a notice.')).toBeVisible()
-  await expect(player.getByText('Teaching sequence. Nothing runs.')).toBeVisible()
   await player.getByRole('button', { name: 'Close' }).click()
   await expect(player).toBeHidden()
 
   // Open the lesson from the Approval part. A second send of the same approved version is blocked.
   await inspector.getByRole('button', { name: partRow('Approval') }).click()
   await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
+  await expect(inspector.getByText('From a written plan')).toBeVisible()
   await inspector.getByRole('button', { name: 'Open lesson' }).click()
   const lesson = page.getByRole('dialog', { name: 'Approval gate' })
   await expect(lesson.getByRole('group', { name: 'Controls' })).toBeVisible()

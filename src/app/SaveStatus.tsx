@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { CircleAlert } from 'lucide-react'
 import { useAppStore } from './store'
 import buttons from './buttons.module.css'
 import { storageProblem, usePersistence } from './persistenceContext'
@@ -13,23 +14,22 @@ export function SaveStatus() {
     <div className={styles.root}>
       {save.kind === 'error' ? (
         <div className={styles.failed} role="alert" title={storageProblem(save.error)}>
-          <span className={styles.dot} aria-hidden="true" />
+          <CircleAlert className={styles.alert} size={16} strokeWidth={1.5} aria-hidden="true" />
           <span className={styles.text}>
             <strong>Not saved</strong>
             <span className="sr-only">. {storageProblem(save.error)}</span>
           </span>
           {save.error.kind !== 'unavailable' && (
-            <button type="button" className={clsx(buttons.button, buttons.quiet, styles.small)} onClick={retrySave}>
+            <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={retrySave}>
               Try again
             </button>
           )}
-          <button type="button" className={clsx(buttons.button, styles.small)} onClick={exportNow}>
+          <button type="button" className={buttons.button} onClick={exportNow}>
             Export
           </button>
         </div>
       ) : (
         <p className={styles.line} role="status" data-state={save.kind} title={save.kind === 'saved' ? 'Saved in this browser' : undefined}>
-          <span className={styles.dot} aria-hidden="true" />
           {save.kind === 'saving' ? 'Saving' : 'Saved'}
         </p>
       )}

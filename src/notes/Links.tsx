@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
@@ -10,9 +11,9 @@ import { newId } from '../overlay/notes'
 import { OVERLAY_LIMITS } from '../overlay/schema'
 import { manualLinkStatus } from '../overlay/status'
 import type { ManualLink } from '../overlay/types'
+import { StatusTag } from './NoteCard'
 import styles from './notes.module.css'
 import { PartSelect } from './TargetSelect'
-import { YouTag } from './YouTag'
 
 function partName(board: Board, id: string): string {
   return board.components.find((c) => c.id === id)?.label ?? id
@@ -46,10 +47,14 @@ export function LinksSection({ componentId }: { componentId: string }) {
             const other = partName(board, outgoing ? link.to : link.from)
             return (
               <li key={link.id}>
-                <button type="button" className={styles.linkRow} onClick={() => choose({ type: 'link', id: link.id })}>
-                  <YouTag />
+                <button type="button" className={styles.linkRow} data-yours="" onClick={() => choose({ type: 'link', id: link.id })}>
+                  {outgoing ? (
+                    <ArrowRight className={styles.linkArrow} size={16} strokeWidth={1.5} aria-hidden="true" />
+                  ) : (
+                    <ArrowLeft className={styles.linkArrow} size={16} strokeWidth={1.5} aria-hidden="true" />
+                  )}
                   <span className={styles.linkText}>
-                    <span aria-hidden="true">{outgoing ? '→' : '←'}</span> {other}
+                    {other}
                     {link.label !== '' && <span className={styles.linkLabel}>{link.label}</span>}
                   </span>
                 </button>
@@ -151,17 +156,14 @@ export function LinkDetail({ board, link }: { board: Board; link: ManualLink }) 
     <>
       <BackButton />
       <Heading>Your link</Heading>
-      <div className={styles.tags}>
-        <YouTag />
-        {broken && (
-          <span className={styles.tag} data-warn="">
-            Needs relinking
-          </span>
-        )}
-      </div>
+      {broken && (
+        <div className={styles.tags}>
+          <StatusTag status="needs-relinking" />
+        </div>
+      )}
       <div className={styles.route}>
         {ids.has(link.from) ? <PartButton board={board} id={link.from} /> : <span className={styles.gone}>{link.from}</span>}
-        <span aria-hidden="true">→</span>
+        <ArrowRight className={styles.linkArrow} size={16} strokeWidth={1.5} aria-hidden="true" />
         <span className="sr-only">to</span>
         {ids.has(link.to) ? <PartButton board={board} id={link.to} /> : <span className={styles.gone}>{link.to}</span>}
       </div>

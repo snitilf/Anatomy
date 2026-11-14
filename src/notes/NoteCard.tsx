@@ -1,9 +1,9 @@
+import { CircleHelp, History, StickyNote, Unlink } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { OVERLAY_LIMITS } from '../overlay/schema'
 import type { Note, NoteStatus } from '../overlay/types'
 import { useAppDispatch } from '../app/store'
 import styles from './notes.module.css'
-import { YouTag } from './YouTag'
 
 const DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 
@@ -16,6 +16,17 @@ function when(note: Note): string {
 const STATUS_TAG: Record<Exclude<NoteStatus, 'current'>, string> = {
   'possibly-outdated': 'Possibly outdated',
   'needs-relinking': 'Needs relinking',
+}
+
+/** Possibly outdated is neutral. Needs relinking is the one state that asks for action, in the danger color. */
+export function StatusTag({ status }: { status: Exclude<NoteStatus, 'current'> }) {
+  const Icon = status === 'needs-relinking' ? Unlink : History
+  return (
+    <span className={styles.status} data-status={status}>
+      <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+      {STATUS_TAG[status]}
+    </span>
+  )
 }
 
 export function NoteCard({
@@ -44,15 +55,17 @@ export function NoteCard({
   }
 
   return (
-    <li className={styles.note} data-kind={note.kind} data-status={status}>
+    <li className={styles.note} data-kind={note.kind} data-status={status} data-yours="">
       <div className={styles.tags}>
-        <YouTag />
-        <span className={styles.tag}>{note.kind === 'note' ? 'Note' : 'Question'}</span>
-        {status !== 'current' && (
-          <span className={styles.tag} data-warn="">
-            {STATUS_TAG[status]}
-          </span>
-        )}
+        <span className={styles.kind}>
+          {note.kind === 'note' ? (
+            <StickyNote size={16} strokeWidth={1.5} aria-hidden="true" />
+          ) : (
+            <CircleHelp size={16} strokeWidth={1.5} aria-hidden="true" />
+          )}
+          {note.kind === 'note' ? 'Note' : 'Question'}
+        </span>
+        {status !== 'current' && <StatusTag status={status} />}
       </div>
       {context}
       {editing ? (
