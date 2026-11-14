@@ -6,10 +6,10 @@ import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
 import { Tip } from '../app/Tip'
 import { useUi } from '../app/ui'
-import type { Board, BoardResponse } from '../board/schema'
+import type { Board } from '../board/schema'
 import { changedFields } from '../layer/diff'
 import { newId } from '../layer/edits'
-import { LAYER_LIMITS, type Note, type NoteStatus, type Target } from '../layer/model'
+import { LAYER_LIMITS, type Note, type NoteStatus, type Response, type Target } from '../layer/model'
 import { noteStatus, wasSent } from '../layer/status'
 import { sameTarget, targetName } from '../notes/targets'
 import { deletedToast } from '../notes/undoToast'
@@ -27,8 +27,11 @@ const ANSWER = {
   answered: { label: 'Answered', icon: MessageSquareReply },
 } as const
 
-/** The agent wrote it, so it is neutral: never the color of the user's own work. */
-export function AgentAnswer({ board, answer }: { board: Board; answer: BoardResponse }) {
+/**
+ * The agent's answer to one of the user's items. The agent wrote it, so it is neutral: never the color of the user's own work.
+ * `onDismiss` puts the item and its answer in the archive.
+ */
+export function AgentAnswer({ board, answer, onDismiss }: { board: Board; answer: Response; onDismiss?: (() => void) | undefined }) {
   const { label, icon: Icon } = ANSWER[answer.status]
   return (
     <div className={styles.answer}>
@@ -36,7 +39,7 @@ export function AgentAnswer({ board, answer }: { board: Board; answer: BoardResp
         <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
         {label}
       </p>
-      <p className={styles.answerText}>{answer.text}</p>
+      {answer.text !== '' && <p className={styles.answerText}>{answer.text}</p>}
       {answer.status === 'adopted' && answer.changed.length > 0 && (
         <p className={styles.answerChanged}>
           Changed:{' '}
@@ -48,10 +51,24 @@ export function AgentAnswer({ board, answer }: { board: Board; answer: BoardResp
           ))}
         </p>
       )}
+      {onDismiss && (
+        <div className={styles.answerActions}>
+          <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={onDismiss}>
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
+/** The answer to an item still on the map, with Dismiss. Nothing when the agent has not answered it. */
+export function ItemAnswer({ board, id }: { board: Board; id: string }) {
+  const dispatch = useAppDispatch()
+  const answer = useAppStore((s) => answerFor(s.layer, id))
+  if (!answer) return null
+  return <AgentAnswer board={board} answer={answer} onDismiss={() => dispatch({ type: 'itemsArchived', answers: [{ id, response: answer }], now: new Date() })} />
+}
 
 function decode(value: string): Target {
   if (value === 'board') return { type: 'board' }
@@ -122,7 +139,6 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.text)
   const status = noteStatus(board, note)
-  const answer = answerFor(board, note.id)
   const Icon = note.kind === 'note' ? StickyNote : CircleHelp
   const kind = note.kind === 'note' ? 'Note' : 'Question'
 
@@ -231,7 +247,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
           }}
         />
       )}
-      {answer && <AgentAnswer board={board} answer={answer} />}
+      <ItemAnswer board={board} id={note.id} />
     </li>
   )
 }
