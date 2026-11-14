@@ -99,23 +99,6 @@ export function planEdges(rects: Readonly<Record<string, Rect>>, edges: readonly
 
 const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
 
-/** A cubic curve that leaves one side straight out and arrives at the other straight in. Only used when no path is found. */
-export function curve(a: Point, sideA: Side, b: Point, sideB: Side): Route {
-  const reach = Math.max(28, (Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2)
-  const na = NORMAL[sideA]
-  const nb = NORMAL[sideB]
-  const c1 = { x: a.x + na.x * reach, y: a.y + na.y * reach }
-  const c2 = { x: b.x + nb.x * reach, y: b.y + nb.y * reach }
-  const points: Point[] = []
-  const steps = 48
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps
-    const p = lerp(lerp(lerp(a, c1, t), lerp(c1, c2, t), t), lerp(lerp(c1, c2, t), lerp(c2, b, t), t), t)
-    points.push(p)
-  }
-  return { d: `M ${a.x} ${a.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${b.x} ${b.y}`, points }
-}
-
 /** True when the straight run from p to q crosses the inside of the rectangle. */
 function crosses(p: Point, q: Point, r: Rect): boolean {
   const minX = Math.min(p.x, q.x)
@@ -606,7 +589,7 @@ function direction(n: Point): number {
  * The line for one connection, always made of straight runs with rounded corners. A straight run when the two ends
  * line up, else an elbow on the free track of the gap with the lowest cost, else a path found around the cards.
  * An elbow that runs along other lines, across them, or through a group area of neither end is compared with the
- * path search, and the cheaper one wins. A curve is the last resort, for when no path exists. Pass the `Obstacles`
+ * path search, and the cheaper one wins. When no path exists, the plain elbow is drawn anyway. Pass the `Obstacles`
  * of the cards when drawing many connections in one go, so the cards are indexed once, and the lines drawn so far
  * in `drawn`.
  */
@@ -638,7 +621,8 @@ export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn
   const found = findPath(start, end, direction(n1), direction({ x: -n2.x, y: -n2.y }), grid, drawn, ownGroups)
   if (found && (!best || found.cost + STUB * 2 < best.cost)) return rounded([plan.a, start, ...found.points.slice(1, -1), end, plan.b])
   if (best) return rounded(best.points)
-  return curve(plan.a, plan.out, plan.b, plan.in)
+  // Nothing gets through, such as between cards that touch. A plain elbow keeps the look of every other line.
+  return rounded(elbow(plan))
 }
 
 /** The cheap line drawn while a card moves: an elbow with no search. */

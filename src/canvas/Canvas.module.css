@@ -10,61 +10,6 @@
 .canvas :global(.react-flow) {
   --xy-background-color: var(--bg);
   --xy-background-pattern-dots-color-default: color-mix(in srgb, var(--fg) 13%, transparent);
-  --xy-controls-button-background-color-default: var(--raised);
-  --xy-controls-button-background-color-hover-default: var(--hover);
-  --xy-controls-button-color-default: var(--fg-2);
-  --xy-controls-button-color-hover-default: var(--fg);
-  --xy-controls-button-border-color-default: var(--border);
-  --xy-controls-box-shadow-default: none;
-}
-
-.controls {
-  margin: 0 12px 12px 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--raised);
-  box-shadow: var(--shadow-float);
-}
-
-.canvas :global(.react-flow__controls-button) {
-  appearance: none;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--raised);
-  color: var(--fg-2);
-  cursor: pointer;
-  transition:
-    background-color 120ms var(--ease-out),
-    color 120ms var(--ease-out);
-}
-
-.canvas :global(.react-flow__controls-button:last-child) {
-  border-bottom: 0;
-}
-
-.canvas :global(.react-flow__controls-button:hover) {
-  background: color-mix(in srgb, var(--raised), var(--fg) 5%);
-  color: var(--fg);
-}
-
-/* React Flow sizes its own icons. Lucide icons keep their 16px and their stroke. */
-.canvas :global(.react-flow__controls-button svg) {
-  width: 16px;
-  max-width: none;
-  height: 16px;
-  max-height: none;
-  fill: none;
-}
-
-.canvas :global(.react-flow__controls-button:focus-visible) {
-  position: relative;
-  box-shadow: inset 0 0 0 2px var(--focus);
 }
 
 .canvas :global(.react-flow__node:focus-visible),
@@ -92,14 +37,21 @@
   z-index: 1100;
 }
 
-@media (max-width: 760px) {
-  /* Touch screens pinch to zoom. Only the fit button stays. */
-  .zoomStep {
-    display: none !important;
-  }
-}
 
 /* The card in hand sits above every connection label, so nothing covers what you are moving. */
 .canvas :global(.react-flow__node.dragging) {
   z-index: 1200 !important;
+}
+
+/* Cards a drop pushed aside glide to their new place. Nothing else on the map animates its position. */
+.canvas :global(.react-flow__node.pushed) {
+  transition: transform 150ms var(--ease-out);
+}
+
+/*
+ * On a quiet map, only the labels of the selection, of a walkthrough step, and of the card under the pointer show.
+ * The rest are hidden, not faded, so they never cover anything.
+ */
+.canvas[data-labels='quiet'] [data-label]:not([data-active], [data-selected], [data-highlighted]) {
+  visibility: hidden;
 }

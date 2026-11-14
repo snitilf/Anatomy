@@ -106,7 +106,7 @@ describe('routeConnection', () => {
     expect(elbow(plan!)).toHaveLength(4)
   })
 
-  it('never crosses a card on any board when a path exists, and never falls back to a curve', () => {
+  it('never crosses a card on any board when a path exists, and draws only right angles', () => {
     for (const board of allBoards()) {
       const rects = placeCards(board, { positions: {}, sizes: {} })
       const geometry = computeGeometry(board, rects)

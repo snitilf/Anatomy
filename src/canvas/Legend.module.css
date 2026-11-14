@@ -1,49 +1,38 @@
-.legend {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  z-index: 5;
-  display: flex;
-}
-
 .button {
   appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 10px 0 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--raised);
   box-shadow: var(--shadow-float);
   color: var(--fg-2);
-  font-weight: var(--weight-medium);
   cursor: pointer;
   transition:
     background-color 120ms var(--ease-out),
-    color 120ms var(--ease-out),
-    transform 120ms var(--ease-out);
+    color 120ms var(--ease-out);
 }
 
-.button:hover,
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    background: color-mix(in srgb, var(--raised), var(--fg) 5%);
+    color: var(--fg);
+  }
+}
+
 .button[data-popup-open] {
   background: color-mix(in srgb, var(--raised), var(--fg) 5%);
   color: var(--fg);
 }
 
 .button:focus-visible {
+  outline: none;
   box-shadow:
     var(--ring),
     var(--shadow-float);
-}
-
-.button:active {
-  transform: scale(0.97);
-}
-
-.icon {
-  flex: none;
 }
 
 .positioner {
@@ -91,21 +80,3 @@
   color: var(--fg-2);
 }
 
-/* On a narrow screen the key is an icon in the top corner. The map keeps a margin there when it fits. */
-@media (max-width: 760px) {
-  .legend {
-    top: 8px;
-    left: 8px;
-    bottom: auto;
-  }
-
-  .button {
-    width: 32px;
-    padding: 0;
-    justify-content: center;
-  }
-
-  .text {
-    display: none;
-  }
-}

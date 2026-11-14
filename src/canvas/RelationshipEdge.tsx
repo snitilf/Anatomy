@@ -8,23 +8,24 @@ import { KIND_STYLE, SELECTED_WIDTH, TONE_COLOR } from './kinds'
 import styles from './RelationshipEdge.module.css'
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
-  const { id, data, selected, markerEnd, interactionWidth } = props
+  const { id, data, selected, markerEnd, interactionWidth, source, target } = props
   const dispatch = useAppDispatch()
   if (!data) return null
   const unknown = data.kind === 'unknown'
   const text = unknown ? `Meaning unknown: ${data.label}` : data.label
   const style = KIND_STYLE[data.kind]
+  const ends = `${source} ${target}`
   const emphasized = selected || data.active || data.highlighted
   return (
     <>
-      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined}>
+      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends}>
         <BaseEdge
           id={id}
           path={data.path}
           {...(markerEnd ? { markerEnd } : {})}
           interactionWidth={interactionWidth ?? 28}
           style={{
-            stroke: emphasized ? 'var(--accent)' : TONE_COLOR[style.tone],
+            stroke: emphasized ? 'var(--accent)' : `var(--line-ink, ${TONE_COLOR[style.tone]})`,
             strokeWidth: emphasized ? Math.max(SELECTED_WIDTH, style.width) : style.width,
             strokeDasharray: style.dash || undefined,
             strokeLinecap: style.dash.startsWith('1.5') ? 'round' : 'butt',
@@ -34,6 +35,8 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
       <EdgeLabelRenderer>
         <div
           className={clsx(styles.pill, 'nodrag nopan')}
+          data-label=""
+          data-ends={ends}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           data-highlighted={data.highlighted || undefined}

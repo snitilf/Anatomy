@@ -1,7 +1,7 @@
 import { inflate, overlaps, type Point, type Rect } from './geometry'
 
-/** Space left between a card and the card that pushed it. */
-export const PUSH_GAP = 16
+/** Space left between a card and the card that pushed it: room for a line to pass between them. */
+export const PUSH_GAP = 40
 /** A push may push further cards, this many times over. What still overlaps after that stays. */
 const PASSES = 3
 /** Extra distance a push may take to keep a card inside its own group area, and out of another group's area. */
