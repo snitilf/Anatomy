@@ -23,7 +23,6 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
         <path
           className={styles.ghost}
           d={data.ghost}
-          data-ends={ends}
           style={{ stroke: TONE_COLOR[style.tone], strokeWidth: style.width, strokeDasharray: style.dash || undefined }}
           aria-hidden="true"
         />

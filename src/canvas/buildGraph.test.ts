@@ -271,3 +271,57 @@ describe('card sizes', () => {
     if (own) expect(after.edges.get(own.id)).not.toBe(before.edges.get(own.id))
   })
 })
+
+describe('the user layer on the map', () => {
+  const board = exampleBoard()
+  const iso = '2026-01-01T00:00:00.000Z'
+  const rects: Record<string, Rect> = { ...placeCards(board, { positions: {}, sizes: {} }), 'part-abcdef': { x: -600, y: -400, width: 240, height: 112 } }
+  const proposal = { id: 'part-abcdef', label: 'Cache', summary: '', x: -600, y: -400, width: 240, height: 112, createdAt: iso }
+  const rel = board.relationships[0]!
+  const third = board.components.find((c) => c.id !== rel.from && c.id !== rel.to)!.id
+  const link = { id: 'link-abcdef', from: 'part-abcdef', to: rel.from, label: '', createdAt: iso }
+  const reconnect = { id: 'edit-abcdef', relationshipId: rel.id, to: third, createdAt: iso }
+  const sticky = { id: 'mark-abcdef', createdAt: iso, kind: 'sticky' as const, x: 10, y: 20, width: 176, height: 128, text: 'Hi' }
+
+  it('routes links to proposed parts, and keeps lines out of them', () => {
+    const geometry = computeGeometry(board, rects, [link])
+    const shape = geometry.edges.get('manual:link-abcdef')
+    expect(shape).toBeDefined()
+    const inside = (p: Point, r: Rect) => p.x > r.x + 1 && p.x < r.x + r.width - 1 && p.y > r.y + 1 && p.y < r.y + r.height - 1
+    for (const s of geometry.edges.values()) expect(s.points.some((p) => inside(p, rects['part-abcdef']!))).toBe(false)
+  })
+
+  it('draws a moved connection where the user put it, with its original dimmed under it and its label on the new line', () => {
+    const geometry = computeGeometry(board, rects, [], undefined, [reconnect])
+    const moved = geometry.edges.get(`edit:${rel.id}`)
+    expect(moved).toMatchObject({ from: rel.from, to: third })
+    expect(moved!.labelWidth).toBeGreaterThan(0)
+    expect(geometry.edges.get(rel.id)!.labelWidth).toBe(0)
+    const { edges } = assembleGraph(board, rects, geometry, undefined, undefined, [], new Map(), new GraphCache(), undefined, undefined, {
+      proposals: [proposal],
+      reconnects: [reconnect],
+      marks: [],
+    })
+    const edge = edges.find((e) => e.id === rel.id)!
+    expect(edge).toMatchObject({ source: rel.from, target: third, data: { edited: true, ghost: geometry.edges.get(rel.id)!.path, path: moved!.path } })
+  })
+
+  it('a later build keeps its lines, and drops the moved line once the edit is gone', () => {
+    const edited = computeGeometry(board, rects, [], undefined, [reconnect])
+    const back = computeGeometry(board, rects, [], edited, [])
+    expect(back.edges.has(`edit:${rel.id}`)).toBe(false)
+    expect(back.edges.get(rel.id)!.labelWidth).toBeGreaterThan(0)
+  })
+
+  it('adds proposed parts, text, and sticky notes as nodes, and draws a note in motion where it is', () => {
+    const geometry = computeGeometry(board, rects)
+    const { nodes } = assembleGraph(board, rects, geometry, { type: 'mark', id: sticky.id }, undefined, [], new Map(), new GraphCache(), undefined, undefined, {
+      proposals: [proposal],
+      reconnects: [],
+      marks: [sticky],
+      moving: { id: sticky.id, x: 50, y: 60 },
+    })
+    expect(nodes.find((n) => n.id === 'part-abcdef')).toMatchObject({ type: 'proposal', position: { x: -600, y: -400 } })
+    expect(nodes.find((n) => n.id === 'mark:mark-abcdef')).toMatchObject({ type: 'mark-sticky', position: { x: 50, y: 60 }, selected: true })
+  })
+})
