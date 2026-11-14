@@ -26,7 +26,7 @@ type Outcome =
   | { kind: 'failed'; draft: FeedbackDraft; prompt: string }
 
 /** The prompt box: read-only, so the user can still select it by hand when the copy fails, with a Copy button. */
-function PromptBox({ prompt, copyRef }: { prompt: string; copyRef?: React.Ref<HTMLButtonElement> }) {
+function PromptBox({ prompt }: { prompt: string }) {
   const [copied, setCopied] = useState<boolean | undefined>()
   return (
     <div className={styles.promptBox}>
@@ -35,7 +35,6 @@ function PromptBox({ prompt, copyRef }: { prompt: string; copyRef?: React.Ref<HT
       </p>
       <Tip label={copied === false ? 'Could not copy' : copied ? 'Copied' : 'Copy prompt'}>
         <button
-          ref={copyRef}
           type="button"
           className={clsx(buttons.button, buttons.quiet, buttons.icon, styles.copy)}
           aria-label="Copy prompt"
@@ -89,7 +88,8 @@ export function SendMenu() {
   const [outcome, setOutcome] = useState<Outcome | undefined>()
   const [busy, setBusy] = useState(false)
   const sendRef = useRef<HTMLButtonElement>(null)
-  const copyRef = useRef<HTMLButtonElement>(null)
+  const sentRef = useRef<HTMLParagraphElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
 
   const inFolder = origin === 'folder' && folder?.state === 'open'
   const prompt = inFolder ? SEND_PROMPT : downloadedPrompt(board?.title ?? '')
@@ -103,9 +103,9 @@ export function SendMenu() {
   const layer = store.getState().layer
   const count = draft ? unsentCount(draft) : 0
 
-  // After a send, focus moves to the prompt's Copy button, so Enter does not send again.
+  // After a send, focus moves to the result, so the Send button leaving does not drop focus to the page.
   useEffect(() => {
-    if (outcome?.kind === 'sent') copyRef.current?.focus()
+    if (outcome?.kind === 'sent') sentRef.current?.focus()
   }, [outcome])
 
   if (!board || !layer || !view.visible) return null
@@ -182,12 +182,12 @@ export function SendMenu() {
   if (outcome?.kind === 'sent') {
     body = (
       <>
-        <p className={styles.sentHead} role="status">
+        <p ref={sentRef} className={styles.sentHead} role="status" tabIndex={-1}>
           <DrawnCheck />
           {outcome.count === 1 ? 'Sent 1 item' : `Sent ${outcome.count} items`}
         </p>
         <p className={styles.path}>{outcome.downloaded ? 'Downloaded feedback.json' : '.anatomy/feedback.json'}</p>
-        <PromptBox prompt={outcome.prompt} copyRef={copyRef} />
+        <PromptBox prompt={outcome.prompt} />
         <p className={styles.line}>{outcome.copied ? 'Prompt copied. Paste it to your agent.' : 'Could not copy. Select the prompt and copy it.'}</p>
       </>
     )
@@ -262,8 +262,12 @@ export function SendMenu() {
       </Tip>
       <Popover.Portal>
         <Popover.Positioner className={styles.positioner} side="bottom" align="end" sideOffset={6} collisionPadding={8}>
-          <Popover.Popup className={styles.panel} aria-label="Send to agent" initialFocus={() => sendRef.current ?? true}>
-            {outcome?.kind !== 'sent' && <h2 className={styles.heading}>Send to agent</h2>}
+          <Popover.Popup className={styles.panel} aria-label="Send to agent" initialFocus={() => sendRef.current ?? headingRef.current ?? true}>
+            {outcome?.kind !== 'sent' && (
+              <h2 ref={headingRef} className={styles.heading} tabIndex={-1}>
+                Send to agent
+              </h2>
+            )}
             {body}
           </Popover.Popup>
         </Popover.Positioner>

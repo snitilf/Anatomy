@@ -82,7 +82,7 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
   const Icon = landed ? CircleCheck : CircleDashed
   return (
     <div className={notes.state}>
-      <p className={styles.rowMeta}>
+      <p className={notes.route}>
         <s>
           {name(was.from)} to {name(was.to)}
         </s>
@@ -261,7 +261,7 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
                         <span className={styles.rowMain}>
                           <span className={styles.rowTitle}>{after?.label ?? id}</span>
                           {moved && before && after ? (
-                            <span className={styles.rowMeta}>
+                            <span className={clsx(styles.rowMeta, styles.wraps)}>
                               <s>
                                 {names(was, before.from)} to {names(was, before.to)}
                               </s>
