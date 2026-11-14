@@ -16,6 +16,11 @@ export interface ConnectionRef {
   to: string
 }
 
+/** A connection an arrow points at, and where along the line it points: 0 at its start, 1 at its end. */
+export interface ConnectionPoint extends ConnectionRef {
+  at: number
+}
+
 /** Something the board no longer has. Only its ID is known. */
 export interface MissingRef {
   type: 'missing'
@@ -24,7 +29,13 @@ export interface MissingRef {
 
 export type Ref = PartRef | ConnectionRef
 /** Where an arrow end lies. `point` is empty space. */
-export type Pointed = Ref | MissingRef | { type: 'point' }
+export type Pointed = PartRef | ConnectionPoint | MissingRef | { type: 'point' }
+
+/** What the target of a note said in the revision the user marked, so the agent can tell what the note was about. */
+export type Snapshot =
+  | { type: 'board'; title: string; goal: string }
+  | { type: 'component'; label: string; summary: string }
+  | { type: 'relationship'; label: string; kind: string; from: string; to: string }
 
 export type FeedbackItem =
   | {
@@ -32,6 +43,8 @@ export type FeedbackItem =
       type: 'note' | 'question'
       text: string
       about: { type: 'board' } | Ref | MissingRef
+      /** The target as the user saw it. Missing when the target left the board. */
+      snapshot?: Snapshot
       /** Set when the board changed under the note since it was written. */
       status?: 'possibly-outdated' | 'needs-relinking'
     }
@@ -66,7 +79,7 @@ export interface Feedback {
   /** The board revision the user marked. */
   baseRevision: number
   createdAt: string
-  /** What is new or changed since the last send. */
+  /** What is new or changed since the last send, and every item sent before that has no answer yet. */
   items: FeedbackItem[]
   /** Items sent before that the user has since deleted. */
   withdrawn: string[]

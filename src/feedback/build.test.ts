@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Board } from '../board/schema'
 import { placeCards } from '../layout/cards'
-import { center, type Rect } from '../layout/geometry'
+import type { Rect } from '../layout/geometry'
 import { addLink, addMark, addNote, addProposal, archiveItems, deleteNote, editNote, reconnect, recordSent } from '../layer/edits'
 import { emptyLayer, type Layer, type Mark } from '../layer/model'
 import { allBoards, exampleBoard } from '../layer/testBoards'
-import { buildFeedback } from './build'
+import { pointAlong } from '../whiteboard/geometry'
+import { buildFeedback, mapSceneOf, unsentCount } from './build'
 
 const t0 = new Date('2026-05-01T10:00:00.000Z')
 const iso = t0.toISOString()
@@ -27,7 +28,13 @@ describe('buildFeedback', () => {
       const { feedback, skipped } = build(board, layer)
       expect(feedback).toMatchObject({ format: 'anatomy-feedback', schemaVersion: 1, id: 'feedback-aaaaaa', boardId: board.id, baseRevision: board.revision, createdAt: iso, withdrawn: [] })
       expect(skipped).toEqual([])
-      expect(feedback.items).toContainEqual({ id: 'note-aaaaaa', type: 'question', text: 'Why two?', about: { type: 'component', id: a!.id, label: a!.label } })
+      expect(feedback.items).toContainEqual({
+        id: 'note-aaaaaa',
+        type: 'question',
+        text: 'Why two?',
+        about: { type: 'component', id: a!.id, label: a!.label },
+        snapshot: { type: 'component', label: a!.label, summary: a!.summary },
+      })
       expect(feedback.items).toContainEqual({
         id: 'link-aaaaaa',
         type: 'link',
@@ -123,36 +130,67 @@ describe('buildFeedback', () => {
     expect(added?.type === 'new-part' && added.near.map((x) => x.id)).toContain(other.id)
   })
 
-  it('points an arrow at a connection by its middle', () => {
+  it('points an arrow at a connection along its drawn line, and says where along it', () => {
     let checked = 0
     for (const board of allBoards()) {
-      const r = rects(board)
-      const free = (p: { x: number; y: number }) => Object.values(r).every((box) => p.x < box.x - 8 || p.x > box.x + box.width + 8 || p.y < box.y - 8 || p.y > box.y + box.height + 8)
+      const layer = emptyLayer(board.id)
+      const scene = mapSceneOf(board, layer)
+      const boxes = Object.values(scene.rects)
+      const clear = (p: { x: number; y: number }) => boxes.every((box) => p.x < box.x - 10 || p.x > box.x + box.width + 10 || p.y < box.y - 10 || p.y > box.y + box.height + 10)
       const rel = board.relationships.find((x) => {
-        const a = center(r[x.from]!)
-        const b = center(r[x.to]!)
-        return free({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+        const line = scene.lines.get(x.id)
+        const p = line && pointAlong(line, 0.3)
+        return p !== undefined && clear(p)
       })
       if (!rel) continue
-      const a = center(r[rel.from]!)
-      const b = center(r[rel.to]!)
-      const arrow: Mark = { id: 'mark-arrow1', createdAt: iso, kind: 'arrow', from: { type: 'point', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, to: { type: 'relationship', id: rel.id } }
-      const item = build(board, addMark(emptyLayer(board.id), arrow)).feedback.items[0]
+      const line = scene.lines.get(rel.id)!
+      const free = pointAlong(line, 0.3)!
+      const arrow: Mark = { id: 'mark-arrow1', createdAt: iso, kind: 'arrow', from: { type: 'point', x: free.x, y: free.y }, to: { type: 'relationship', id: rel.id, t: 0.75 } }
+      const item = build(board, addMark(layer, arrow)).feedback.items[0]
+      const ref = { type: 'relationship', id: rel.id, label: rel.label, from: rel.from, to: rel.to }
+      expect(item?.type === 'arrow' && item.to).toEqual({ ...ref, at: 0.75 })
       expect(item?.type === 'arrow' && item.from).toMatchObject({ type: 'relationship' })
-      expect(item?.type === 'arrow' && item.to).toEqual({ type: 'relationship', id: rel.id, label: rel.label, from: rel.from, to: rel.to })
+      const from = item?.type === 'arrow' && item.from.type === 'relationship' && item.from.id === rel.id ? item.from.at : undefined
+      if (from !== undefined) expect(from).toBeCloseTo(0.3, 1)
       checked++
     }
     expect(checked).toBeGreaterThan(1)
   })
 
-  it('sends only what is new or changed since the last send, and lists what was withdrawn', () => {
+  it('reads marks against the lines the map draws, when the map passes them', () => {
+    const board = exampleBoard()
+    const layer = emptyLayer(board.id)
+    const scene = mapSceneOf(board, layer)
+    const rel = board.relationships[0]!
+    // A line drawn far from both cards, as if the map had routed it there.
+    const away = [
+      { x: -5000, y: -5000 },
+      { x: -4000, y: -5000 },
+    ]
+    const lines = new Map(scene.lines)
+    lines.set(rel.id, away)
+    const stroke: Mark = { id: 'mark-cross1', createdAt: iso, kind: 'stroke', points: [{ x: -4500, y: -5050 }, { x: -4500, y: -4950 }] }
+    const marked = addMark(layer, stroke)
+    expect(build(board, marked).skipped).toEqual([{ id: 'mark-cross1', reason: 'no-meaning' }])
+    const item = buildFeedback(board, marked, { id: 'feedback-aaaaaa', now: t0, scene: { rects: scene.rects, lines } }).feedback.items[0]
+    expect(item?.type === 'drawing' && item.touches.map((x) => x.id)).toEqual([rel.id])
+  })
+
+  it('sends what is new or changed, sends again what has no answer yet, and lists what was withdrawn', () => {
     const board = exampleBoard()
     let layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'One', target: { type: 'board' } }, t0, 'note-aaaaaa')
     layer = addNote(layer, board, { kind: 'note', text: 'Two', target: { type: 'board' } }, t0, 'note-bbbbbb')
     const first = build(board, layer)
     expect(first.feedback.items.map((i) => i.id)).toEqual(['note-aaaaaa', 'note-bbbbbb'])
+    expect(first.fresh).toEqual(['note-aaaaaa', 'note-bbbbbb'])
+    expect(unsentCount(first)).toBe(2)
     layer = recordSent(layer, first.sent)
-    expect(build(board, layer, 'feedback-bbbbbb').feedback.items).toEqual([])
+
+    // Nothing new, but nothing answered: a second send still carries both, so the agent never loses them.
+    const repeat = build(board, layer, 'feedback-bbbbbb')
+    expect(repeat.feedback.items.map((i) => i.id)).toEqual(['note-aaaaaa', 'note-bbbbbb'])
+    expect(repeat.again).toEqual(['note-aaaaaa', 'note-bbbbbb'])
+    expect(unsentCount(repeat)).toBe(0)
 
     layer = editNote(layer, 'note-aaaaaa', 'One, edited', new Date('2026-05-02T00:00:00.000Z'))
     layer = deleteNote(layer, 'note-bbbbbb')
@@ -160,10 +198,17 @@ describe('buildFeedback', () => {
     const second = build(board, layer, 'feedback-bbbbbb')
     expect(second.feedback.items.map((i) => i.id)).toEqual(['note-aaaaaa', 'note-cccccc'])
     expect(second.feedback.withdrawn).toEqual(['note-bbbbbb'])
+    expect(unsentCount(second)).toBe(3)
     expect(second.sent.items.map((i) => i.id)).toEqual(['note-aaaaaa', 'note-cccccc'])
+    layer = recordSent(layer, second.sent)
+
+    // An answered item stays home until the user changes it.
+    const answered = { ...layer, answers: [{ id: 'note-aaaaaa', response: { respondsTo: 'feedback-bbbbbb', status: 'answered' as const, text: 'Yes.', changed: [] } }] }
+    expect(build(board, answered, 'feedback-cccccc').feedback.items.map((i) => i.id)).toEqual(['note-cccccc'])
+    const edited = editNote(answered, 'note-aaaaaa', 'One, again', new Date('2026-05-03T00:00:00.000Z'))
+    expect(build(board, edited, 'feedback-cccccc').fresh).toEqual(['note-aaaaaa'])
 
     // An item the agent resolved is archived, not withdrawn.
-    layer = recordSent(layer, second.sent)
     layer = archiveItems(layer, [{ id: 'note-cccccc', response: { respondsTo: 'feedback-bbbbbb', status: 'answered', text: 'Because.', changed: [] } }], t0)
     expect(build(board, layer, 'feedback-cccccc').feedback.withdrawn).toEqual([])
   })
