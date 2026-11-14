@@ -89,3 +89,23 @@
     color: var(--fg-2);
   }
 }
+
+.button:disabled {
+  cursor: default;
+  color: var(--fg-3);
+  opacity: 0.6;
+}
+
+.button:disabled:hover {
+  background: var(--raised);
+  border-color: var(--border);
+}
+
+.quiet:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.button:disabled:active {
+  transform: none;
+}
