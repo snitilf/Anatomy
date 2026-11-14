@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { CARD_SIZE } from '../layout/cards'
+import { allBoards } from '../layer/testBoards'
+import { CARD_SIZE, placeCards } from '../layout/cards'
+import { computeGeometry } from './buildGraph'
 import { pillHeight, placeLabel, wrap } from './labelPlacement'
-import { hitsAnyCard, pickSides, planEdges, routeConnection, type Rect } from './routing'
+import { Drawn, elbow, hitsAnyCard, lineHitsCards, pickSides, planEdges, quickRoute, routeConnection, TRACK, type Rect } from './routing'
 
 const CARD_WIDTH = CARD_SIZE.width
 const CARD_HEIGHT = CARD_SIZE.height
@@ -53,13 +55,25 @@ describe('planEdges', () => {
 })
 
 describe('routeConnection', () => {
-  it('draws a plain curve when nothing is in the way', () => {
+  it('draws a straight run when the two ends line up', () => {
     const a = at(0, 0)
     const b = at(320, 0)
     const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
-    const route = routeConnection(plan!, [a, b], [a, b])
-    expect(route.d).toContain('C')
-    expect(route.runs).toBeUndefined()
+    const route = routeConnection(plan!, [a, b])
+    expect(route.d).not.toContain('C')
+    expect(route.runs).toHaveLength(1)
+  })
+
+  it('draws an elbow with right angles when the ends do not line up', () => {
+    const a = at(0, 0)
+    const b = at(400, 200)
+    const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
+    const route = routeConnection(plan!, [a, b])
+    expect(route.d).not.toContain('C')
+    expect(route.runs).toHaveLength(3)
+    for (const [p, q] of route.runs!) expect(p.x === q.x || p.y === q.y).toBe(true)
+    // The middle run is down the middle of the gap.
+    expect(route.runs![1]![0].x).toBe((CARD_WIDTH + 400) / 2)
   })
 
   it('goes around a card that sits between two others', () => {
@@ -67,12 +81,57 @@ describe('routeConnection', () => {
     const middle = at(320, 180)
     const b = at(640, 0)
     const [plan] = [...planEdges({ a, middle, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
-    const cards = [a, middle, b]
-    const direct = routeConnection(plan!, [a, b], [a, b])
-    expect(hitsAnyCard(direct, [middle])).toBe(true)
-    const route = routeConnection(plan!, cards, [a, b])
+    const route = routeConnection(plan!, [a, middle, b])
     expect(route.runs).toBeDefined()
     expect(hitsAnyCard(route, [middle])).toBe(false)
+  })
+
+  it('takes another track when the middle of the gap is taken', () => {
+    const a = at(0, 0)
+    const b = at(400, 200)
+    const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
+    const first = routeConnection(plan!, [a, b])
+    const drawn = new Drawn()
+    drawn.add(first.runs!)
+    const second = routeConnection(plan!, [a, b], drawn)
+    expect(second.runs![1]![0].x).not.toBe(first.runs![1]![0].x)
+    expect(Math.abs(second.runs![1]![0].x - first.runs![1]![0].x)).toBeGreaterThanOrEqual(TRACK)
+  })
+
+  it('leaves the cheap elbow of a moving card free of any search', () => {
+    const a = at(0, 0)
+    const b = at(400, 200)
+    const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
+    expect(quickRoute(plan!).runs).toHaveLength(3)
+    expect(elbow(plan!)).toHaveLength(4)
+  })
+
+  it('never crosses a card on any board when a path exists, and never falls back to a curve', () => {
+    for (const board of allBoards()) {
+      const rects = placeCards(board, { positions: {}, sizes: {} })
+      const geometry = computeGeometry(board, rects)
+      for (const r of board.relationships) {
+        const shape = geometry.edges.get(r.id)!
+        expect(shape.path, `${board.title}: ${r.id}`).not.toContain('C')
+        const others = board.components.filter((c) => c.id !== r.from && c.id !== r.to).map((c) => rects[c.id]!)
+        expect(lineHitsCards(shape.points, others), `${board.title}: ${r.id}`).toBe(false)
+      }
+    }
+  })
+
+  it('solves the forty part board quickly, in full and after one card moves', () => {
+    const board = allBoards()[4]!
+    const rects = placeCards(board, { positions: {}, sizes: {} })
+    let start = performance.now()
+    const full = computeGeometry(board, rects)
+    const fullMs = performance.now() - start
+    const id = board.components[5]!.id
+    const moved = { ...rects, [id]: { ...rects[id]!, x: rects[id]!.x + 40, y: rects[id]!.y + 300 } }
+    start = performance.now()
+    computeGeometry(board, moved, [], full)
+    const partMs = performance.now() - start
+    expect(fullMs).toBeLessThan(400)
+    expect(partMs).toBeLessThan(200)
   })
 })
 
@@ -86,7 +145,7 @@ describe('labels', () => {
     const a = at(0, 0)
     const b = at(0, 180)
     const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
-    const route = routeConnection(plan!, [a, b], [a, b])
+    const route = routeConnection(plan!, [a, b])
     const spot = placeLabel(route.points, 'exact payee and message', [a, b], [])
     expect(spot.lines).toBe(2)
     const top = spot.y - (spot.lines * 16 + 6) / 2
@@ -105,15 +164,18 @@ describe('connections between the same two cards', () => {
     { id: 'back', from: 'b', to: 'a' },
   ]
   const plans = planEdges({ a, b }, ends)
-  const routes = ends.map((e) => routeConnection(plans.get(e.id)!, [a, b], [a, b]))
+  const drawn = new Drawn()
+  const routes = ends.map((e) => {
+    const route = routeConnection(plans.get(e.id)!, [a, b], drawn)
+    drawn.add(route.runs!)
+    return route
+  })
 
-  it('draw curves that stay visibly apart in the middle', () => {
+  it('run on their own tracks and never along each other', () => {
     for (let i = 0; i < routes.length; i++) {
-      for (let j = i + 1; j < routes.length; j++) {
-        const p = routes[i]!.points[24]!
-        const q = routes[j]!.points[24]!
-        expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(30)
-      }
+      const others = new Drawn()
+      routes.forEach((r, j) => j !== i && others.add(r.runs!))
+      for (const [p, q] of routes[i]!.runs!) expect(others.shared(p, q)).toBe(0)
     }
   })
 
