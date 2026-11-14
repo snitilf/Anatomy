@@ -22,7 +22,8 @@ Rules:
 - If a consequential detail is unknown, ask me first. Record what stays unknown as "unknown" or "question" items.
 - Add 1 to 4 walkthroughs. Highlights name parts and connections only.
 - Every ID is unique across the whole board, and every reference must point at something that exists.
-- Return only the JSON.`
+- Write the board to .anatomy/board.json in this repository. If you cannot write files, return only the JSON.
+- When you revise it later, raise revision and keep the IDs of everything that stays.`
 
 export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
