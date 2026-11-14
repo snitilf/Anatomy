@@ -41,7 +41,7 @@
 }
 
 .primary:hover {
-  background: color-mix(in srgb, var(--accent), white 8%);
+  background: color-mix(in srgb, var(--accent), black 8%);
   border-color: transparent;
 }
 
