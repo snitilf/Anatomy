@@ -1,65 +1,63 @@
-/* Everything the user wrote looks different from agent content: a dashed border and a "You" label. */
-
-.you {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 18px;
-  text-transform: uppercase;
-}
+/* Everything the user wrote sits on the user's own color, so it never reads as the agent's. */
 
 .list {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .note {
   display: grid;
   gap: 6px;
-  padding: 10px 12px;
-  border: 1px dashed color-mix(in srgb, var(--ink) 55%, transparent);
-  border-radius: var(--radius-s);
-  background: color-mix(in srgb, var(--paper) 55%, var(--surface));
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--yours-tint);
 }
 
 .note[data-status='needs-relinking'] {
-  border-style: dotted;
-  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.kind {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  color: var(--yours-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
 }
 
-.tag {
-  padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
+.kind svg {
+  color: var(--yours);
 }
 
-.tag[data-warn] {
-  border-color: var(--ink);
-  border-style: dashed;
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+}
+
+.status[data-status='needs-relinking'] {
+  color: var(--danger);
 }
 
 .text {
   margin: 0;
+  color: var(--fg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   text-wrap: pretty;
@@ -68,64 +66,69 @@
 .meta,
 .on {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.on {
-  font-size: 13px;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 4px 8px;
+  gap: var(--space-1);
+}
+
+/* A quiet button's text lines up with the text above it. */
+.row > .plain:first-child {
+  margin-left: -10px;
 }
 
 .spaced {
-  margin-top: 22px;
+  margin-top: var(--space-6);
 }
 
 .solid,
 .plain {
   appearance: none;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: var(--radius-s);
-  font-size: 13px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-medium);
   cursor: pointer;
   transition:
     background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out),
     transform 120ms var(--ease-out);
 }
 
 .solid {
-  border: 1px solid var(--accent);
+  border: 1px solid transparent;
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--on-accent);
 }
 
 .solid:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+  background: color-mix(in srgb, var(--accent), white 8%);
 }
 
 .solid:disabled {
-  border-color: var(--line);
-  background: var(--faint);
-  color: var(--muted);
+  background: var(--hover);
+  color: var(--fg-3);
   cursor: default;
 }
 
 .plain {
   border: 1px solid transparent;
   background: none;
-  color: var(--accent);
+  color: var(--fg-2);
 }
 
 .plain:hover {
-  background: var(--soft);
+  background: var(--hover);
+  color: var(--fg);
 }
 
 .solid:active:not(:disabled),
@@ -133,14 +136,21 @@
   transform: scale(0.97);
 }
 
+/* Buttons inside a form or a note sit flush with the text. */
+.formFoot .solid,
+.relink .solid {
+  margin: 0;
+}
+
 .inline {
   appearance: none;
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
-  font-weight: 600;
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-text) 40%, transparent);
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
   cursor: pointer;
@@ -150,60 +160,72 @@
 
 .form {
   display: grid;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .field {
   display: grid;
-  gap: 3px;
+  gap: var(--space-1);
   min-width: 0;
   flex: 1 1 180px;
 }
 
 .fieldLabel {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
 }
 
 .select,
 .input,
 .textarea {
   width: 100%;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-s);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 14px;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--fg);
+  transition: border-color 120ms var(--ease-out);
+}
+
+.select:hover,
+.input:hover,
+.textarea:hover {
+  border-color: color-mix(in srgb, var(--fg) 26%, transparent);
 }
 
 .textarea {
   display: block;
   min-height: 76px;
   resize: vertical;
-  line-height: 1.45;
+}
+
+.textarea::placeholder,
+.input::placeholder {
+  color: var(--fg-3);
 }
 
 .select:focus-visible,
 .input:focus-visible,
 .textarea:focus-visible {
   border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .formFoot {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .counter {
   margin-right: auto;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -211,12 +233,11 @@
   display: inline-flex;
   justify-self: start;
   padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-s);
-  background: var(--faint);
+  border-radius: var(--radius-sm);
+  background: var(--hover);
 }
 
-.kind {
+.kindOption {
   position: relative;
   display: inline-flex;
 }
@@ -232,19 +253,22 @@
 .kindFace {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-  transition: background-color 80ms var(--ease-out);
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-xs);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.kindInput:hover + .kindFace {
+  color: var(--fg);
 }
 
 .kindInput:checked + .kindFace {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 1px 2px var(--shadow);
+  background: var(--raised);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--border);
 }
 
 .kindInput:focus-visible + .kindFace {
@@ -253,7 +277,7 @@
 
 .editor {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* Links */
@@ -261,62 +285,66 @@
 .linkRow {
   appearance: none;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: var(--space-2);
   width: 100%;
-  padding: 8px 10px;
-  border: 1px dashed color-mix(in srgb, var(--ink) 55%, transparent);
-  border-radius: var(--radius-s);
-  background: none;
+  padding: 6px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--yours-tint);
+  color: var(--fg);
   text-align: left;
   cursor: pointer;
 }
 
 .linkRow:hover {
-  background: var(--faint);
+  background: color-mix(in srgb, var(--yours) 20%, transparent);
+}
+
+.linkArrow {
+  flex: none;
+  margin-top: 2px;
+  color: var(--yours);
 }
 
 .linkText {
   display: block;
   min-width: 0;
-  font-weight: 550;
+  font-weight: var(--weight-medium);
   overflow-wrap: anywhere;
 }
 
 .linkLabel {
   display: block;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 400;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  font-weight: var(--weight-regular);
 }
 
 .route {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin-top: 10px;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .gone {
-  color: var(--muted);
+  color: var(--fg-2);
   text-decoration: line-through;
 }
 
 .notice {
-  margin: 10px 0 0;
-  padding: 8px 12px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius-s);
-  color: var(--muted);
-  font-size: 13px;
+  margin: var(--space-3) 0 0;
+  color: var(--fg-2);
 }
 
 .relink {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   margin-top: 6px;
 }
@@ -326,60 +354,59 @@
 .changed,
 .review {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .changeGroup {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .changeTitle {
   margin: 0;
-  font-size: 13px;
-  font-weight: 650;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
 }
 
 .changeLine {
   margin: 0;
-  font-size: 14px;
 }
 
 .changeList {
-  margin: 0;
+  margin: 0 0 0 -8px;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
 
 .changeButton {
   appearance: none;
   display: block;
   width: 100%;
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-s);
+  padding: 4px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
   background: none;
+  color: var(--fg);
   text-align: left;
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 550;
+  font-weight: var(--weight-medium);
   cursor: pointer;
 }
 
 .changeButton:hover {
-  background: var(--faint);
+  background: var(--hover);
 }
 
 .removed {
-  padding: 6px 10px;
-  color: var(--muted);
-  font-size: 14px;
+  padding: 4px var(--space-2);
+  color: var(--fg-2);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
 }
 
 .labelBlock {
-  margin-top: 18px;
+  margin-top: var(--space-4);
 }

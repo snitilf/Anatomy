@@ -2,11 +2,11 @@
   width: min(600px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 24px 60px -12px var(--shadow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  color: var(--fg);
+  box-shadow: var(--shadow-float);
 }
 
 .dialog::backdrop {
@@ -25,73 +25,84 @@
 }
 
 .body {
-  padding: 20px 24px 24px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--space-3);
+  margin: 0 -8px var(--space-3) 0;
 }
 
 .title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  font-weight: var(--weight-semibold);
 }
 
 .steps {
-  margin: 0 0 16px;
-  padding-left: 22px;
+  margin: 0 0 var(--space-4);
+  padding-left: 20px;
   display: grid;
-  gap: 6px;
+  gap: var(--space-1);
+  color: var(--fg);
+}
+
+.steps li {
+  padding-left: 2px;
 }
 
 .steps li::marker {
-  color: var(--accent);
-  font-weight: 700;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin: 12px 0 0;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
 }
 
 .label {
   display: block;
-  margin: 20px 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
+  margin: var(--space-5) 0 var(--space-2);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
 }
 
 .prompt {
   display: block;
   width: 100%;
   resize: vertical;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-s);
-  background: var(--paper);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--fg);
   font-family: var(--font-mono);
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.prompt:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .status {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--danger);
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 760px) {
   .body {
-    padding: 16px;
+    padding: var(--space-3) var(--space-4) var(--space-4);
   }
 }

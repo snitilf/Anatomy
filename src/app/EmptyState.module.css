@@ -3,44 +3,39 @@
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 20px;
-  padding: 24px 16px;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-4);
   text-align: center;
+  background: var(--bg);
 }
 
 .sketch {
   display: block;
   max-width: 100%;
   height: auto;
-  color: var(--muted);
+  color: var(--fg-3);
 }
 
 .sketch .card {
-  fill: var(--surface);
-  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  fill: var(--raised);
+  stroke: var(--border-strong);
 }
 
 .sketch .link {
-  stroke: var(--accent);
+  stroke: color-mix(in srgb, var(--fg) 28%, transparent);
 }
 
 .sketch .bars {
-  opacity: 0.28;
-}
-
-.space {
-  margin: -8px 0 0;
-  color: var(--muted);
-  font-size: 14px;
+  opacity: 0.3;
 }
 
 .line {
   margin: 0;
   max-width: 28ch;
-  font-size: 22px;
-  line-height: 1.3;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: var(--text-xl);
+  line-height: var(--leading-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.012em;
   text-wrap: balance;
 }
 
@@ -48,31 +43,30 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .problem {
+  display: flex;
+  gap: var(--space-2);
   margin: 0;
   max-width: 44ch;
-  padding: 8px 12px;
-  border: 1px dashed var(--ink);
-  border-radius: var(--radius-s);
-  color: var(--ink);
-  font-size: 14px;
+  color: var(--danger);
+  text-align: left;
   text-wrap: pretty;
 }
 
 .saved {
-  width: min(460px, 100%);
-  margin-top: 12px;
+  width: min(440px, 100%);
+  margin-top: var(--space-3);
   text-align: left;
 }
 
 .savedTitle {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
 }

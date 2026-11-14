@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import type { Board, BoardItem, BoardRelationship, Source } from '../board/schema'
-import { ITEM_LABEL, SOURCE_MEANING } from '../app/labels'
-import { SourceBadge } from '../app/SourceBadge'
+import { ArrowLeft, ArrowRight, ChevronRight, CircleHelp } from 'lucide-react'
+import { ITEM_LABEL } from '../app/labels'
+import { SourceNote } from '../app/SourceNote'
 import styles from './parts.module.css'
 import { usePanel } from './panelContext'
 
@@ -37,7 +38,8 @@ export function BackButton() {
   const { choose } = usePanel()
   return (
     <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
-      <span aria-hidden="true">&larr;</span> Board overview
+      <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
+      Board overview
     </button>
   )
 }
@@ -52,14 +54,10 @@ export function PartButton({ board, id }: { board: Board; id: string }) {
   )
 }
 
-/** The source label of a part or connection, with its meaning in words under it. */
-export function SourcePill({ source }: { source: Source }) {
-  return (
-    <div className={styles.source}>
-      <SourceBadge kind={source.kind} />
-      <p className={styles.meaning}>{SOURCE_MEANING[source.kind]}</p>
-    </div>
-  )
+/** Where a part or connection comes from. Nothing is shown for the default, the agent's own explanation. */
+export function SourceLine({ source }: { source: Source }) {
+  if (source.kind === 'agent-explanation') return null
+  return <SourceNote kind={source.kind} className={styles.source} />
 }
 
 /**
@@ -70,6 +68,7 @@ export function Disclosure({ title, count = 0, open = false, children }: { title
   return (
     <details className={styles.disclosure} open={open || undefined}>
       <summary className={styles.disclosureTitle}>
+        <ChevronRight className={styles.chevron} size={16} strokeWidth={1.5} aria-hidden="true" />
         {title}
         {count > 0 && <span className={styles.count}>{count}</span>}
       </summary>
@@ -143,16 +142,28 @@ export function ConnectionButton({
   const { choose } = usePanel()
   const otherId = direction === 'out' ? relationship.to : relationship.from
   const other = board.components.find((c) => c.id === otherId)?.label ?? otherId
-  const arrow = direction === 'out' ? '→' : '←'
+  const Arrow = direction === 'out' ? ArrowRight : ArrowLeft
   return (
     <button type="button" className={styles.connection} onClick={() => choose({ type: 'relationship', id: relationship.id })}>
-      <span className={styles.connectionTitle}>
-        <span aria-hidden="true" className={styles.arrow}>
-          {arrow}
-        </span>{' '}
-        {other}
+      <Arrow className={styles.arrow} size={16} strokeWidth={1.5} aria-hidden="true" />
+      <span className={styles.rowMain}>
+        <span className={styles.rowTitle}>{other}</span>
+        <span className={styles.rowMeta}>
+          <ConnectionLabel relationship={relationship} />
+        </span>
       </span>
-      <span className={styles.connectionLabel}>{relationship.kind === 'unknown' ? `? ${relationship.label}` : relationship.label}</span>
     </button>
+  )
+}
+
+/** A connection's label. An unknown kind gets a question mark icon and says so to screen readers. */
+export function ConnectionLabel({ relationship }: { relationship: BoardRelationship }) {
+  if (relationship.kind !== 'unknown') return <>{relationship.label}</>
+  return (
+    <>
+      <CircleHelp className={styles.unknown} size={12} strokeWidth={1.5} aria-hidden="true" />
+      <span className="sr-only">Meaning unknown: </span>
+      {relationship.label}
+    </>
   )
 }

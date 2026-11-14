@@ -1,11 +1,11 @@
 import type { RelationshipKind, SourceKind } from '../board/schema'
 
-/** Short label on a card or badge. Always shown as text, never as color alone. */
+/** Where something comes from, in a few words. The default, the agent's own explanation, is never shown. */
 export const SOURCE_LABEL: Record<SourceKind, string> = {
   'agent-explanation': 'Agent explanation',
-  'agent-proposal': 'Agent proposal',
-  'documented-intent': 'Documented',
-  'user-stated': 'You said',
+  'agent-proposal': 'Proposal, not decided',
+  'documented-intent': 'From a written plan',
+  'user-stated': 'You said this',
 }
 
 /** One plain sentence about how far to trust a source. */

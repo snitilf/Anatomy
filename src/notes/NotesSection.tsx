@@ -36,7 +36,7 @@ function NoteForm({ target }: { target: Target }) {
     >
       <div className={styles.kinds} role="radiogroup" aria-label="Kind">
         {(['note', 'question'] as const).map((k) => (
-          <label key={k} className={styles.kind}>
+          <label key={k} className={styles.kindOption}>
             <input type="radio" name={group} className={styles.kindInput} checked={kind === k} onChange={() => setKind(k)} />
             <span className={styles.kindFace}>{k === 'note' ? 'Note' : 'Question'}</span>
           </label>

@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { SOURCE_LABEL } from './app/labels'
+import type { SourceKind } from './board/schema'
 import shortenerRaw from './examples/external/url-shortener.board.json?raw'
 import nordetRaw from './examples/nordet.board.json?raw'
 import { press } from './test/press'
@@ -12,7 +14,7 @@ async function loadNordet() {
 
 const nordet = JSON.parse(nordetRaw) as {
   title: string
-  components: { id: string; label: string; explanation?: string }[]
+  components: { id: string; label: string; explanation?: string; source: { kind: SourceKind } }[]
   relationships: { id: string; from: string; to: string; kind: string; label: string }[]
 }
 
@@ -39,12 +41,22 @@ describe('App', () => {
   it('shows a part with its explanation and source label', async () => {
     render(<App />)
     await loadNordet()
-    const part = nordet.components.find((c) => c.explanation)!
+    const part = nordet.components.find((c) => c.explanation && c.source.kind !== 'agent-explanation')!
     const panel = screen.getByTestId('inspector')
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${part.label}`) })[0]!)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
-    expect(within(panel).getByText(/Agent explanation|Agent proposal|Documented|You said/)).toBeInTheDocument()
+    expect(within(panel).getByText(SOURCE_LABEL[part.source.kind])).toBeInTheDocument()
     expect(within(panel).getByText('Explanation')).toBeInTheDocument()
+  })
+
+  it('shows no source line for the default, the agent explanation', async () => {
+    render(<App />)
+    await loadNordet()
+    const part = nordet.components.find((c) => c.source.kind === 'agent-explanation')!
+    const panel = screen.getByTestId('inspector')
+    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${part.label}`) })[0]!)
+    expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
+    expect(within(panel).queryByText(SOURCE_LABEL['agent-explanation'])).not.toBeInTheDocument()
   })
 
   it('shows a connection in plain words', async () => {

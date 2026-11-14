@@ -5,7 +5,7 @@ import { LessonDialog } from '../lessons/LessonDialog'
 import { LinksSection } from '../notes/Links'
 import { NotesSection } from '../notes/NotesSection'
 import { Markdown } from '../text/markdown'
-import { BackButton, BulletList, CitedSection, ConnectionButton, Disclosure, Heading, OpenItems, Section, SourcePill } from './parts'
+import { BackButton, BulletList, CitedSection, ConnectionButton, Disclosure, Heading, OpenItems, Section, SourceLine } from './parts'
 import styles from './parts.module.css'
 
 export function ComponentDetail({
@@ -27,8 +27,12 @@ export function ComponentDetail({
     <>
       <BackButton />
       <Heading>{component.label}</Heading>
-      {group && <p className={styles.meta}>In {group.label}</p>}
-      <SourcePill source={component.source} />
+      {(group || component.source.kind !== 'agent-explanation') && (
+        <div className={styles.meta}>
+          {group && <span>In {group.label}</span>}
+          <SourceLine source={component.source} />
+        </div>
+      )}
 
       <p className={styles.lead}>{component.summary}</p>
 
@@ -50,12 +54,9 @@ export function ComponentDetail({
       )}
 
       {component.lesson !== undefined && lesson && (
-        <Section title="Interactive lesson">
+        <Section title="Lesson">
           <div className={styles.lessonCard}>
-            <span className={styles.lessonTitle}>
-              {lesson.title}
-              <span className={styles.tag}>Teaching model</span>
-            </span>
+            <span className={styles.lessonTitle}>{lesson.title}</span>
             <p className={styles.lessonSummary}>{lesson.summary}</p>
             <button ref={opener} type="button" className={styles.primary} onClick={() => setLessonOpen(true)}>
               Open lesson

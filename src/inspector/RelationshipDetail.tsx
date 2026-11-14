@@ -1,8 +1,9 @@
+import { ArrowRight, CircleHelp } from 'lucide-react'
 import type { Board, BoardRelationship } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
 import { NotesSection } from '../notes/NotesSection'
 import { Markdown } from '../text/markdown'
-import { BackButton, CitedSection, Disclosure, Heading, OpenItems, PartButton, SourcePill } from './parts'
+import { BackButton, CitedSection, Disclosure, Heading, OpenItems, PartButton, SourceLine } from './parts'
 import styles from './parts.module.css'
 
 export function RelationshipDetail({ board, relationship }: { board: Board; relationship: BoardRelationship }) {
@@ -14,11 +15,27 @@ export function RelationshipDetail({ board, relationship }: { board: Board; rela
       <Heading>{relationship.label}</Heading>
       <div className={styles.route}>
         <PartButton board={board} id={relationship.from} />
-        <span className={styles.routeKind}>{unknown ? '→' : `${KIND_WORDS[relationship.kind]}`}</span>
+        {unknown ? (
+          <>
+            <ArrowRight className={styles.routeArrow} size={16} strokeWidth={1.5} aria-hidden="true" />
+            <span className="sr-only">to</span>
+          </>
+        ) : (
+          <span className={styles.routeKind}>{KIND_WORDS[relationship.kind]}</span>
+        )}
         <PartButton board={board} id={relationship.to} />
       </div>
-      {unknown && <p className={styles.notice}>{KIND_WORDS.unknown}.</p>}
-      <SourcePill source={relationship.source} />
+      {unknown && (
+        <p className={styles.notice}>
+          <CircleHelp size={16} strokeWidth={1.5} aria-hidden="true" />
+          {KIND_WORDS.unknown}
+        </p>
+      )}
+      {relationship.source.kind !== 'agent-explanation' && (
+        <div className={styles.meta}>
+          <SourceLine source={relationship.source} />
+        </div>
+      )}
       {/* A connection has no summary, so its explanation is the first thing to read. */}
       {relationship.explanation && (
         <Disclosure title="Explanation" open>

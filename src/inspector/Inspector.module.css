@@ -4,12 +4,12 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--surface);
-  border-left: 1px solid var(--line);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
 }
 
 .content {
-  padding: 20px 24px 40px;
+  padding: var(--space-4) var(--space-5) var(--space-8);
   max-width: 560px;
   /* A word with no spaces wraps instead of widening the panel. */
   overflow-wrap: anywhere;
@@ -18,10 +18,10 @@
 @media (max-width: 760px) {
   .panel {
     border-left: 0;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--border);
   }
 
   .content {
-    padding: 16px 16px 32px;
+    padding: var(--space-3) var(--space-4) var(--space-8);
   }
 }
