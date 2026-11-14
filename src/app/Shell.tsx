@@ -9,9 +9,10 @@ import { HowToDialog } from './HowToDialog'
 import { Notices } from './Notices'
 import { Dialogs } from './Dialogs'
 import { readFileText } from './openFile'
-import { usePersistence } from './persistenceContext'
+import { useWorkspace } from './workspaceContext'
 import styles from './Shell.module.css'
 import { Toolbar } from './Toolbar'
+import { undoCommand } from './undoKeys'
 
 /** Elements on the map that can hold keyboard focus. */
 const MAP_FOCUS = '.react-flow__node, .react-flow__edge'
@@ -37,7 +38,7 @@ export function Shell() {
   const store = useAppStoreApi()
   const scenario = useAppStore((s) => s.scenario !== undefined)
   const dispatch = useAppDispatch()
-  const { openText } = usePersistence()
+  const { openText } = useWorkspace()
   const input = useRef<HTMLInputElement>(null)
   const [howTo, setHowTo] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -94,6 +95,18 @@ export function Shell() {
     event.target.value = ''
     void openFile(file)
   }
+
+  // Undo and redo work anywhere but in a text field and in a dialog, which keep their own.
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      const command = undoCommand(event)
+      if (!command || (event.target as Element | null)?.closest?.('dialog')) return
+      event.preventDefault()
+      dispatch({ type: command })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dispatch])
 
   // Drop a .json file anywhere on the window to open it.
   useEffect(() => {
@@ -180,7 +193,7 @@ export function Shell() {
             <Inspector />
           </PlayOriginContext.Provider>
         ) : (
-          <EmptyState onOpen={openPicker} />
+          <EmptyState onOpen={openPicker} onHowTo={() => setHowTo(true)} />
         )}
       </main>
       <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
