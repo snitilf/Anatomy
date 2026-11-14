@@ -2,16 +2,17 @@ import { MarkerType, Position, type Edge, type EdgeMarker, type Node } from '@xy
 import type { Board, BoardRelationship, SourceKind } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
 import type { Selection } from '../app/state'
+import { groupAreas, GROUP_PADDING, summaryLinesFor } from '../layout/cards'
 import { inflate, overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link } from '../layer/model'
 import { pillHeight, placeLabel, PointIndex, textArea } from './labelPlacement'
-import { curve, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
+import { Drawn, lineHitsCards, Obstacles, planEdges, quickRoute, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
 
-export const GROUP_PADDING = { side: 24, top: 46, bottom: 24 }
+export { GROUP_PADDING }
 
 /**
  * Every connection joins the same two hidden handles on its cards. The line is drawn from its own path, so it never
@@ -40,6 +41,8 @@ export interface CardData extends Record<string, unknown> {
   summary: string
   sourceKind: SourceKind
   hasLesson: boolean
+  /** How many summary lines fit on the card at its size. */
+  summaryLines: number
 }
 export interface ManualEdgeData extends Record<string, unknown> {
   linkId: string
@@ -93,28 +96,12 @@ export interface GroupBox {
   height: number
 }
 
-function groupBox(board: Board, g: Board['groups'][number], rects: Readonly<Record<string, Rect>>): GroupBox | undefined {
-  const members = board.components
-    .filter((c) => c.group === g.id)
-    .map((c) => rects[c.id])
-    .filter((r): r is Rect => r !== undefined)
-  if (members.length === 0) return undefined
-  const minX = Math.min(...members.map((r) => r.x))
-  const minY = Math.min(...members.map((r) => r.y))
-  const maxX = Math.max(...members.map((r) => r.x + r.width))
-  const maxY = Math.max(...members.map((r) => r.y + r.height))
-  return {
-    id: g.id,
-    label: g.label,
-    x: minX - GROUP_PADDING.side,
-    y: minY - GROUP_PADDING.top,
-    width: maxX - minX + GROUP_PADDING.side * 2,
-    height: maxY - minY + GROUP_PADDING.top + GROUP_PADDING.bottom,
-  }
-}
-
 function groupBounds(board: Board, rects: Readonly<Record<string, Rect>>): GroupBox[] {
-  return board.groups.flatMap((g) => groupBox(board, g, rects) ?? [])
+  const areas = groupAreas(board, rects)
+  return board.groups.flatMap((g) => {
+    const area = areas[g.id]
+    return area ? [{ id: g.id, label: g.label, ...area }] : []
+  })
 }
 
 /** Where one connection is drawn and where its label sits. Identical shapes keep the same object. */
@@ -168,7 +155,19 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
     if (r) boxOf.set(c.id, r)
   }
   const boxes = [...boxOf.values()]
-  const obstacles = new Obstacles(boxes)
+  const groups = groupBounds(board, rects)
+  const groupRect = new Map<string, Rect>(groups.map((g) => [g.id, g]))
+  const groupOfCard = new Map<string, string | undefined>(board.components.map((c) => [c.id, c.group]))
+  const ownGroups = (end: EdgeEnds): Rect[] => {
+    const out: Rect[] = []
+    for (const card of [end.from, end.to]) {
+      const g = groupOfCard.get(card)
+      const r = g === undefined ? undefined : groupRect.get(g)
+      if (r) out.push(r)
+    }
+    return out
+  }
+  const obstacles = new Obstacles(boxes, groups)
   const drawn = links.filter((l) => boxOf.has(l.from) && boxOf.has(l.to))
   const ends: EdgeEnds[] = [...board.relationships, ...drawn.map((l) => ({ id: manualId(l.id), from: l.from, to: l.to }))]
   const plans = planEdges(rects, ends)
@@ -196,26 +195,35 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
     return lineHitsCards(shape.points, movedBoxes) ? undefined : shape
   }
 
-  // Draw every line first, so each label can keep off all of them. Lines that stay come first, so the rest route around them.
-  const used: [Point, Point][] = []
+  // Draw every line first, so each label can keep off all of them. Lines that stay come first, so the rest route
+  // around them. The rest go shortest first, then by ID, so a line keeps its track from one build to the next.
+  const runs = new Drawn()
   const slots: ({ id: string; from: string; to: string; text: string; route: Route; stays: EdgeShape | undefined } | undefined)[] = ends.map(() => undefined)
+  const fresh: number[] = []
   ends.forEach((end, i) => {
     const stays = kept(end)
-    if (!stays) return
+    if (!stays) {
+      fresh.push(i)
+      return
+    }
     const route: Route = { d: stays.path, points: stays.points as Point[], ...(stays.runs ? { runs: stays.runs as [Point, Point][] } : {}) }
     slots[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays }
-    if (route.runs) used.push(...route.runs)
+    if (route.runs) runs.add(route.runs)
   })
-  ends.forEach((end, i) => {
-    if (slots[i]) return
+  const reach = (i: number) => {
+    const plan = plans.get((ends[i] as EdgeEnds).id)
+    return plan ? Math.abs(plan.a.x - plan.b.x) + Math.abs(plan.a.y - plan.b.y) : Infinity
+  }
+  const lengths = new Map(fresh.map((i) => [i, reach(i)]))
+  fresh.sort((i, j) => (lengths.get(i) as number) - (lengths.get(j) as number) || ((ends[i] as EdgeEnds).id < (ends[j] as EdgeEnds).id ? -1 : 1))
+  for (const i of fresh) {
+    const end = ends[i] as EdgeEnds
     const plan = plans.get(end.id)
-    const fromBox = boxOf.get(end.from)
-    const toBox = boxOf.get(end.to)
-    if (!plan || !fromBox || !toBox) return
-    const route = routeConnection(plan, boxes, [fromBox, toBox], used, obstacles)
+    if (!plan || !boxOf.has(end.from) || !boxOf.has(end.to)) continue
+    const route = routeConnection(plan, boxes, runs, obstacles, ownGroups(end))
     slots[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays: undefined }
-    if (route.runs) used.push(...route.runs)
-  })
+    if (route.runs) runs.add(route.runs)
+  }
   const routes = slots.filter((r) => r !== undefined)
 
   const lines = new PointIndex()
@@ -256,7 +264,7 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
     later.push(i)
   })
   for (const i of later) place(routes[i] as (typeof routes)[number], i)
-  return { edges, groups: groupBounds(board, rects), ends, solved: rects }
+  return { edges, groups, ends, solved: rects }
 }
 
 /**
@@ -270,7 +278,7 @@ export function moveCard(board: Board, geometry: Geometry, rects: Readonly<Recor
     if (shape.from !== id && shape.to !== id) continue
     const plan = plans.get(edgeId)
     if (!plan) continue
-    const line = curve(plan.a, plan.out, plan.b, plan.in, plan.bend)
+    const line = quickRoute(plan)
     const middle = line.points[Math.floor(line.points.length / 2)] ?? plan.a
     const next: EdgeShape = {
       ...shape,
@@ -286,9 +294,9 @@ export function moveCard(board: Board, geometry: Geometry, rects: Readonly<Recor
   const group = board.components.find((c) => c.id === id)?.group
   let groups = geometry.groups
   if (group !== undefined) {
-    const def = board.groups.find((g) => g.id === group)
-    const box = def ? groupBox(board, def, rects) : undefined
-    if (box) groups = geometry.groups.map((g) => (g.id === group ? box : g))
+    const members = board.components.filter((c) => c.group === group)
+    const area = groupAreas({ ...board, groups: board.groups.filter((g) => g.id === group), components: members }, rects)[group]
+    if (area) groups = geometry.groups.map((g) => (g.id === group ? { ...g, ...area } : g))
   }
   return { edges: edges ?? geometry.edges, groups, ends: geometry.ends, solved: geometry.solved }
 }
@@ -393,6 +401,7 @@ export function assembleGraph(
         summary: c.summary,
         sourceKind: c.source.kind,
         hasLesson: c.lesson !== undefined,
+        summaryLines: summaryLinesFor(c, rect),
       },
       selected: c.id === selectedPart,
       connectable: true,

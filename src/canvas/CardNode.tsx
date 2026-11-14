@@ -24,7 +24,9 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
       >
         <h3 className={styles.label}>{data.label}</h3>
-        <p className={styles.summary}>{data.summary}</p>
+        <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }}>
+          {data.summary}
+        </p>
         {(data.hasLesson || mine > 0) && (
           <div className={styles.foot}>
             {data.hasLesson && (
