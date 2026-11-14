@@ -10,6 +10,7 @@ import { openStore, StorageError, type BoardStore, type BoardSummary } from '../
 import { browserFolderAccess, canPickFolders, FILES, type FileStamp, type Folder, type FolderAccess } from '../workspace/folder'
 import { createSaveQueue, type SaveQueue, type SaveStatus } from '../workspace/saveQueue'
 import { watchBoard } from '../workspace/watch'
+import { downloadText } from './download'
 import { openFromText } from './openFile'
 import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
 import { isExampleBoard } from './examples'
@@ -410,6 +411,10 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       if (!folder || folder.state === 'reopen') return false
       try {
         if (options.onlyIfMissing && (await folder.folder.stat(file)) !== undefined) return true
+        if (options.keep) {
+          const existing = await folder.folder.read(file)
+          if (existing && options.keep(existing.text)) return true
+        }
         await folder.folder.write(file, text)
         return true
       } catch {
@@ -511,16 +516,8 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
     if (!b || !l) return
     try {
       const now = new Date()
-      const text = serializeExport(makeExport(b, l, now))
-      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `anatomy-${b.id}-${stamp(now)}.json`
-      document.body.append(link)
-      link.click()
-      link.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 0)
-      toast('Exported')
+      downloadText(`anatomy-${b.id}-${stamp(now)}.json`, serializeExport(makeExport(b, l, now)))
+      toast('Downloaded')
     } catch {
       notice('The export file could not be made. Try again.')
     }

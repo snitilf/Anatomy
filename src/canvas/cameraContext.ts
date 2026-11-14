@@ -1,6 +1,7 @@
 import type { Viewport } from '@xyflow/react'
 import { createContext, useContext } from 'react'
 import type { Rect } from '../layout/geometry'
+import type { Scene } from '../whiteboard/geometry'
 import type { Frame, Limits, Size } from './camera'
 
 /** Moves the map's camera, always inside the zoom and pan limits of what is on the map. */
@@ -16,6 +17,8 @@ export interface Camera {
   zoom(command: ZoomCommand, animate?: boolean): void
   /** Where a card is on the map now. */
   rectOf(id: string): Rect | undefined
+  /** Every card and every drawn line, as the map shows them now. */
+  scene(): Scene
 }
 
 export type ZoomCommand = 'in' | 'out' | 'reset' | 'fit'

@@ -1,10 +1,11 @@
 import clsx from 'clsx'
 import { ArrowRight, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Type, Unlink, type LucideIcon } from 'lucide-react'
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useContext, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
+import { CameraSlotContext } from '../canvas/cameraContext'
 import { describeMarkFor } from '../feedback/build'
 import type { MissingRef, Pointed, Ref } from '../feedback/types'
 import { LAYER_LIMITS, type Link, type Mark, type Proposal } from '../layer/model'
@@ -174,9 +175,11 @@ function joined(refs: readonly Ref[]): ReactNode {
 export function MarkView({ board, mark }: { board: Board; mark: Mark }) {
   const dispatch = useAppDispatch()
   const { layer } = useAppStore(useShallow((s) => ({ layer: s.layer })))
+  const camera = useContext(CameraSlotContext)
   if (!layer) return null
   const { word, icon } = MARK[mark.kind]
-  const told = describeMarkFor(board, layer, mark)
+  // Read against the lines the map draws now, as the feedback will be.
+  const told = describeMarkFor(board, layer, mark, camera.get()?.scene())
   const sentence: ReactNode[] = []
   if (told && (told.type === 'drawing' || told.type === 'shape')) {
     if (told.encloses.length > 0) sentence.push(<Fragment key="a">Around {joined(told.encloses)}.</Fragment>)

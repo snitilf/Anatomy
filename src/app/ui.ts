@@ -11,6 +11,8 @@ export interface UiState {
   sidebar: { open: boolean; width: number }
   tab: 'details' | 'review'
   menuOpen: boolean
+  /** The Send to agent popover. */
+  sendOpen: boolean
   howToOpen: boolean
   lineKeyOpen: boolean
   /** The phone bottom sheet: 0 shows only its header, 1 half the screen, 2 the full height. */
@@ -60,6 +62,7 @@ export interface UiApi {
   setSidebarWidth(width: number, persist?: boolean): void
   setTab(tab: UiState['tab']): void
   setMenuOpen(open: boolean): void
+  setSendOpen(open: boolean): void
   setHowToOpen(open: boolean): void
   setLineKeyOpen(open: boolean): void
   setSheet(stop: UiState['sheet']): void
@@ -75,6 +78,7 @@ export function createUi(): UiApi {
     sidebar: typeof window === 'undefined' ? { open: true, width: SIDEBAR.width } : readSidebar(),
     tab: 'details',
     menuOpen: false,
+    sendOpen: false,
     howToOpen: false,
     lineKeyOpen: false,
     sheet: 0,
@@ -97,6 +101,7 @@ export function createUi(): UiApi {
     setSidebarWidth: (width, persist = true) => setSidebar({ ...store.getState().sidebar, width: clampWidth(width) }, persist),
     setTab: (tab) => store.setState({ tab }),
     setMenuOpen: (menuOpen) => store.setState({ menuOpen }),
+    setSendOpen: (sendOpen) => store.setState({ sendOpen }),
     setHowToOpen: (howToOpen) => store.setState({ howToOpen }),
     setLineKeyOpen: (lineKeyOpen) => store.setState({ lineKeyOpen }),
     setSheet: (sheet) => store.setState({ sheet }),
