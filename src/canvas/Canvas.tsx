@@ -14,7 +14,7 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { currentStep } from '../scenarios/step'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
@@ -26,8 +26,8 @@ import { newId } from '../layer/edits'
 import type { Board } from '../board/schema'
 import type { Link } from '../layer/model'
 import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
-import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, viewportShowing, zoomLimits, type Limits } from './camera'
-import { CameraContext, prefersStillness, type Camera as CameraApi } from './cameraContext'
+import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, WheelZoom } from './CameraControls'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
@@ -262,18 +262,40 @@ export function Canvas() {
       const flow = flowRef.current
       return flow ? moveCamera(flow, viewport, current(), size(), duration) : viewport
     }
-    return {
-      limits: current,
-      size,
-      move,
-      frame: (options = {}, duration = 0) => {
-        const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
-        const start = options.readable ? flowStart(rects) : undefined
-        return move(frameViewport(current(), size(), start ? { ...options, start } : options), duration)
-      },
+    const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
+      const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
+      const start = options.readable ? flowStart(rects) : undefined
+      return move(frameViewport(current(), size(), start ? { ...options, start } : options), duration)
     }
+    // Where a glide is going. A second step during the glide goes on from there, not from halfway.
+    const glide: { heading?: { viewport: Viewport; until: number } | undefined } = {}
+    const now = (): Viewport => {
+      const flow = flowRef.current
+      const heading = glide.heading
+      return heading && performance.now() < heading.until ? heading.viewport : (flow?.getViewport() ?? { x: 0, y: 0, zoom: 1 })
+    }
+    const zoom: CameraApi['zoom'] = (command, animate = false) => {
+      const duration = animate && !prefersStillness() ? GLIDE_MS : 0
+      const box = size()
+      const middle = { x: box.width / 2, y: box.top + (box.height - box.top) / 2 }
+      const limits = current()
+      const step = stepZoom(now().zoom, command === 'in' ? 1 : -1, limits)
+      let viewport: Viewport
+      // Zoomed all the way out, the whole board is in view, wherever the view was before.
+      if (command === 'fit' || (command === 'out' && step <= limits.minZoom + 1e-6)) viewport = frame({}, duration)
+      else viewport = move(zoomAround(now(), command === 'reset' ? 1 : step, middle), duration)
+      glide.heading = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
+    }
+    return { limits: current, size, move, frame, zoom, rectOf: (id: string) => viewRef.current?.rects[id] }
   }, [])
-  const rectOf = useCallback((id: string) => viewRef.current?.rects[id], [])
+  const slot = useContext(CameraSlotContext)
+  useEffect(() => {
+    slot.set(camera)
+    return () => {
+      if (slot.get() === camera) slot.set(undefined)
+    }
+  }, [slot, camera])
+  const rectOf = camera.rectOf
 
   const step = useMemo(() => currentStep({ board, scenario }), [board, scenario])
   useEffect(() => {

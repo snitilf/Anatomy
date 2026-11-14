@@ -1,8 +1,3 @@
-.caret {
-  margin-right: -4px;
-  color: var(--fg-3);
-}
-
 .positioner {
   z-index: 30;
 }
@@ -57,7 +52,25 @@
   color: var(--fg-2);
 }
 
-.file:hover {
+.keys {
+  margin-left: auto;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.file:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .file:hover {
+    background: var(--hover);
+  }
+}
+
+.file:active {
   background: var(--hover);
 }
 
@@ -75,4 +88,9 @@
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
+}
+
+/* Opened from the keyboard, the panel shows at once. */
+.panel[data-instant] {
+  transition: none;
 }

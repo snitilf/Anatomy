@@ -18,7 +18,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
   const emphasized = selected || data.active || data.highlighted
   return (
     <>
-      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends}>
+      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}
@@ -37,6 +37,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           className={clsx(styles.pill, 'nodrag nopan')}
           data-label=""
           data-ends={ends}
+          data-edge={id}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           data-highlighted={data.highlighted || undefined}

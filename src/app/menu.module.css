@@ -71,3 +71,14 @@
   display: inline-flex;
   color: var(--fg-2);
 }
+
+.separator {
+  height: 1px;
+  margin: var(--space-1) calc(var(--space-1) * -1);
+  background: var(--border);
+}
+
+/* Opened from the keyboard, a menu shows at once. */
+.popup[data-instant] {
+  transition: none;
+}

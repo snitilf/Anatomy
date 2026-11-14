@@ -1,38 +1,54 @@
 import clsx from 'clsx'
-import { CircleAlert } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from './store'
 import buttons from './buttons.module.css'
+import { Tip } from './Tip'
 import { storageProblem, useWorkspace } from './workspaceContext'
 import styles from './SaveStatus.module.css'
 
-/** Whether the work is in browser storage, and a way out when it is not. Always shown while a board is open. */
+/** A write shorter than this never says "Saving", so the status does not flicker on every change. */
+const SLOW_MS = 300
+
+/** Whether the work is saved, and a way out when it is not. Shown while a board is open. */
 export function SaveStatus() {
   const hasBoard = useAppStore((s) => s.board !== undefined)
   const { save, retrySave, exportNow } = useWorkspace()
+  const saving = save.kind === 'saving'
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (!saving) return
+    const timer = window.setTimeout(() => setSlow(true), SLOW_MS)
+    return () => {
+      window.clearTimeout(timer)
+      setSlow(false)
+    }
+  }, [saving])
+
   if (!hasBoard || save.kind === 'none') return null
-  return (
-    <div className={styles.root}>
-      {save.kind === 'error' ? (
-        <div className={styles.failed} role="alert" title={storageProblem(save.error)}>
-          <CircleAlert className={styles.alert} size={16} strokeWidth={1.5} aria-hidden="true" />
-          <span className={styles.text}>
-            <strong>Not saved</strong>
-            <span className="sr-only">. {storageProblem(save.error)}</span>
-          </span>
-          {save.error.kind !== 'unavailable' && (
-            <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={retrySave}>
-              Try again
-            </button>
-          )}
-          <button type="button" className={buttons.button} onClick={exportNow}>
-            Export
+  if (save.kind === 'error') {
+    return (
+      <div className={styles.failed} role="alert">
+        <span className={styles.text}>
+          Not saved
+          <span className="sr-only">. {storageProblem(save.error)}.</span>
+        </span>
+        {save.error.kind !== 'unavailable' && (
+          <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={retrySave}>
+            Try again
           </button>
-        </div>
-      ) : (
-        <p className={styles.line} role="status" data-state={save.kind} title={save.kind === 'saved' ? (save.where === 'folder' ? 'Saved to .anatomy/layer.json' : 'Saved in this browser') : undefined}>
-          {save.kind === 'saving' ? 'Saving' : 'Saved'}
-        </p>
-      )}
-    </div>
+        )}
+        <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={exportNow}>
+          Download a copy
+        </button>
+      </div>
+    )
+  }
+  const where = save.kind === 'saved' && save.where === 'folder' ? 'Saved to .anatomy/layer.json' : 'Saved in this browser'
+  return (
+    <Tip label={where}>
+      <p className={styles.line} role="status" data-state={save.kind}>
+        {saving && slow ? 'Saving' : 'Saved'}
+      </p>
+    </Tip>
   )
 }
