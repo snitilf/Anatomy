@@ -15,42 +15,33 @@
   --anatomy-muted: var(--fg-3);
 }
 
+/* The drawing's shades are mixes of the app tokens, so the lesson follows both themes. */
+.iso.ag[data-theme='light'],
+.iso.ag[data-theme='dark'] {
+  --anatomy-face: var(--raised);
+  --anatomy-top: color-mix(in srgb, var(--raised), var(--bg) 35%);
+  --anatomy-shade-0: color-mix(in srgb, var(--raised), var(--fg) 20%);
+  --anatomy-shade-1: color-mix(in srgb, var(--raised), var(--fg) 14%);
+  --anatomy-shade-2: color-mix(in srgb, var(--raised), var(--fg) 9%);
+  --anatomy-shade-3: color-mix(in srgb, var(--raised), var(--fg) 5%);
+  --anatomy-lit-top: color-mix(in srgb, var(--raised), var(--accent) 16%);
+  --anatomy-lit-shade: color-mix(in srgb, var(--raised), var(--accent) 26%);
+  --anatomy-hi: var(--fg);
+  --anatomy-mid: var(--fg-3);
+  --anatomy-lo: color-mix(in srgb, var(--raised), var(--fg) 38%);
+  --anatomy-faint: color-mix(in srgb, var(--raised), var(--fg) 16%);
+  --anatomy-lit: var(--accent-text);
+  --anatomy-halo: color-mix(in srgb, var(--fg), var(--panel) 40%);
+  --anatomy-dot: var(--fg);
+}
+
 .iso.ag[data-theme='light'] {
-  --anatomy-face: #fdfdfe;
-  --anatomy-top: #ffffff;
-  --anatomy-shade-0: #c9cad3;
-  --anatomy-shade-1: #d6d7de;
-  --anatomy-shade-2: #e2e3e8;
-  --anatomy-shade-3: #ecedf1;
-  --anatomy-lit-top: #e6e7fb;
-  --anatomy-lit-shade: #d5d7f6;
-  --anatomy-hi: #1a1b21;
-  --anatomy-mid: #6f717d;
-  --anatomy-lo: #a0a2ad;
-  --anatomy-faint: #d4d5dc;
-  --anatomy-lit: #5b5fd6;
-  --anatomy-halo: #7d7f8c;
   --anatomy-halo-opacity: 0.32;
-  --anatomy-dot: #3a3b45;
 }
 
 .iso.ag[data-theme='dark'] {
-  --anatomy-face: #22232a;
-  --anatomy-top: #2a2b33;
-  --anatomy-shade-0: #0c0d10;
-  --anatomy-shade-1: #111216;
-  --anatomy-shade-2: #16171c;
-  --anatomy-shade-3: #1c1d23;
-  --anatomy-lit-top: #2c2e55;
-  --anatomy-lit-shade: #24264a;
-  --anatomy-hi: #e8e9ee;
-  --anatomy-mid: #7d7f8c;
-  --anatomy-lo: #4a4c57;
-  --anatomy-faint: #30323b;
-  --anatomy-lit: #9ea2ff;
-  --anatomy-halo: #050506;
   --anatomy-halo-opacity: 0.9;
-  --anatomy-dot: #dcdde4;
+  --anatomy-halo: color-mix(in srgb, var(--panel), black 70%);
 }
 
 .ag {
