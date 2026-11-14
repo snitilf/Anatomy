@@ -27,11 +27,12 @@ When a new revision arrives, the layer stays, and the app compares the layer wit
 | `src/workspace/` | Where work is kept: the one IndexedDB database, the repository folder behind a small interface, the save queue, and the board watcher. | `src/board/`, `src/layer/` |
 | `src/text/` | Safe renderer for the Markdown subset. | `react` |
 | `src/lessons/` | Built-in lesson catalog and lesson components. | `react` |
-| `src/app/` | App state (one pure reducer in a zustand store, with undo history), the workspace provider, shell, toolbar, dialogs. | all of the above |
+| `src/app/` | App state (one pure reducer in a zustand store, with undo history), the screen state (sidebar, menus), the workspace provider, shell, top bar, empty states, dialogs. | all of the above |
+| `src/commands/` | The one list of commands, their keys, the command menu, and the single key listener. | `src/app/`, `src/canvas/` |
 | `src/canvas/` | React Flow map: cards, group areas, connections, user links. | `@xyflow/react`, `src/app/` |
-| `src/inspector/` | Plain-English panel for the selection. | `src/app/`, `src/text/` |
-| `src/scenarios/` | Walkthrough player: step state, highlights, captions. | `src/app/` |
-| `src/notes/` | Notes, questions, links, and the review of notes after an update. | `src/layer/`, `src/app/` |
+| `src/inspector/` | The sidebar: the overview, a view for every kind of selection, the flow block, notes and the agent's answers, the Review tab, and the bottom sheet on a phone. | `src/app/`, `src/commands/`, `src/text/` |
+| `src/scenarios/` | The walkthrough bar: step state, highlights, captions. | `src/app/`, `src/commands/` |
+| `src/notes/` | Note targets in words, the review counts after an update, and the undo toast. | `src/layer/`, `src/app/` |
 | `src/theme/` | Theme choice (system, light, dark), stored in `localStorage` and applied as `data-theme` on `<html>`. An inline script in `index.html` applies it before the first paint. | `react` |
 | `src/styles/` | Design tokens: colors for both themes, type scale, spacing, radii, and the one shadow for floating surfaces. | none |
 
@@ -126,6 +127,22 @@ Opening a revision and sending feedback are barriers: nothing before them can be
 After an undo or redo, an item that came back is selected, and a selection whose item went away is cleared.
 Cmd or Ctrl with Z undoes; with Shift, or Ctrl+Y, it redoes.
 Text fields and dialogs keep their own undo.
+
+## Commands
+
+Every user action with a name is one entry in `COMMANDS` in `src/commands/list.ts`: an ID, a group, a label, an icon, its keys, and when it shows and is enabled.
+The command menu (Cmd or Ctrl with K), the top bar buttons, the tooltips, and the keys all read that one list, so a new action lands in one place.
+`useCommand(id)` gives a button the label, the printed shortcut, the state, and a way to run it.
+One `keydown` listener, in the capture phase on the document, runs the shortcuts.
+A single key does nothing while a text field, a dialog, a menu, or a popover has focus, and Cmd or Ctrl shortcuts leave text fields to their own keys.
+The single keys of the whiteboard tools (V, H, P, R, O, A, T, S, N) are kept free for them.
+Commands made from what is open, such as one per example, walkthrough, part, and connection, come from `boardCommands`.
+
+## The sidebar
+
+The sidebar shows the overview or the selection under Details, and a Review tab while a new revision, a note, or an answer needs a look.
+Its width (300 to 520) and whether it is open are kept per browser.
+On a screen 760 px wide or less it is a bottom sheet with three stops, dragged by its header only.
 
 ## Feedback
 

@@ -18,7 +18,9 @@ function Lead() {
     return (
       <>
         <h2 className={styles.line}>{folder.name} has no board yet.</h2>
-        <p className={styles.hint}>It opens here when your agent writes .anatomy/board.json.</p>
+        <p className={styles.hint}>
+          It opens here when your agent writes <span className={styles.path}>.anatomy/board.json</span>.
+        </p>
         <div className={styles.actions}>
           <button type="button" className={primary} onClick={copyPrompt.run}>
             Copy prompt

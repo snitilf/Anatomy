@@ -29,6 +29,8 @@ export function AppToaster({ id }: { id?: string }) {
       style={LOOK}
       toastOptions={{
         style: { padding: '8px 14px', fontSize: 13, lineHeight: '20px', fontWeight: 500, boxShadow: 'var(--shadow-float)' },
+        // The way back, such as Undo, reads as a quiet text button in the accent.
+        actionButtonStyle: { background: 'transparent', color: 'var(--accent-text)', fontSize: 13, fontWeight: 500, padding: '0 4px', height: 24 },
       }}
     />
   )
