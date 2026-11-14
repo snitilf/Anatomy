@@ -46,6 +46,8 @@ All versions are exact.
 | `@base-ui/react` | 1.9.0 | Accessible menus and popovers |
 | `sonner` | 2.0.8 | Short confirmations |
 | `clsx` | 2.1.1 | Conditional class names |
+| `lucide-react` | 1.72.0 | Icons |
+| `@fontsource-variable/inter` | 5.3.0 | Inter, bundled with the app so no font loads from the network |
 | `typescript` | 7.0.2 | Type checking, strict mode |
 | `vite` | 8.3.8 | Dev server and build |
 | `@vitejs/plugin-react` | 6.3.0 | React support for Vite |
@@ -65,5 +67,5 @@ Versions recorded on November 13, 2026.
 The approval-gate lesson uses the Anatomy kit by wheresryan22 (MIT).
 Its license and source commit are in `src/lessons/kit/`.
 
-The production dependency tree is MIT, ISC, and BSD-3-Clause as of November 13, 2026.
+The production dependency tree is MIT, ISC, and BSD-3-Clause as of November 13, 2026, plus the Inter font under the SIL Open Font License 1.1.
 Review the locked tree again before any public release.
