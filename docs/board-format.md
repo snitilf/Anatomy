@@ -24,6 +24,7 @@ Two complete examples are in [`src/examples/`](../src/examples/).
 | `relationships` | no | Connections between two components. |
 | `items` | no | Assumptions, unknowns, and open questions. |
 | `scenarios` | no | Step-by-step walkthroughs of a journey. |
+| `responses` | no | Answers to the user's feedback. See [Responses](#responses). |
 
 ## IDs
 
@@ -83,6 +84,31 @@ Each step has a `caption` and a `highlight` list of component and relationship I
 A scenario is a teaching sequence.
 Playing it does not run anything.
 
+## Responses
+
+When the user sends feedback from Anatomy, the agent writes the next revision and answers each feedback item in `responses`.
+Boards without `responses` stay valid.
+
+```json
+"responses": {
+  "respondsTo": "feedback-k2m9x0q4z7ab",
+  "items": [
+    { "feedbackId": "note-a1b2c3d4e5f6", "status": "answered", "text": "The retry runs at most three times.", "changed": [] },
+    { "feedbackId": "edit-0p9o8i7u6y5t", "status": "adopted", "text": "Moved the call to the queue.", "changed": ["api-to-queue"] }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `respondsTo` | The `id` of the feedback file this revision answers. |
+| `feedbackId` | The `id` of one item in that feedback file. |
+| `status` | `adopted` (the change is now on the board), `declined` (not made, `text` says why), or `answered` (a question or note, answered in `text`). |
+| `text` | The answer, 1 to 600 characters. |
+| `changed` | IDs of the components and relationships this revision changed for the item. Up to 20. |
+
+An ID in `changed` that is not on the board is a warning, not an error.
+
 ## Text
 
 The `explanation` fields accept a small Markdown subset: paragraphs, lists, bold, italics, and inline code.
@@ -98,6 +124,7 @@ Anatomy shows anything else, including HTML and links, as plain text.
 | Groups | 12 |
 | Items | 100 |
 | Scenarios | 20 |
+| Response items | 300 |
 | Steps in a scenario | 1 to 50 |
 | Highlights in a step | 30 |
 | References in a source | 10 |
