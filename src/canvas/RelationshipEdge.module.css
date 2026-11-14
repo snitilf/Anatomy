@@ -125,3 +125,18 @@
 .pill.mine[data-faded] {
   color: color-mix(in srgb, var(--yours-text) 45%, transparent);
 }
+
+/* Where a connection ran before the user moved its end: the agent's line, dimmed, under the user's. */
+.ghost {
+  fill: none;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.pill[data-edited] {
+  color: var(--yours-text);
+}
+
+.pill[data-edited][data-selected] {
+  color: var(--accent-text);
+}

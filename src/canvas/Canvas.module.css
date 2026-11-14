@@ -56,3 +56,25 @@
 .canvas[data-labels='quiet'] [data-label]:not([data-active], [data-selected], [data-highlighted]) {
   visibility: hidden;
 }
+
+/* Hand: the map pans from anywhere, cards included. */
+.canvas[data-tool='hand'] :global(.react-flow__pane),
+.canvas[data-tool='hand'] :global(.react-flow__node),
+.canvas[data-tool='hand'] :global(.react-flow__node) * {
+  cursor: grab !important;
+}
+
+.canvas[data-tool='hand'] :global(.react-flow__pane.dragging) {
+  cursor: grabbing !important;
+}
+
+/* Away from Select, labels and the link dots stay out of the way of the tool. */
+.canvas:not([data-tool='select']) [data-label],
+.canvas:not([data-tool='select']) :global(.react-flow__handle) {
+  pointer-events: none !important;
+}
+
+/* A text, sticky note, or part being typed in place hides under its editor. */
+.canvas :global(.react-flow__node.editing) {
+  visibility: hidden;
+}

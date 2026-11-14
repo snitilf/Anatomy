@@ -4,26 +4,34 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Copy,
   Download,
   FileUp,
   FolderOpen,
+  Hand,
   Inbox,
   Link2,
   Maximize,
   Minus,
   Monitor,
   Moon,
+  MousePointer2,
+  MoveUpRight,
   PanelRight,
+  Pen,
   Play,
   Plus,
   Redo2,
   Scan,
   Search,
   Spline,
+  Square,
+  SquarePlus,
   StickyNote,
   Sun,
   Trash2,
+  Type,
   Undo2,
   X,
 } from 'lucide-react'
@@ -32,6 +40,7 @@ import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
 import type { Rect } from '../layout/geometry'
+import type { Tool } from '../whiteboard/tools'
 import type { Command, CommandContext } from './types'
 
 const hasBoard = (c: CommandContext) => c.state.board !== undefined
@@ -83,6 +92,34 @@ const theme = (mode: ThemeMode, label: string, icon: Command['icon']): Command =
   checked: () => getThemeMode() === mode,
   run: () => setThemeMode(mode),
 })
+
+const tool = (id: Tool, label: string, icon: Command['icon'], key: string, keywords: readonly string[] = []): Command => ({
+  id: `tool.${id}`,
+  group: 'Tools',
+  label,
+  icon,
+  keys: [key],
+  keywords: ['whiteboard', 'draw', ...keywords],
+  visible: (c) => hasBoard(c) && !playing(c),
+  checked: (c) => c.ui.tool === id,
+  run: (c) => {
+    c.uiApi.setEditing(undefined)
+    c.uiApi.setTool(id)
+  },
+})
+
+/** The whiteboard tools, in tool bar order. */
+export const TOOLS: readonly Command[] = [
+  tool('select', 'Select', MousePointer2, 'V', ['move', 'pointer']),
+  tool('hand', 'Hand', Hand, 'H', ['pan']),
+  tool('pen', 'Pen', Pen, 'P', ['drawing', 'freehand']),
+  tool('rect', 'Rectangle', Square, 'R', ['shape', 'box']),
+  tool('ellipse', 'Ellipse', Circle, 'O', ['shape', 'circle']),
+  tool('arrow', 'Arrow', MoveUpRight, 'A', ['line', 'connector']),
+  tool('text', 'Text', Type, 'T', ['label', 'write']),
+  tool('sticky', 'Sticky note', StickyNote, 'S', ['note', 'post-it']),
+  tool('part', 'New part', SquarePlus, 'N', ['proposal', 'component', 'card']),
+]
 
 /** Every command with a fixed name. Toolbar buttons, tooltips, the menu, and the keys all read this one list. */
 export const COMMANDS: readonly Command[] = [
@@ -150,6 +187,20 @@ export const COMMANDS: readonly Command[] = [
     keywords: ['export', 'save'],
     visible: hasBoard,
     run: (c) => c.workspace.exportNow(),
+  },
+  {
+    // Escape leaves a whiteboard tool before it leaves the selection.
+    id: 'tool.cancel',
+    group: 'Tools',
+    label: 'Back to Select',
+    icon: MousePointer2,
+    keys: ['Escape'],
+    unlisted: true,
+    enabled: (c) => c.ui.tool !== 'select',
+    run: (c) => {
+      c.uiApi.setEditing(undefined)
+      c.uiApi.setTool('select')
+    },
   },
   {
     id: 'goto.overview',
@@ -312,6 +363,7 @@ export const COMMANDS: readonly Command[] = [
     visible: hasBoard,
     run: (c) => c.uiApi.setLineKeyOpen(true),
   },
+  ...TOOLS,
   theme('system', 'System', Monitor),
   theme('light', 'Light', Sun),
   theme('dark', 'Dark', Moon),

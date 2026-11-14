@@ -18,14 +18,27 @@ import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, u
 import { currentStep } from '../scenarios/step'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
-import { useAppDispatch, useAppStore } from '../app/store'
-import { CARD_MAX, CARD_MIN, CARD_WIDTH, groupAreas, placeCards, snap, type CardPlacement } from '../layout/cards'
+import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
+import { useUi, useUiApi } from '../app/ui'
+import { editsText } from '../commands/keys'
+import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, groupAreas, placeCards, snap, type CardPlacement } from '../layout/cards'
 import type { Point, Rect, Size } from '../layout/geometry'
 import { pushApart } from '../layout/push'
 import { newId } from '../layer/edits'
 import type { Board } from '../board/schema'
-import type { Link } from '../layer/model'
-import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
+import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
+import { DrawSurface, ATTACH_PX, type Drawn } from '../whiteboard/DrawSurface'
+import { Editor, type Typed } from '../whiteboard/Editor'
+import { EndHandles, type EndHandle } from '../whiteboard/EndHandles'
+import { partUnder } from '../whiteboard/pointer'
+import { endDropAction, type Drop, type EndRef } from '../whiteboard/endDrop'
+import { arrowEnds, attachAt, pointAlong, translateMark, type Scene } from '../whiteboard/geometry'
+import { InkLayer } from '../whiteboard/InkLayer'
+import { ProposalNode, StickyNode, TextNode } from '../whiteboard/nodes'
+import { STICKY_MAX, STICKY_MIN, STICKY_SIZE } from '../whiteboard/sizes'
+import { Toolbar } from '../whiteboard/Toolbar'
+import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
+import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, WheelZoom } from './CameraControls'
@@ -39,7 +52,7 @@ import { inView, SNAP_PX, SnapTargets } from './snap'
 import { SnapGuides, type GuideLines } from './SnapGuides'
 import { ZoomBar } from './ZoomBar'
 
-const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode }
+const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode, proposal: ProposalNode, 'mark-text': TextNode, 'mark-sticky': StickyNode }
 const edgeTypes: EdgeTypes = { relationship: RelationshipEdge, 'manual-link': ManualEdge }
 const ARIA_LABELS = {
   'node.a11yDescription.keyboardDisabled': 'Press Enter to select this part. Then use the arrow keys to move it. Press Escape to go back to the overview.',
@@ -53,6 +66,8 @@ const ARIA_LABELS = {
 interface View {
   board: Board
   links: readonly Link[] | undefined
+  proposals: readonly Proposal[] | undefined
+  reconnects: readonly Reconnect[] | undefined
   /** The stored positions and sizes this view was built from. */
   base: CardPlacement | undefined
   rects: Record<string, Rect>
@@ -65,15 +80,23 @@ interface View {
 
 const NO_PLACEMENT: CardPlacement = { positions: {}, sizes: {} }
 
+/** Where every card is: the board's parts as laid out, and the parts the user proposed, where the user put them. */
+function placeAll(board: Board, base: CardPlacement | undefined, proposals: readonly Proposal[] | undefined): Record<string, Rect> {
+  const rects = placeCards(board, base ?? NO_PLACEMENT)
+  for (const p of proposals ?? []) rects[p.id] = { x: p.x, y: p.y, width: p.width, height: p.height }
+  return rects
+}
+
+interface UserLines {
+  links: readonly Link[] | undefined
+  proposals: readonly Proposal[] | undefined
+  reconnects: readonly Reconnect[] | undefined
+}
+
 /** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
-function fullView(
-  board: Board,
-  base: CardPlacement | undefined,
-  links: readonly Link[] | undefined,
-  rects = placeCards(board, base ?? NO_PLACEMENT),
-  previous?: Geometry,
-): View {
-  return { board, links, base, rects, geometry: computeGeometry(board, rects, links ?? [], previous) }
+function fullView(board: Board, base: CardPlacement | undefined, user: UserLines, rects = placeAll(board, base, user.proposals), previous?: Geometry): View {
+  const { links, proposals, reconnects } = user
+  return { board, links, proposals, reconnects, base, rects, geometry: computeGeometry(board, rects, links ?? [], previous, reconnects ?? []) }
 }
 
 function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
@@ -149,7 +172,7 @@ const CROWDED_LINES = 20
 const CROWDED_RATIO = 1.5
 
 export function Canvas() {
-  const { board, positions, sizes, links, notes, marks, proposals, selection, scenario } = useAppStore(
+  const { board, positions, sizes, links, notes, marks, proposals, reconnects, selection, scenario } = useAppStore(
     useShallow((s) => ({
       board: s.board,
       positions: s.layer?.positions,
@@ -158,21 +181,33 @@ export function Canvas() {
       notes: s.layer?.notes,
       marks: s.layer?.marks,
       proposals: s.layer?.proposals,
+      reconnects: s.layer?.reconnects,
       selection: s.selection,
       scenario: s.scenario,
     })),
   )
   const stored = useMemo(() => (positions && sizes ? { positions, sizes } : undefined), [positions, sizes])
   const dispatch = useAppDispatch()
-  const [view, setView] = useState<View | undefined>(() => (board ? fullView(board, stored, links) : undefined))
-  // The map is rebuilt in full when the board or the links change, or when positions or sizes change from outside the map.
+  const store = useAppStoreApi()
+  const uiApi = useUiApi()
+  const chosenTool = useUi((u) => u.tool)
+  const spaceHand = useUi((u) => u.spaceHand)
+  const editing = useUi((u) => u.editing)
+  const tool = spaceHand ? 'hand' : chosenTool
+  const [view, setView] = useState<View | undefined>(() => (board ? fullView(board, stored, { links, proposals, reconnects }) : undefined))
+  // The map is rebuilt in full when the board or the links change. When positions, sizes, proposed parts, or moved
+  // connection ends change from outside the map, only the lines that changed are solved again.
   let shown = view
   if (board && (!view || view.board !== board || view.links !== links)) {
-    shown = fullView(board, stored, links)
+    shown = fullView(board, stored, { links, proposals, reconnects })
     setView(shown)
-  } else if (view && stored !== view.base) {
-    const rects = placeCards(view.board, stored ?? NO_PLACEMENT)
-    shown = sameRects(rects, view.rects) ? { ...view, base: stored } : fullView(view.board, stored, view.links, rects, view.geometry)
+  } else if (view && (stored !== view.base || proposals !== view.proposals || reconnects !== view.reconnects)) {
+    const rects = placeAll(view.board, stored, proposals)
+    const user = { links: view.links, proposals, reconnects }
+    shown =
+      sameRects(rects, view.rects) && reconnects === view.reconnects
+        ? { ...view, base: stored, proposals }
+        : fullView(view.board, stored, user, rects, view.geometry)
     setView(shown)
   }
   const viewRef = useRef(shown)
@@ -309,11 +344,40 @@ export function Canvas() {
     }
     return counts
   }, [notes])
+  /** A text or sticky note being dragged or resized, until it is dropped. */
+  const [moving, setMoving] = useState<UserParts['moving']>(undefined)
+  const movingRef = useRef(moving)
+  useLayoutEffect(() => {
+    movingRef.current = moving
+  })
+  const user = useMemo<UserParts>(
+    () => ({ proposals: proposals ?? [], reconnects: reconnects ?? [], marks: marks ?? [], moving, editing: editing?.id }),
+    [proposals, reconnects, marks, moving, editing],
+  )
   const graph = useMemo(
     () =>
-      board && shown ? assembleGraph(board, shown.rects, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held, pushed) : undefined,
-    [board, shown, selection, step, links, noteCounts, cache, pushed],
+      board && shown
+        ? assembleGraph(board, shown.rects, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held, pushed, user)
+        : undefined,
+    [board, shown, selection, step, links, noteCounts, cache, pushed, user],
   )
+
+  // What arrow ends attach to: every card, and every connection's drawn line, where the user's moved line wins.
+  const rectsNow = shown?.rects
+  const geometryNow = shown?.geometry
+  const scene = useMemo<Scene>(() => {
+    const lines = new Map<string, readonly Point[]>()
+    for (const r of board?.relationships ?? []) {
+      const shape = geometryNow?.edges.get(editedId(r.id)) ?? geometryNow?.edges.get(r.id)
+      if (shape) lines.set(r.id, shape.points)
+    }
+    return { rects: rectsNow ?? {}, lines }
+  }, [board, rectsNow, geometryNow])
+  const sceneRef = useRef(scene)
+  useLayoutEffect(() => {
+    sceneRef.current = scene
+  })
+  const getScene = useCallback(() => sceneRef.current, [])
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
 
@@ -325,7 +389,7 @@ export function Canvas() {
       const current = viewRef.current
       if (!current) return
       saveKeyMoves(current)
-      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v.links, v.rects, v.geometry) : v))
+      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v, v.rects, v.geometry) : v))
     }
     return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
   }, [settle, shown, saveKeyMoves])
@@ -353,6 +417,11 @@ export function Canvas() {
     },
     [saveKeyMoves],
   )
+  // A walkthrough shows the map as it is. Tools come back to Select when one starts.
+  useEffect(() => {
+    if (step && chosenTool !== 'select') uiApi.setTool('select')
+  }, [step, chosenTool, uiApi])
+
   const [connecting, setConnecting] = useState(false)
   const connectEndedAt = useRef(-Infinity)
   const stepKey = step ? `${step.scenario.id}:${step.index}` : undefined
@@ -383,10 +452,43 @@ export function Canvas() {
     return held && !held.cancelled ? held : undefined
   }, [])
 
+  /** Text and sticky notes move and resize on their own: no lines, no guides, no push. One change on drop. */
+  const markNodeChange = useCallback(
+    (change: NodeChange) => {
+      if (!('id' in change)) return
+      const id = change.id.slice(MARK_PREFIX.length)
+      const mark = store.getState().layer?.marks.find((m) => m.id === id)
+      if (!mark || (mark.kind !== 'text' && mark.kind !== 'sticky')) return
+      if (change.type === 'select' && change.selected) {
+        if (!playing.current) dispatch({ type: 'select', selection: { type: 'mark', id } })
+      } else if (change.type === 'position' && change.position && change.dragging) {
+        const { x, y } = change.position
+        setMoving((m) => ({ ...(m?.id === id ? m : {}), id, x: Math.round(x), y: Math.round(y) }))
+      } else if (change.type === 'dimensions' && change.dimensions && change.resizing !== undefined) {
+        if (change.resizing) {
+          const width = clampTo(Math.round(change.dimensions.width), STICKY_MIN.width, STICKY_MAX.width)
+          const height = clampTo(Math.round(change.dimensions.height), STICKY_MIN.height, STICKY_MAX.height)
+          setMoving((m) => ({ ...(m?.id === id ? m : { x: mark.x, y: mark.y }), id, width, height }))
+        } else {
+          const done = movingRef.current
+          setMoving(undefined)
+          if (done?.id === id && done.width !== undefined && done.height !== undefined) {
+            dispatch({ type: 'markChanged', id, mark: { ...mark, x: done.x, y: done.y, width: done.width, height: done.height } })
+          }
+        }
+      }
+    },
+    [dispatch, store],
+  )
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       for (const change of changes) {
         if (!('id' in change) || change.id.startsWith('group:')) continue
+        if (change.id.startsWith(MARK_PREFIX)) {
+          markNodeChange(change)
+          continue
+        }
         if (change.type === 'position' && change.position) {
           const { id, position } = change
           const held = hold.current
@@ -439,17 +541,28 @@ export function Canvas() {
           // While a walkthrough plays, picking up a card must not change what the panel shows. A click still does.
           if (playing.current) continue
           pickedOnMap.current = change.id
-          dispatch({ type: 'select', selection: { type: 'component', id: change.id } })
+          const proposal = store.getState().layer?.proposals.some((p) => p.id === change.id)
+          dispatch({ type: 'select', selection: { type: proposal ? 'proposal' : 'component', id: change.id } })
         }
       }
     },
-    [dispatch, pickUp, letGo, showPushed],
+    [dispatch, pickUp, letGo, showPushed, store, markNodeChange],
   )
 
-  const onDragStart = useCallback((_: unknown, node: { id: string }) => pickUp(node.id, 'drag'), [pickUp])
+  const onDragStart = useCallback((_: unknown, node: { id: string }) => {
+    if (!node.id.startsWith(MARK_PREFIX)) pickUp(node.id, 'drag')
+  }, [pickUp])
 
   const onDragStop = useCallback(
     (_: unknown, node: { id: string }) => {
+      if (node.id.startsWith(MARK_PREFIX)) {
+        const done = movingRef.current
+        setMoving(undefined)
+        const id = node.id.slice(MARK_PREFIX.length)
+        const mark = store.getState().layer?.marks.find((m) => m.id === id)
+        if (done?.id === id && mark) dispatch({ type: 'markChanged', id, mark: translateMark(mark, done.x - (mark.kind === 'stroke' || mark.kind === 'arrow' ? 0 : mark.x), done.y - (mark.kind === 'stroke' || mark.kind === 'arrow' ? 0 : mark.y)) })
+        return
+      }
       const held = letGo()
       const current = viewRef.current
       // React Flow's own position has no snapping, so the drop is read from the map.
@@ -464,17 +577,34 @@ export function Canvas() {
       const next = flow ? viewportShowing(flow.getViewport(), camera.size(), rect) : undefined
       if (next) camera.move(next, prefersStillness() ? 0 : DROP_PAN_MS)
     },
-    [dispatch, letGo, showPushed, camera],
+    [dispatch, letGo, showPushed, camera, store],
   )
 
   // During a walkthrough a click on a part still opens it. Picking a part up does not.
   const onNodeClick = useCallback(
     (_: unknown, node: { id: string }) => {
-      if (!playing.current || node.id.startsWith('group:')) return
+      if (!playing.current || node.id.startsWith('group:') || node.id.startsWith(MARK_PREFIX)) return
       pickedOnMap.current = node.id
-      dispatch({ type: 'select', selection: { type: 'component', id: node.id } })
+      const proposal = store.getState().layer?.proposals.some((p) => p.id === node.id)
+      dispatch({ type: 'select', selection: { type: proposal ? 'proposal' : 'component', id: node.id } })
     },
-    [dispatch],
+    [dispatch, store],
+  )
+
+  // A double click on text, a sticky note, or a proposed part types in place.
+  const onNodeDoubleClick = useCallback(
+    (_: unknown, node: { id: string }) => {
+      if (playing.current) return
+      const layer = store.getState().layer
+      if (node.id.startsWith(MARK_PREFIX)) {
+        const mark = layer?.marks.find((m) => m.id === node.id.slice(MARK_PREFIX.length))
+        if (mark && (mark.kind === 'text' || mark.kind === 'sticky')) uiApi.setEditing({ kind: mark.kind, id: mark.id, x: mark.x, y: mark.y })
+        return
+      }
+      const proposal = layer?.proposals.find((p) => p.id === node.id)
+      if (proposal) uiApi.setEditing({ kind: 'part', id: proposal.id, x: proposal.x, y: proposal.y })
+    },
+    [store, uiApi],
   )
 
   // The card under the pointer brings its own lines forward and lets the rest step back. One style rule, no render.
@@ -536,21 +666,140 @@ export function Canvas() {
       if (!from) return
       const point = 'changedTouches' in event ? event.changedTouches[0] : event
       if (!point) return
-      const target = cardUnder(point.clientX, point.clientY)
+      const target = partUnder(point.clientX, point.clientY)
       if (target && target !== from) addLink(from, target)
     },
     [addLink],
   )
+
+  /** Something drawn: a line, a shape, or an arrow is saved at once; a click with a text tool starts typing there. */
+  const onDrawn = useCallback(
+    (drawn: Drawn) => {
+      const used = uiApi.store.getState().tool
+      if (drawn.mark) {
+        const id = newId('mark')
+        dispatch({ type: 'markAdded', mark: { ...drawn.mark, id, createdAt: new Date().toISOString() } as Mark })
+        if (used !== 'pen') dispatch({ type: 'select', selection: { type: 'mark', id } })
+      } else if (drawn.place) {
+        const kind = used === 'text' ? 'text' : used === 'sticky' ? 'sticky' : 'part'
+        const size = kind === 'sticky' ? STICKY_SIZE : kind === 'part' ? CARD_SIZE : undefined
+        // A sticky note or a part is centered on the click. Text starts where the caret would be.
+        const x = Math.round(size ? drawn.place.x - size.width / 2 : drawn.place.x - 4)
+        const y = Math.round(size ? drawn.place.y - size.height / 2 : drawn.place.y - 11)
+        uiApi.setEditing({ kind, x, y })
+      }
+      if (ONE_USE_TOOLS.has(used)) uiApi.setTool('select')
+    },
+    [dispatch, uiApi],
+  )
+
+  /** What was typed in place is saved as one change. Nothing typed into a new one leaves nothing behind. */
+  const onTyped = useCallback(
+    (typed: Typed) => {
+      const at = uiApi.store.getState().editing
+      uiApi.setEditing(undefined)
+      const layer = store.getState().layer
+      if (!at || !layer) return
+      const now = new Date().toISOString()
+      if (at.kind === 'part') {
+        const label = typed.label.trim()
+        const summary = typed.summary.trim()
+        if (at.id) {
+          dispatch({ type: 'proposalChanged', id: at.id, change: { ...(label ? { label } : {}), summary } })
+        } else if (label) {
+          const id = newId('part')
+          dispatch({ type: 'proposalAdded', proposal: { id, label, summary, x: at.x, y: at.y, ...CARD_SIZE, createdAt: now } })
+          dispatch({ type: 'select', selection: { type: 'proposal', id } })
+        }
+        return
+      }
+      const text = typed.text.trim()
+      const existing = at.id ? layer.marks.find((m) => m.id === at.id) : undefined
+      if (existing && (existing.kind === 'text' || existing.kind === 'sticky')) {
+        if (existing.kind === 'text' && !text) dispatch({ type: 'markDeleted', id: existing.id })
+        else if (text !== existing.text) dispatch({ type: 'markChanged', id: existing.id, mark: { ...existing, text, ...(existing.kind === 'text' && typed.size ? typed.size : {}) } })
+        return
+      }
+      if (!text) return
+      const id = newId('mark')
+      const box = at.kind === 'sticky' ? STICKY_SIZE : (typed.size ?? { width: 120, height: 26 })
+      dispatch({ type: 'markAdded', mark: { id, createdAt: now, kind: at.kind, x: at.x, y: at.y, width: box.width, height: box.height, text } })
+      dispatch({ type: 'select', selection: { type: 'mark', id } })
+    },
+    [dispatch, store, uiApi],
+  )
+
+  const onInkSelect = useCallback((id: string) => dispatch({ type: 'select', selection: { type: 'mark', id } }), [dispatch])
+  const onInkMoved = useCallback((id: string, mark: Mark) => dispatch({ type: 'markChanged', id, mark }), [dispatch])
+
+  /** A dragged end, let go: a connection or link end moves to another part, an arrow end attaches where it lands. */
+  const onEndDrop = useCallback(
+    (ref: EndRef, drop: Drop) => {
+      const { board: b, layer } = store.getState()
+      const zoom = flowRef.current?.getViewport().zoom ?? 1
+      if (!b || !layer) return
+      const action = endDropAction(ref, drop, { board: b, layer, scene: sceneRef.current, reach: ATTACH_PX / zoom }, { id: newId('edit'), now: new Date() })
+      if (action) dispatch(action)
+    },
+    [dispatch, store],
+  )
+  /** An arrow end snaps onto the connection it would attach to while it is dragged. */
+  const endTip = useCallback((ref: EndRef, at: Point, part: string | undefined): Point => {
+    if (ref.kind !== 'arrow' || part !== undefined) return at
+    const zoom = flowRef.current?.getViewport().zoom ?? 1
+    const end = attachAt(at, sceneRef.current, ATTACH_PX / zoom)
+    if (end.type !== 'relationship') return at
+    const line = sceneRef.current.lines.get(end.id)
+    return (line && pointAlong(line, end.t ?? 0.5)) ?? at
+  }, [])
 
   const onPaneClick = useCallback(() => {
     if (performance.now() - connectEndedAt.current < PANE_CLICK_GUARD_MS) return
     dispatch({ type: 'select', selection: { type: 'board' } })
   }, [dispatch])
 
+  const handles = useMemo<EndHandle[]>(() => {
+    if (tool !== 'select' || !selection || !geometryNow || step) return []
+    const pair = (kind: EndRef['kind'], id: string, a: Point | undefined, b: Point | undefined): EndHandle[] =>
+      a && b
+        ? [
+            { ref: { kind, id, end: 'from' }, at: a, fixed: b },
+            { ref: { kind, id, end: 'to' }, at: b, fixed: a },
+          ]
+        : []
+    if (selection.type === 'relationship' || selection.type === 'link') {
+      const key = selection.type === 'link' ? `${MANUAL_PREFIX}${selection.id}` : geometryNow.edges.has(editedId(selection.id)) && reconnects?.some((r) => r.relationshipId === selection.id) ? editedId(selection.id) : selection.id
+      const points = geometryNow.edges.get(key)?.points
+      return points && points.length > 1 ? pair(selection.type, selection.id, points[0], points[points.length - 1]) : []
+    }
+    if (selection.type === 'mark') {
+      const mark = marks?.find((m) => m.id === selection.id)
+      const ends = mark?.kind === 'arrow' ? arrowEnds(mark, scene) : undefined
+      return ends ? pair('arrow', selection.id, ends.a, ends.b) : []
+    }
+    return []
+  }, [tool, selection, geometryNow, reconnects, marks, scene, step])
+
+  const editingItem = useMemo(() => {
+    if (!editing?.id) return undefined
+    const mark = marks?.find((m) => m.id === editing.id)
+    if (mark && (mark.kind === 'text' || mark.kind === 'sticky')) return { initial: { text: mark.text }, size: mark.kind === 'sticky' ? { width: mark.width, height: mark.height } : undefined }
+    const proposal = proposals?.find((p) => p.id === editing.id)
+    return proposal ? { initial: { label: proposal.label, summary: proposal.summary }, size: { width: proposal.width, height: proposal.height } } : undefined
+  }, [editing, marks, proposals])
+
   if (!board || !graph) return null
+  const props = mapProps(step ? 'select' : tool)
 
   return (
-    <div ref={mapBox} className={styles.canvas} data-connecting={connecting || undefined} data-labels={quiet ? 'quiet' : undefined} data-hover-scope="">
+    <div
+      ref={mapBox}
+      className={styles.canvas}
+      data-connecting={connecting || undefined}
+      data-labels={quiet ? 'quiet' : undefined}
+      data-tool={tool}
+      data-hover-scope=""
+    >
       <style ref={hoverStyle} />
       <CameraContext.Provider value={camera}>
         <ReactFlow
@@ -564,6 +813,7 @@ export function Canvas() {
           onNodeDragStart={onDragStart}
           onNodeDragStop={onDragStop}
           onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
           autoPanOnNodeDrag={false}
@@ -572,16 +822,19 @@ export function Canvas() {
           zoomOnScroll={false}
           zoomOnPinch
           onPaneClick={onPaneClick}
+          panOnDrag={props.panOnDrag}
+          nodesDraggable={props.nodesDraggable}
+          elementsSelectable={props.elementsSelectable}
           minZoom={limits.minZoom}
           maxZoom={MAX_ZOOM}
           translateExtent={limits.extent}
-          nodesConnectable
+          nodesConnectable={props.nodesConnectable}
           connectionMode={ConnectionMode.Loose}
           onConnect={onConnect}
           onConnectStart={() => setConnecting(true)}
           onConnectEnd={onConnectEnd}
-          edgesFocusable
-          nodesFocusable
+          edgesFocusable={props.edgesFocusable}
+          nodesFocusable={props.nodesFocusable}
           deleteKeyCode={null}
           selectionKeyCode={null}
           multiSelectionKeyCode={null}
@@ -597,6 +850,15 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <SnapGuides ref={guides} />
+          <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved}>
+            {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}
+          </InkLayer>
+          {isDrawing(tool) && !step && <DrawSurface tool={tool} scene={getScene} onDrawn={onDrawn} />}
+          {editing && (!editing.id || editingItem) && (
+            <Editor key={`${editing.kind}:${editing.id ?? `${editing.x},${editing.y}`}`} editing={editing} initial={editingItem?.initial ?? {}} size={editingItem?.size} onDone={onTyped} />
+          )}
+          {!step && <Toolbar />}
+          <SpaceHand />
           <ZoomBar />
           <WheelZoom />
           <MapHint />
@@ -604,6 +866,37 @@ export function Canvas() {
       </CameraContext.Provider>
     </div>
   )
+}
+
+/**
+ * Holding Space pans the map from anywhere, whatever the tool, as in every drawing app.
+ * Not while a field, a button, or a menu has focus, where Space types or presses.
+ */
+function SpaceHand() {
+  const uiApi = useUiApi()
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+      const target = event.target
+      if (editsText(target) || (target instanceof Element && target.closest('button, a, [role="menu"], [role="dialog"], dialog, [role="listbox"]'))) return
+      event.preventDefault()
+      uiApi.setSpaceHand(true)
+    }
+    const up = (event: KeyboardEvent) => {
+      if (event.code === 'Space') uiApi.setSpaceHand(false)
+    }
+    const release = () => uiApi.setSpaceHand(false)
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', release)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', release)
+      release()
+    }
+  }, [uiApi])
+  return null
 }
 
 /** Hands the map's instance to the canvas before any effect of the map runs, so the first camera move has it. */
@@ -615,16 +908,6 @@ function FlowHandle({ onFlow }: { onFlow: (flow: ReactFlowInstance) => void }) {
 
 /** The click that ends a connection drag arrives within a frame or two of the drop. */
 const PANE_CLICK_GUARD_MS = 150
-
-/** The part card under a screen point. Group areas do not count. */
-function cardUnder(x: number, y: number): string | undefined {
-  for (const el of document.elementsFromPoint(x, y)) {
-    const node = el.closest<HTMLElement>('.react-flow__node')
-    if (!node || node.classList.contains('react-flow__node-group-area')) continue
-    return node.dataset.id
-  }
-  return undefined
-}
 
 function cancelTimer(id: number): () => void {
   return () => window.clearTimeout(id)
