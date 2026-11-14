@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import anatomyText from '../examples/anatomy.board.json?raw'
-import { placeCards } from '../layout/cards'
 import { addNote, moveCards } from './edits'
 import { makeExport, parseOpenedFile, serializeExport } from './files'
 import { emptyLayer } from './model'
 import { anatomyBoard, clone } from './testBoards'
+import { v1Placement } from './v1Layout'
 
 const now = new Date('2026-03-04T05:06:07.000Z')
 
@@ -19,7 +19,8 @@ function sample() {
 /** An export file as version 1 wrote it: an overlay with every card's position frozen. */
 function versionOne() {
   const { board, layer } = sample()
-  const frozen = Object.fromEntries(Object.entries(placeCards(board, layer)).map(([id, r]) => [id, { x: r.x, y: r.y }]))
+  // Version 1 stored where its own layout put every card, and the moved card where the user put it.
+  const frozen = { ...v1Placement(board), ...layer.positions }
   return {
     board,
     text: JSON.stringify({
