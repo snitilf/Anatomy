@@ -91,7 +91,7 @@ describe('folder mode', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
       expect(await screen.findByRole('heading', { name: 'shop has no board yet.' })).toBeInTheDocument()
       const main = within(screen.getByRole('main'))
-      expect(main.getByText('It opens here when your agent writes .anatomy/board.json.')).toBeInTheDocument()
+      expect(main.getByText(/It opens here when your agent writes/)).toHaveTextContent('It opens here when your agent writes .anatomy/board.json.')
       expect(main.getByRole('button', { name: 'How to make a board' })).toBeInTheDocument()
       // Copy prompt writes the format next to the board and copies the prompt that points the agent at it.
       const writeText = vi.fn().mockResolvedValue(undefined)
