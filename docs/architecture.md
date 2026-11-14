@@ -30,6 +30,8 @@ When an updated base board arrives, the overlay stays, and the app compares the 
 | `src/inspector/` | Plain-English panel for the selection. | `src/app/`, `src/text/` |
 | `src/scenarios/` | Walkthrough player: step state, highlights, captions. | `src/app/` |
 | `src/notes/` | Notes, questions, manual links, and the review of notes after an update. | `src/overlay/`, `src/app/` |
+| `src/theme/` | Theme choice (system, light, dark), stored in `localStorage` and applied as `data-theme` on `<html>`. An inline script in `index.html` applies it before the first paint. | `react` |
+| `src/styles/` | Design tokens: colors for both themes, type scale, spacing, radii, and the one shadow for floating surfaces. | none |
 
 Logic lives in pure functions with unit tests.
 While a card is dragged, only the connections of that card are redrawn with simple curves.
