@@ -33,3 +33,27 @@ export function diffBoards(prev: Board, next: Board): BoardDiff {
     boardChanged: fingerprintBoard(prev) !== fingerprintBoard(next),
   }
 }
+
+const COMPONENT_FIELDS = { label: 'name', summary: 'summary', explanation: 'explanation', group: 'group', inputs: 'inputs', outputs: 'outputs', source: 'source' } as const
+const RELATIONSHIP_FIELDS = { from: 'start', to: 'end', kind: 'kind', label: 'label', explanation: 'explanation', source: 'source' } as const
+const BOARD_FIELDS = { title: 'title', goal: 'goal', scope: 'scope' } as const
+
+function fieldsThatDiffer<T extends object>(before: T, after: T, names: Partial<Record<keyof T, string>>): string[] {
+  return (Object.keys(names) as (keyof T)[]).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k])).map((k) => names[k] as string)
+}
+
+/**
+ * The fields of one part, connection, or the board that differ between two revisions, in plain words.
+ * Empty when the target is missing from either revision, or nothing differs.
+ */
+export function changedFields(prev: Board, next: Board, target: { type: 'board' } | { type: 'component' | 'relationship'; id: string }): string[] {
+  if (target.type === 'board') return fieldsThatDiffer(prev, next, BOARD_FIELDS)
+  if (target.type === 'component') {
+    const a = prev.components.find((c) => c.id === target.id)
+    const b = next.components.find((c) => c.id === target.id)
+    return a && b ? fieldsThatDiffer(a, b, COMPONENT_FIELDS) : []
+  }
+  const a = prev.relationships.find((r) => r.id === target.id)
+  const b = next.relationships.find((r) => r.id === target.id)
+  return a && b ? fieldsThatDiffer(a, b, RELATIONSHIP_FIELDS) : []
+}

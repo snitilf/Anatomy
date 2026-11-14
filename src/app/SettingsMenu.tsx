@@ -1,41 +1,56 @@
 import { Menu } from '@base-ui/react/menu'
 import clsx from 'clsx'
-import { Check, Monitor, Moon, Settings2, Sun, type LucideIcon } from 'lucide-react'
+import { Check, Settings2 } from 'lucide-react'
+import { useCommand } from '../commands/context'
 import { setThemeMode, useThemeMode, type ThemeMode } from '../theme/theme'
 import buttons from './buttons.module.css'
 import menu from './menu.module.css'
+import { Tip } from './Tip'
 
-const MODES: readonly { mode: ThemeMode; label: string; icon: LucideIcon }[] = [
-  { mode: 'system', label: 'System', icon: Monitor },
-  { mode: 'light', label: 'Light', icon: Sun },
-  { mode: 'dark', label: 'Dark', icon: Moon },
-]
+const MODES: readonly ThemeMode[] = ['system', 'light', 'dark']
 
-/** App settings. For now it holds the theme. */
+function ThemeItem({ mode }: { mode: ThemeMode }) {
+  const command = useCommand(`theme.${mode}`)
+  const Icon = command.command.icon
+  return (
+    <Menu.RadioItem value={mode} className={menu.item} closeOnClick>
+      <Icon className={menu.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
+      <span className={menu.itemText}>{command.label.replace('Theme: ', '')}</span>
+      <Menu.RadioItemIndicator className={menu.check}>
+        <Check size={16} strokeWidth={1.5} aria-hidden="true" />
+      </Menu.RadioItemIndicator>
+    </Menu.RadioItem>
+  )
+}
+
+/** The theme, and the guide for making a board. */
 export function SettingsMenu() {
   const mode = useThemeMode()
+  const howTo = useCommand('howto')
+  const HowToIcon = howTo.command.icon
   return (
     <Menu.Root>
-      <Menu.Trigger className={clsx(buttons.button, buttons.quiet, buttons.icon)} aria-label="Settings" title="Settings">
-        <Settings2 size={16} strokeWidth={1.5} aria-hidden="true" />
-      </Menu.Trigger>
+      <Tip label="Settings">
+        <Menu.Trigger className={clsx(buttons.button, buttons.quiet, buttons.icon)} aria-label="Settings">
+          <Settings2 size={16} strokeWidth={1.5} aria-hidden="true" />
+        </Menu.Trigger>
+      </Tip>
       <Menu.Portal>
         <Menu.Positioner className={menu.positioner} side="bottom" align="end" sideOffset={6} collisionPadding={8}>
           <Menu.Popup className={menu.popup} data-dismissible>
             <Menu.Group>
               <Menu.GroupLabel className={menu.label}>Theme</Menu.GroupLabel>
               <Menu.RadioGroup value={mode} onValueChange={(value) => setThemeMode(value as ThemeMode)}>
-                {MODES.map(({ mode: value, label, icon: Icon }) => (
-                  <Menu.RadioItem key={value} value={value} className={menu.item} closeOnClick>
-                    <Icon className={menu.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
-                    <span className={menu.itemText}>{label}</span>
-                    <Menu.RadioItemIndicator className={menu.check}>
-                      <Check size={16} strokeWidth={1.5} aria-hidden="true" />
-                    </Menu.RadioItemIndicator>
-                  </Menu.RadioItem>
+                {MODES.map((m) => (
+                  <ThemeItem key={m} mode={m} />
                 ))}
               </Menu.RadioGroup>
             </Menu.Group>
+            <Menu.Separator className={menu.separator} />
+            <Menu.Item className={menu.item} onClick={howTo.run}>
+              <HowToIcon className={menu.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
+              <span className={menu.itemText}>{howTo.label}</span>
+            </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>

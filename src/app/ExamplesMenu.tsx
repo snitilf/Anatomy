@@ -1,7 +1,3 @@
-import { Menu } from '@base-ui/react/menu'
-import clsx from 'clsx'
-import { ChevronDown } from 'lucide-react'
-import buttons from './buttons.module.css'
 import { EXAMPLES } from './examples'
 import styles from './ExamplesMenu.module.css'
 import { useWorkspace } from './workspaceContext'
@@ -18,7 +14,7 @@ export function ExampleList({ onChosen }: { onChosen?: () => void }) {
             className={styles.item}
             onClick={() => {
               onChosen?.()
-              openText(example.fileName, example.raw)
+              openText(example.fileName, example.raw, 'example')
             }}
           >
             <span className={styles.itemTitle}>{example.title}</span>
@@ -27,33 +23,5 @@ export function ExampleList({ onChosen }: { onChosen?: () => void }) {
         </li>
       ))}
     </ul>
-  )
-}
-
-/**
- * The start screen's list of examples. Every choice is one action, so it is a real menu:
- * the arrow keys move between examples, Enter opens one, and Escape closes the menu and returns focus to the trigger.
- */
-export function ExamplesMenu({ label, primary = false }: { label: string; primary?: boolean }) {
-  const { openText } = useWorkspace()
-  return (
-    <Menu.Root>
-      <Menu.Trigger className={clsx(buttons.button, primary && buttons.primary)}>
-        {label}
-        <ChevronDown className={styles.caret} size={16} strokeWidth={1.5} aria-hidden="true" />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner className={styles.positioner} side="bottom" align="start" sideOffset={6} collisionPadding={12}>
-          <Menu.Popup className={styles.list} data-dismissible>
-            {EXAMPLES.map((example) => (
-              <Menu.Item key={example.id} className={styles.item} onClick={() => openText(example.fileName, example.raw)}>
-                <span className={styles.itemTitle}>{example.title}</span>
-                <span className={styles.itemText}>{example.description}</span>
-              </Menu.Item>
-            ))}
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
   )
 }

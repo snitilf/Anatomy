@@ -1,0 +1,35 @@
+.positioner {
+  z-index: 60;
+}
+
+.tip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 8px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 125ms var(--ease-out);
+}
+
+.tip[data-starting-style],
+.tip[data-ending-style] {
+  opacity: 0;
+}
+
+.tip[data-instant] {
+  transition: none;
+}
+
+.keys {
+  font: inherit;
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}

@@ -81,9 +81,20 @@
   background: var(--border);
 }
 
+.steps,
+.key {
+  display: contents;
+}
+
+/* Phone: the sheet covers the bottom of the map, so the bar sits above its lowest stop and shows only fit. */
 @media (max-width: 760px) {
   .dock {
     left: 8px;
-    bottom: 8px;
+    bottom: calc(var(--sheet-peek, 64px) + 8px);
+  }
+
+  .steps,
+  .key {
+    display: none;
   }
 }

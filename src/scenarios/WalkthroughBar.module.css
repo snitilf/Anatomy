@@ -1,0 +1,126 @@
+/* Bottom center of the map, over it. */
+.bar {
+  position: absolute;
+  z-index: 15;
+  left: 50%;
+  bottom: 16px;
+  width: min(560px, calc(100% - 32px));
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-1) var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+
+@starting-style {
+  .bar:not([data-instant]) {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+}
+
+.caption {
+  margin: 0;
+  padding-right: var(--space-1);
+  max-height: 80px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--fg);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.count {
+  margin: 0;
+  min-width: 40px;
+  text-align: center;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.button {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+
+.button[aria-disabled] {
+  color: color-mix(in srgb, var(--fg-3) 50%, transparent);
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button {
+    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+  }
+
+  .button:hover:not([aria-disabled]) {
+    background: var(--hover);
+    color: var(--fg);
+  }
+}
+
+.button:active:not([aria-disabled]) {
+  background: var(--active);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: opacity 120ms var(--ease-out);
+  }
+
+  @starting-style {
+    .bar:not([data-instant]) {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/* Phone: above the sheet's lowest stop. */
+@media (max-width: 760px) {
+  .bar {
+    bottom: calc(64px + 8px);
+    width: calc(100% - 16px);
+  }
+}

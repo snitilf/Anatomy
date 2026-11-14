@@ -1,5 +1,5 @@
 import type { Board } from '../board/schema'
-import { fingerprintTarget } from './fingerprint'
+import { fingerprintTarget, fingerprintValue } from './fingerprint'
 import type { Layer, Link, Note, NoteStatus } from './model'
 
 export function noteStatus(board: Board, note: Note): NoteStatus {
@@ -30,4 +30,10 @@ export function summarizeLayer(board: Board, layer: Pick<Layer, 'notes' | 'links
   }
   const brokenLinks = layer.links.filter((l) => linkStatus(board, layer, l) === 'needs-relinking')
   return { outdated, needsRelinking, brokenLinks }
+}
+
+/** True when the item went to the agent and has not changed since. */
+export function wasSent(layer: Pick<Layer, 'sent'>, item: { id: string }): boolean {
+  const entry = layer.sent?.items.find((s) => s.id === item.id)
+  return entry !== undefined && entry.fingerprint === fingerprintValue(item)
 }

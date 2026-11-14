@@ -1,18 +1,25 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type FocusEvent } from 'react'
+import { toast } from 'sonner'
 import { Canvas } from '../canvas/Canvas'
-import { Inspector } from '../inspector/Inspector'
-import { PlayOriginContext } from '../scenarios/focus'
-import { ScenarioPlayer } from '../scenarios/ScenarioPlayer'
-import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
+import { CameraSlotContext, createCameraSlot } from '../canvas/cameraContext'
+import { CommandMenu } from '../commands/CommandMenu'
+import { CommandsProvider } from '../commands/CommandsProvider'
+import type { ShellActions } from '../commands/types'
+import { Sidebar } from '../inspector/Sidebar'
+import { WalkthroughBar } from '../scenarios/WalkthroughBar'
+import { agentReadme, FIRST_BOARD_PROMPT } from './agentReadme'
+import { copyText } from './clipboard'
+import { Dialogs } from './Dialogs'
 import { EmptyState } from './EmptyState'
 import { HowToDialog } from './HowToDialog'
 import { Notices } from './Notices'
-import { Dialogs } from './Dialogs'
 import { readFileText } from './openFile'
-import { useWorkspace } from './workspaceContext'
 import styles from './Shell.module.css'
-import { Toolbar } from './Toolbar'
-import { undoCommand } from './undoKeys'
+import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
+import { TipProvider } from './Tip'
+import { TopBar } from './TopBar'
+import { createUi, UiContext, useUi, useUiApi } from './ui'
+import { useWorkspace } from './workspaceContext'
 
 /** Elements on the map that can hold keyboard focus. */
 const MAP_FOCUS = '.react-flow__node, .react-flow__edge'
@@ -34,13 +41,29 @@ function RestoreFocus({ pending, restore }: { pending: { current: boolean }; res
 }
 
 export function Shell() {
+  const [ui] = useState(createUi)
+  const [camera] = useState(createCameraSlot)
+  return (
+    <UiContext.Provider value={ui}>
+      <CameraSlotContext.Provider value={camera}>
+        <TipProvider>
+          <ShellBody />
+        </TipProvider>
+      </CameraSlotContext.Provider>
+    </UiContext.Provider>
+  )
+}
+
+function ShellBody() {
   const hasBoard = useAppStore((s) => s.board !== undefined)
   const store = useAppStoreApi()
   const scenario = useAppStore((s) => s.scenario !== undefined)
   const dispatch = useAppDispatch()
-  const { openText } = useWorkspace()
+  const uiApi = useUiApi()
+  const sidebar = useUi((u) => u.sidebar)
+  const howTo = useUi((u) => u.howToOpen)
+  const { openText, writeFolderFile } = useWorkspace()
   const input = useRef<HTMLInputElement>(null)
-  const [howTo, setHowTo] = useState(false)
   const [dragging, setDragging] = useState(false)
   const playOrigin = useRef<HTMLElement | null>(null)
   // The card or connection that last had focus, so Escape can give focus back to it.
@@ -49,12 +72,12 @@ export function Shell() {
   const wasPlaying = useRef(false)
   const main = useRef<HTMLElement>(null)
 
-  const inspectorHeading = () => main.current?.querySelector<HTMLElement>('aside h2') ?? null
+  const sidebarHeading = () => main.current?.querySelector<HTMLElement>('aside h2') ?? null
   const focusIfLost = (target: HTMLElement | null) => {
     const active = document.activeElement
     if (active && active !== document.body) return
     if (target?.isConnected) target.focus()
-    else inspectorHeading()?.focus()
+    else sidebarHeading()?.focus()
   }
 
   // Focus that sat in the start screen is lost when a board replaces it. It goes to the panel heading.
@@ -68,20 +91,14 @@ export function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasBoard])
 
-  const closePlayer = () => {
-    wasPlaying.current = true
-    dispatch({ type: 'scenarioStopped' })
-  }
-
   // After the player closes, focus goes back to the Play button, or to the panel heading if that button is gone.
   useEffect(() => {
     if (scenario || !wasPlaying.current) return
     wasPlaying.current = false
     const origin = playOrigin.current
     if (origin?.isConnected) origin.focus()
-    else inspectorHeading()?.focus()
+    else sidebarHeading()?.focus()
   }, [scenario])
-
 
   async function openFile(file: File | undefined) {
     if (!file) return
@@ -96,17 +113,35 @@ export function Shell() {
     void openFile(file)
   }
 
-  // Undo and redo work anywhere but in a text field and in a dialog, which keep their own.
-  useEffect(() => {
-    const onKey = (event: globalThis.KeyboardEvent) => {
-      const command = undoCommand(event)
-      if (!command || (event.target as Element | null)?.closest?.('dialog')) return
-      event.preventDefault()
-      dispatch({ type: command })
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [dispatch])
+  const shell = useMemo<ShellActions>(
+    () => ({
+      openFile: () => input.current?.click(),
+      toOverview: () => {
+        const selection = store.getState().selection
+        if (!selection || selection.type === 'board') return
+        restoreFocus.current = true
+        dispatch({ type: 'select', selection: { type: 'board' } })
+      },
+      closeWalkthrough: () => {
+        wasPlaying.current = true
+        dispatch({ type: 'scenarioStopped' })
+      },
+      playWalkthrough: (id) => {
+        const active = document.activeElement
+        playOrigin.current = active instanceof HTMLElement && active !== document.body ? active : null
+        dispatch({ type: 'scenarioStarted', id })
+      },
+      copyPrompt: () => {
+        // The copy runs first, inside the click, where the browser still allows it.
+        void copyText(FIRST_BOARD_PROMPT).then((ok) => {
+          if (ok) toast('Prompt copied')
+          else toast('Could not copy. Open How to make a board and copy the prompt there.')
+        })
+        void writeFolderFile('README.md', agentReadme(), { onlyIfMissing: true })
+      },
+    }),
+    [dispatch, store, writeFolderFile],
+  )
 
   // Drop a .json file anywhere on the window to open it.
   useEffect(() => {
@@ -151,60 +186,46 @@ export function Shell() {
     if (el) lastOnMap.current = el
   }
 
-  function onKeyDown(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || !hasBoard) return
-    // A dialog handles its own Escape.
-    if ((event.target as HTMLElement).closest('dialog')) return
-    // So does an open menu or popover: Escape closes it and leaves the selection alone.
-    if ((event.target as HTMLElement).closest('[data-dismissible], [data-popup-open]')) return
-    const selection = store.getState().selection
-    if (scenario) {
-      closePlayer()
-    } else if (selection && selection.type !== 'board') {
-      restoreFocus.current = true
-      dispatch({ type: 'select', selection: { type: 'board' } })
-    }
-  }
-
-  const openPicker = () => input.current?.click()
+  const closeHowTo = useCallback(() => uiApi.setHowToOpen(false), [uiApi])
 
   return (
-    <div className={styles.shell}>
-      <Toolbar onOpen={openPicker} onHowTo={() => setHowTo(true)} />
-      <main
-        ref={main}
-        className={styles.main}
-        data-empty={hasBoard ? undefined : ''}
-        data-playing={scenario ? '' : undefined}
-        onKeyDown={onKeyDown}
-        onFocus={onFocus}
-      >
-        <div className={styles.notices} data-notices="">
-          <Notices />
-        </div>
-        {hasBoard ? (
-          <PlayOriginContext.Provider value={playOrigin}>
-            <div className={styles.canvas}>
-              <div className={styles.map}>
+    <CommandsProvider shell={shell}>
+      <div className={styles.shell}>
+        <TopBar />
+        <main
+          ref={main}
+          className={styles.main}
+          data-empty={hasBoard ? undefined : ''}
+          data-sidebar={hasBoard && sidebar.open ? '' : undefined}
+          style={{ '--sidebar-width': `${sidebar.width}px` } as CSSProperties}
+          onFocus={onFocus}
+        >
+          <div className={styles.notices} data-notices="">
+            <Notices />
+          </div>
+          {hasBoard ? (
+            <>
+              <div className={styles.canvas}>
                 <Canvas />
+                {scenario && <WalkthroughBar />}
               </div>
-              {scenario && <ScenarioPlayer onClose={closePlayer} />}
-            </div>
-            <Inspector />
-          </PlayOriginContext.Provider>
-        ) : (
-          <EmptyState onOpen={openPicker} onHowTo={() => setHowTo(true)} />
+              <Sidebar />
+            </>
+          ) : (
+            <EmptyState />
+          )}
+        </main>
+        <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
+        <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
+        <Dialogs />
+        <HowToDialog open={howTo} onClose={closeHowTo} />
+        <CommandMenu />
+        {dragging && (
+          <div className={styles.drop} aria-hidden="true">
+            <p>Drop to open</p>
+          </div>
         )}
-      </main>
-      <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
-      <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
-      <Dialogs />
-      <HowToDialog open={howTo} onClose={() => setHowTo(false)} />
-      {dragging && (
-        <div className={styles.drop} aria-hidden="true">
-          <p>Drop to open</p>
-        </div>
-      )}
-    </div>
+      </div>
+    </CommandsProvider>
   )
 }

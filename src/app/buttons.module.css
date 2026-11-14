@@ -109,3 +109,11 @@
 .button:disabled:active {
   transform: none;
 }
+
+/* A smaller button for inline actions, such as those beside the save status. */
+.small {
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}

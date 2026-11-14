@@ -1,0 +1,120 @@
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+}
+
+/* An 8px grip over the left edge. */
+.resize {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color 120ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .resize:hover::after {
+    background: var(--border-strong);
+  }
+}
+
+.resize:active::after,
+.resize:focus-visible::after {
+  background: var(--accent);
+}
+
+.resize:focus-visible {
+  outline: none;
+}
+
+.tabs {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.tab[data-active] {
+  color: var(--fg);
+}
+
+.tab[data-active]::after {
+  content: '';
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--fg);
+}
+
+.tab:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--ring);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--fg-2);
+  }
+
+  .tab[data-active]:hover {
+    color: var(--fg);
+  }
+}
+
+.tabCount {
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-regular);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.content {
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}

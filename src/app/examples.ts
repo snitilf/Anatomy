@@ -25,3 +25,8 @@ export const EXAMPLES: readonly Example[] = [
     raw: anatomyRaw,
   },
 ]
+
+/** True when a board ID belongs to one of the examples, so a board reopened from browser storage still reads as one. */
+export function isExampleBoard(boardId: string): boolean {
+  return EXAMPLES.some((example) => (JSON.parse(example.raw) as { id?: unknown }).id === boardId)
+}
