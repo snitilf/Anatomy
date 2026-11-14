@@ -26,7 +26,7 @@ import type { Point, Rect, Size } from '../layout/geometry'
 import { settleMoves } from '../layout/groups'
 import { newId } from '../layer/edits'
 import type { Board } from '../board/schema'
-import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
+import type { Link, Mark, MarkEnd, Proposal, Reconnect } from '../layer/model'
 import { DrawSurface, ATTACH_PX, type Drawn } from '../whiteboard/DrawSurface'
 import { Editor, type Typed } from '../whiteboard/Editor'
 import { EndHandles, type EndHandle } from '../whiteboard/EndHandles'
@@ -152,10 +152,10 @@ interface Hold {
 
 /**
  * Moves the cards that a dropped or resized card covers out of its way, then moves the groups apart so that no two group
- * areas overlap. Group areas for the push are taken from before the change.
+ * areas overlap.
  */
-function pushAside(view: View, ids: readonly string[], before: View): Record<string, Point> {
-  return settleMoves(view.board, view.rects, ids, before.rects)
+function pushAside(view: View, ids: readonly string[]): Record<string, Point> {
+  return settleMoves(view.board, view.rects, ids)
 }
 
 /** The cards in the first column on the left, where the flow starts. */
@@ -241,7 +241,7 @@ export function Canvas() {
       }
       keyMoves.current.clear()
       if (Object.keys(moves).length === 0) return
-      const aside = pushAside(current, Object.keys(moves), current)
+      const aside = pushAside(current, Object.keys(moves))
       dispatch({ type: 'cardsMoved', positions: { ...aside, ...moves } })
       showPushed(Object.keys(aside))
     },
@@ -388,6 +388,21 @@ export function Canvas() {
   useLayoutEffect(() => {
     sceneRef.current = scene
   })
+  // Arrows attached to the card in hand, or to a connection that is hidden with it, wait for the drop too.
+  const hiddenArrows = useMemo(() => {
+    const out = new Set<string>()
+    if (!shown) return out
+    const held = shown.held
+    const hiddenLines = new Set<string>()
+    for (const r of board?.relationships ?? []) {
+      if (shown.geometry.edges.get(r.id)?.cheap || shown.geometry.edges.get(editedId(r.id))?.cheap) hiddenLines.add(r.id)
+    }
+    if (held === undefined && hiddenLines.size === 0) return out
+    const attached = (end: MarkEnd) =>
+      (end.type === 'part' && end.id === held) || (end.type === 'relationship' && hiddenLines.has(end.id))
+    for (const m of marks ?? []) if (m.kind === 'arrow' && (attached(m.from) || attached(m.to))) out.add(m.id)
+    return out
+  }, [shown, board, marks])
   const getScene = useCallback(() => sceneRef.current, [])
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
@@ -415,7 +430,11 @@ export function Canvas() {
       if (held.cancelled) return
       held.cancelled = true
       guides.current?.hide()
-      setView((v) => (v ? { ...v, rects: held.before.rects, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) } : v))
+      setView((v) => {
+        if (!v) return v
+        const { held: _held, ...rest } = v
+        return { ...rest, rects: held.before.rects, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) }
+      })
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -544,7 +563,7 @@ export function Canvas() {
             const current = viewRef.current
             const rect = current?.rects[id]
             if (!held || !current || !rect) continue
-            const aside = pushAside(current, [id], held.before)
+            const aside = pushAside(current, [id])
             dispatch({ type: 'cardResized', id, size: { width: rect.width, height: rect.height }, positions: aside })
             showPushed(Object.keys(aside))
           }
@@ -580,7 +599,7 @@ export function Canvas() {
       const rect = current?.rects[node.id]
       if (!held || !current || !rect) return
       keyMoves.current.delete(node.id)
-      const aside = pushAside(current, [node.id], held.before)
+      const aside = pushAside(current, [node.id])
       dispatch({ type: 'cardsMoved', positions: { ...aside, [node.id]: { x: rect.x, y: rect.y } } })
       showPushed(Object.keys(aside))
       // The card is not held back while it moves. After the drop, a card that landed out of sight is brought back.
@@ -860,7 +879,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <SnapGuides ref={guides} />
-          <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved}>
+          <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}
           </InkLayer>
           {isDrawing(tool) && !step && <DrawSurface tool={tool} scene={getScene} onDrawn={onDrawn} />}

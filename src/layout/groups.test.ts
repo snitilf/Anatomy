@@ -98,7 +98,7 @@ describe('settleMoves on the example boards', () => {
         if (!into) continue
         const size = start[mover.id]!
         const rects = { ...start, [mover.id]: { ...size, x: Math.round(into.x + into.width / 2 - size.width / 2), y: Math.round(into.y + into.height / 2 - size.height / 2) } }
-        const moves = settleMoves(b, rects, [mover.id], start)
+        const moves = settleMoves(b, rects, [mover.id])
         const after = apply(rects, moves)
         // Only what the drop made worse counts: the layout may already hold two groups closer than the gap elsewhere.
         const worse = clashes(b, after).filter((c) => !clashes(b, start).includes(c))
@@ -121,9 +121,31 @@ describe('settleMoves on the example boards', () => {
       const mover = b.components.find((c) => c.group !== undefined)
       if (!mover) continue
       const rects = { ...start, [mover.id]: { ...start[mover.id]!, width: 480, height: 320 } }
-      const after = apply(rects, settleMoves(b, rects, [mover.id], start))
+      const after = apply(rects, settleMoves(b, rects, [mover.id]))
       const worse = clashes(b, after).filter((c) => !clashes(b, start).includes(c))
       expect(worse).toEqual([])
     }
+  })
+})
+
+describe('settleMoves keeps other groups rigid', () => {
+  it('moves every displaced member of a hit group by the same amount', () => {
+    const b = board({ h: ['b', 'c'] }, ['a'])
+    const rects = { a: card(600, 0), b: card(600, 0), c: card(600, 200) }
+    // a is dropped onto b.
+    const moves = settleMoves(b, rects, ['a'])
+    expect(moves.a).toBeUndefined()
+    const db = { x: moves.b!.x - rects.b.x, y: moves.b!.y - rects.b.y }
+    const dc = { x: moves.c!.x - rects.c.x, y: moves.c!.y - rects.c.y }
+    expect(db).toEqual(dc)
+    expect(clashes(b, apply(rects, moves))).toEqual([])
+  })
+
+  it('still pushes cards apart inside one group', () => {
+    const b = board({ g: ['a', 'x'] })
+    const rects = { a: card(0, 0), x: card(40, 80) }
+    const moves = settleMoves(b, rects, ['a'])
+    expect(moves.x).toBeDefined()
+    expect(overlaps(rects.a, apply(rects, moves).x!)).toBe(false)
   })
 })
