@@ -95,7 +95,7 @@ test('the map hint can be closed with its button', async ({ page }) => {
   await expect(page.getByRole('note')).toHaveCount(0)
 })
 
-test('selecting a part softens the other lines, and a selected connection is drawn at 3px', async ({ page }) => {
+test('selecting a part softens the other lines, and a selected connection is drawn at 1.5px', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, NORDET)
   const inspector = page.getByRole('complementary', { name: 'Details' })
@@ -114,7 +114,7 @@ test('selecting a part softens the other lines, and a selected connection is dra
         return path ? getComputedStyle(path).strokeWidth : ''
       }),
     )
-    .toBe('3px')
+    .toBe('1.5px')
 })
 
 test('the panel starts at the top for every new selection', async ({ page }) => {

@@ -3,52 +3,68 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  background: var(--paper);
+  background: var(--bg);
 }
 
 /* React Flow reads these to style its own parts. */
 .canvas :global(.react-flow) {
-  --xy-background-color: var(--paper);
-  --xy-background-pattern-dots-color-default: color-mix(in srgb, var(--ink) 16%, transparent);
-  --xy-controls-button-background-color-default: var(--surface);
-  --xy-controls-button-background-color-hover-default: var(--soft);
-  --xy-controls-button-color-default: var(--ink);
-  --xy-controls-button-color-hover-default: var(--ink);
-  --xy-controls-button-border-color-default: var(--line);
+  --xy-background-color: var(--bg);
+  --xy-background-pattern-dots-color-default: color-mix(in srgb, var(--fg) 13%, transparent);
+  --xy-controls-button-background-color-default: var(--raised);
+  --xy-controls-button-background-color-hover-default: var(--hover);
+  --xy-controls-button-color-default: var(--fg-2);
+  --xy-controls-button-color-hover-default: var(--fg);
+  --xy-controls-button-border-color-default: var(--border);
   --xy-controls-box-shadow-default: none;
-  /* The credit sits over the map, so it keeps its own paper behind the text. Muted on paper is above 4.5 to 1 in both themes. */
-  --xy-attribution-background-color-default: color-mix(in srgb, var(--paper) 88%, transparent);
 }
 
-.canvas :global(.react-flow__controls) {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
+.controls {
+  margin: 0 12px 12px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: var(--lift);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
 }
 
 .canvas :global(.react-flow__controls-button) {
+  appearance: none;
+  display: grid;
+  place-items: center;
   width: 32px;
   height: 32px;
-  border-bottom: 1px solid var(--line);
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--fg-2);
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out);
 }
 
+.canvas :global(.react-flow__controls-button:last-child) {
+  border-bottom: 0;
+}
+
+.canvas :global(.react-flow__controls-button:hover) {
+  background: color-mix(in srgb, var(--raised), var(--fg) 5%);
+  color: var(--fg);
+}
+
+/* React Flow sizes its own icons. Lucide icons keep their 16px and their stroke. */
 .canvas :global(.react-flow__controls-button svg) {
-  fill: currentColor;
+  width: 16px;
+  max-width: none;
+  height: 16px;
+  max-height: none;
+  fill: none;
 }
 
 .canvas :global(.react-flow__controls-button:focus-visible) {
-  box-shadow: inset 0 0 0 2px var(--accent);
-  border-radius: 0;
-}
-
-.canvas :global(.react-flow__attribution) {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.canvas :global(.react-flow__attribution a) {
-  color: inherit;
+  position: relative;
+  box-shadow: inset 0 0 0 2px var(--focus);
 }
 
 .canvas :global(.react-flow__node:focus-visible),
@@ -60,7 +76,7 @@
 /* The edge sets its stroke inline, so the focus style must win over it. */
 .canvas :global(.react-flow__edge:focus-visible .react-flow__edge-path) {
   stroke: var(--accent) !important;
-  stroke-width: 3px !important;
+  stroke-width: 2px !important;
 }
 
 .canvas :global(.react-flow__pane) {
@@ -76,15 +92,10 @@
   z-index: 1100;
 }
 
-.canvas :global(.react-flow__controls) {
-  margin-bottom: 26px;
-}
-
 @media (max-width: 760px) {
   /* Touch screens pinch to zoom. Only the fit button stays. */
-  .canvas :global(.react-flow__controls-zoomin),
-  .canvas :global(.react-flow__controls-zoomout) {
-    display: none;
+  .zoomStep {
+    display: none !important;
   }
 }
 
