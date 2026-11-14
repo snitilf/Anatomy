@@ -3,6 +3,11 @@ import { defaultLayout, resolvePositions } from './layout'
 import { anatomyBoard, clone, nordetBoard } from './testBoards'
 import { emptyOverlay } from './types'
 
+/** The same board with every starting position removed, so the default slots apply. */
+function withoutPositions<T extends { components: { position?: unknown }[] }>(b: T): T {
+  return { ...b, components: b.components.map(({ position: _p, ...rest }) => rest) }
+}
+
 function overlaps(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.abs(a.x - b.x) < 280 && Math.abs(a.y - b.y) < 160
 }
@@ -62,14 +67,14 @@ describe('resolvePositions', () => {
   })
 
   it('keeps a free default slot when there is no collision', () => {
-    const b = anatomyBoard()
+    const b = withoutPositions(anatomyBoard())
     expect(resolvePositions(b, emptyOverlay(b.id))).toEqual(defaultLayout(b))
   })
 
   it('places several new cards below the lowest card of their column', () => {
     const b = clone(anatomyBoard())
     b.groups = [{ id: 'g1', label: 'One' }]
-    b.components = b.components.slice(0, 3).map((c) => ({ ...c, group: 'g1' }))
+    b.components = withoutPositions(b).components.slice(0, 3).map((c) => ({ ...c, group: 'g1' }))
     const [a] = b.components
     const overlay = { ...emptyOverlay(b.id), positions: { [a!.id]: { x: 0, y: 0 } } }
     const r = resolvePositions(b, overlay)
