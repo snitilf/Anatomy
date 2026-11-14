@@ -15,7 +15,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
   const emphasized = selected || data.active
   return (
     <>
-      <g className={styles.line} data-faded={data.faded || undefined} data-ends={ends}>
+      <g className={styles.line} data-faded={data.faded || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}
@@ -34,6 +34,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           className={clsx(styles.pill, styles.mine, 'nodrag nopan')}
           data-label=""
           data-ends={ends}
+          data-edge={id}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           data-faded={data.faded || undefined}

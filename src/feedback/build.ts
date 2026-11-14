@@ -241,3 +241,8 @@ export function buildFeedback(board: Board, layer: Layer, options: { id: string;
     sent: { feedbackId: options.id, baseRevision: board.revision, at: createdAt, items: record },
   }
 }
+
+/** What the agent will be told about one mark, or undefined when the mark says nothing it could use. */
+export function describeMarkFor(board: Board, layer: Layer, mark: Mark): FeedbackItem | undefined {
+  return describeMark(sceneOf(board, layer), board, mark)
+}

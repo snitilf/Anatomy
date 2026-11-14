@@ -1,5 +1,6 @@
 import type { Viewport } from '@xyflow/react'
 import { createContext, useContext } from 'react'
+import type { Rect } from '../layout/geometry'
 import type { Frame, Limits, Size } from './camera'
 
 /** Moves the map's camera, always inside the zoom and pan limits of what is on the map. */
@@ -11,7 +12,26 @@ export interface Camera {
   move(viewport: Viewport, duration?: number): Viewport
   /** Frames the whole content, or a box of it. */
   frame(options?: Frame, duration?: number): Viewport
+  /** Steps the zoom in or out, resets it to 100%, or fits the whole board. It glides when `animate` and motion is allowed. */
+  zoom(command: ZoomCommand, animate?: boolean): void
+  /** Where a card is on the map now. */
+  rectOf(id: string): Rect | undefined
 }
+
+export type ZoomCommand = 'in' | 'out' | 'reset' | 'fit'
+
+/** The camera of the map that is open, for code outside the map such as commands. Empty while no map is shown. */
+export interface CameraSlot {
+  get(): Camera | undefined
+  set(camera: Camera | undefined): void
+}
+
+export function createCameraSlot(): CameraSlot {
+  let current: Camera | undefined
+  return { get: () => current, set: (camera) => (current = camera) }
+}
+
+export const CameraSlotContext = createContext<CameraSlot>(createCameraSlot())
 
 export const CameraContext = createContext<Camera | undefined>(undefined)
 

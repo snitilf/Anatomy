@@ -12,7 +12,8 @@ import { createSaveQueue, type SaveQueue, type SaveStatus } from '../workspace/s
 import { watchBoard } from '../workspace/watch'
 import { openFromText } from './openFile'
 import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
-import { WorkspaceContext, type FileChoice, type FolderStatus, type SaveState, type WorkspaceApi } from './workspaceContext'
+import { isExampleBoard } from './examples'
+import { WorkspaceContext, type BoardOrigin, type FileChoice, type FolderStatus, type SaveState, type WorkspaceApi } from './workspaceContext'
 
 /** Where the layer is saved: in this browser, next to the board, or in the repository folder. */
 type Sink = { kind: 'browser' } | { kind: 'folder'; folder: Folder }
@@ -92,6 +93,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
   const [choice, setChoice] = useState<FileChoice | undefined>()
   const [sink, setSink] = useState<Sink>(BROWSER)
   const [folder, setFolder] = useState<{ folder: Folder; state: FolderStatus['state'] } | undefined>()
+  const [origin, setOrigin] = useState<BoardOrigin | undefined>()
 
   const storeRef = useRef<BoardStore | undefined>(undefined)
   const persistedRef = useRef<Persisted | undefined>(undefined)
@@ -204,6 +206,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       leaveFolder()
       // The stored board is already saved. Only the choice of what was opened last is new.
       markPersisted({ sink: BROWSER, board: stored.board, json: JSON.stringify(layer) })
+      setOrigin(isExampleBoard(stored.board.id) ? 'example' : 'file')
       void store.setLastOpened({ mode: 'file', boardId: stored.board.id }).catch(() => {})
       dispatch({ type: 'boardOpened', board: stored.board, layer, warnings: stored.warnings })
     },
@@ -269,6 +272,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
         return
       }
       setFolder({ folder: target, state: 'open' })
+      setOrigin('folder')
       markPersisted({ sink: sinkRef.current, board: parsed.board, json: JSON.stringify(found.layer) })
       dispatch({ type: 'boardOpened', board: parsed.board, layer: found.layer, warnings: parsed.warnings })
       if (found.backedUp) notice(`${FILES.layer} could not be read, so it was kept as ${FILES.layerBackup} and a new one starts.`)
@@ -394,9 +398,10 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
   }, [folder, notice, openFolderNow])
 
   const writeFolderFile = useCallback<WorkspaceApi['writeFolderFile']>(
-    async (file, text) => {
+    async (file, text, options = {}) => {
       if (!folder || folder.state === 'reopen') return false
       try {
+        if (options.onlyIfMissing && (await folder.folder.stat(file)) !== undefined) return true
         await folder.folder.write(file, text)
         return true
       } catch {
@@ -407,7 +412,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
   )
 
   const openText = useCallback(
-    (fileName: string, text: string) => {
+    (fileName: string, text: string, from: Exclude<BoardOrigin, 'folder'> = 'file') => {
       const action = openFromText(fileName, text)
       if (action.type !== 'boardOpened') {
         dispatch(action)
@@ -415,6 +420,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       }
       generation.current++
       leaveFolder()
+      setOrigin(from)
       const id = action.board.id
       const current = appStore.getState()
       const open = current.board?.id === id && current.board && current.layer ? { board: current.board, layer: current.layer } : undefined
@@ -524,6 +530,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
 
   const api: WorkspaceApi = {
     folder: folder ? { name: folder.folder.name, state: folder.state } : undefined,
+    origin: board ? origin : undefined,
     canOpenFolder: access !== undefined,
     starting: phase === 'starting',
     unavailable,

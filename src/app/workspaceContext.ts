@@ -28,8 +28,12 @@ export interface FolderStatus {
   state: 'open' | 'missing' | 'reopen'
 }
 
+/** Where the open board came from. The top bar names it. */
+export type BoardOrigin = 'folder' | 'file' | 'example'
+
 export interface WorkspaceApi {
   folder: FolderStatus | undefined
+  origin: BoardOrigin | undefined
   /** True when this browser can open a repository folder. */
   canOpenFolder: boolean
   /** True while the first connection to browser storage is still being made. */
@@ -43,8 +47,8 @@ export interface WorkspaceApi {
   openFolder: () => void
   reopenFolder: () => void
   /** Writes a file into the open folder's `.anatomy` folder. False when no folder is open or the write failed. */
-  writeFolderFile: (file: Extract<FileName, 'feedback.json' | 'README.md'>, text: string) => Promise<boolean>
-  openText: (fileName: string, text: string) => void
+  writeFolderFile: (file: Extract<FileName, 'feedback.json' | 'README.md'>, text: string, options?: { onlyIfMissing?: boolean }) => Promise<boolean>
+  openText: (fileName: string, text: string, origin?: Exclude<BoardOrigin, 'folder'>) => void
   openSaved: (id: string) => void
   askDelete: (board: BoardSummary | undefined) => void
   confirmDelete: () => void
@@ -57,6 +61,7 @@ const nothing = () => {}
 
 export const WorkspaceContext = createContext<WorkspaceApi>({
   folder: undefined,
+  origin: undefined,
   canOpenFolder: false,
   starting: false,
   unavailable: undefined,

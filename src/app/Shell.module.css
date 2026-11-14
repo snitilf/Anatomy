@@ -5,20 +5,19 @@
 }
 
 .main {
-  --inspector-width: clamp(320px, 31vw, 380px);
   position: relative;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--inspector-width);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
 
-.main[data-empty] {
-  grid-template-columns: minmax(0, 1fr);
+.main[data-sidebar] {
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
 }
 
-/* Notices float over the top of the map. They never move the toolbar or the map. */
+/* Notices float over the top of the map. They never move the top bar or the map. */
 .notices {
   position: absolute;
   z-index: 40;
@@ -31,19 +30,13 @@
   pointer-events: none;
 }
 
-.main:not([data-empty]) .notices {
-  right: calc(var(--inspector-width) + 12px);
+.main[data-sidebar] .notices {
+  right: calc(var(--sidebar-width) + 12px);
 }
 
 .canvas {
+  position: relative;
   min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.map {
-  flex: 1;
   min-height: 0;
 }
 
@@ -68,22 +61,13 @@
   color: var(--fg);
 }
 
+/* Phone: the map takes the screen and the sidebar becomes a sheet over it. */
 @media (max-width: 760px) {
-  .main,
-  .main[data-empty] {
+  .main[data-sidebar] {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .main:not([data-empty]) .notices {
+  .main[data-sidebar] .notices {
     right: 12px;
-  }
-
-  .main:not([data-empty]) {
-    grid-template-rows: minmax(220px, 42%) minmax(0, 1fr);
-  }
-
-  /* The player needs room for its caption, so the map area grows while a walkthrough plays. */
-  .main[data-playing]:not([data-empty]) {
-    grid-template-rows: minmax(330px, 68%) minmax(0, 1fr);
   }
 }

@@ -1,0 +1,294 @@
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* A note is the user's: a block in their tint, no border. */
+.note {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--yours-tint);
+}
+
+.icon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--yours);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.text {
+  margin: 0;
+  color: var(--fg);
+  white-space: pre-wrap;
+  text-wrap: pretty;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.on {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.on:focus-visible {
+  outline: none;
+  border-radius: 2px;
+  box-shadow: var(--ring);
+}
+
+/* Edit and delete show on hover and on focus, so the note reads as text first. */
+.tools {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  margin: -2px -2px 0 0;
+  opacity: 0;
+}
+
+.note:focus-within .tools {
+  opacity: 1;
+}
+
+.tool {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+
+.tool:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.editor {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.editorActions,
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* Where the note stands against this revision. */
+.state {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+}
+
+.stateLine {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  text-wrap: pretty;
+}
+
+.stateLine svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--fg-3);
+}
+
+.stateLine[data-tone='danger'] svg {
+  color: var(--danger);
+}
+
+/* The agent's answer: neutral, indented under the item it answers. */
+.answer {
+  display: grid;
+  gap: 2px;
+  margin-left: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.answerHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--fg-2);
+  font-weight: var(--weight-medium);
+}
+
+.answerText,
+.answerChanged {
+  margin: 0;
+  color: var(--fg);
+  text-wrap: pretty;
+}
+
+.answerChanged {
+  color: var(--fg-2);
+}
+
+.composer {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.textarea {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--fg);
+  font: inherit;
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--fg-3);
+}
+
+.textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.composerFoot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.composerFoot > button {
+  margin-left: auto;
+}
+
+.counter {
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Note or question: a two-way switch. */
+.switch {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+}
+
+.option {
+  position: relative;
+  display: inline-flex;
+}
+
+.radio {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.face {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-xs);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: 20px;
+  font-weight: var(--weight-medium);
+}
+
+.radio:checked + .face {
+  background: var(--raised);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.radio:focus-visible + .face {
+  box-shadow: var(--ring);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .note:hover .tools {
+    opacity: 1;
+  }
+
+  .tool:hover {
+    background: var(--hover);
+    color: var(--fg);
+  }
+
+  .on:hover {
+    color: var(--fg);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .textarea:hover {
+    border-color: var(--border-strong);
+  }
+}
+
+/* Touch has no hover, so the tools stay visible. */
+@media (hover: none) {
+  .tools {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .textarea {
+    font-size: 16px;
+  }
+}
