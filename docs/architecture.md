@@ -21,7 +21,7 @@ When a new revision arrives, the layer stays, and the app compares the layer wit
 | Folder | Owns | Depends on |
 | --- | --- | --- |
 | `src/board/` | Board schema (including `responses`), validation, JSON Schema export. | `zod` |
-| `src/layout/` | Geometry (point, size, rect) and card placement: the default layout, and a rect per card from the user's positions and sizes. | `src/board/` |
+| `src/layout/` | Geometry (point, size, rect), the layered layout, card sizes, push apart, and a rect per card from the user's positions and sizes. | `src/board/`, `@dagrejs/dagre` |
 | `src/layer/` | User layer schema, version 1 upgrade, every edit as a pure function, fingerprints, board comparison, note status, export files. | `src/board/`, `src/layout/` |
 | `src/feedback/` | The `anatomy-feedback` format and the pure builder that turns a layer into feedback. | `src/layer/`, `src/layout/` |
 | `src/workspace/` | Where work is kept: the one IndexedDB database, the repository folder behind a small interface, the save queue, and the board watcher. | `src/board/`, `src/layer/` |
@@ -42,17 +42,38 @@ React components read from the app state and dispatch actions.
 
 Every card has a rect: its position and its size.
 `placeCards` in `src/layout/cards.ts` gives the rect of every card.
-A position the user set wins, then the board's position, then a slot of the default layout.
-A size the user set wins over the default size (`CARD_SIZE`, 260 by 150).
+A position the user set wins, then the board's position, then the layered layout.
+A size the user set wins over the size of the card's text (`contentSize`: 240 wide, at least 112 tall, on an 8 px grid).
+A resized card stays between 224 by 112 and 480 by 320.
 Only the cards the user moved or resized are stored, so the other cards follow the layout each time a board opens.
-The default layout places groups in columns 440 units apart and cards in rows 240 units apart.
-A card without a fixed position takes the first free spot in its column when a card the board placed covers its slot.
-Moving or resizing a card never moves another card.
+
+The layout (`src/layout/autoLayout.ts`) is a left-to-right flow from the connections, made with dagre in two passes.
+The members of each group are laid out first, then each group is one block among the loose cards.
+Connections in both directions between two blocks count in the direction of the block the board lists first.
+Pieces that no connection joins are packed in rows toward a screen-like shape.
+The layout uses each card's text size, never a size the user set, so a resize never moves the other cards around.
+When some cards have a board position, the rest are laid out as a block to their right.
+A card the layout placed never stays under a card with a fixed position: `pushApart` in `src/layout/push.ts` moves it aside.
+
+A drop or a resize that covers other cards pushes them aside along the shorter way out, 40 units away, for at most three rounds.
+A pushed card prefers a free spot and its own group area, and never lands on a card that has settled.
+The dropped card and every pushed card are saved in one action, so one undo puts them all back.
 
 Routing, labels, group areas, and the camera all read the card rects, never a fixed card size.
-While a card is dragged, only the connections of that card are redrawn with simple curves.
-After the drop, one full layout pass routes the connections and places the labels.
+Every connection is made of straight runs with rounded corners (`src/canvas/routing.ts`).
+A connection is a straight run when its ends line up, else an elbow on a free track of the gap between the cards, else a path found with A* around the cards.
+The search charges for turns, for running along or across a line already drawn, and for passing through a group area neither end belongs to.
+Each gap between cards has up to three tracks, so parallel lines do not run on top of each other.
+While a card is dragged or resized, only its connections are redrawn, as plain elbows, and their labels hide.
+After the drop, one full layout pass routes the connections and places the labels, which keep off every card, line, and other label.
 Connections whose cards did not move or change size keep their route and label when those are still clear.
+
+The camera (`src/canvas/camera.ts`) keeps the map inside limits worked out from the content: cards, group areas, marks, and proposed parts.
+The map zooms out only until the whole content fits, never needing more than 100%, and in to 200%.
+Panning stops a margin past the content.
+Every camera move the app makes goes through `clampViewport`, because React Flow applies the limits only to the user's own panning.
+Opening a board fits it when the fit leaves text readable (60% or more), else it shows the start of the flow at 80%.
+On a crowded map, connection labels below 90% show only for the selection and for the card under the pointer.
 
 ## User layer, version 2
 
