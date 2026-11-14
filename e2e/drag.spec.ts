@@ -72,32 +72,66 @@ const EDGE_BOARDS = [
 ]
 
 for (const board of EDGE_BOARDS) {
-  test(`no connection disappears for a frame while a card is held: ${board.name}`, async ({ page }) => {
+  test(`the lines of the held card are hidden while it moves and back, in place, after the drop: ${board.name}`, async ({ page }) => {
     await open(page, board.file)
     const edges = page.locator('.react-flow__edge')
     const total = await edges.count()
     expect(total).toBeGreaterThan(0)
     const spot = await grabbable(page)
+    const ownEdges = page.locator(`.react-flow__edge:has([data-ends~="${spot.id}"])`)
+    const own = await ownEdges.count()
+    const ownLabels = page.locator(`[data-label][data-ends~="${spot.id}"]`)
+    const labels = await ownLabels.count()
+    expect(labels).toBeGreaterThan(0)
+    expect(own).toBeGreaterThan(0)
+    const pathsBefore = await page.evaluate(() => [...document.querySelectorAll('.react-flow__edge-path')].map((p) => p.getAttribute('d')))
 
     await page.mouse.move(spot.x, spot.y)
     await page.mouse.down()
-    // Sweep the card around so that every one of its lines changes the side it leaves from, more than once.
-    const counts: number[] = []
-    const path = (i: number) => {
-      const t = (i / 90) * Math.PI * 2
-      return { x: spot.x + Math.sin(t) * 260, y: spot.y + (1 - Math.cos(t)) * 110 }
+    await page.mouse.move(spot.x + 30, spot.y + 10, { steps: 3 })
+    await expect(ownEdges).toHaveCount(0)
+    // Sweep the card around: nothing of its own is drawn, and every other line stays.
+    for (let i = 1; i <= 40; i++) {
+      const t = (i / 40) * Math.PI * 2
+      await page.mouse.move(spot.x + Math.sin(t) * 200, spot.y + (1 - Math.cos(t)) * 90)
+      await nextFrame(page)
+      expect(await ownEdges.count()).toBe(0)
+      expect(await edges.count()).toBe(total - own)
     }
-    for (let i = 1; i <= 90; i++) {
-      const at = path(i)
-      await page.mouse.move(at.x, at.y)
-      counts.push(await page.evaluate(() => new Promise<number>((resolve) => requestAnimationFrame(() => resolve(document.querySelectorAll('.react-flow__edge').length)))))
-    }
+    await expect(ownLabels).toHaveCount(0)
     await page.mouse.up()
-    expect(Math.min(...counts)).toBe(total)
-    await nextFrame(page)
+    await page.waitForTimeout(500)
     await expect(edges).toHaveCount(total)
+    await expect(ownEdges).toHaveCount(own)
+    await expect(ownLabels).toHaveCount(labels)
+    // Every line is drawn again.
+    const pathsAfter = await page.evaluate(() => [...document.querySelectorAll('.react-flow__edge-path')].map((p) => p.getAttribute('d')))
+    expect(pathsAfter.length).toBe(pathsBefore.length)
   })
 }
+
+test('Escape during a drag brings the hidden lines back where they were', async ({ page }) => {
+  await open(page, BOARD_FILE)
+  const spot = await grabbable(page)
+  const edges = page.locator('.react-flow__edge')
+  const total = await edges.count()
+  const pathsBefore = await page.evaluate(() => [...document.querySelectorAll('.react-flow__edge-path')].map((p) => p.getAttribute('d')).sort())
+  await page.mouse.move(spot.x, spot.y)
+  await page.mouse.down()
+  for (let i = 1; i <= 8; i++) {
+    await page.mouse.move(spot.x + i * 10, spot.y + i * 6)
+    await nextFrame(page)
+  }
+  expect(await edges.count()).toBeLessThan(total)
+  await page.keyboard.press('Escape')
+  await nextFrame(page)
+  await expect(edges).toHaveCount(total)
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  await expect(edges).toHaveCount(total)
+  const pathsAfter = await page.evaluate(() => [...document.querySelectorAll('.react-flow__edge-path')].map((p) => p.getAttribute('d')).sort())
+  expect(pathsAfter).toEqual(pathsBefore)
+})
 
 interface Pair {
   from: { id: string; x: number; y: number }

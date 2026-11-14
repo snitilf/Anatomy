@@ -50,18 +50,25 @@ describe.each([
     })
   })
 
-  it('keeps the labels of a moved connection on its line', () => {
-    const { positions, geometry } = setup(board)
+  it('hides the connections of the moved card without solving them again', () => {
+    const { positions, geometry, build } = setup(board)
     const next = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
     const after = moveCard(board, geometry, next, id)
     for (const edgeId of touching(id)) {
       const before = geometry.edges.get(edgeId)!
       const shape = after.edges.get(edgeId)!
-      expect(shape.path).not.toBe(before.path)
-      expect(shape.labelWidth).toBe(before.labelWidth)
-      expect(shape.labelLines).toBe(before.labelLines)
-      expect(Number.isFinite(shape.labelX) && Number.isFinite(shape.labelY)).toBe(true)
+      expect(shape.cheap).toBe(true)
+      expect(shape.path).toBe(before.path)
     }
+    // A second frame of the same drag keeps the same objects, so nothing is redrawn.
+    const again = moveCard(board, after, { ...next, [id]: { ...next[id]!, x: next[id]!.x + 5 } }, id)
+    for (const edgeId of touching(id)) expect(again.edges.get(edgeId)).toBe(after.edges.get(edgeId))
+    const hidden = new Set(
+      build(next, after, id)
+        .edges.filter((e) => e.hidden)
+        .map((e) => e.id),
+    )
+    expect(hidden).toEqual(new Set(touching(id)))
   })
 
   it('hands React Flow the same objects for everything that did not change', () => {
