@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowRight, Circle, Link2, MoveUpRight, PenLine, Square, SquareDashed, StickyNote, Type, Unlink, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Type, Unlink, type LucideIcon } from 'lucide-react'
 import { Fragment, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
@@ -142,7 +142,7 @@ export function LinkView({ board, link }: { board: Board; link: Link }) {
 }
 
 const MARK: Record<Mark['kind'], { word: string; icon: LucideIcon }> = {
-  stroke: { word: 'Drawing', icon: PenLine },
+  stroke: { word: 'Drawing', icon: Pen },
   rect: { word: 'Rectangle', icon: Square },
   ellipse: { word: 'Ellipse', icon: Circle },
   arrow: { word: 'Arrow', icon: MoveUpRight },
@@ -236,7 +236,7 @@ export function ProposalView({ board, proposal }: { board: Board; proposal: Prop
     <div className={styles.view}>
       <div className={styles.head}>
         <BackButton />
-        <Heading icon={SquareDashed}>{proposal.label}</Heading>
+        <Heading icon={SquarePlus}>{proposal.label}</Heading>
         <p className={styles.meta}>New part</p>
       </div>
       <SavedField label="Name" value={proposal.label} max={LAYER_LIMITS.partLabel} onSave={(label) => label && dispatch({ type: 'proposalChanged', id: proposal.id, change: { label } })} />

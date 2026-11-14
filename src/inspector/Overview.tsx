@@ -1,4 +1,4 @@
-import { ArrowRight, Check, CircleHelp, Link2, Play, Shapes, SquareDashed, StickyNote, Spline, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Check, CircleHelp, Link2, Play, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { SourceNote } from '../app/SourceNote'
@@ -43,7 +43,7 @@ function yoursRows(board: Board, layer: Layer): YoursRow[] {
     rows.push({ key: l.id, icon: Link2, text: l.label || 'Link', where: `${name(l.from)} to ${name(l.to)}`, sent: wasSent(layer, l), select: { type: 'link', id: l.id } })
   }
   for (const p of layer.proposals) {
-    rows.push({ key: p.id, icon: SquareDashed, text: p.label, where: 'New part', sent: wasSent(layer, p), select: { type: 'proposal', id: p.id } })
+    rows.push({ key: p.id, icon: SquarePlus, text: p.label, where: 'New part', sent: wasSent(layer, p), select: { type: 'proposal', id: p.id } })
   }
   for (const m of layer.marks) {
     const text = m.kind === 'text' || m.kind === 'sticky' ? m.text || MARK_WORD[m.kind] : (m.note ?? MARK_WORD[m.kind])
