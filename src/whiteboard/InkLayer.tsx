@@ -98,10 +98,10 @@ const Shapes = memo(function Shapes({ marks, selected, moving, handlers }: { mar
 })
 
 /** Arrows follow the parts and connections they are attached to, so they draw again when those move. */
-function Arrows({ marks, scene, selected, moving, handlers }: { marks: readonly Ink[]; scene: Scene; selected: string | undefined; moving: Moving | undefined; handlers: Handlers }) {
+function Arrows({ marks, scene, selected, moving, handlers, hidden }: { marks: readonly Ink[]; scene: Scene; selected: string | undefined; moving: Moving | undefined; handlers: Handlers; hidden: ReadonlySet<string> | undefined }) {
   return (
     <>
-      {marks.map((m) => (m.kind === 'arrow' ? <ArrowMark key={m.id} mark={moving?.id === m.id ? (translateMark(m, moving.dx, moving.dy) as Arrow) : m} scene={scene} selected={m.id === selected} handlers={handlers} /> : null))}
+      {marks.map((m) => (m.kind === 'arrow' && !hidden?.has(m.id) ? <ArrowMark key={m.id} mark={moving?.id === m.id ? (translateMark(m, moving.dx, moving.dy) as Arrow) : m} scene={scene} selected={m.id === selected} handlers={handlers} /> : null))}
     </>
   )
 }
@@ -114,6 +114,8 @@ export interface InkLayerProps {
   interactive: boolean
   onSelect(id: string): void
   onMoved(id: string, mark: Mark): void
+  /** Arrows that are not drawn: those attached to a card in hand or to a line that is hidden until the drop. */
+  hidden?: ReadonlySet<string>
   /** Drawn on top of the marks, in board coordinates: the end handles of the selection. */
   children?: ReactNode
 }
@@ -122,7 +124,7 @@ export interface InkLayerProps {
  * Strokes, rectangles, ellipses, and arrows, in one SVG in board coordinates above the cards.
  * Only the lines take the pointer, through a wide invisible copy of each, so the cards under a shape stay reachable.
  */
-export function InkLayer({ marks, scene, selected, interactive, onSelect, onMoved, children }: InkLayerProps) {
+export function InkLayer({ marks, scene, selected, interactive, onSelect, onMoved, hidden, children }: InkLayerProps) {
   const flow = useReactFlow()
   const [moving, setMoving] = useState<Moving | undefined>(undefined)
   const inkMarks = useMemo(() => marks.filter(isInk), [marks])
@@ -188,7 +190,7 @@ export function InkLayer({ marks, scene, selected, interactive, onSelect, onMove
           </marker>
         </defs>
         <Shapes marks={inkMarks} selected={selected} moving={moving} handlers={handlers} />
-        <Arrows marks={inkMarks} scene={scene} selected={selected} moving={moving} handlers={handlers} />
+        <Arrows marks={inkMarks} scene={scene} selected={selected} moving={moving} handlers={handlers} hidden={hidden} />
         {box && <rect className={styles.selection} {...inflate(box, 6)} rx={4} />}
         {children}
       </svg>

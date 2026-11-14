@@ -107,6 +107,17 @@ test('the whiteboard: draw, write, propose, re-point, undo, and everything comes
   await expect(page.locator('[data-mark]')).toHaveCount(3)
   await expect(page.getByRole('complementary').getByText(/^From/)).toBeVisible()
 
+  // The arrow follows nothing while its card is in hand, and is back when the drag is cancelled.
+  const grab = { x: c.x + c.width / 2, y: c.y + c.height / 2 }
+  await page.mouse.move(grab.x, grab.y)
+  await page.mouse.down()
+  await page.mouse.move(grab.x + 40, grab.y + 30, { steps: 4 })
+  await expect(page.locator('[data-mark]')).toHaveCount(2)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-mark]')).toHaveCount(3)
+  await page.mouse.up()
+  await expect(page.locator('[data-mark]')).toHaveCount(3)
+
   // A sticky note with words on it.
   await page.keyboard.press('s')
   await page.mouse.click(map.x + map.width - 160, map.y + 120)
