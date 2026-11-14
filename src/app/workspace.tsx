@@ -210,7 +210,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       markPersisted({ sink: BROWSER, board: stored.board, json: JSON.stringify(layer) })
       setOrigin(isExampleBoard(stored.board.id) ? 'example' : 'file')
       void store.setLastOpened({ mode: 'file', boardId: stored.board.id }).catch(() => {})
-      dispatch({ type: 'boardOpened', board: stored.board, layer, warnings: stored.warnings })
+      dispatch({ type: 'boardOpened', board: stored.board, layer, warnings: stored.warnings, now: new Date() })
     },
     [dispatch, leaveFolder, markPersisted, notice],
   )
@@ -242,7 +242,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
           onBoard: (next, warnings) => {
             const open = appStore.getState().board
             // A new revision of the open board goes through the update review. Anything else opens like the folder itself.
-            if (open?.id === next.id) dispatch({ type: 'boardOpened', board: next, warnings, previous: open })
+            if (open?.id === next.id) dispatch({ type: 'boardOpened', board: next, warnings, previous: open, now: new Date() })
             else void openFolderLater.current(target)
           },
         })
@@ -276,7 +276,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       setFolder({ folder: target, state: 'open' })
       setOrigin('folder')
       markPersisted({ sink: sinkRef.current, board: parsed.board, json: JSON.stringify(found.layer) })
-      dispatch({ type: 'boardOpened', board: parsed.board, layer: found.layer, warnings: parsed.warnings })
+      dispatch({ type: 'boardOpened', board: parsed.board, layer: found.layer, warnings: parsed.warnings, now: new Date() })
       if (found.backedUp) notice(`${FILES.layer} could not be read, so it was kept as ${FILES.layerBackup} and a new one starts.`)
       watch(file.stamp)
     },

@@ -20,6 +20,7 @@ export const LAYER_LIMITS = {
   proposals: 60,
   reconnects: 200,
   archive: 1000,
+  answers: 1000,
   sentItems: 3000,
   noteText: 2000,
   markText: 2000,
@@ -151,8 +152,8 @@ export const reconnect = z
 
 /** The agent's answer to one item, from the `responses` of a board revision. */
 export const response = z.strictObject({
-  /** The feedback the answer belongs to. */
-  respondsTo: ownId('feedback'),
+  /** The feedback the answer belongs to, as the board names it. */
+  respondsTo: boardId,
   status: z.enum(['adopted', 'declined', 'answered']),
   text: z.string().trim().max(LAYER_LIMITS.responseText),
   changed: z.array(boardId).max(LAYER_LIMITS.changed),
@@ -169,6 +170,9 @@ export const archiveEntry = z.discriminatedUnion('type', [
   archived('proposal', proposal),
   archived('reconnect', reconnect),
 ])
+
+/** The agent's latest answer to one of the user's items that is still on the map. */
+export const answer = z.strictObject({ id: z.string().max(64), response })
 
 /** What the last sends to the agent contained, so the next send holds only what is new or changed. */
 export const sent = z.strictObject({
@@ -193,6 +197,8 @@ export const layerSchema = z.strictObject({
   proposals: z.array(proposal).max(LAYER_LIMITS.proposals),
   reconnects: z.array(reconnect).max(LAYER_LIMITS.reconnects),
   archive: z.array(archiveEntry).max(LAYER_LIMITS.archive),
+  /** Answers the agent gave to items still on the map. Layers written before answers were kept have none. */
+  answers: z.array(answer).max(LAYER_LIMITS.answers).default([]),
   sent: sent.optional(),
 })
 
@@ -206,6 +212,7 @@ export type Proposal = z.infer<typeof proposal>
 export type Reconnect = z.infer<typeof reconnect>
 export type Response = z.infer<typeof response>
 export type ArchiveEntry = z.infer<typeof archiveEntry>
+export type Answer = z.infer<typeof answer>
 export type Sent = z.infer<typeof sent>
 export type NoteStatus = 'current' | 'possibly-outdated' | 'needs-relinking'
 
@@ -226,6 +233,7 @@ export function emptyLayer(boardId: string): Layer {
     proposals: [],
     reconnects: [],
     archive: [],
+    answers: [],
   }
 }
 

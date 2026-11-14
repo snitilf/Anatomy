@@ -15,6 +15,7 @@ import {
   findItem,
   moveCards,
   newId,
+  receiveAnswers,
   reconnect,
   relinkNote,
   resizeCard,
@@ -207,6 +208,86 @@ describe('archive', () => {
     expect(restoreArchived(archived, 'note-aaaaaa').archive).toEqual([])
     expect(dropArchived(archived, 'note-aaaaaa').archive).toEqual([])
     expect(archiveItems(l, [{ id: 'note-ghost1', response }], t1)).toBe(l)
+  })
+})
+
+describe('answers from a revision', () => {
+  /** The next revision of a board, answering the user's items. */
+  function answering(board: ReturnType<typeof nordetBoard>, items: { feedbackId: string; status: 'adopted' | 'declined' | 'answered'; text: string; changed: string[] }[]) {
+    const next = clone(board)
+    next.revision = board.revision + 1
+    next.responses = { respondsTo: 'feedback-aaaaaa', items }
+    return next
+  }
+
+  it('archives an adopted reconnect whose changes are on the board, and keeps declined and answered items with their answer', () => {
+    for (const board of [nordetBoard(), anatomyBoard()]) {
+      const rel = board.relationships[0]!
+      const other = board.components.find((c) => c.id !== rel.from && c.id !== rel.to)!
+      let layer = addNote(emptyLayer(board.id), board, { kind: 'question', text: 'Why?', target: { type: 'board' } }, t0, 'note-aaaaaa')
+      layer = addNote(layer, board, { kind: 'note', text: 'Split it.', target: { type: 'board' } }, t0, 'note-bbbbbb')
+      const moved = reconnect(layer, board, { relationshipId: rel.id, end: 'to', part: other.id }, t0, 'edit-aaaaaa')
+      if (!moved.ok) throw new Error('reconnect')
+      layer = moved.layer
+      const next = answering(board, [
+        { feedbackId: 'edit-aaaaaa', status: 'adopted', text: 'Moved it.', changed: [rel.id] },
+        { feedbackId: 'note-aaaaaa', status: 'answered', text: 'Because.', changed: [] },
+        { feedbackId: 'note-bbbbbb', status: 'declined', text: 'Too small.', changed: [] },
+        { feedbackId: 'note-gone00', status: 'answered', text: 'Nothing here.', changed: [] },
+      ])
+      next.relationships[0] = { ...rel, to: other.id }
+      const after = receiveAnswers(layer, next, t1)
+      expect(after.reconnects).toEqual([])
+      expect(after.archive.map((e) => [e.item.id, e.response.status, e.archivedAt])).toEqual([['edit-aaaaaa', 'adopted', t1.toISOString()]])
+      expect(after.notes.map((n) => n.id)).toEqual(['note-aaaaaa', 'note-bbbbbb'])
+      expect(after.answers.map((a) => [a.id, a.response.status, a.response.respondsTo])).toEqual([
+        ['note-aaaaaa', 'answered', 'feedback-aaaaaa'],
+        ['note-bbbbbb', 'declined', 'feedback-aaaaaa'],
+      ])
+      expect(layerSchema.safeParse(after).success).toBe(true)
+      // The same revision opening again changes nothing.
+      expect(receiveAnswers(after, next, t1)).toBe(after)
+    }
+  })
+
+  it('keeps an adopted item on the map when what it names is not on the board', () => {
+    const board = nordetBoard()
+    const layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'Add a queue.', target: { type: 'board' } }, t0, 'note-aaaaaa')
+    for (const changed of [[], ['no-such-part']]) {
+      const after = receiveAnswers(layer, answering(board, [{ feedbackId: 'note-aaaaaa', status: 'adopted', text: 'Added.', changed }]), t1)
+      expect(after.notes).toHaveLength(1)
+      expect(after.archive).toEqual([])
+      expect(after.answers[0]?.response.status).toBe('adopted')
+    }
+  })
+
+  it('a restored item keeps its answer and is not archived again by the same revision', () => {
+    const board = nordetBoard()
+    const part = board.components[0]!
+    const layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'Rename it.', target: { type: 'component', id: part.id } }, t0, 'note-aaaaaa')
+    const next = answering(board, [{ feedbackId: 'note-aaaaaa', status: 'adopted', text: 'Renamed.', changed: [part.id] }])
+    const archived = receiveAnswers(layer, next, t1)
+    expect(archived.notes).toEqual([])
+    const restored = restoreArchived(archived, 'note-aaaaaa')
+    expect(restored.notes.map((n) => n.id)).toEqual(['note-aaaaaa'])
+    expect(restored.answers.map((a) => a.id)).toEqual(['note-aaaaaa'])
+    expect(receiveAnswers(restored, next, t1)).toBe(restored)
+  })
+
+  it('dismissing archives the item and its answer; deleting an item drops its answer', () => {
+    const board = nordetBoard()
+    let layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'x', target: { type: 'board' } }, t0, 'note-aaaaaa')
+    layer = addNote(layer, board, { kind: 'note', text: 'y', target: { type: 'board' } }, t0, 'note-bbbbbb')
+    const next = answering(board, [
+      { feedbackId: 'note-aaaaaa', status: 'declined', text: 'No.', changed: [] },
+      { feedbackId: 'note-bbbbbb', status: 'answered', text: 'Yes.', changed: [] },
+    ])
+    layer = receiveAnswers(layer, next, t1)
+    const response = layer.answers[0]!.response
+    const dismissed = archiveItems(layer, [{ id: 'note-aaaaaa', response }], t1)
+    expect(dismissed.answers.map((a) => a.id)).toEqual(['note-bbbbbb'])
+    expect(dismissed.archive[0]?.response).toEqual(response)
+    expect(deleteNote(dismissed, 'note-bbbbbb').answers).toEqual([])
   })
 })
 
