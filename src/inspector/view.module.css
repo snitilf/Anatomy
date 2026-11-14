@@ -178,6 +178,11 @@
   opacity: 1;
 }
 
+.wraps {
+  white-space: normal;
+  text-wrap: pretty;
+}
+
 .inlineArrow {
   margin: 0 4px;
   vertical-align: -2px;

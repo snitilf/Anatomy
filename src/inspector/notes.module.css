@@ -298,3 +298,16 @@
     font-size: 16px;
   }
 }
+
+/* A moved connection in Review: where it was, and where the user asked for it. Wraps, so both names stay readable. */
+.route {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  text-wrap: pretty;
+}
+
+.route s {
+  color: var(--fg-3);
+}
