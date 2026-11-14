@@ -1,5 +1,5 @@
 import type { Board } from '../board/schema'
-import type { Target } from '../overlay/types'
+import type { Target } from '../layer/model'
 
 /** A target as the plain value of a select option. */
 export function encodeTarget(target: Target): string {

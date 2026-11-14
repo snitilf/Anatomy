@@ -1,9 +1,10 @@
+import { placeCards } from '../layout/cards'
 import { act, fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 import { AppStoreContext } from '../app/store'
 import { initialState, reducer, type Action } from '../app/state'
-import { nordetBoard } from '../overlay/testBoards'
+import { nordetBoard } from '../layer/testBoards'
 import { Canvas } from './Canvas'
 
 const ID = nordetBoard().components[0]!.id
@@ -29,7 +30,7 @@ function setup(walkthrough = false) {
   const press = (x = 100, y = 100) => fireEvent(node(), mouse('mousedown', x, y))
   const move = (x: number, y: number) => fireEvent(window, mouse('mousemove', x, y))
   const release = (x: number, y: number) => fireEvent(window, mouse('mouseup', x, y))
-  const moves = () => dispatch.mock.calls.map(([a]) => a).filter((a) => a.type === 'cardMoved')
+  const moves = () => dispatch.mock.calls.map(([a]) => a).filter((a) => a.type === 'cardsMoved')
   return { state, dispatch, node, press, move, release, moves }
 }
 
@@ -44,10 +45,9 @@ describe('dragging a card', () => {
     act(() => t.release(220, 148))
     expect(t.moves()).toHaveLength(1)
     const [move] = t.moves()
-    expect(move).toMatchObject({ type: 'cardMoved', id: ID })
-    const home = t.state.overlay!.positions[ID]!
+    const home = placeCards(t.state.board!, t.state.layer!)[ID]!
     // The first move only picks the card up, so the card travels from the second pointer position on.
-    expect(move).toMatchObject({ point: { x: home.x + 110, y: home.y + 44 } })
+    expect(move).toEqual({ type: 'cardsMoved', positions: { [ID]: { x: home.x + 110, y: home.y + 44 } } })
   })
 
   it('puts the card back when Escape is pressed, and changes nothing else', () => {
@@ -76,7 +76,7 @@ describe('dragging a card', () => {
     act(() => t.move(110, 104))
     act(() => t.move(180, 150))
     act(() => t.release(180, 150))
-    expect(t.dispatch.mock.calls.map(([a]) => a.type)).toEqual(['cardMoved'])
+    expect(t.dispatch.mock.calls.map(([a]) => a.type)).toEqual(['cardsMoved'])
   })
 
   it('opens the card when a drag starts outside a walkthrough', () => {

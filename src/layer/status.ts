@@ -1,6 +1,6 @@
 import type { Board } from '../board/schema'
 import { fingerprintTarget } from './fingerprint'
-import type { ManualLink, Note, NoteStatus, Overlay } from './types'
+import type { Layer, Link, Note, NoteStatus } from './model'
 
 export function noteStatus(board: Board, note: Note): NoteStatus {
   const current = fingerprintTarget(board, note.target)
@@ -8,25 +8,26 @@ export function noteStatus(board: Board, note: Note): NoteStatus {
   return current === note.targetFingerprint ? 'current' : 'possibly-outdated'
 }
 
-export function manualLinkStatus(board: Board, link: ManualLink): 'current' | 'needs-relinking' {
-  const ids = new Set(board.components.map((c) => c.id))
+/** A link is broken when one of its parts left the board. Links to the user's proposed parts break only with them. */
+export function linkStatus(board: Board, layer: Pick<Layer, 'proposals'>, link: Link): 'current' | 'needs-relinking' {
+  const ids = new Set([...board.components.map((c) => c.id), ...layer.proposals.map((p) => p.id)])
   return ids.has(link.from) && ids.has(link.to) ? 'current' : 'needs-relinking'
 }
 
-export interface OverlaySummary {
+export interface LayerSummary {
   outdated: Note[]
   needsRelinking: Note[]
-  brokenLinks: ManualLink[]
+  brokenLinks: Link[]
 }
 
-export function summarizeOverlay(board: Board, overlay: Overlay): OverlaySummary {
+export function summarizeLayer(board: Board, layer: Pick<Layer, 'notes' | 'links' | 'proposals'>): LayerSummary {
   const outdated: Note[] = []
   const needsRelinking: Note[] = []
-  for (const note of overlay.notes) {
+  for (const note of layer.notes) {
     const status = noteStatus(board, note)
     if (status === 'possibly-outdated') outdated.push(note)
     else if (status === 'needs-relinking') needsRelinking.push(note)
   }
-  const brokenLinks = overlay.manualLinks.filter((l) => manualLinkStatus(board, l) === 'needs-relinking')
+  const brokenLinks = layer.links.filter((l) => linkStatus(board, layer, l) === 'needs-relinking')
   return { outdated, needsRelinking, brokenLinks }
 }

@@ -22,11 +22,11 @@ import { currentStep } from '../scenarios/step'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
-import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
-import type { Point } from '../overlay/types'
-import { newId } from '../overlay/notes'
+import { placeCards, type CardPlacement } from '../layout/cards'
+import type { Point, Rect } from '../layout/geometry'
+import { newId } from '../layer/edits'
 import type { Board } from '../board/schema'
-import type { ManualLink } from '../overlay/types'
+import type { Link } from '../layer/model'
 import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
 import { frame, keepDroppedCardInView } from './camera'
 import { CardNode } from './CardNode'
@@ -72,12 +72,14 @@ function KeepSelectionInView({ takePicked }: { takePicked: () => string | undefi
     }
     const node = flow.getNode(selection.id)
     if (!node) return
+    const w = node.width ?? 0
+    const h = node.height ?? 0
     const { zoom, x, y } = flow.getViewport()
     const left = node.position.x * zoom + x
     const top = node.position.y * zoom + y
-    const visible = left >= 0 && top >= 0 && left + CARD_WIDTH * zoom <= width && top + CARD_HEIGHT * zoom <= height
+    const visible = left >= 0 && top >= 0 && left + w * zoom <= width && top + h * zoom <= height
     if (narrow || !visible) {
-      void flow.setCenter(node.position.x + CARD_WIDTH / 2, node.position.y + CARD_HEIGHT / 2, {
+      void flow.setCenter(node.position.x + w / 2, node.position.y + h / 2, {
         zoom: narrow ? Math.max(zoom, 0.8) : zoom,
         duration: 0,
       })
@@ -248,10 +250,10 @@ function ZoomButtons() {
 /** The map as it is drawn now. While a card moves, the lines are cheap curves. A full build follows the drop. */
 interface View {
   board: Board
-  links: readonly ManualLink[] | undefined
-  /** The stored positions this view was built from. */
-  base: Record<string, Point> | undefined
-  positions: Record<string, Point>
+  links: readonly Link[] | undefined
+  /** The stored positions and sizes this view was built from. */
+  base: CardPlacement | undefined
+  rects: Record<string, Rect>
   geometry: Geometry
   /** The card under the pointer. */
   held?: string
@@ -259,28 +261,36 @@ interface View {
   settle?: number
 }
 
+const NO_PLACEMENT: CardPlacement = { positions: {}, sizes: {} }
+
 /** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
 function fullView(
   board: Board,
-  base: Record<string, Point> | undefined,
-  links: readonly ManualLink[] | undefined,
-  positions = base ?? {},
+  base: CardPlacement | undefined,
+  links: readonly Link[] | undefined,
+  rects = placeCards(board, base ?? NO_PLACEMENT),
   previous?: Geometry,
 ): View {
-  return { board, links, base, positions, geometry: computeGeometry(board, positions, links ?? [], previous) }
+  return { board, links, base, rects, geometry: computeGeometry(board, rects, links ?? [], previous) }
 }
 
-function samePositions(a: Record<string, Point> | undefined, b: Record<string, Point>): boolean {
-  const mine = a ?? {}
-  const keys = Object.keys(mine)
-  return keys.length === Object.keys(b).length && keys.every((k) => b[k]?.x === mine[k]?.x && b[k]?.y === mine[k]?.y)
+function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
+  const keys = Object.keys(a)
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((k) => {
+      const p = a[k]
+      const q = b[k]
+      return p !== undefined && q !== undefined && p.x === q.x && p.y === q.y && p.width === q.width && p.height === q.height
+    })
+  )
 }
 
 function moved(view: View, id: string, point: Point, settle: number): View {
-  const at = view.positions[id]
-  if (at && at.x === point.x && at.y === point.y) return view
-  const positions = { ...view.positions, [id]: { x: point.x, y: point.y } }
-  return { ...view, positions, geometry: moveCard(view.board, view.geometry, positions, id), settle }
+  const at = view.rects[id]
+  if (!at || (at.x === point.x && at.y === point.y)) return view
+  const rects = { ...view.rects, [id]: { ...at, x: point.x, y: point.y } }
+  return { ...view, rects, geometry: moveCard(view.board, view.geometry, rects, id), settle }
 }
 
 /** Arrow keys repeat quickly. The full build and the save wait until they stop. */
@@ -306,25 +316,28 @@ interface Drag {
 }
 
 export function Canvas() {
-  const { board, stored, links, notes, selection, scenario } = useAppStore(
+  const { board, positions, sizes, links, notes, selection, scenario } = useAppStore(
     useShallow((s) => ({
       board: s.board,
-      stored: s.overlay?.positions,
-      links: s.overlay?.manualLinks,
-      notes: s.overlay?.notes,
+      positions: s.layer?.positions,
+      sizes: s.layer?.sizes,
+      links: s.layer?.links,
+      notes: s.layer?.notes,
       selection: s.selection,
       scenario: s.scenario,
     })),
   )
+  const stored = useMemo(() => (positions && sizes ? { positions, sizes } : undefined), [positions, sizes])
   const dispatch = useAppDispatch()
   const [view, setView] = useState<View | undefined>(() => (board ? fullView(board, stored, links) : undefined))
-  // The map is rebuilt in full when the board or the links change, or when positions change from outside the map.
+  // The map is rebuilt in full when the board or the links change, or when positions or sizes change from outside the map.
   let shown = view
   if (board && (!view || view.board !== board || view.links !== links)) {
     shown = fullView(board, stored, links)
     setView(shown)
   } else if (view && stored !== view.base) {
-    shown = samePositions(stored, view.positions) ? { ...view, base: stored } : fullView(view.board, stored, view.links, undefined, view.geometry)
+    const rects = placeCards(view.board, stored ?? NO_PLACEMENT)
+    shown = sameRects(rects, view.rects) ? { ...view, base: stored } : fullView(view.board, stored, view.links, rects, view.geometry)
     setView(shown)
   }
   const viewRef = useRef(shown)
@@ -332,6 +345,19 @@ export function Canvas() {
   const keyMoves = useRef(new Set<string>())
   const pickedOnMap = useRef<string | undefined>(undefined)
   const playing = useRef(false)
+  /** Arrow-key moves are saved together, as one step of undo, once the keys stop. */
+  const saveKeyMoves = useCallback(
+    (current: View) => {
+      const moves: Record<string, Point> = {}
+      for (const id of keyMoves.current) {
+        const rect = current.rects[id]
+        if (rect) moves[id] = { x: rect.x, y: rect.y }
+      }
+      keyMoves.current.clear()
+      if (Object.keys(moves).length > 0) dispatch({ type: 'cardsMoved', positions: moves })
+    },
+    [dispatch],
+  )
   const [cache] = useState(() => new GraphCache())
   const mapBox = useRef<HTMLDivElement>(null)
   const flowRef = useRef<ReactFlowInstance | undefined>(undefined)
@@ -354,7 +380,7 @@ export function Canvas() {
     return counts
   }, [notes])
   const graph = useMemo(
-    () => (board && shown ? assembleGraph(board, shown.positions, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held) : undefined),
+    () => (board && shown ? assembleGraph(board, shown.rects, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held) : undefined),
     [board, shown, selection, step, links, noteCounts, cache],
   )
 
@@ -365,15 +391,11 @@ export function Canvas() {
     const settleNow = () => {
       const current = viewRef.current
       if (!current) return
-      for (const id of keyMoves.current) {
-        const point = current.positions[id]
-        if (point) dispatch({ type: 'cardMoved', id, point })
-      }
-      keyMoves.current.clear()
-      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v.links, v.positions, v.geometry) : v))
+      saveKeyMoves(current)
+      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v.links, v.rects, v.geometry) : v))
     }
     return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
-  }, [settle, shown, dispatch])
+  }, [settle, shown, saveKeyMoves])
 
   // Escape while a card is held puts it back and leaves the selection and focus alone.
   useEffect(() => {
@@ -384,7 +406,7 @@ export function Canvas() {
       event.preventDefault()
       if (held.cancelled) return
       held.cancelled = true
-      setView((v) => (v ? { ...v, positions: held.before.positions, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) } : v))
+      setView((v) => (v ? { ...v, rects: held.before.rects, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) } : v))
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -393,13 +415,9 @@ export function Canvas() {
   // A keyboard move that has not been saved yet is saved when the map goes away.
   useEffect(
     () => () => {
-      const current = viewRef.current
-      for (const id of keyMoves.current) {
-        const point = current?.positions[id]
-        if (point) dispatch({ type: 'cardMoved', id, point })
-      }
+      if (viewRef.current) saveKeyMoves(viewRef.current)
     },
-    [dispatch],
+    [saveKeyMoves],
   )
   const [connecting, setConnecting] = useState(false)
   const connectEndedAt = useRef(-Infinity)
@@ -449,9 +467,10 @@ export function Canvas() {
       })
       if (!held || held.cancelled) return
       keyMoves.current.delete(node.id)
-      dispatch({ type: 'cardMoved', id: node.id, point: node.position })
+      dispatch({ type: 'cardsMoved', positions: { [node.id]: { x: node.position.x, y: node.position.y } } })
       // The card is not held back while it moves. After the drop, a card that landed out of sight is brought back.
-      if (flowRef.current) keepDroppedCardInView(flowRef.current, mapBox.current, node.position, prefersStillness() ? 0 : DROP_PAN_MS)
+      const rect = viewRef.current?.rects[node.id]
+      if (flowRef.current && rect) keepDroppedCardInView(flowRef.current, mapBox.current, { ...rect, ...node.position }, prefersStillness() ? 0 : DROP_PAN_MS)
     },
     [dispatch],
   )

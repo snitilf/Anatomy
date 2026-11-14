@@ -1,7 +1,7 @@
 import { CircleHelp, History, StickyNote, Unlink } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { OVERLAY_LIMITS } from '../overlay/schema'
-import type { Note, NoteStatus } from '../overlay/types'
+import { LAYER_LIMITS } from '../layer/model'
+import type { Note, NoteStatus } from '../layer/model'
 import { useAppDispatch } from '../app/store'
 import styles from './notes.module.css'
 
@@ -74,7 +74,7 @@ export function NoteCard({
             className={styles.textarea}
             aria-label={note.kind === 'note' ? 'Edit your note' : 'Edit your question'}
             value={draft}
-            maxLength={OVERLAY_LIMITS.noteText}
+            maxLength={LAYER_LIMITS.noteText}
             rows={3}
             autoFocus
             onChange={(event) => setDraft(event.target.value)}

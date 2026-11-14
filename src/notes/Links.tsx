@@ -7,10 +7,10 @@ import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
 import { BackButton, Disclosure, Heading, PartButton } from '../inspector/parts'
 import { usePanel } from '../inspector/panelContext'
-import { newId } from '../overlay/notes'
-import { OVERLAY_LIMITS } from '../overlay/schema'
-import { manualLinkStatus } from '../overlay/status'
-import type { ManualLink } from '../overlay/types'
+import { newId } from '../layer/edits'
+import { LAYER_LIMITS } from '../layer/model'
+import { linkStatus } from '../layer/status'
+import type { Link } from '../layer/model'
 import { StatusTag } from './NoteCard'
 import styles from './notes.module.css'
 import { PartSelect } from './TargetSelect'
@@ -21,14 +21,14 @@ function partName(board: Board, id: string): string {
 
 /** The links the user drew at one part, and a keyboard-friendly form to draw another. */
 export function LinksSection({ componentId }: { componentId: string }) {
-  const { board, manualLinks } = useAppStore(useShallow((s) => ({ board: s.board, manualLinks: s.overlay?.manualLinks })))
+  const { board, layer } = useAppStore(useShallow((s) => ({ board: s.board, layer: s.layer })))
   const dispatch = useAppDispatch()
   const { choose } = usePanel()
   const [to, setTo] = useState('')
   const [label, setLabel] = useState('')
-  if (!board || !manualLinks) return null
-  const mine = manualLinks.filter((l) => l.from === componentId || l.to === componentId)
-  const broken = mine.some((l) => manualLinkStatus(board, l) === 'needs-relinking')
+  if (!board || !layer) return null
+  const mine = layer.links.filter((l) => l.from === componentId || l.to === componentId)
+  const broken = mine.some((l) => linkStatus(board, layer, l) === 'needs-relinking')
 
   function add() {
     if (to === '') return
@@ -79,7 +79,7 @@ export function LinksSection({ componentId }: { componentId: string }) {
             id={`link-label-${componentId}`}
             className={styles.input}
             value={label}
-            maxLength={OVERLAY_LIMITS.linkLabel}
+            maxLength={LAYER_LIMITS.linkLabel}
             onChange={(event) => setLabel(event.target.value)}
           />
         </span>
@@ -94,7 +94,7 @@ export function LinksSection({ componentId }: { componentId: string }) {
 }
 
 /** Attaches the missing end of a link to a part that exists now. Never done automatically. */
-export function RelinkLinkEnd({ link, end, board }: { link: ManualLink; end: 'from' | 'to'; board: Board }) {
+export function RelinkLinkEnd({ link, end, board }: { link: Link; end: 'from' | 'to'; board: Board }) {
   const dispatch = useAppDispatch()
   const [chosen, setChosen] = useState('')
   const other = end === 'from' ? link.to : link.from
@@ -141,10 +141,11 @@ function DeleteLink({ id }: { id: string }) {
 export { DeleteLink }
 
 /** The inspector view for a link the user drew. */
-export function LinkDetail({ board, link }: { board: Board; link: ManualLink }) {
+export function LinkDetail({ board, link }: { board: Board; link: Link }) {
   const dispatch = useAppDispatch()
+  const proposals = useAppStore((s) => s.layer?.proposals)
   const [label, setLabel] = useState(link.label)
-  const broken = manualLinkStatus(board, link) === 'needs-relinking'
+  const broken = linkStatus(board, { proposals: proposals ?? [] }, link) === 'needs-relinking'
   const ids = new Set(board.components.map((c) => c.id))
   const changed = label.trim() !== link.label
 
@@ -192,7 +193,7 @@ export function LinkDetail({ board, link }: { board: Board; link: ManualLink }) 
               id="link-label"
               className={styles.input}
               value={label}
-              maxLength={OVERLAY_LIMITS.linkLabel}
+              maxLength={LAYER_LIMITS.linkLabel}
               onChange={(event) => setLabel(event.target.value)}
               onBlur={save}
             />
