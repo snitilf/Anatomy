@@ -63,7 +63,14 @@ A scenario is a teaching sequence, and it does not run anything.
 Show a failure path or an edge case when it helps the learner.
 Label any part of the path that is not built as planned.
 
-## 6. Checklist before you hand over the file
+## 6. Answering feedback
+
+If the user sent feedback (`.anatomy/feedback.json`), write the next revision with a higher `revision` and a `responses` block.
+Set `respondsTo` to the feedback `id`, and answer every item by its `id` with `adopted`, `declined`, or `answered`.
+List in `changed` the IDs you changed for that item.
+See [Responses](board-format.md#responses).
+
+## 7. Checklist before you hand over the file
 
 Run every check before you reply.
 
@@ -77,7 +84,7 @@ Run every check before you reply.
 8. The file parses as JSON and passes `schema/board.v1.schema.json`.
 9. No text promises a guarantee that the material does not state.
 
-## 7. Prompt to paste into your agent
+## 8. Prompt to paste into your agent
 
 Copy this block, replace the placeholders, and send it to your agent.
 
@@ -93,7 +100,7 @@ Do not edit any file except the board file.
 Your final reply must contain only the JSON board file, with no commentary.
 ```
 
-## 8. Minimal valid example
+## 9. Minimal valid example
 
 This example is the smallest board that passes the schema, so it has 2 components.
 A real board has 6 to 12.
