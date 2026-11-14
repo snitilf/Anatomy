@@ -83,7 +83,19 @@ test.describe('zoom bar', () => {
       const dismiss = page.getByRole('button', { name: 'Dismiss' })
       if (await dismiss.count()) await dismiss.first().click()
       const out = page.getByRole('toolbar', { name: 'Zoom' }).getByRole('button', { name: 'Zoom out' })
-      for (let i = 0; i < 12 && (await out.isEnabled()); i++) await out.click()
+      // Each step glides; the button can turn disabled mid-glide, so let the zoom settle before checking it again.
+      for (let i = 0; i < 12 && (await out.isEnabled()); i++) {
+        await out.click()
+        let last = Number.NaN
+        await expect
+          .poll(async () => {
+            const now = await zoomOf(page)
+            const settled = now === last
+            last = now
+            return settled
+          }, { intervals: [60] })
+          .toBe(true)
+      }
       await expect(out).toBeDisabled()
       // The last step glides for 160 ms. A wheel past the limit, once it lands, changes nothing.
       await page.waitForTimeout(300)
