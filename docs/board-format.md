@@ -105,9 +105,38 @@ Boards without `responses` stay valid.
 | `feedbackId` | The `id` of one item in that feedback file. |
 | `status` | `adopted` (the change is now on the board), `declined` (not made, `text` says why), or `answered` (a question or note, answered in `text`). |
 | `text` | The answer, 1 to 600 characters. |
-| `changed` | IDs of the components and relationships this revision changed for the item. Up to 20. |
+| `changed` | IDs of the components and relationships this revision added or changed for the item. Up to 20. |
 
 An ID in `changed` that is not on the board is a warning, not an error.
+
+What Anatomy does with each answer:
+
+- `adopted`, with every ID in `changed` on the board: the user's item moves to an archive, and the map shows the agent's version. The user can restore it.
+- `adopted` with an empty `changed`, or with an ID that is missing: the item stays on the map with the answer next to it.
+- `declined` and `answered`: the item stays with the answer next to it until the user dismisses it.
+
+To adopt a moved connection, change `from` or `to` of the same relationship and keep its ID.
+To adopt a link or a new part, add the relationship or component and list its new ID in `changed`.
+An item with no answer is sent again with the user's next feedback.
+
+### The feedback file
+
+Anatomy writes `.anatomy/feedback.json` (format `anatomy-feedback`, version 1) when the user sends.
+It has an `id`, the `boardId`, the `baseRevision` the user marked, `createdAt`, `items`, and `withdrawn` (items the user deleted after an earlier send).
+Every item has an `id` and a `type`, and describes what the user meant in board terms, never in pixels:
+
+| `type` | Fields |
+| --- | --- |
+| `note`, `question` | `text`, `about` (the board, a part, or a connection), `snapshot` (the target as the user saw it), and `status` when the target changed or left after the note was written. |
+| `link` | `from`, `to`, `label`: a connection the user drew. |
+| `reconnect` | `connection`, and its `was` and `now` ends: the user moved one or both ends. |
+| `new-part` | `label`, `summary`, its `links`, and the parts it sits `near`. |
+| `drawing`, `shape` | `note`, what it `encloses`, and what it `touches`. |
+| `arrow` | `note`, `from`, `to`. An end on a connection has `at`: where along it, from 0 at its start to 1 at its end. |
+| `text`, `sticky` | `text`, `note`, and the parts it is `on`. |
+
+A part is `{ "type": "component" }` for one of the board's components, or `{ "type": "new-part" }` for one the user proposed.
+`missing` names something that is no longer on the board.
 
 ## Text
 
