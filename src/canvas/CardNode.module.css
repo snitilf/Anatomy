@@ -120,6 +120,8 @@
 
 /* Handles for drawing a link. They show when the pointer is on the card, the card has focus, or a link is being drawn. */
 .drawHandle {
+  /* Above the card, so the whole dot takes the pointer, not only the half outside the edge. */
+  z-index: 1;
   width: 10px;
   height: 10px;
   min-width: 0;
