@@ -8,6 +8,9 @@ import { STICKY_SIZE } from './sizes'
 import type { Editing } from './tools'
 import styles from './Editor.module.css'
 
+/** Room added to the measured width of text, so rounding never wraps its last word. */
+const TEXT_SLACK = 2
+
 export interface Typed {
   text: string
   label: string
@@ -49,7 +52,7 @@ export function Editor({
     if (done.current) return
     done.current = true
     const el = first.current
-    onDone({ text, label, summary, ...(editing.kind === 'text' && el ? { size: { width: Math.ceil(el.offsetWidth), height: Math.ceil(el.offsetHeight) } } : {}) })
+    onDone({ text, label, summary, ...(editing.kind === 'text' && el ? { size: { width: Math.ceil(el.offsetWidth) + TEXT_SLACK, height: Math.ceil(el.offsetHeight) } } : {}) })
   }
   const onBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (root.current?.contains(event.relatedTarget as Node | null)) return

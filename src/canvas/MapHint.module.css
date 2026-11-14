@@ -1,8 +1,8 @@
 .hint {
   position: absolute;
   left: 50%;
-  /* The bottom row stays free of cards in the first view, beside the line key and the zoom buttons. */
-  bottom: 12px;
+  /* Above the whiteboard tool bar, which holds the bottom middle of the map. */
+  bottom: 68px;
   z-index: 6;
   display: flex;
   align-items: center;
@@ -39,4 +39,11 @@
 .close:hover {
   background: var(--hover);
   color: var(--fg);
+}
+
+/* A narrow map lifts the tool bar above the zoom bar, so the hint goes higher too. */
+@container map (max-width: 860px) {
+  .hint {
+    bottom: 108px;
+  }
 }
