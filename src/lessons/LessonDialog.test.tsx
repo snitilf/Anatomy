@@ -16,7 +16,7 @@ describe('LessonDialog', () => {
     render(<LessonDialog lessonId="approval-gate" onClose={() => {}} />)
     expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled()
     expect(screen.getByText('Loading lesson')).toBeInTheDocument()
-    expect(await screen.findByText('Teaching model, not live execution', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText('Where the analogy stops', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('says so for an unknown lesson', () => {

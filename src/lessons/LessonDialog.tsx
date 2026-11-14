@@ -1,6 +1,7 @@
 /* oxlint-disable react/static-components -- the lazy component is memoized per lesson id */
 import { Suspense, lazy, useEffect, useMemo, useRef } from 'react'
 import clsx from 'clsx'
+import { X } from 'lucide-react'
 import buttons from '../app/buttons.module.css'
 import { findLesson } from './catalog'
 import styles from './LessonDialog.module.css'
@@ -36,8 +37,8 @@ export function LessonDialog({ lessonId, onClose }: Props) {
     >
       <div className={styles.head}>
         <h2 className={styles.title}>{entry?.title ?? 'Lesson'}</h2>
-        <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={onClose}>
-          Close
+        <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.icon)} onClick={onClose} aria-label="Close" title="Close">
+          <X size={16} strokeWidth={1.5} aria-hidden="true" />
         </button>
       </div>
       {Lesson ? (
