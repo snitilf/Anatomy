@@ -184,3 +184,16 @@
     height: 28px;
   }
 }
+
+/* A part the user proposed has the user's color on its edge. Selection still wins. */
+.card[data-yours] {
+  border-color: var(--yours);
+}
+
+.card[data-yours]:hover {
+  border-color: color-mix(in srgb, var(--yours) 80%, var(--fg));
+}
+
+.card[data-yours][data-selected] {
+  border-color: var(--accent);
+}

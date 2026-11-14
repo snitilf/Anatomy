@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import { useStore, type StoreApi } from 'zustand'
 import { createStore } from 'zustand/vanilla'
+import type { Editing, Tool } from '../whiteboard/tools'
 
 /**
  * The state of the screen around the board: the sidebar, the open menus and dialogs.
@@ -18,6 +19,12 @@ export interface UiState {
   linkPicker: number
   /** Set when a command asks for the note composer. */
   composer: number
+  /** The whiteboard tool in use. */
+  tool: Tool
+  /** Space is held: the map pans from anywhere, whatever the tool. */
+  spaceHand: boolean
+  /** Text being typed on the map. */
+  editing?: Editing | undefined
 }
 
 export const SIDEBAR = { width: 360, min: 300, max: 520 } as const
@@ -58,6 +65,9 @@ export interface UiApi {
   setSheet(stop: UiState['sheet']): void
   askLinkPicker(): void
   askComposer(): void
+  setTool(tool: Tool): void
+  setSpaceHand(held: boolean): void
+  setEditing(editing: Editing | undefined): void
 }
 
 export function createUi(): UiApi {
@@ -70,6 +80,8 @@ export function createUi(): UiApi {
     sheet: 0,
     linkPicker: 0,
     composer: 0,
+    tool: 'select',
+    spaceHand: false,
   }))
   const setSidebar = (sidebar: UiState['sidebar'], persist = true) => {
     store.setState({ sidebar })
@@ -90,6 +102,9 @@ export function createUi(): UiApi {
     setSheet: (sheet) => store.setState({ sheet }),
     askLinkPicker: () => store.setState((s) => ({ linkPicker: s.linkPicker + 1 })),
     askComposer: () => store.setState((s) => ({ composer: s.composer + 1 })),
+    setTool: (tool) => store.setState({ tool }),
+    setSpaceHand: (spaceHand) => store.setState({ spaceHand }),
+    setEditing: (editing) => store.setState({ editing }),
   }
 }
 
