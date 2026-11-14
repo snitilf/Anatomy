@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../app/store'
 import type { Rect } from '../layout/geometry'
-import { clampViewport, zoomAround, type Limits } from './camera'
+import { clampViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 
 const STEP_MS = 220
@@ -47,14 +47,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
     }
     const node = rectOf(selection.id)
     if (!node) return
-    const { zoom, x, y } = flow.getViewport()
-    const left = node.x * zoom + x
-    const top = node.y * zoom + y
-    const visible = left >= 0 && top >= 0 && left + node.width * zoom <= width && top + node.height * zoom <= height
-    if (narrow || !visible) {
-      const z = narrow ? Math.max(zoom, 0.8) : zoom
-      camera.move({ x: width / 2 - (node.x + node.width / 2) * z, y: height / 2 - (node.y + node.height / 2) * z, zoom: z })
-    }
+    const next = viewportFor(flow.getViewport(), camera.size(), node, narrow)
+    if (next) camera.move(next)
   }, [key, selection, board, flow, camera, width, height, takePicked, rectOf])
 
   return null
@@ -181,9 +175,10 @@ export function KeepInLimits({ limits }: { limits: Limits }) {
 const WHEEL_STEP = 1.2
 
 /**
- * Ctrl and wheel zooms, and so does a pinch on a trackpad. A mouse wheel notch sends a large delta, and React Flow
- * turns the largest ones into a jump of several times the size. This takes those events first and keeps each one to
- * a step of about 20 per cent, inside the zoom limits. Small pinch deltas are not changed.
+ * The wheel zooms around the pointer, and so does a pinch on a trackpad (which arrives as Ctrl and wheel). A mouse
+ * wheel notch sends a large delta, and React Flow turns the largest ones into a jump of several times the size. This
+ * takes those events first and keeps each one to a step of about 20 per cent, inside the zoom limits. Small deltas are
+ * not changed. Panning is by dragging the empty map, with Space held, or with the Hand tool.
  */
 export function WheelZoom() {
   const flow = useReactFlow()
@@ -193,11 +188,12 @@ export function WheelZoom() {
     if (!map) return
     const mac = /Mac/i.test(navigator.platform)
     const onWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey || (event.target as Element | null)?.closest('.nowheel')) return
+      if ((event.target as Element | null)?.closest('.nowheel')) return
       event.preventDefault()
       event.stopImmediatePropagation()
       const unit = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002
-      const octaves = -event.deltaY * unit * (mac ? 10 : 1)
+      // A pinch on a Mac sends small deltas, so it is amplified. A wheel notch is not.
+      const octaves = -event.deltaY * unit * (mac && event.ctrlKey ? 10 : 1)
       const limit = Math.log2(WHEEL_STEP)
       const limits = camera.limits()
       const view: Viewport = flow.getViewport()

@@ -1,4 +1,5 @@
 /// <reference lib="dom" />
+import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 import { cardTransform, grabbable, nextFrame, open, viewport } from './helpers.ts'
 
@@ -143,6 +144,96 @@ test.describe('moving and resizing cards', () => {
       expect(Math.abs(now.left - b.left)).toBeLessThan(1.5)
       expect(Math.abs(now.top - b.top)).toBeLessThan(1.5)
     }
+  })
+
+  for (const file of [SIXTEEN, FORTY]) {
+    test(`a card dropped into another group never leaves two group areas overlapping: ${file}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await open(page, file)
+      const dismiss = page.getByRole('button', { name: 'Dismiss' })
+      if (await dismiss.count()) await dismiss.first().click()
+      await page.keyboard.press('Shift+Digit1')
+      await page.waitForTimeout(500)
+      const board = JSON.parse(await readFile(file, 'utf8')) as { components: { id: string; group?: string }[] }
+      const areas = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll<HTMLElement>('.react-flow__node-group-area')].map((n) => {
+            const r = n.getBoundingClientRect()
+            return { id: n.dataset.id ?? '', left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+          }),
+        )
+      const clear = (boxes: Awaited<ReturnType<typeof areas>>, zoom: number) => {
+        const half = Math.max(0, 24 * zoom - 2) / 2
+        const out: string[] = []
+        for (let i = 0; i < boxes.length; i++) {
+          for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i]!
+            const b = boxes[j]!
+            if (a.left - half < b.right + half && a.right + half > b.left - half && a.top - half < b.bottom + half && a.bottom + half > b.top - half) out.push(`${a.id}+${b.id}`)
+          }
+        }
+        return out
+      }
+      const zoom = (await viewport(page)).match(/scale\(([\d.]+)\)/)
+      const z = zoom ? Number(zoom[1]) : 1
+      const groups = await areas()
+      expect(groups.length).toBeGreaterThanOrEqual(2)
+      const mover = board.components.find((c) => c.group !== undefined)!
+      const target = groups.find((g) => g.id !== `group:${mover.group}`)!
+      const card = (await cardBoxes(page)).find((b) => b.id === mover.id)!
+      const from = { x: (card.left + card.right) / 2, y: (card.top + card.bottom) / 2 }
+      const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.react-flow__node-card')?.getAttribute('data-id'), from)
+      expect(hit).toBe(mover.id)
+      await slowDrag(page, from, { x: (target.left + target.right) / 2, y: (target.top + target.bottom) / 2 }, 30)
+      await page.mouse.up()
+      await page.waitForTimeout(600)
+      expect(clear(await areas(), z)).toEqual([])
+      expect(overlapping(await cardBoxes(page))).toEqual([])
+      // One undo puts every card back.
+      const before = groups
+      await page.keyboard.press('ControlOrMeta+z')
+      await page.waitForTimeout(600)
+      const undone = await areas()
+      for (const b of before) {
+        const now = undone.find((x) => x.id === b.id)!
+        expect(Math.abs(now.left - b.left)).toBeLessThan(2)
+        expect(Math.abs(now.top - b.top)).toBeLessThan(2)
+      }
+    })
+  }
+
+  test('the wheel zooms around the pointer, and dragging empty map pans', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await open(page, SHORTENER)
+    await level(page).click()
+    await page.waitForTimeout(300)
+    const pane = (await page.locator('.react-flow__pane').boundingBox())!
+    const at = { x: pane.x + pane.width * 0.3, y: pane.y + pane.height * 0.4 }
+    const view = async () => {
+      const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\) scale\(([\d.]+)\)/.exec(await viewport(page))!
+      return { x: Number(m[1]), y: Number(m[2]), zoom: Number(m[3]) }
+    }
+    const start = await view()
+    await page.mouse.move(at.x, at.y)
+    await page.mouse.wheel(0, -100)
+    await expect.poll(async () => (await view()).zoom).toBeGreaterThan(start.zoom)
+    const zoomed = await view()
+    expect(zoomed.zoom / start.zoom).toBeLessThanOrEqual(1.21)
+    // The board point under the pointer stays under it.
+    const point = (v: { x: number; y: number; zoom: number }) => ({ x: (at.x - pane.x - v.x) / v.zoom, y: (at.y - pane.y - v.y) / v.zoom })
+    expect(point(zoomed).x).toBeCloseTo(point(start).x, 0)
+    expect(point(zoomed).y).toBeCloseTo(point(start).y, 0)
+    await page.mouse.wheel(0, 100)
+    await expect.poll(async () => (await view()).zoom).toBeLessThan(zoomed.zoom)
+    // Dragging empty space pans, and scrolling does not.
+    const before = await view()
+    await page.mouse.move(pane.x + 6, pane.y + pane.height - 6)
+    await page.mouse.down()
+    await page.mouse.move(pane.x + 46, pane.y + pane.height - 40, { steps: 6 })
+    await page.mouse.up()
+    const panned = await view()
+    expect(panned.zoom).toBeCloseTo(before.zoom, 4)
+    expect(Math.abs(panned.x - before.x) + Math.abs(panned.y - before.y)).toBeGreaterThan(5)
   })
 
   test('alignment guides show while a card moves near a neighbor, and go when it drops', async ({ page }) => {

@@ -23,7 +23,7 @@ import { useUi, useUiApi } from '../app/ui'
 import { editsText } from '../commands/keys'
 import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, groupAreas, placeCards, snap, type CardPlacement } from '../layout/cards'
 import type { Point, Rect, Size } from '../layout/geometry'
-import { pushApart } from '../layout/push'
+import { settleMoves } from '../layout/groups'
 import { newId } from '../layer/edits'
 import type { Board } from '../board/schema'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
@@ -62,7 +62,7 @@ const ARIA_LABELS = {
   'edge.a11yDescription.default': 'Press Enter to select this connection. Press Escape to go back to the overview.',
 }
 
-/** The map as it is drawn now. While a card moves, the lines are cheap elbows. A full build follows the drop. */
+/** The map as it is drawn now. While a card moves, its lines are hidden. A full build follows the drop. */
 interface View {
   board: Board
   links: readonly Link[] | undefined
@@ -74,7 +74,7 @@ interface View {
   geometry: Geometry
   /** The card under the pointer, moved or resized. */
   held?: string
-  /** Set while the lines are cheap elbows: milliseconds to wait before the full build. */
+  /** Set while the lines of a moved card are hidden: milliseconds to wait before the full build. */
   settle?: number
 }
 
@@ -111,7 +111,7 @@ function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
   )
 }
 
-/** The cheap update for one card that moved or changed size: only its own lines and its group area are redrawn. */
+/** The cheap update for one card that moved or changed size: its lines are hidden and its group area follows. */
 function changed(view: View, id: string, rect: Rect, settle: number): View {
   const at = view.rects[id]
   if (!at || (at.x === rect.x && at.y === rect.y && at.width === rect.width && at.height === rect.height)) return view
@@ -150,10 +150,12 @@ interface Hold {
   reach: number
 }
 
-/** Moves the cards that a dropped or resized card covers out of its way. Group areas are taken from before the change. */
+/**
+ * Moves the cards that a dropped or resized card covers out of its way, then moves the groups apart so that no two group
+ * areas overlap. Group areas for the push are taken from before the change.
+ */
 function pushAside(view: View, ids: readonly string[], before: View): Record<string, Point> {
-  const groupOf = new Map(view.board.components.map((c) => [c.id, c.group]))
-  return pushApart(view.rects, new Set(ids), { groupOf: (id) => groupOf.get(id), areas: groupAreas(view.board, before.rects) })
+  return settleMoves(view.board, view.rects, ids, before.rects)
 }
 
 /** The cards in the first column on the left, where the flow starts. */
@@ -826,9 +828,8 @@ export function Canvas() {
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
           autoPanOnNodeDrag={false}
-          panOnScroll
-          panOnScrollSpeed={0.8}
-          zoomOnScroll={false}
+          panOnScroll={false}
+          zoomOnScroll
           zoomOnPinch
           onPaneClick={onPaneClick}
           panOnDrag={props.panOnDrag}
