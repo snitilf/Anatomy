@@ -151,5 +151,19 @@ test('dragging a card on a board with 150 strokes and 20 sticky notes stays smoo
   await budget(page, 'drag, 150 strokes and 20 stickies', () => drag(page, spot, 90, 60))
 })
 
-// The pen arrives with the whiteboard. This case turns on with it.
-test.fixme('a pen stroke of 300 moves stays smooth', async () => {})
+test('a pen stroke of 300 moves on forty parts stays smooth, and is saved as one drawing', async ({ page }) => {
+  await open(page, BOARDS[3]!.file)
+  const map = (await page.locator('.react-flow').boundingBox())!
+  await page.keyboard.press('p')
+  const start = { x: map.x + 120, y: map.y + map.height / 2 }
+  await budget(page, 'pen, 300 moves, forty parts', async () => {
+    await page.mouse.move(start.x, start.y)
+    await page.mouse.down()
+    for (let i = 1; i <= 300; i++) {
+      await page.mouse.move(start.x + i * 2, start.y + Math.sin(i / 12) * 80)
+      if (i % 5 === 0) await nextFrame(page)
+    }
+    await page.mouse.up()
+  })
+  await expect(page.locator('[data-mark]')).toHaveCount(1)
+})
