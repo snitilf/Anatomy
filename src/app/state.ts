@@ -19,6 +19,7 @@ import {
   editNote,
   findItem,
   moveCards,
+  moveProposals,
   reconnect,
   recordSent,
   relinkNote,
@@ -58,7 +59,7 @@ export type LayerAction =
   | { type: 'linkAdded'; from: string; to: string; label: string; id: string; now: Date }
   | { type: 'linkEdited'; id: string; change: { from?: string; to?: string; label?: string } }
   | { type: 'linkDeleted'; id: string }
-  /** One drop or one run of arrow keys. Several cards move together when a drop pushes others aside. */
+  /** One drop or one run of arrow keys. Several cards move together when a drop pushes others aside. Proposed parts move too. */
   | { type: 'cardsMoved'; positions: Readonly<Record<string, Point>> }
   /** One resize. `positions` holds the cards it pushed aside, so the whole change is one step of undo. */
   | { type: 'cardResized'; id: string; size: Size; positions?: Readonly<Record<string, Point>> }
@@ -116,8 +117,14 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
   linkAdded: (l, b, a) => addLink(l, b, { from: a.from, to: a.to, label: a.label }, a.now, a.id).layer,
   linkEdited: (l, b, a) => editLink(l, b, a.id, a.change).layer,
   linkDeleted: (l, _b, a) => deleteLink(l, a.id),
-  cardsMoved: (l, b, a) => moveCards(l, onBoard(b, a.positions)),
-  cardResized: (l, b, a) => (b.components.some((c) => c.id === a.id) ? moveCards(resizeCard(l, a.id, a.size), onBoard(b, a.positions ?? {})) : l),
+  cardsMoved: (l, b, a) => moveProposals(moveCards(l, onBoard(b, a.positions)), a.positions),
+  cardResized: (l, b, a) => {
+    const part = b.components.some((c) => c.id === a.id)
+    if (!part && !l.proposals.some((p) => p.id === a.id)) return l
+    const sized = part ? resizeCard(l, a.id, a.size) : updateProposal(l, a.id, { width: a.size.width, height: a.size.height })
+    const pushed = a.positions ?? {}
+    return moveProposals(moveCards(sized, onBoard(b, pushed)), pushed)
+  },
   markAdded: (l, _b, a) => addMark(l, a.mark),
   markChanged: (l, _b, a) => updateMark(l, a.id, () => a.mark),
   markDeleted: (l, _b, a) => deleteMark(l, a.id),

@@ -250,6 +250,18 @@ export function addProposal(layer: Layer, input: Proposal): Layer {
   return parsed.success ? { ...layer, proposals: [...layer.proposals, parsed.data] } : layer
 }
 
+/** Moves proposed parts, as one change. Unknown IDs and points out of range are ignored. */
+export function moveProposals(layer: Layer, moves: Readonly<Record<string, Point>>): Layer {
+  let moved = false
+  const proposals = layer.proposals.map((p) => {
+    const to = Object.hasOwn(moves, p.id) ? moves[p.id] : undefined
+    if (!to || (to.x === p.x && to.y === p.y) || !inRange(to.x, LAYER_LIMITS.coordinate) || !inRange(to.y, LAYER_LIMITS.coordinate)) return p
+    moved = true
+    return { ...p, x: to.x, y: to.y }
+  })
+  return moved ? { ...layer, proposals } : layer
+}
+
 export function updateProposal(layer: Layer, id: string, change: Partial<Omit<Proposal, 'id' | 'createdAt'>>): Layer {
   return mapItem(layer, 'proposal', id, (p) => {
     const parsed = proposalSchema.safeParse({ ...p, ...change })
