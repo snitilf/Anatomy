@@ -286,6 +286,8 @@ export function Canvas() {
   useLayoutEffect(() => {
     boundsRef.current = bounds
   })
+  // What arrow ends attach to, as drawn now. Filled in below, once the map is built.
+  const sceneRef = useRef<Scene>({ rects: {}, lines: new Map() })
   const camera = useMemo<CameraApi>(() => {
     const size = () => {
       const el = mapBox.current
@@ -321,7 +323,15 @@ export function Canvas() {
       else viewport = move(zoomAround(now(), command === 'reset' ? 1 : step, middle), duration)
       glide.heading = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
     }
-    return { limits: current, size, move, frame, zoom, rectOf: (id: string) => viewRef.current?.rects[id] }
+    return {
+      limits: current,
+      size,
+      move,
+      frame,
+      zoom,
+      rectOf: (id: string) => viewRef.current?.rects[id],
+      scene: () => sceneRef.current,
+    }
   }, [])
   const slot = useContext(CameraSlotContext)
   useEffect(() => {
@@ -373,7 +383,6 @@ export function Canvas() {
     }
     return { rects: rectsNow ?? {}, lines }
   }, [board, rectsNow, geometryNow])
-  const sceneRef = useRef(scene)
   useLayoutEffect(() => {
     sceneRef.current = scene
   })

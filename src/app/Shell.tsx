@@ -7,7 +7,7 @@ import { CommandsProvider } from '../commands/CommandsProvider'
 import type { ShellActions } from '../commands/types'
 import { Sidebar } from '../inspector/Sidebar'
 import { WalkthroughBar } from '../scenarios/WalkthroughBar'
-import { agentReadme, FIRST_BOARD_PROMPT } from './agentReadme'
+import { agentReadme, FIRST_BOARD_PROMPT, keepReadme } from './agentReadme'
 import { copyText } from './clipboard'
 import { Dialogs } from './Dialogs'
 import { EmptyState } from './EmptyState'
@@ -137,7 +137,7 @@ function ShellBody() {
           if (ok) toast('Prompt copied')
           else toast('Could not copy. Open How to make a board and copy the prompt there.')
         })
-        void writeFolderFile('README.md', agentReadme(), { onlyIfMissing: true })
+        void writeFolderFile('README.md', agentReadme(), { keep: keepReadme })
       },
     }),
     [dispatch, store, writeFolderFile],

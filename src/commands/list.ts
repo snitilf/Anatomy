@@ -25,6 +25,7 @@ import {
   Redo2,
   Scan,
   Search,
+  Send,
   Spline,
   Square,
   SquarePlus,
@@ -132,6 +133,19 @@ export const COMMANDS: readonly Command[] = [
     unlisted: true,
     inFields: true,
     run: (c) => c.uiApi.setMenuOpen(!c.ui.menuOpen),
+  },
+  {
+    id: 'send',
+    group: 'Board',
+    label: 'Send to agent',
+    icon: Send,
+    keys: ['Mod+Enter'],
+    keywords: ['feedback', 'export', 'prompt'],
+    visible: hasBoard,
+    run: (c) => {
+      c.uiApi.setMenuOpen(false)
+      c.uiApi.setSendOpen(true)
+    },
   },
   {
     id: 'undo',

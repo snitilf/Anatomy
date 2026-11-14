@@ -97,7 +97,7 @@ describe('folder mode', () => {
       const writeText = vi.fn().mockResolvedValue(undefined)
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
       fireEvent.click(main.getByRole('button', { name: 'Copy prompt' }))
-      await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^# Authoring an Anatomy board/))
+      await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^<!-- Written by Anatomy[^]*# Authoring an Anatomy board/))
       expect(writeText).toHaveBeenCalledWith('Read .anatomy/README.md, then write .anatomy/board.json that explains: ')
       await folder.write(FILES.board, exampleRaw)
       await act(() => vi.advanceTimersByTimeAsync(4100))

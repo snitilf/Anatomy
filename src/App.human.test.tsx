@@ -314,7 +314,7 @@ describe('export and open', () => {
     // A keyboard move joins the layer once the keys stop, a quarter of a second later.
     await new Promise((resolve) => setTimeout(resolve, 350))
     const text = await exportText()
-    expect(await screen.findByText('Exported')).toBeInTheDocument()
+    expect(await screen.findByText('Downloaded')).toBeInTheDocument()
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled()
     const file = JSON.parse(text) as { layer: { positions: Record<string, { y: number }> } }
     first.unmount()

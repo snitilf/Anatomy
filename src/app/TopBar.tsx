@@ -4,6 +4,7 @@ import { useCommand, type CommandView } from '../commands/context'
 import buttons from './buttons.module.css'
 import { OpenMenu } from './OpenMenu'
 import { SaveStatus } from './SaveStatus'
+import { SendMenu } from './SendMenu'
 import { SettingsMenu } from './SettingsMenu'
 import { useAppStore } from './store'
 import { Tip } from './Tip'
@@ -85,7 +86,7 @@ export function TopBar() {
             <kbd className={styles.keys}>{menu.shortcut}</kbd>
           </button>
         </Tip>
-        {/* The primary action, Send to agent, takes this place. */}
+        <SendMenu />
         {hasBoard && (
           <Tip label={open ? 'Hide sidebar' : 'Show sidebar'} keys={sidebar.shortcut}>
             <button

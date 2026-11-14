@@ -46,8 +46,15 @@ export interface WorkspaceApi {
   choice: FileChoice | undefined
   openFolder: () => void
   reopenFolder: () => void
-  /** Writes a file into the open folder's `.anatomy` folder. False when no folder is open or the write failed. */
-  writeFolderFile: (file: Extract<FileName, 'feedback.json' | 'README.md'>, text: string, options?: { onlyIfMissing?: boolean }) => Promise<boolean>
+  /**
+   * Writes a file into the open folder's `.anatomy` folder. False when no folder is open or the write failed.
+   * `onlyIfMissing` leaves any existing file alone, and `keep` leaves an existing file alone when it returns true.
+   */
+  writeFolderFile: (
+    file: Extract<FileName, 'feedback.json' | 'README.md'>,
+    text: string,
+    options?: { onlyIfMissing?: boolean; keep?: (existing: string) => boolean },
+  ) => Promise<boolean>
   openText: (fileName: string, text: string, origin?: Exclude<BoardOrigin, 'folder'>) => void
   openSaved: (id: string) => void
   askDelete: (board: BoardSummary | undefined) => void
