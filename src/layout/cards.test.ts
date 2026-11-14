@@ -1,43 +1,130 @@
 import { describe, expect, it } from 'vitest'
+import type { Board } from '../board/schema'
 import { allBoards, anatomyBoard, clone, exampleBoard } from '../layer/testBoards'
-import { CARD_SIZE, defaultLayout, placeCards } from './cards'
-import { overlaps } from './geometry'
+import { autoLayout } from './autoLayout'
+import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, clampSize, contentSize, groupAreas, lineCount, placeCards, summaryLinesFor } from './cards'
+import { overlaps, type Rect } from './geometry'
 
 const none = { positions: {}, sizes: {} }
 
-/** The same board with every starting position removed, so the default slots apply. */
-function withoutPositions<T extends { components: { position?: unknown }[] }>(b: T): T {
+/** The same board with every starting position removed, so the layout places every card. */
+function withoutPositions(b: Board): Board {
   return { ...b, components: b.components.map(({ position: _p, ...rest }) => rest) }
 }
 
-describe('defaultLayout', () => {
-  it('is deterministic and gives every component its own slot', () => {
-    const b = exampleBoard()
-    const a = defaultLayout(b)
-    expect(defaultLayout(clone(b))).toEqual(a)
-    expect(Object.keys(a).sort()).toEqual(b.components.map((c) => c.id).sort())
-    const pts = Object.values(a)
-    expect(new Set(pts.map((p) => `${p.x},${p.y}`)).size).toBe(pts.length)
+function overlapping(rects: readonly Rect[]): number {
+  let count = 0
+  for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) if (overlaps(rects[i]!, rects[j]!)) count++
+  return count
+}
+
+function bounds(rects: readonly Rect[]) {
+  const minX = Math.min(...rects.map((r) => r.x))
+  const minY = Math.min(...rects.map((r) => r.y))
+  return { width: Math.max(...rects.map((r) => r.x + r.width)) - minX, height: Math.max(...rects.map((r) => r.y + r.height)) - minY }
+}
+
+describe('card sizes', () => {
+  it('counts the lines a text wraps to', () => {
+    expect(lineCount('short', 200, 6)).toBe(1)
+    expect(lineCount('a b c d e f g h i j', 60, 6)).toBe(2)
+    expect(lineCount('x'.repeat(70), 120, 6)).toBe(4)
+    expect(lineCount('', 120, 6)).toBe(1)
   })
 
-  it('uses columns of 440 and rows of 240, groups in file order, ungrouped last', () => {
-    const b = clone(anatomyBoard())
-    b.groups = [{ id: 'g1', label: 'One' }, { id: 'g2', label: 'Two' }]
-    b.components = b.components.slice(0, 4).map((c, i) => {
-      const { group: _g, ...rest } = c
-      return i === 0 ? { ...rest, group: 'g2' } : i === 1 ? { ...rest, group: 'g1' } : i === 2 ? { ...rest, group: 'g2' } : rest
-    })
-    const l = defaultLayout(b)
-    const ids = b.components.map((c) => c.id)
-    expect(l[ids[1]!]).toEqual({ x: 0, y: 0 })
-    expect(l[ids[0]!]).toEqual({ x: 440, y: 0 })
-    expect(l[ids[2]!]).toEqual({ x: 440, y: 240 })
-    expect(l[ids[3]!]).toEqual({ x: 880, y: 0 })
+  it('makes a card as tall as its text, on the 8 px grid and within the limits', () => {
+    const short = contentSize({ label: 'Clock', summary: 'Tells the time.' })
+    expect(short).toEqual({ width: CARD_WIDTH, height: CARD_MIN.height })
+    const long = contentSize({ label: 'A rather long title that needs two lines here', summary: 'word '.repeat(60) })
+    expect(long.height).toBeGreaterThan(CARD_MIN.height)
+    expect(long.height % 8).toBe(0)
+    expect(long.height).toBeLessThanOrEqual(CARD_MAX.height)
+  })
+
+  it('leaves no large gap under a two-line summary', () => {
+    const size = contentSize({ label: 'Rule check', summary: 'Compares the order with the rules and the sample date.' })
+    expect(size.height).toBe(CARD_MIN.height)
+    expect(summaryLinesFor({ label: 'Rule check' }, size)).toBeGreaterThanOrEqual(2)
+  })
+
+  it('shows more summary lines on a taller card', () => {
+    const card = { label: 'Rule check' }
+    expect(summaryLinesFor(card, { width: 240, height: 320 })).toBeGreaterThan(summaryLinesFor(card, { width: 240, height: 112 }))
+  })
+
+  it('clamps a size to the limits and snaps it to the grid', () => {
+    expect(clampSize({ width: 100, height: 50 })).toEqual(CARD_MIN)
+    expect(clampSize({ width: 900, height: 900 })).toEqual(CARD_MAX)
+    expect(clampSize({ width: 301, height: 205 })).toEqual({ width: 304, height: 208 })
+  })
+})
+
+describe('autoLayout', () => {
+  it('places every card with no overlap and the same result twice, on every board', () => {
+    for (const board of allBoards().map(withoutPositions)) {
+      const sizeOf = () => ({ ...CARD_SIZE })
+      const a = autoLayout(board, sizeOf)
+      expect(Object.keys(a).sort()).toEqual(board.components.map((c) => c.id).sort())
+      expect(autoLayout(clone(board), sizeOf)).toEqual(a)
+      const rects = Object.values(a).map((p) => ({ ...p, ...CARD_SIZE }))
+      expect(overlapping(rects)).toBe(0)
+    }
+  })
+
+  it('keeps group areas apart, so no group area covers a card of another group', () => {
+    for (const board of allBoards().map(withoutPositions)) {
+      const rects = placeCards(board, none)
+      const areas = groupAreas(board, rects)
+      for (const c of board.components) {
+        for (const [id, area] of Object.entries(areas)) if (id !== c.group) expect(overlaps(area, rects[c.id]!), `${c.id} under ${id}`).toBe(false)
+      }
+      const list = Object.values(areas)
+      expect(overlapping(list)).toBe(0)
+    }
+  })
+
+  it('reads left to right: a connection between groups mostly runs forward', () => {
+    for (const board of allBoards().map(withoutPositions)) {
+      const rects = placeCards(board, none)
+      const forward = board.relationships.filter((r) => rects[r.from]!.x < rects[r.to]!.x).length
+      const backward = board.relationships.filter((r) => rects[r.from]!.x > rects[r.to]!.x).length
+      expect(forward, board.title).toBeGreaterThanOrEqual(backward)
+    }
+  })
+
+  it('stays compact on the sixteen and forty part boards', () => {
+    const [, , , sixteen, forty] = allBoards()
+    for (const board of [sixteen!, forty!]) {
+      const rects = Object.values(placeCards(withoutPositions(board), none))
+      const size = bounds(rects)
+      // A long strip is hard to read at any zoom. The pieces are packed toward a screen-like shape.
+      expect(size.width / size.height).toBeGreaterThan(0.5)
+      expect(size.width / size.height).toBeLessThan(3)
+      const area = rects.reduce((sum, r) => sum + r.width * r.height, 0)
+      expect(area / (size.width * size.height)).toBeGreaterThan(0.12)
+    }
+  })
+
+  it('takes a few milliseconds on the forty part board', () => {
+    const forty = withoutPositions(allBoards()[4]!)
+    const start = performance.now()
+    for (let i = 0; i < 5; i++) placeCards(forty, none)
+    expect((performance.now() - start) / 5).toBeLessThan(60)
+  })
+
+  it('packs cards that no connection joins instead of one long row or column', () => {
+    const b = withoutPositions(clone(exampleBoard()))
+    b.relationships = []
+    b.groups = []
+    b.components = b.components.map(({ group: _g, ...c }) => c)
+    const size = bounds(Object.values(placeCards(b, none)))
+    expect(size.width).toBeLessThan(CARD_WIDTH * 7)
+    expect(size.height).toBeLessThan(CARD_MIN.height * 7)
   })
 })
 
 describe('placeCards', () => {
-  it('prefers the user position, then the board position, then the default slot', () => {
+  it('prefers the user position, then the board position, then the layout', () => {
     const b = clone(anatomyBoard())
     const [a, c] = b.components
     a!.position = { x: 10, y: 20 }
@@ -47,50 +134,55 @@ describe('placeCards', () => {
     expect(r[c!.id]).toMatchObject({ x: -5, y: -6 })
   })
 
-  it('gives each card the default size unless the user resized it', () => {
+  it('sizes each card to its text unless the user resized it', () => {
     const b = exampleBoard()
     const [a, c] = b.components
     const r = placeCards(b, { positions: {}, sizes: { [a!.id]: { width: 400, height: 300 } } })
     expect(r[a!.id]).toMatchObject({ width: 400, height: 300 })
-    expect(r[c!.id]).toMatchObject(CARD_SIZE)
+    expect(r[c!.id]).toMatchObject(contentSize(c!))
   })
 
   it('places cards without a position clear of the cards the board placed, on every board', () => {
     for (const b of allBoards()) {
-      const r = placeCards(b, none)
-      const auto = b.components.filter((c) => c.position === undefined).map((c) => r[c.id]!)
-      for (const x of auto) for (const y of Object.values(r)) if (x !== y) expect(overlaps(x, y)).toBe(false)
-      expect(placeCards(b, none)).toEqual(r)
+      const partial = clone(b)
+      // Half the cards keep a board position, so both kinds meet.
+      partial.components = partial.components.map((c, i) => (i % 2 === 0 ? { ...c, position: { x: (i % 4) * 300, y: Math.floor(i / 4) * 200 } } : (({ position: _p, ...rest }) => rest)(c)))
+      const r = placeCards(partial, none)
+      expect(overlapping(Object.values(r))).toBe(0)
+      expect(placeCards(partial, none)).toEqual(r)
     }
   })
 
-  it('moves nothing else when the user moves or resizes one card', () => {
-    for (const b of allBoards()) {
+  it('keeps the other cards in place when the user moves one to an empty spot', () => {
+    for (const b of allBoards().map(withoutPositions)) {
       const first = b.components[0]!
-      const layout = defaultLayout(b)
-      const last = b.components[b.components.length - 1]!
       const before = placeCards(b, none)
-      // The first card is dropped on the last card's slot, and grown.
-      const r = placeCards(b, { positions: { [first.id]: layout[last.id]! }, sizes: { [first.id]: { width: 420, height: 260 } } })
-      expect(r[first.id]).toMatchObject({ ...layout[last.id], width: 420, height: 260 })
+      const far = { x: -5000, y: -5000 }
+      const r = placeCards(b, { positions: { [first.id]: far }, sizes: {} })
+      expect(r[first.id]).toMatchObject(far)
       for (const c of b.components) if (c.id !== first.id) expect(r[c.id]).toEqual(before[c.id])
     }
   })
 
-  it('keeps a free default slot when there is no collision', () => {
-    const b = withoutPositions(anatomyBoard())
-    const r = placeCards(b, none)
-    for (const [id, p] of Object.entries(defaultLayout(b))) expect(r[id]).toEqual({ ...p, ...CARD_SIZE })
+  it('never leaves a card under one the user moved: the auto-placed card steps aside', () => {
+    for (const b of allBoards().map(withoutPositions)) {
+      const [first, second] = b.components
+      const before = placeCards(b, none)
+      // The first card is dropped right on top of the second one, and grown.
+      const r = placeCards(b, { positions: { [first!.id]: { x: before[second!.id]!.x + 20, y: before[second!.id]!.y + 10 } }, sizes: { [first!.id]: { width: 320, height: 200 } } })
+      for (const c of b.components) if (c.id !== first!.id) expect(overlaps(r[c.id]!, r[first!.id]!), c.id).toBe(false)
+    }
   })
 
-  it('places several new cards below the lowest card of their column', () => {
-    const b = clone(anatomyBoard())
-    b.groups = [{ id: 'g1', label: 'One' }]
-    b.components = withoutPositions(b).components.slice(0, 3).map((c) => ({ ...c, group: 'g1' }))
-    const [a] = b.components
-    a!.position = { x: 0, y: 0 }
-    const r = placeCards(b, none)
-    expect(r[b.components[1]!.id]).toMatchObject({ x: 0, y: 240 })
-    expect(r[b.components[2]!.id]).toMatchObject({ x: 0, y: 480 })
+  it('lays out a card a new revision adds without putting it on a card the user moved', () => {
+    for (const b of allBoards().map(withoutPositions)) {
+      const before = placeCards(b, none)
+      const moved = Object.fromEntries(b.components.slice(0, 3).map((c) => [c.id, { x: before[c.id]!.x + 30, y: before[c.id]!.y + 30 }]))
+      const next = clone(b)
+      next.components.push({ ...next.components[0]!, id: 'added-in-revision-two', label: 'Added later' })
+      next.relationships.push({ ...next.relationships[0]!, id: 'added-connection', from: next.components[1]!.id, to: 'added-in-revision-two' })
+      const r = placeCards(next, { positions: moved, sizes: {} })
+      for (const id of Object.keys(moved)) expect(overlaps(r['added-in-revision-two']!, r[id]!)).toBe(false)
+    }
   })
 })

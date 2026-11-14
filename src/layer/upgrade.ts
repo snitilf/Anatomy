@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Board } from '../board/schema'
 import { formatPath, type BoardProblem } from '../board/validate'
-import { placeCards } from '../layout/cards'
+import { v1Placement } from './v1Layout'
 import { boardId, emptyLayer, layerSchema, LAYER_FORMAT, link, note, type Layer } from './model'
 
 /**
@@ -31,7 +31,7 @@ function problems(error: z.ZodError): BoardProblem[] {
  */
 function movedOnly(positions: OverlayV1['positions'], board: Board | undefined): Layer['positions'] {
   if (!board) return positions
-  const auto = placeCards(board, { positions: {}, sizes: {} })
+  const auto = v1Placement(board)
   const out: Layer['positions'] = {}
   for (const [id, p] of Object.entries(positions)) {
     const a = auto[id]

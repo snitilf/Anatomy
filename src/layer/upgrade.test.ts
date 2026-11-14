@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { placeCards } from '../layout/cards'
+import { v1Placement } from './v1Layout'
 import { emptyLayer, layerSchema, LAYER_LIMITS } from './model'
 import { allBoards, exampleBoard } from './testBoards'
 import { readLayer } from './upgrade'
@@ -20,7 +20,7 @@ function overlayV1(boardId: string, positions: Record<string, { x: number; y: nu
 describe('readLayer', () => {
   it('upgrades a version 1 overlay: frozen default positions go, moved ones stay, on every board', () => {
     for (const board of allBoards()) {
-      const auto = placeCards(board, { positions: {}, sizes: {} })
+      const auto = v1Placement(board)
       const frozen = Object.fromEntries(Object.entries(auto).map(([id, r]) => [id, { x: r.x, y: r.y }]))
       const moved = board.components[0]!.id
       frozen[moved] = { x: -900, y: -900 }
