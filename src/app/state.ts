@@ -20,6 +20,7 @@ import {
   findItem,
   moveCards,
   moveProposals,
+  receiveAnswers,
   reconnect,
   recordSent,
   relinkNote,
@@ -84,6 +85,8 @@ export type Action =
       warnings: BoardProblem[]
       /** The saved version of this board, when it is not the one open now. The changes are measured from it. */
       previous?: Board | undefined
+      /** When it opened. Items the agent adopted are archived with this time. */
+      now?: Date | undefined
     }
   | { type: 'closed' }
   | { type: 'noticeShown'; message: string }
@@ -202,7 +205,8 @@ export function reducer(state: AppState, action: Action): AppState {
       const old = action.previous ?? state.board
       const sameBoard = old !== undefined && old.id === board.id
       const keptLayer = sameBoard && state.layer?.boardId === board.id ? state.layer : undefined
-      const layer = action.layer ?? keptLayer ?? emptyLayer(board.id)
+      // The agent's answers in this revision go next to the user's items, and adopted items that landed are archived.
+      const layer = receiveAnswers(action.layer ?? keptLayer ?? emptyLayer(board.id), board, action.now ?? new Date())
       // A new revision is a barrier: undo never reaches back into the version before it.
       const next: AppState = { board, layer, warnings: action.warnings, history: emptyHistory }
       if (sameBoard) {
