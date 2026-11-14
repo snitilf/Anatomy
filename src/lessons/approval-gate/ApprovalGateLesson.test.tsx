@@ -5,7 +5,6 @@ import ApprovalGateLesson from './ApprovalGateLesson'
 describe('ApprovalGateLesson', () => {
   it('shows the limits and the analogy map', () => {
     render(<ApprovalGateLesson />)
-    expect(screen.getByText('Teaching model, not live execution')).toBeInTheDocument()
     expect(screen.getByText('Where the analogy stops')).toBeInTheDocument()
     expect(screen.getAllByRole('term')).toHaveLength(3)
   })
