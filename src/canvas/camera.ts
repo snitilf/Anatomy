@@ -216,7 +216,9 @@ export function viewportShowing(viewport: Viewport, map: Size & { top: number },
   return { x: x + dx, y: y + dy, zoom }
 }
 
-/** Moves the camera, always inside the limits. */
-export function moveCamera(flow: ReactFlowInstance, viewport: Viewport, limits: Limits, map: Size, duration = 0): void {
-  void flow.setViewport(clampViewport(viewport, limits, map), { duration })
+/** Moves the camera, always inside the limits. Returns where it goes. */
+export function moveCamera(flow: ReactFlowInstance, viewport: Viewport, limits: Limits, map: Size, duration = 0): Viewport {
+  const next = clampViewport(viewport, limits, map)
+  void flow.setViewport(next, { duration })
+  return next
 }

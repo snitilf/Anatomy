@@ -260,7 +260,7 @@ export function Canvas() {
     const current = (): Limits => zoomLimits(boundsRef.current, size())
     const move = (viewport: Viewport, duration = 0) => {
       const flow = flowRef.current
-      if (flow) moveCamera(flow, viewport, current(), size(), duration)
+      return flow ? moveCamera(flow, viewport, current(), size(), duration) : viewport
     }
     return {
       limits: current,
@@ -269,7 +269,7 @@ export function Canvas() {
       frame: (options = {}, duration = 0) => {
         const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
         const start = options.readable ? flowStart(rects) : undefined
-        move(frameViewport(current(), size(), start ? { ...options, start } : options), duration)
+        return move(frameViewport(current(), size(), start ? { ...options, start } : options), duration)
       },
     }
   }, [])

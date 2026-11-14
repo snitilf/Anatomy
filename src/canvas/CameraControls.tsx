@@ -192,6 +192,11 @@ export function WheelZoom() {
       const view: Viewport = flow.getViewport()
       const next = Math.min(limits.maxZoom, Math.max(limits.minZoom, view.zoom * 2 ** Math.max(-limit, Math.min(limit, octaves))))
       if (next === view.zoom) return
+      // Zoomed all the way out, the whole board is in view.
+      if (next <= limits.minZoom + 1e-6) {
+        camera.frame()
+        return
+      }
       // The point under the pointer stays where it is.
       const rect = map.getBoundingClientRect()
       camera.move(zoomAround(view, next, { x: event.clientX - rect.left, y: event.clientY - rect.top }))
