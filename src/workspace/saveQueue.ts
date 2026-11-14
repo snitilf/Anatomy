@@ -1,4 +1,4 @@
-import { StorageError } from './store'
+import { StorageError } from './db'
 
 export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | { error: StorageError }
 

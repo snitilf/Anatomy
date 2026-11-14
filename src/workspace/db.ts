@@ -1,9 +1,8 @@
 import type { Board } from '../board/schema'
-import type { Overlay } from '../overlay/types'
+import type { Layer } from '../layer/model'
 
-export type Namespace = 'home' | 'work'
-
-export const NAMESPACES: Record<Namespace, string> = { home: 'Home', work: 'Work' }
+/** The one browser database. Databases of earlier versions ("anatomy-home", "anatomy-work") are left as they are. */
+export const DB_NAME = 'anatomy'
 
 export interface SavedBoard {
   board: Board
@@ -17,7 +16,7 @@ export interface BoardSummary {
   savedAt: string
 }
 
-export type StorageErrorKind = 'unavailable' | 'quota' | 'blocked' | 'failed'
+export type StorageErrorKind = 'unavailable' | 'quota' | 'blocked' | 'failed' | 'folder'
 
 export class StorageError extends Error {
   readonly kind: StorageErrorKind
@@ -31,12 +30,15 @@ export class StorageError extends Error {
 
 const DB_VERSION = 1
 const BOARDS = 'boards'
-const OVERLAYS = 'overlays'
+const LAYERS = 'layers'
 const META = 'meta'
 const LAST_OPENED = 'lastOpened'
+const FOLDER = 'folder'
+
+/** What to open again after a reload: a board saved in this browser, or the repository folder. */
+export type LastOpened = { mode: 'file'; boardId: string } | { mode: 'folder' }
 
 export interface BoardStore {
-  readonly namespace: Namespace
   /** Newest save first. */
   listBoards(): Promise<BoardSummary[]>
   /**
@@ -45,13 +47,16 @@ export interface BoardStore {
    * and an older version of the app may have written it.
    * The caller must validate both values before using them.
    */
-  loadBoard(id: string): Promise<{ board: Board; overlay: Overlay | undefined } | undefined>
+  loadBoard(id: string): Promise<{ board: unknown; layer: unknown } | undefined>
   saveBoard(board: Board): Promise<void>
-  saveOverlay(overlay: Overlay): Promise<void>
-  /** Removes the board and its overlay in one transaction. */
+  saveLayer(layer: Layer): Promise<void>
+  /** Removes the board and its layer in one transaction. */
   deleteBoard(id: string): Promise<void>
-  getLastOpened(): Promise<string | undefined>
-  setLastOpened(id: string): Promise<void>
+  getLastOpened(): Promise<LastOpened | undefined>
+  setLastOpened(last: LastOpened): Promise<void>
+  /** The stored handle of the repository folder. Untrusted: the caller checks what it is. */
+  getFolder(): Promise<unknown>
+  setFolder(handle: unknown): Promise<void>
   close(): void
 }
 
@@ -77,13 +82,10 @@ function unavailable(cause?: unknown): StorageError {
   })
 }
 
-export async function openStore(
-  ns: Namespace,
-  factory: IDBFactory | undefined = typeof indexedDB === 'undefined' ? undefined : indexedDB,
-): Promise<BoardStore> {
+export async function openStore(factory: IDBFactory | undefined = typeof indexedDB === 'undefined' ? undefined : indexedDB): Promise<BoardStore> {
   if (!factory) throw unavailable()
-  const db = await openDatabase(`anatomy-${ns}`, factory)
-  return createStore(ns, db)
+  const db = await openDatabase(DB_NAME, factory)
+  return createStore(db)
 }
 
 function openDatabase(name: string, factory: IDBFactory): Promise<IDBDatabase> {
@@ -97,7 +99,7 @@ function openDatabase(name: string, factory: IDBFactory): Promise<IDBDatabase> {
     }
     request.onupgradeneeded = () => {
       const db = request.result
-      for (const store of [BOARDS, OVERLAYS, META]) {
+      for (const store of [BOARDS, LAYERS, META]) {
         if (!db.objectStoreNames.contains(store)) db.createObjectStore(store)
       }
     }
@@ -166,9 +168,11 @@ function transact<T>(
   })
 }
 
-function createStore(namespace: Namespace, db: IDBDatabase): BoardStore {
+function createStore(db: IDBDatabase): BoardStore {
+  const getMeta = (key: string) => transact(db, [META], 'readonly', (tx) => tx.objectStore(META).get(key), ([request]): unknown => request?.result)
+  const setMeta = (key: string, value: unknown) =>
+    transact(db, [META], 'readwrite', (tx) => (value === undefined ? tx.objectStore(META).delete(key) : tx.objectStore(META).put(value, key)), () => undefined)
   return {
-    namespace,
 
     listBoards() {
       return transact(
@@ -197,16 +201,13 @@ function createStore(namespace: Namespace, db: IDBDatabase): BoardStore {
     loadBoard(id) {
       return transact(
         db,
-        [BOARDS, OVERLAYS],
+        [BOARDS, LAYERS],
         'readonly',
-        (tx) => [tx.objectStore(BOARDS).get(id), tx.objectStore(OVERLAYS).get(id)],
-        ([boardRequest, overlayRequest]) => {
-          const saved = boardRequest?.result as SavedBoard | undefined
+        (tx) => [tx.objectStore(BOARDS).get(id), tx.objectStore(LAYERS).get(id)],
+        ([boardRequest, layerRequest]) => {
+          const saved = boardRequest?.result as Partial<SavedBoard> | undefined
           if (saved === undefined) return undefined
-          return {
-            board: saved.board,
-            overlay: overlayRequest?.result as Overlay | undefined,
-          }
+          return { board: saved.board, layer: layerRequest?.result as unknown }
         },
       )
     },
@@ -216,41 +217,37 @@ function createStore(namespace: Namespace, db: IDBDatabase): BoardStore {
       return transact(db, [BOARDS], 'readwrite', (tx) => tx.objectStore(BOARDS).put(row, board.id), () => undefined)
     },
 
-    saveOverlay(overlay) {
-      return transact(
-        db,
-        [OVERLAYS],
-        'readwrite',
-        (tx) => tx.objectStore(OVERLAYS).put(overlay, overlay.boardId),
-        () => undefined,
-      )
+    saveLayer(layer) {
+      return transact(db, [LAYERS], 'readwrite', (tx) => tx.objectStore(LAYERS).put(layer, layer.boardId), () => undefined)
     },
 
     deleteBoard(id) {
       return transact(
         db,
-        [BOARDS, OVERLAYS],
+        [BOARDS, LAYERS],
         'readwrite',
-        (tx) => [tx.objectStore(BOARDS).delete(id), tx.objectStore(OVERLAYS).delete(id)],
+        (tx) => [tx.objectStore(BOARDS).delete(id), tx.objectStore(LAYERS).delete(id)],
         () => undefined,
       )
     },
 
-    getLastOpened() {
-      return transact(
-        db,
-        [META],
-        'readonly',
-        (tx) => tx.objectStore(META).get(LAST_OPENED),
-        ([request]) => {
-          const value: unknown = request?.result
-          return typeof value === 'string' ? value : undefined
-        },
-      )
+    async getLastOpened() {
+      const value = (await getMeta(LAST_OPENED)) as Partial<Record<string, unknown>> | undefined
+      if (value?.mode === 'folder') return { mode: 'folder' }
+      if (value?.mode === 'file' && typeof value.boardId === 'string') return { mode: 'file', boardId: value.boardId }
+      return undefined
     },
 
-    setLastOpened(id) {
-      return transact(db, [META], 'readwrite', (tx) => tx.objectStore(META).put(id, LAST_OPENED), () => undefined)
+    setLastOpened(last) {
+      return setMeta(LAST_OPENED, last)
+    },
+
+    getFolder() {
+      return getMeta(FOLDER)
+    },
+
+    setFolder(handle) {
+      return setMeta(FOLDER, handle)
     },
 
     close() {
