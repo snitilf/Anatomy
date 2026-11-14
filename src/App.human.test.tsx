@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -71,16 +71,41 @@ function readBlob(blob: Blob): Promise<string> {
 }
 
 async function loadExample() {
-  press(screen.getByRole('button', { name: 'Load an example' }))
-  fireEvent.click(await screen.findByRole('menuitem', { name: /Example check-in/ }))
+  fireEvent.click(screen.getByRole('button', { name: /Example check-in/ }))
+  await screen.findByTestId('inspector')
 }
 
 function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: number; y: number } {
   const positions = (stored as { layer: { positions: Record<string, { x: number; y: number }> } }).layer.positions
   return positions[id]!
 }
-const links = () => within(screen.getByTestId('inspector')).getByText('Your links').closest('details')!
+const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Flow' })
 const panel = () => within(screen.getByTestId('inspector'))
+
+/** Picks a row in an open picker or the command menu. */
+async function pick(name: RegExp | string) {
+  fireEvent.click(await screen.findByRole('option', { name }))
+}
+
+/** Links the selected part to another one through the flow block's picker. */
+async function addLink(to: string, label = '') {
+  press(panel().getByRole('button', { name: 'Add link' }))
+  await pick(new RegExp(`^${to}`))
+  const field = await panel().findByRole('textbox', { name: 'Label' })
+  fireEvent.change(field, { target: { value: label } })
+  fireEvent.submit(field.closest('form')!)
+}
+
+async function runCommand(name: string) {
+  act(() => {
+    fireEvent.keyDown(document.body, { key: 'k', metaKey: true })
+  })
+  const menu = within(await screen.findByRole('dialog', { name: 'Command menu' }))
+  fireEvent.click(menu.getByRole('option', { name: new RegExp(name) }))
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument())
+  // The menu runs a command once it has closed.
+  await act(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))))
+}
 
 function selectPart(id: string) {
   fireEvent.click(panel().getAllByRole('button', { name: new RegExp(`^${part(id).label}`) })[0]!)
@@ -90,12 +115,13 @@ function selectPart(id: string) {
 function addNote(text: string, kind: 'Note' | 'Question' = 'Note') {
   const group = panel().getByRole('radiogroup', { name: 'Kind' })
   fireEvent.click(within(group).getByRole('radio', { name: kind }))
-  fireEvent.change(panel().getByRole('textbox', { name: new RegExp(`^Your ${kind.toLowerCase()}$`) }), { target: { value: text } })
-  fireEvent.click(panel().getByRole('button', { name: `Add ${kind.toLowerCase()}` }))
+  fireEvent.change(panel().getByRole('textbox', { name: `Add a ${kind.toLowerCase()}` }), { target: { value: text } })
+  fireEvent.click(panel().getByRole('button', { name: 'Add' }))
 }
 
+/** Waits for a confirmed write. The status reads Saved during a short write too, so the state is read, not the text. */
 async function saved() {
-  await screen.findByText('Saved', {}, { timeout: 3000 })
+  await waitFor(() => expect(document.querySelector('[role="status"][data-state="saved"]')).not.toBeNull(), { timeout: 3000 })
 }
 
 async function openFile(container: HTMLElement, text: string, name = 'board.json') {
@@ -104,7 +130,7 @@ async function openFile(container: HTMLElement, text: string, name = 'board.json
 }
 
 async function exportText(): Promise<string> {
-  fireEvent.click(screen.getByRole('button', { name: 'Export' }))
+  await runCommand('Download a copy')
   return readBlob(blobs[blobs.length - 1]!)
 }
 
@@ -129,17 +155,20 @@ describe('your notes', () => {
     addNote('Ask legal who signs off')
     const item = panel().getByText('Ask legal who signs off').closest('li')!
     expect(item).toHaveAttribute('data-yours')
-    expect(within(item).getByText('Note')).toBeInTheDocument()
+    expect(within(item).getByText(/^Note/)).toBeInTheDocument()
 
-    fireEvent.click(within(item).getByRole('button', { name: 'Edit' }))
+    fireEvent.click(within(item).getByRole('button', { name: 'Edit note' }))
     fireEvent.change(within(item).getByRole('textbox'), { target: { value: 'Ask legal and finance' } })
     fireEvent.click(within(item).getByRole('button', { name: 'Save' }))
     expect(panel().getByText('Ask legal and finance')).toBeInTheDocument()
     expect(panel().queryByText('Ask legal who signs off')).not.toBeInTheDocument()
 
-    fireEvent.click(panel().getByRole('button', { name: 'Delete' }))
+    // Delete acts at once, and the toast offers the way back.
     fireEvent.click(panel().getByRole('button', { name: 'Delete note' }))
     expect(panel().queryByText('Ask legal and finance')).not.toBeInTheDocument()
+    const toast = (await screen.findByText('Note deleted')).closest('li')!
+    fireEvent.click(within(toast).getByRole('button', { name: 'Undo' }))
+    expect(panel().getByText('Ask legal and finance')).toBeInTheDocument()
   })
 
   it('adds a question to a connection, and counts it on the card', async () => {
@@ -149,7 +178,7 @@ describe('your notes', () => {
     fireEvent.click(panel().getAllByRole('button', { name: new RegExp(rel.label) })[0]!)
     addNote('What if the version is stale?', 'Question')
     const item = panel().getByText('What if the version is stale?').closest('li')!
-    expect(within(item).getByText('Question')).toBeInTheDocument()
+    expect(within(item).getByText(/^Question/)).toBeInTheDocument()
 
     selectPart('approval')
     addNote('One more')
@@ -159,7 +188,7 @@ describe('your notes', () => {
   it('shows a counter only near the limit', async () => {
     render(<App />)
     await loadExample()
-    const box = panel().getByRole('textbox', { name: 'Your note' })
+    const box = panel().getByRole('textbox', { name: 'Add a note' })
     fireEvent.change(box, { target: { value: 'a'.repeat(100) } })
     expect(panel().queryByText(/of 2000/)).not.toBeInTheDocument()
     fireEvent.change(box, { target: { value: 'a'.repeat(1950) } })
@@ -169,33 +198,34 @@ describe('your notes', () => {
   it('adds with Ctrl+Enter', async () => {
     render(<App />)
     await loadExample()
-    fireEvent.change(panel().getByRole('textbox', { name: 'Your note' }), { target: { value: 'Whole board thought' } })
-    fireEvent.keyDown(panel().getByRole('textbox', { name: 'Your note' }), { key: 'Enter', ctrlKey: true })
-    expect(panel().getByText('Whole board thought')).toBeInTheDocument()
+    fireEvent.change(panel().getByRole('textbox', { name: 'Add a note' }), { target: { value: 'Whole board thought' } })
+    fireEvent.keyDown(panel().getByRole('textbox', { name: 'Add a note' }), { key: 'Enter', ctrlKey: true })
+    expect(within(panel().getByRole('region', { name: 'Notes' })).getByText('Whole board thought')).toBeInTheDocument()
   })
 })
 
 describe('your links', () => {
-  it('draws a link from the keyboard path and lists it in the line key', async () => {
+  it('draws a link from the keyboard path, shows it in the flow, and lists it in the line key', async () => {
     render(<App />)
     await loadExample()
     selectPart('preview')
-    fireEvent.change(panel().getByLabelText('Link to'), { target: { value: 'saved-record' } })
-    fireEvent.change(panel().getByLabelText('Label'), { target: { value: 'I would check this' } })
-    fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
-    expect(await screen.findByText('Link added')).toBeInTheDocument()
-    const row = panel().getByRole('button', { name: /Saved record/ })
-    fireEvent.click(row)
-    expect(panel().getByRole('heading', { name: 'Your link' })).toBeInTheDocument()
+    await addLink('Saved record', 'I would check this')
+    expect(await panel().findByRole('heading', { name: 'I would check this' })).toBeInTheDocument()
     expect(panel().getByRole('textbox', { name: 'Label' })).toHaveValue('I would check this')
+
+    selectPart('preview')
+    const row = within(flow()).getByRole('button', { name: 'I would check this' }).closest('li')!
+    expect(row).toHaveAttribute('data-yours', 'link')
+    expect(within(row).getByRole('button', { name: 'Saved record' })).toBeInTheDocument()
+    fireEvent.click(within(row).getByRole('button', { name: 'I would check this' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Line key' }))
     const key = await screen.findByRole('dialog', { name: 'Line key' })
     expect(within(key).getByText('Your link')).toBeInTheDocument()
 
     fireEvent.click(panel().getByRole('button', { name: 'Delete' }))
-    fireEvent.click(panel().getByRole('button', { name: 'Delete link' }))
     expect(panel().getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(await screen.findByText('Link deleted')).toBeInTheDocument()
   })
 })
 
@@ -205,8 +235,10 @@ describe('saving', () => {
     await loadExample()
     selectPart('approval')
     addNote('Survives a reload')
-    fireEvent.change(panel().getByLabelText('Link to'), { target: { value: 'saved-record' } })
-    fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
+    await addLink('Saved record')
+    // Adding a link shows the link. The card must be selected again for the arrow keys to move it.
+    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    selectPart('approval')
 
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowRight', shiftKey: true })
@@ -219,14 +251,17 @@ describe('saving', () => {
     const raw = await store.loadBoard('example-order-check-in')
     store.close()
     const moved = positionOf(raw, 'approval')
+    expect(moved).toBeDefined()
     const start = placeCards(exampleBoard(), { positions: {}, sizes: {} })['approval']!
     expect(moved).not.toEqual(start)
 
     render(<App />)
-    expect(await screen.findByRole('heading', { name: example.title })).toBeInTheDocument()
+    await screen.findByTestId('inspector')
+    expect(await panel().findByRole('heading', { name: example.title })).toBeInTheDocument()
     selectPart('approval')
     expect(panel().getByText('Survives a reload')).toBeInTheDocument()
-    expect(within(links()).getByRole('button', { name: /Saved record/ })).toBeInTheDocument()
+    const mine = within(flow()).getByRole('button', { name: 'Link' }).closest('li')!
+    expect(within(mine).getByRole('button', { name: 'Saved record' })).toBeInTheDocument()
     await saved()
     const again = await openStore()
     const reloaded = await again.loadBoard('example-order-check-in')
@@ -234,7 +269,7 @@ describe('saving', () => {
     expect(positionOf(reloaded, 'approval').x).toBe(moved.x)
   })
 
-  it('says Not saved and offers an export when the write fails, and keeps the note', async () => {
+  it('says Not saved and offers a download when the write fails, and keeps the note', async () => {
     failing.on = true
     render(<App />)
     await loadExample()
@@ -243,7 +278,7 @@ describe('saving', () => {
     const alert = await screen.findByRole('alert', {}, { timeout: 3000 })
     expect(within(alert).getByText('Not saved')).toBeInTheDocument()
     expect(within(alert).getByText(/out of storage space/)).toBeInTheDocument()
-    expect(within(alert).getByRole('button', { name: 'Export' })).toBeInTheDocument()
+    expect(within(alert).getByRole('button', { name: 'Download a copy' })).toBeInTheDocument()
     expect(screen.queryByText('Saved')).not.toBeInTheDocument()
     expect(panel().getByText('Still here')).toBeInTheDocument()
     expect(new StorageError('quota', 'x').kind).toBe('quota')
@@ -253,12 +288,14 @@ describe('saving', () => {
     render(<App />)
     await loadExample()
     await saved()
-    press(screen.getByRole('button', { name: 'Open' }))
-    fireEvent.click(await screen.findByRole('button', { name: `Delete ${example.title}` }))
-    const dialog = screen.getByRole('dialog', { name: `Delete ${example.title}?` })
+    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' }))
+    const open = within(await screen.findByRole('dialog', { name: 'Open' }))
+    expect(open.getByRole('heading', { name: 'Recent' })).toBeInTheDocument()
+    fireEvent.click(open.getByRole('button', { name: `Delete ${example.title}` }))
+    const dialog = await screen.findByRole('dialog', { name: `Delete ${example.title}?` })
     expect(within(dialog).getByText(/notes from this browser/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete board' }))
-    expect(await screen.findByRole('button', { name: 'Load an example' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Open file' })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('Saved')).not.toBeInTheDocument())
   })
 })
@@ -269,8 +306,9 @@ describe('export and open', () => {
     await loadExample()
     selectPart('approval')
     addNote('Travels with the file')
-    fireEvent.change(panel().getByLabelText('Link to'), { target: { value: 'saved-record' } })
-    fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
+    await addLink('Saved record')
+    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    selectPart('approval')
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
     // A keyboard move joins the layer once the keys stop, a quarter of a second later.
@@ -284,10 +322,12 @@ describe('export and open', () => {
     globalThis.indexedDB = new IDBFactory()
     const second = render(<App />)
     await openFile(second.container, text, 'export.json')
-    expect(await screen.findByRole('heading', { name: example.title })).toBeInTheDocument()
+    await screen.findByTestId('inspector')
+    expect(await panel().findByRole('heading', { name: example.title })).toBeInTheDocument()
     selectPart('approval')
     expect(panel().getByText('Travels with the file')).toBeInTheDocument()
-    expect(within(links()).getByRole('button', { name: /Saved record/ })).toBeInTheDocument()
+    const mine = within(flow()).getByRole('button', { name: 'Link' }).closest('li')!
+    expect(within(mine).getByRole('button', { name: 'Saved record' })).toBeInTheDocument()
     await saved()
     const store = await openStore()
     const raw = await store.loadBoard('example-order-check-in')
@@ -322,38 +362,46 @@ describe('export and open', () => {
 })
 
 describe('a new version of a board you already have', () => {
-  it('shows what changed, flags notes, and never moves them by itself', async () => {
+  it('reviews what changed and flags notes, and never moves them by itself', async () => {
     const first = render(<App />)
     await loadExample()
     selectPart('preview')
     addNote('Check the wording')
-    fireEvent.click(panel().getByRole('button', { name: /Board overview/ }))
+    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
     selectPart('sample-clock')
     addNote('Where does the date come from?', 'Question')
-    fireEvent.click(panel().getByRole('button', { name: /Board overview/ }))
+    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
     await saved()
 
     await openFile(first.container, modifiedExample(), 'example.json')
-    const changed = await panel().findByRole('heading', { name: 'What changed' })
-    const section = changed.closest('section')!
-    expect(within(section).getByRole('button', { name: part('preview').label })).toBeInTheDocument()
-    expect(within(section).getByText(part('sample-clock').label)).toBeInTheDocument()
+    // A new revision does not switch tabs. A toast says so and offers the review.
+    expect(await screen.findByText('Revision 2 is open')).toBeInTheDocument()
+    const tab = await panel().findByRole('tab', { name: /Review/ })
+    expect(tab).toHaveTextContent('2')
+    expect(panel().getByRole('heading', { name: example.title })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
 
-    const review = panel().getByRole('heading', { name: 'Notes to review' }).closest('section')!
-    const outdated = within(review).getByText('Check the wording').closest('li')!
-    expect(within(outdated).getByText('Possibly outdated')).toBeInTheDocument()
-    const homeless = within(review).getByText('Where does the date come from?').closest('li')!
-    expect(within(homeless).getByText('Needs relinking')).toBeInTheDocument()
+    const changes = panel().getByRole('region', { name: 'Changed in revision 2' })
+    expect(within(changes).getByRole('button', { name: part('preview').label })).toBeInTheDocument()
+    expect(within(changes).getByText(part('sample-clock').label)).toBeInTheDocument()
+
+    const outdatedGroup = panel().getByRole('region', { name: 'Possibly outdated' })
+    const outdated = within(outdatedGroup).getByText('Check the wording').closest('li')!
+    expect(within(outdated).getByText(/Preview changed after you wrote this: summary\./)).toBeInTheDocument()
+    const relinking = panel().getByRole('region', { name: 'Needs relinking' })
+    const homeless = within(relinking).getByText('Where does the date come from?').closest('li')!
+    expect(within(homeless).getByText(/was removed\./)).toBeInTheDocument()
 
     fireEvent.click(within(outdated).getByRole('button', { name: 'Still true' }))
-    expect(within(review).queryByText('Check the wording')).not.toBeInTheDocument()
+    expect(panel().queryByRole('region', { name: 'Possibly outdated' })).not.toBeInTheDocument()
 
-    fireEvent.change(within(homeless).getByLabelText('Attach to'), { target: { value: 'component:rule-check' } })
-    fireEvent.click(within(homeless).getByRole('button', { name: 'Attach' }))
-    expect(panel().queryByRole('heading', { name: 'Notes to review' })).not.toBeInTheDocument()
+    press(within(homeless).getByRole('button', { name: 'Attach to' }))
+    await pick(/^Rule check/)
+    expect(panel().queryByRole('region', { name: 'Needs relinking' })).not.toBeInTheDocument()
 
-    fireEvent.click(within(section).getByRole('button', { name: 'Done reviewing' }))
-    expect(panel().queryByRole('heading', { name: 'What changed' })).not.toBeInTheDocument()
+    fireEvent.click(within(changes).getByRole('button', { name: 'Done' }))
+    // With nothing left to review, the tab row goes and the details show.
+    await waitFor(() => expect(panel().queryByRole('tab', { name: /Review/ })).not.toBeInTheDocument())
 
     selectPart('rule-check')
     expect(panel().getByText('Where does the date come from?')).toBeInTheDocument()
@@ -364,10 +412,11 @@ describe('a new version of a board you already have', () => {
     await loadExample()
     selectPart('sample-clock')
     addNote('Orphan')
-    fireEvent.click(panel().getByRole('button', { name: /Board overview/ }))
+    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
     await openFile(first.container, modifiedExample(), 'example.json')
-    fireEvent.click(await panel().findByRole('button', { name: 'Done reviewing' }))
-    const review = panel().getByRole('heading', { name: 'Notes to review' }).closest('section')!
-    expect(within(review).getByText('Orphan')).toBeInTheDocument()
-    })
+    fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
+    fireEvent.click(await panel().findByRole('button', { name: 'Done' }))
+    const relinking = panel().getByRole('region', { name: 'Needs relinking' })
+    expect(within(relinking).getByText('Orphan')).toBeInTheDocument()
+  })
 })

@@ -37,7 +37,7 @@ function Crumb() {
   return (
     <OpenMenu
       trigger={
-        <button type="button" className={styles.crumb} aria-label={`${name}. Open`}>
+        <button type="button" className={styles.crumb}>
           <span className={styles.crumbText}>{name}</span>
           <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
         </button>

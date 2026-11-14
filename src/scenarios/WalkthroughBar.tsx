@@ -49,11 +49,12 @@ export function WalkthroughBar() {
         <p className={styles.title}>{step.scenario.title}</p>
         <StepButton view={previous} label="Previous" disabled={step.index === 0} />
         <p className={styles.count}>
-          <span className="sr-only">Step </span>
-          {step.index + 1}
-          <span aria-hidden="true"> / </span>
-          <span className="sr-only"> of </span>
-          {total}
+          <span aria-hidden="true">
+            {step.index + 1} / {total}
+          </span>
+          <span className="sr-only">
+            Step {step.index + 1} of {total}
+          </span>
         </p>
         <StepButton view={next} label="Next" disabled={step.index === total - 1} buttonRef={nextButton} />
         <StepButton view={close} label="Close" />
