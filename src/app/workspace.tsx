@@ -97,6 +97,8 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
 
   const storeRef = useRef<BoardStore | undefined>(undefined)
   const persistedRef = useRef<Persisted | undefined>(undefined)
+  /** The layer most recently handed to the save queue. It may not be written yet. */
+  const scheduledRef = useRef<Persisted | undefined>(undefined)
   const stopWatching = useRef<() => void>(() => {})
   const savedRef = useRef<readonly BoardSummary[]>(saved)
   const sinkRef = useRef<Sink>(sink)
@@ -350,12 +352,18 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
     if (sink.kind === 'browser' && phase !== 'ready') return
     const done = persistedRef.current
     // The folder's board is the agent's file, so only the layer counts there.
-    const sameBoard = done?.sink === sink && (sink.kind === 'folder' || done.board === board)
-    if (sameBoard && done.json === layerJson) return
+    const same = (p: Persisted | undefined): p is Persisted => p?.sink === sink && (sink.kind === 'folder' || p.board === board)
+    const sameBoard = same(done)
+    // Compared with what is waiting to be written, not only with what was written: an undo and a quick redo bring
+    // back the written layer while the undone one still waits, and that one must not be the last write.
+    const waiting = scheduledRef.current
+    if (sameBoard && (same(waiting) ? waiting.json : done.json) === layerJson) return
     if (sameBoard) {
+      scheduledRef.current = { sink, board, json: layerJson }
       queue.schedule({ sink, board, layer })
       return
     }
+    scheduledRef.current = undefined
     // A new board, a new version, or a new place: write it now, after anything still waiting for the old one.
     void queue.flush().then(() => {
       const s = appStore.getState()
