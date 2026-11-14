@@ -86,26 +86,38 @@ export function separateGroups(board: Board, rects: Readonly<Record<string, Rect
 }
 
 /**
- * Everything a drop or a resize moves besides the cards in hand: the cards they cover are pushed aside (group areas
- * taken from `before`, the map as it was), then the groups are kept apart. One set of positions, for one undo step.
+ * Everything a drop or a resize moves besides the cards in hand. Cards a held card covers are pushed aside only within
+ * the same group, or among cards that have no group, so a group's own layout never changes because another group was
+ * hit. A collision across groups is settled after that by `separateGroups`, which moves whole groups. One set of
+ * positions, for one undo step.
  */
-export function settleMoves(board: Board, rects: Readonly<Record<string, Rect>>, ids: readonly string[], before: Readonly<Record<string, Rect>>): Record<string, Point> {
+export function settleMoves(board: Board, rects: Readonly<Record<string, Rect>>, ids: readonly string[]): Record<string, Point> {
   const groupOf = new Map(board.components.map((c) => [c.id, c.group]))
   const pinned = new Set(ids)
-  const options = { groupOf: (id: string) => groupOf.get(id), areas: groupAreas(board, before) }
+  const lanes = new Map<string, string[]>()
+  for (const id of Object.keys(rects)) {
+    const lane = groupOf.get(id) ?? ''
+    const list = lanes.get(lane)
+    if (list) list.push(id)
+    else lanes.set(lane, [id])
+  }
   // A push reaches only a few cards deep. A card it moved last may still cover another, so the push goes on from every
   // card that moved, until nothing is covered.
   const aside: Record<string, Point> = {}
   const pushed: Record<string, Rect> = { ...rects }
-  const pins = new Set(pinned)
-  for (let round = 0; round < PUSH_ROUNDS; round++) {
-    const moves = pushApart(pushed, pins, options)
-    const moved = Object.keys(moves)
-    if (moved.length === 0) break
-    for (const id of moved) {
-      pushed[id] = { ...(pushed[id] as Rect), ...(moves[id] as Point) }
-      aside[id] = moves[id] as Point
-      pins.add(id)
+  for (const members of lanes.values()) {
+    const pins = new Set(members.filter((id) => pinned.has(id)))
+    if (pins.size === 0) continue
+    for (let round = 0; round < PUSH_ROUNDS; round++) {
+      const lane = Object.fromEntries(members.map((id) => [id, pushed[id] as Rect]))
+      const moves = pushApart(lane, pins)
+      const moved = Object.keys(moves)
+      if (moved.length === 0) break
+      for (const id of moved) {
+        pushed[id] = { ...(pushed[id] as Rect), ...(moves[id] as Point) }
+        aside[id] = moves[id] as Point
+        pins.add(id)
+      }
     }
   }
   return { ...aside, ...separateGroups(board, pushed, pinned) }
