@@ -1,4 +1,4 @@
-/* Drawn in board coordinates over the cards. The line stays one pixel wide at any zoom. */
+/* Drawn in board coordinates over the cards. A faint dashed line in its own color, one pixel wide at any zoom. */
 .guides {
   position: absolute;
   left: 0;
@@ -11,8 +11,9 @@
 }
 
 .line {
-  stroke: var(--accent);
+  stroke: var(--guide);
   stroke-width: 1px;
+  stroke-dasharray: 3 3;
   vector-effect: non-scaling-stroke;
   shape-rendering: crispEdges;
 }
