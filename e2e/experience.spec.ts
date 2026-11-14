@@ -12,13 +12,13 @@ const zoomOf = async (page: Page) => {
 test('the map opens at a readable zoom, and Fit still shows the whole board', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await open(page, FORTY)
-  // The whole board would need far less than the readable zoom, so the first view is its top-left corner.
+  // The whole board would need far less than a readable zoom, so the first view is the start of the flow.
   expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.79)
   const first = await page.locator('.react-flow__node-card').first().boundingBox()
   expect(first?.x).toBeGreaterThanOrEqual(0)
   expect(first?.y).toBeGreaterThanOrEqual(0)
 
-  await page.getByRole('button', { name: 'fit view' }).click()
+  await page.getByRole('button', { name: 'Fit to screen' }).click()
   await expect.poll(() => zoomOf(page)).toBeLessThan(0.5)
 })
 

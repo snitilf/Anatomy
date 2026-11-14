@@ -34,7 +34,8 @@ test('folder mode: open the repository, move a card, reload, the place is kept, 
   expect(moved).not.toBe(start)
   const saved = page.getByRole('status').filter({ hasText: /^Saved$/ })
   await expect(saved).toHaveAttribute('title', 'Saved to .anatomy/layer.json')
-  await expect.poll(async () => Object.keys((await storedLayer(page))?.positions ?? {})).toEqual([spot.id])
+  // A card the drop covered steps aside and is saved with it.
+  await expect.poll(async () => Object.keys((await storedLayer(page))?.positions ?? {})).toContain(spot.id)
 
   await page.reload()
   await expect(page.locator(`.react-flow__node-card[data-id="${spot.id}"]`)).toBeVisible()
