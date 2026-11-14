@@ -216,6 +216,42 @@ export function viewportShowing(viewport: Viewport, map: Size & { top: number },
   return { x: x + dx, y: y + dy, zoom }
 }
 
+/** Space kept between a part chosen in the sidebar or the command menu and the edge of the map. */
+export const SELECT_ROOM = 80
+/** A card narrower than this on screen is too small to read. */
+export const LEGIBLE_WIDTH = 120
+/** The zoom a part that is too small to read is shown at, at least. */
+export const LEGIBLE_ZOOM = 0.8
+
+/**
+ * Where the camera goes to show a part that was chosen away from the map. The part ends at least `SELECT_ROOM` from
+ * the edges of the map, never flush against one. When it is smaller than `LEGIBLE_WIDTH` on screen, or the screen is
+ * narrow, the zoom is raised to `LEGIBLE_ZOOM` and the part is centered. Returns undefined when nothing needs to move.
+ */
+export function viewportFor(viewport: Viewport, map: Size & { top: number }, card: Rect, narrow = false): Viewport | undefined {
+  const { x, y } = viewport
+  const small = card.width * viewport.zoom < LEGIBLE_WIDTH
+  const zoom = narrow || small ? Math.max(viewport.zoom, LEGIBLE_ZOOM) : viewport.zoom
+  if (zoom !== viewport.zoom) {
+    const room = map.height - map.top
+    return { x: map.width / 2 - (card.x + card.width / 2) * zoom, y: map.top + room / 2 - (card.y + card.height / 2) * zoom, zoom }
+  }
+  const left = card.x * zoom + x
+  const top = card.y * zoom + y
+  const right = left + card.width * zoom
+  const bottom = top + card.height * zoom
+  // Too big for the room: its middle goes to the middle. Otherwise it moves just far enough.
+  const shift = (low: number, high: number, min: number, max: number) => {
+    if (high - low > max - min) return (min + max) / 2 - (low + high) / 2
+    if (low < min) return min - low
+    return high > max ? max - high : 0
+  }
+  const dx = shift(left, right, SELECT_ROOM, map.width - SELECT_ROOM)
+  const dy = shift(top, bottom, map.top + SELECT_ROOM, map.height - SELECT_ROOM)
+  if (dx === 0 && dy === 0) return undefined
+  return { x: x + dx, y: y + dy, zoom }
+}
+
 /** Moves the camera, always inside the limits. Returns where it goes. */
 export function moveCamera(flow: ReactFlowInstance, viewport: Viewport, limits: Limits, map: Size, duration = 0): Viewport {
   const next = clampViewport(viewport, limits, map)

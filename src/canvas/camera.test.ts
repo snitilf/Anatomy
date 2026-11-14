@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampViewport, contentBounds, frameViewport, MAX_ZOOM, PAN_MARGIN, READABLE_ZOOM, START_ZOOM, stepZoom, viewportShowing, zoomLimits } from './camera'
+import { clampViewport, contentBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, READABLE_ZOOM, START_ZOOM, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
 
 const map = { width: 1000, height: 700 }
 const board = { x: 0, y: 0, width: 2000, height: 1000 }
@@ -94,5 +94,37 @@ describe('viewportShowing', () => {
     expect(v).toBeDefined()
     expect(1100 + 240 + v!.x).toBeLessThanOrEqual(map.width)
     expect(viewportShowing({ x: 0, y: 0, zoom: 1 }, { ...map, top: 0 }, { x: 100, y: 100, width: 240, height: 112 })).toBeUndefined()
+  })
+})
+
+describe('viewportFor', () => {
+  const area = { ...map, top: 40 }
+  const card = { width: 240, height: 112 }
+
+  it('leaves a part that is well inside the map alone', () => {
+    expect(viewportFor({ x: 0, y: 0, zoom: 1 }, area, { x: 300, y: 300, ...card })).toBeUndefined()
+  })
+
+  it('never leaves a part flush against an edge', () => {
+    for (const at of [{ x: 4, y: 300 }, { x: 300, y: 44 }, { x: 740, y: 300 }, { x: 300, y: 580 }]) {
+      const v = viewportFor({ x: 0, y: 0, zoom: 1 }, area, { ...at, ...card })
+      expect(v).toBeDefined()
+      const left = at.x + v!.x
+      const top = at.y + v!.y
+      expect(left).toBeGreaterThanOrEqual(SELECT_ROOM - 0.5)
+      expect(left + card.width).toBeLessThanOrEqual(map.width - SELECT_ROOM + 0.5)
+      expect(top).toBeGreaterThanOrEqual(area.top + SELECT_ROOM - 0.5)
+      expect(top + card.height).toBeLessThanOrEqual(map.height - SELECT_ROOM + 0.5)
+    }
+  })
+
+  it('zooms in on a part that is too small to read and centers it', () => {
+    const v = viewportFor({ x: 0, y: 0, zoom: 0.3 }, area, { x: 900, y: 500, ...card })!
+    expect(v.zoom).toBe(LEGIBLE_ZOOM)
+    expect(900 * v.zoom + v.x + (card.width * v.zoom) / 2).toBeCloseTo(map.width / 2, 5)
+  })
+
+  it('keeps a zoom that is already readable', () => {
+    expect(viewportFor({ x: 0, y: 0, zoom: 1.5 }, area, { x: -900, y: 100, ...card })!.zoom).toBe(1.5)
   })
 })
