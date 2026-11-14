@@ -91,8 +91,9 @@ interface Layer {
   marks: Mark[] // whiteboard: stroke, rect, ellipse, arrow, text, sticky
   proposals: Proposal[] // a new part the user sketched: label, summary, rect
   reconnects: Reconnect[] // { relationshipId, from?, to? }: moved ends of an agent connection
-  archive: ArchiveEntry[] // items the agent resolved, each with its answer, restorable
-  sent?: Sent // what was sent to the agent so far, to send only what is new or changed
+  archive: ArchiveEntry[] // items the agent resolved or the user dismissed, each with its answer, restorable
+  answers: Answer[] // { id, response }: the agent's latest answer to an item still on the map
+  sent?: Sent // what was sent to the agent so far, with a fingerprint per item
 }
 ```
 
@@ -113,6 +114,7 @@ Note status is computed, never stored:
 
 A link whose part is missing is also `needs-relinking`.
 The app never deletes or moves a note or link by itself.
+The only thing it moves on its own is an item the agent adopted, into the archive, from where it can be restored.
 
 A fingerprint is a short hash of the meaning of a part or connection, without its position.
 For a component it covers label, summary, explanation, group, inputs, outputs, and source.
@@ -173,13 +175,27 @@ The sidebar shows the overview or the selection under Details, and a Review tab 
 Its width (300 to 520) and whether it is open are kept per browser.
 On a screen 760 px wide or less it is a bottom sheet with three stops, dragged by its header only.
 
-## Feedback
+## Feedback and answers
+
+Send to agent (`src/app/SendMenu.tsx`) is the top bar's primary action, with `Cmd+Enter` or `Ctrl+Enter`.
+It opens a popover that shows what will go, then writes `.anatomy/feedback.json` and copies a short prompt.
+For a board opened as a file or an example it downloads `feedback.json` instead, and the prompt says it is in the Downloads folder.
+The copy starts first, inside the press, because browsers allow it only there.
+`.anatomy/README.md` is written on the first send, and replaced when the format changes, unless the user removed its first line.
 
 `buildFeedback` in `src/feedback/build.ts` turns the layer into an `anatomy-feedback` file, version 1.
-Each item says what the user meant in board terms: a note about a part, a link between parts, a connection with its old and new ends, a new part with its links and neighbors, and drawings as what they enclose, touch, or point at, measured against the card rects.
-Only items that are new or changed since the last send go in; deleted items that were sent before are listed as withdrawn.
-A drawing with no note that touches nothing is skipped, and the result says so.
+Each item says what the user meant in board terms: a note or question about a target with a snapshot of that target, a link between parts, a connection with its old and new ends, a new part with its links and neighbors, and drawings as what they enclose, touch, or point at.
+Marks are read against the lines the map draws, routed around the cards, which the map passes in as its scene; an arrow end on a connection says where along it (`at`, 0 to 1).
+A send holds every item that is new or changed since the last send, and every item sent before that has no answer yet, so a second send never drops what the first one held.
+Deleted items that were sent before are listed as withdrawn.
+A drawing with no note that touches nothing is skipped, and the popover lists it with a way to select it.
+
 The agent answers in the `responses` of the next board revision.
+When a revision opens (`receiveAnswers` in `src/layer/edits.ts`), each answer is kept in the layer next to its item, so a later revision without answers does not lose it.
+An adopted item moves to the archive when the answer names what changed and every named ID is on the board; otherwise it stays with its answer.
+Declined and answered items keep their answer until the user dismisses them, which archives them as one step of undo.
+An answer already taken in is not taken in again, so an item restored from the archive stays restored when the same revision opens again.
+The Review tab lists the answers, the items adopted in this revision, each moved connection with its old ends, the ends the user asked for, and whether the board now has them, and the rest of the archive, which can be restored.
 
 ## Export file
 

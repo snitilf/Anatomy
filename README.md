@@ -1,7 +1,8 @@
 # Anatomy
 
 Anatomy is a local browser app that turns a plan, feature, or project into a visual explanation that you can explore, question, and annotate.
-It opens a board file, which is a JSON document that describes the parts of a system, how they connect, and named scenarios that walk through a journey.
+Your coding agent writes a board, a JSON document in `.anatomy/board.json` that describes the parts of a system, how they connect, and walkthroughs of a journey.
+You mark the board up, send your marks back with Send to agent, and the agent answers them in its next revision.
 The app runs in the browser on your own machine and does not send board data to any server.
 
 ## Documentation

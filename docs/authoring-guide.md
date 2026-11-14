@@ -63,11 +63,20 @@ A scenario is a teaching sequence, and it does not run anything.
 Show a failure path or an edge case when it helps the learner.
 Label any part of the path that is not built as planned.
 
-## 6. Answering feedback
+## 6. Updating a board and answering feedback
 
-If the user sent feedback (`.anatomy/feedback.json`), write the next revision with a higher `revision` and a `responses` block.
-Set `respondsTo` to the feedback `id`, and answer every item by its `id` with `adopted`, `declined`, or `answered`.
-List in `changed` the IDs you changed for that item.
+A board lives in the repository at `.anatomy/board.json`, and Anatomy opens each new revision as soon as you write it.
+To update a board, write the whole file again:
+
+- Raise `revision` by one.
+- Keep the IDs of every part, connection, item, and scenario that stays, so the user's notes stay attached.
+- When a connection moves to another part, change its `from` or `to` and keep its ID.
+- Give new things new IDs, and never reuse the ID of something you removed for something else.
+
+When the user sends feedback, Anatomy writes `.anatomy/feedback.json` and the user asks you to answer it.
+Answer every item by its `id` in a `responses` block, with `adopted`, `declined`, or `answered`, and set `respondsTo` to the feedback `id`.
+List in `changed` the IDs you added or changed for each adopted item.
+Do not edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
 See [Responses](board-format.md#responses).
 
 ## 7. Checklist before you hand over the file
@@ -83,6 +92,7 @@ Run every check before you reply.
 7. Every unbuilt part is marked as planned.
 8. The file parses as JSON and passes `schema/board.v1.schema.json`.
 9. No text promises a guarantee that the material does not state.
+10. When you answer feedback, `revision` is higher than before and every feedback item has a response.
 
 ## 8. Prompt to paste into your agent
 
@@ -96,8 +106,19 @@ Validate the file against <PATH TO board.v1.schema.json>.
 Read only this material: <MATERIAL YOU AUTHORIZE>.
 If a consequential detail is unknown, ask me before you write.
 Record what you cannot confirm as "unknown" or "question" items instead of guessing.
-Do not edit any file except the board file.
-Your final reply must contain only the JSON board file, with no commentary.
+Write the board to .anatomy/board.json in the repository, and do not edit any other file.
+```
+
+In a repository that Anatomy already opened, `.anatomy/README.md` holds this guide and the schema, so a shorter prompt is enough:
+
+```text
+Read .anatomy/README.md, then write .anatomy/board.json that explains: <WHAT TO EXPLAIN>.
+```
+
+After the user sends feedback, Anatomy copies this prompt:
+
+```text
+Read .anatomy/feedback.json and answer every item in the next revision of .anatomy/board.json. The format is in .anatomy/README.md.
 ```
 
 ## 9. Minimal valid example
