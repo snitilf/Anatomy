@@ -26,7 +26,7 @@
   --on-accent: #ffffff;
 
   /* The alignment guides while a card moves: a soft teal, faint, in no other use. */
-  --guide: rgb(14 140 150 / 0.5);
+  --guide: rgb(14 140 150 / 0.55);
 
   /* Yours: everything the user made. Amber is used for nothing else. */
   --yours: #c98410;
@@ -62,7 +62,7 @@
   --accent-tint: rgb(110 116 240 / 0.16);
   --on-accent: #ffffff;
 
-  --guide: rgb(70 205 215 / 0.45);
+  --guide: rgb(90 215 225 / 0.65);
 
   --yours: #e8a33d;
   --yours-text: #f0b45a;
