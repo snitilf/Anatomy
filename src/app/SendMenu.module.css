@@ -149,6 +149,12 @@
   font-weight: var(--weight-semibold);
 }
 
+.sentHead:focus,
+.heading:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .check {
   flex: none;
   fill: none;
