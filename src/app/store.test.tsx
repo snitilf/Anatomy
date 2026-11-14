@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react'
 import { Profiler } from 'react'
 import { describe, expect, it } from 'vitest'
 import { NotesSection } from '../notes/NotesSection'
-import { nordetBoard } from '../overlay/testBoards'
+import { nordetBoard } from '../layer/testBoards'
 import { PanelContext } from '../inspector/panelContext'
 import { AppStoreContext, createAppStore } from './store'
 import { Toolbar } from './Toolbar'
@@ -46,9 +46,11 @@ describe('the app store', () => {
     const { api, board } = opened()
     const id = board.components[0]!.id
     const commits = counted(<NotesSection target={{ type: 'component', id }} />, api)
+    // The first change turns on Undo. Later moves change nothing the toolbar shows.
+    act(() => api.dispatch({ type: 'cardsMoved', positions: { [id]: { x: 800, y: 800 } } }))
     const before = { ...commits }
-    act(() => api.dispatch({ type: 'cardMoved', id, point: { x: 900, y: 900 } }))
-    expect(api.store.getState().overlay?.positions[id]).toEqual({ x: 900, y: 900 })
+    act(() => api.dispatch({ type: 'cardsMoved', positions: { [id]: { x: 900, y: 900 } } }))
+    expect(api.store.getState().layer?.positions[id]).toEqual({ x: 900, y: 900 })
     expect(commits).toEqual(before)
   })
 
@@ -58,7 +60,7 @@ describe('the app store', () => {
     const commits = counted(<NotesSection target={{ type: 'component', id }} />, api)
     const before = commits.notes
     act(() =>
-      api.dispatch({ type: 'noteAdded', kind: 'note', text: 'Hello', target: { type: 'component', id }, id: 'n1', now: new Date() }),
+      api.dispatch({ type: 'noteAdded', kind: 'note', text: 'Hello', target: { type: 'component', id }, id: 'note-aaaaaa', now: new Date() }),
     )
     expect(commits.notes).toBeGreaterThan(before)
   })
