@@ -1,0 +1,73 @@
+/* Floating menus and popovers share one look: a raised surface, a hairline, and the one floating shadow. */
+
+.positioner {
+  z-index: 40;
+}
+
+.popup {
+  box-sizing: border-box;
+  display: grid;
+  gap: 1px;
+  min-width: 180px;
+  max-width: calc(100vw - 16px);
+  padding: var(--space-1);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+
+.popup[data-starting-style],
+.popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.popup:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-float);
+}
+
+.label {
+  padding: 6px 8px 4px;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-xs);
+  outline: none;
+  cursor: default;
+  user-select: none;
+}
+
+.item[data-highlighted] {
+  background: var(--hover);
+}
+
+.icon {
+  flex: none;
+  color: var(--fg-2);
+}
+
+.itemText {
+  flex: 1;
+  min-width: 0;
+}
+
+.check {
+  display: inline-flex;
+  color: var(--fg-2);
+}

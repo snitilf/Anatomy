@@ -4,6 +4,9 @@
  */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/inter'
+import '../styles/tokens.css'
+import { initTheme } from '../theme/theme'
 import ApprovalGateLesson from './approval-gate/ApprovalGateLesson'
 
 const params = new URLSearchParams(window.location.search)
@@ -20,6 +23,8 @@ if (scheme === 'light' || scheme === 'dark' || still) {
     return real(query)
   }
 }
+
+initTheme()
 
 const root = document.getElementById('root')
 if (root) {

@@ -1,31 +1,35 @@
 import type { CSSProperties } from 'react'
 import { Toaster } from 'sonner'
+import { useTheme } from '../theme/theme'
 
 const LOOK = {
-  '--normal-bg': 'var(--surface)',
-  '--normal-text': 'var(--ink)',
-  '--normal-border': 'var(--line)',
-  '--border-radius': 'var(--radius-m)',
+  '--normal-bg': 'var(--raised)',
+  '--normal-text': 'var(--fg)',
+  '--normal-border': 'var(--border)',
+  '--border-radius': 'var(--radius-md)',
   '--width': 'max-content',
   fontFamily: 'inherit',
 } as CSSProperties
 
 /**
  * Short confirmations only. Errors and the save status stay on the page, because they must stay until read.
- * Sonner follows the system theme and skips its motion when the system asks for less.
+ * Sonner follows the app theme and skips its motion when the system asks for less.
  */
 export function AppToaster({ id }: { id?: string }) {
+  const theme = useTheme()
   return (
     <Toaster
       {...(id ? { id } : {})}
       position="bottom-center"
-      theme="system"
+      theme={theme}
       duration={2500}
       visibleToasts={1}
       richColors={false}
       closeButton={false}
       style={LOOK}
-      toastOptions={{ style: { padding: '10px 16px', fontSize: 14, fontWeight: 600, boxShadow: 'var(--lift)' } }}
+      toastOptions={{
+        style: { padding: '8px 14px', fontSize: 13, lineHeight: '20px', fontWeight: 500, boxShadow: 'var(--shadow-float)' },
+      }}
     />
   )
 }
