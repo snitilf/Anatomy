@@ -1,10 +1,6 @@
 .caret {
-  width: 6px;
-  height: 6px;
-  margin-left: 2px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: translateY(-2px) rotate(45deg);
+  margin-right: -4px;
+  opacity: 0.7;
 }
 
 .positioner {
@@ -14,21 +10,19 @@
 .list {
   box-sizing: border-box;
   display: grid;
-  gap: 2px;
+  gap: 1px;
   width: 300px;
-  max-width: calc(100vw - 24px);
+  max-width: calc(100vw - 16px);
   margin: 0;
-  padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  box-shadow:
-    0 2px 4px var(--shadow),
-    0 12px 28px -8px var(--shadow);
+  padding: var(--space-1);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
   transform-origin: var(--transform-origin);
   transition:
-    opacity 120ms var(--ease-out),
-    transform 120ms var(--ease-out);
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
 }
 
 .list[data-starting-style],
@@ -39,17 +33,12 @@
 
 .list:focus-visible {
   outline: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .list {
-    transition: none;
-  }
+  box-shadow: var(--shadow-float);
 }
 
 .plain {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -59,24 +48,31 @@
   appearance: none;
   display: grid;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px var(--space-2);
   border: 0;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-xs);
   background: none;
+  color: var(--fg);
   text-align: left;
+  outline: none;
   cursor: pointer;
 }
 
 .item:hover,
 .item[data-highlighted] {
-  background: var(--faint);
+  background: var(--hover);
+}
+
+.item:focus-visible {
+  box-shadow: var(--ring);
 }
 
 .itemTitle {
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 
 .itemText {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
 }

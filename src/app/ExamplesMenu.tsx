@@ -1,5 +1,6 @@
 import { Menu } from '@base-ui/react/menu'
 import clsx from 'clsx'
+import { ChevronDown } from 'lucide-react'
 import buttons from './buttons.module.css'
 import { EXAMPLES } from './examples'
 import styles from './ExamplesMenu.module.css'
@@ -39,7 +40,7 @@ export function ExamplesMenu({ label, primary = false }: { label: string; primar
     <Menu.Root>
       <Menu.Trigger className={clsx(buttons.button, primary && buttons.primary)}>
         {label}
-        <span aria-hidden="true" className={styles.caret} />
+        <ChevronDown className={styles.caret} size={16} strokeWidth={1.5} aria-hidden="true" />
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner className={styles.positioner} side="bottom" align="start" sideOffset={6} collisionPadding={12}>

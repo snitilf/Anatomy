@@ -53,17 +53,19 @@
   z-index: 50;
   display: grid;
   place-items: center;
-  border: 2px dashed var(--accent);
-  border-radius: var(--radius-m);
-  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  box-shadow: inset 0 0 0 3px var(--accent-tint);
   pointer-events: none;
 }
 
 .drop p {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--accent);
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
 }
 
 @media (max-width: 760px) {

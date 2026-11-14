@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { Copy, Download, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AppToaster } from './AppToaster'
@@ -92,25 +93,26 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
           <h2 id="howto-title" className={styles.title}>
             How to make a board
           </h2>
-          <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={onClose}>
-            Close
+          <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.icon)} onClick={onClose} aria-label="Close" title="Close">
+            <X size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
 
         <ol className={styles.steps}>
           <li>
-            <strong>Give your agent the guide and the schema.</strong> They describe the file Anatomy opens.
+            Give your agent the guide and the schema.
           </li>
           <li>
-            <strong>Paste the prompt below,</strong> and say what you want explained.
+            Paste the prompt below and say what you want explained.
           </li>
           <li>
-            <strong>Save the JSON it writes,</strong> then open that file here.
+            Save the JSON it writes, then open that file here.
           </li>
         </ol>
 
         <div className={styles.row}>
           <button type="button" className={buttons.button} onClick={() => download(guideText, 'authoring-guide.md', 'text/markdown')}>
+            <Download size={16} strokeWidth={1.5} aria-hidden="true" />
             Download the guide
           </button>
           <button
@@ -118,6 +120,7 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
             className={buttons.button}
             onClick={() => download(schemaText, 'board.v1.schema.json', 'application/json')}
           >
+            <Download size={16} strokeWidth={1.5} aria-hidden="true" />
             Download JSON Schema
           </button>
         </div>
@@ -128,10 +131,11 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
         <textarea id="agent-prompt" ref={prompt} className={styles.prompt} readOnly rows={15} value={AGENT_PROMPT} />
         <div className={styles.row}>
           <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={copy}>
+            <Copy size={16} strokeWidth={1.5} aria-hidden="true" />
             Copy prompt
           </button>
           <span role="status" className={styles.status}>
-            {failed && 'Could not copy. Select the text and copy it yourself.'}
+            {failed && 'Could not copy. Select the text and copy it.'}
           </span>
         </div>
       </div>

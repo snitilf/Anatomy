@@ -3,11 +3,12 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
 import { PlayOriginContext } from '../scenarios/focus'
 import type { Board } from '../board/schema'
-import { SourceBadge } from '../app/SourceBadge'
+import { ArrowRight, Play } from 'lucide-react'
+import { SourceNote } from '../app/SourceNote'
 import { NotesSection } from '../notes/NotesSection'
 import { NotesToReview, WhatChanged } from '../notes/Review'
 import { usePanel } from './panelContext'
-import { Heading, OpenItems, Section, ShortList } from './parts'
+import { ConnectionLabel, Heading, OpenItems, Section, ShortList } from './parts'
 import styles from './parts.module.css'
 
 function plural(n: number, one: string, many: string) {
@@ -56,6 +57,7 @@ export function Overview({ board }: { board: Board }) {
                     dispatch({ type: 'scenarioStarted', id: scenario.id })
                   }}
                 >
+                  <Play size={14} strokeWidth={1.5} aria-hidden="true" />
                   Play
                 </button>
               </li>
@@ -84,7 +86,7 @@ export function Overview({ board }: { board: Board }) {
                   <span className={styles.rowTitle}>{c.label}</span>
                   {c.group && groupName.get(c.group) && <span className={styles.rowMeta}>{groupName.get(c.group)}</span>}
                 </span>
-                <SourceBadge kind={c.source.kind} />
+                {c.source.kind !== 'agent-explanation' && <SourceNote kind={c.source.kind} className={styles.rowSource} iconOnly />}
               </button>
             </li>
           ))}
@@ -99,10 +101,14 @@ export function Overview({ board }: { board: Board }) {
                 <button type="button" className={styles.row} onClick={() => choose({ type: 'relationship', id: r.id })}>
                   <span className={styles.rowMain}>
                     <span className={styles.rowTitle}>
-                      {names.get(r.from) ?? r.from} <span aria-hidden="true">{'→'}</span>
-                      <span className="sr-only"> to </span> {names.get(r.to) ?? r.to}
+                      {names.get(r.from) ?? r.from}
+                      <ArrowRight className={styles.inlineArrow} size={14} strokeWidth={1.5} aria-hidden="true" />
+                      <span className="sr-only"> to </span>
+                      {names.get(r.to) ?? r.to}
                     </span>
-                    <span className={styles.rowMeta}>{r.kind === 'unknown' ? `? ${r.label}` : r.label}</span>
+                    <span className={styles.rowMeta}>
+                      <ConnectionLabel relationship={r} />
+                    </span>
                   </span>
                 </button>
               </li>

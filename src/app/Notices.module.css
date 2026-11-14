@@ -1,57 +1,57 @@
 .panel {
   box-sizing: border-box;
-  width: min(640px, 100%);
-  padding: 10px 12px 10px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
+  width: min(600px, 100%);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   max-height: min(40dvh, 320px);
   overflow-y: auto;
-  font-size: 14px;
+  background: var(--raised);
+  color: var(--fg);
   pointer-events: auto;
-  box-shadow:
-    0 2px 4px var(--shadow),
-    0 12px 28px -8px var(--shadow);
+  box-shadow: var(--shadow-float);
 }
 
-.error {
-  background: var(--surface);
-  border-left: 4px solid var(--ink);
-}
-
-.warning {
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
+.error .icon {
+  color: var(--danger);
 }
 
 .head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-2);
+}
+
+.icon {
+  flex: none;
+  margin-top: 6px;
+  color: var(--fg-2);
 }
 
 .title {
+  flex: 1;
   min-width: 0;
   margin: 4px 0 0;
   overflow-wrap: anywhere;
-  font-size: 16px;
-  font-weight: 650;
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-semibold);
 }
 
 .file {
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 12px;
 }
 
 .list {
   flex: 1;
-  margin: 8px 0 4px;
+  margin: var(--space-1) 0 var(--space-1) 24px;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
+  color: var(--fg-2);
 }
 
 .warning .list {
@@ -62,20 +62,17 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 10px;
+  gap: 2px var(--space-2);
 }
 
 .path {
-  color: var(--ink);
-  background: var(--faint);
   max-width: 100%;
-  padding: 0 6px;
-  border-radius: 4px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-xs);
+  background: var(--hover);
+  color: var(--fg);
+  font-size: 12px;
   overflow-wrap: anywhere;
-}
-
-.warning .path {
-  background: var(--faint);
 }
 
 .problem > span {

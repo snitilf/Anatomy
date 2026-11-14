@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { CircleAlert, Info } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from './store'
 import buttons from './buttons.module.css'
@@ -12,6 +13,7 @@ export function Notices() {
       {openErrors && (
         <section className={clsx(styles.panel, styles.error)} role="alert" aria-labelledby="open-error-title">
           <div className={styles.head}>
+            <CircleAlert className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
             <h2 className={styles.title} id="open-error-title">
               <span className={styles.file}>{openErrors.fileName}</span> was not opened
             </h2>
@@ -32,6 +34,7 @@ export function Notices() {
       {warnings.length > 0 && (
         <section className={clsx(styles.panel, styles.warning)} role="status" aria-label="Notice">
           <div className={styles.head}>
+            <Info className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
             <ul className={styles.list}>
               {warnings.map((w, i) => (
                 <li key={i} className={styles.problem}>
