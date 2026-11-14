@@ -1,6 +1,6 @@
-import { useReactFlow, useStore } from '@xyflow/react'
+import { useReactFlow, useStore, type Viewport } from '@xyflow/react'
 import { Maximize, Minus, Plus } from 'lucide-react'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { stepZoom, zoomAround } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 import { LineKey } from './Legend'
@@ -18,22 +18,35 @@ export function ZoomBar() {
   const atMin = useStore((s) => s.transform[2] <= s.minZoom + 1e-3)
   const atMax = useStore((s) => s.transform[2] >= s.maxZoom - 1e-3)
 
-  const zoomTo = useCallback(
-    (zoom: number, animate: boolean) => {
-      const size = camera.size()
-      const middle = { x: size.width / 2, y: size.top + (size.height - size.top) / 2 }
-      camera.move(zoomAround(flow.getViewport(), zoom, middle), animate && !prefersStillness() ? GLIDE_MS : 0)
+  // Where a glide is going. A second click during the glide steps on from there, not from halfway.
+  const heading = useRef<{ viewport: Viewport; until: number } | undefined>(undefined)
+  const now = useCallback(() => {
+    const pending = heading.current
+    return pending && performance.now() < pending.until ? pending.viewport : flow.getViewport()
+  }, [flow])
+  const go = useCallback(
+    (target: (from: Viewport) => Viewport, animate: boolean) => {
+      const duration = animate && !prefersStillness() ? GLIDE_MS : 0
+      const viewport = camera.move(target(now()), duration)
+      heading.current = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
     },
-    [camera, flow],
+    [camera, now],
   )
   const run = useCallback(
     (command: 'in' | 'out' | 'reset' | 'fit', animate: boolean) => {
-      const duration = animate && !prefersStillness() ? GLIDE_MS : 0
-      if (command === 'fit') camera.frame({}, duration)
-      else if (command === 'reset') zoomTo(1, animate)
-      else zoomTo(stepZoom(flow.getViewport().zoom, command === 'in' ? 1 : -1, camera.limits()), animate)
+      const size = camera.size()
+      const middle = { x: size.width / 2, y: size.top + (size.height - size.top) / 2 }
+      const limits = camera.limits()
+      const step = stepZoom(now().zoom, command === 'in' ? 1 : -1, limits)
+      // Zoomed all the way out, the whole board is in view, wherever the view was before.
+      if (command === 'fit' || (command === 'out' && step <= limits.minZoom + 1e-6)) {
+        const duration = animate && !prefersStillness() ? GLIDE_MS : 0
+        const viewport = camera.frame({}, duration)
+        heading.current = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
+      } else if (command === 'reset') go((from) => zoomAround(from, 1, middle), animate)
+      else go((from) => zoomAround(from, step, middle), animate)
     },
-    [camera, flow, zoomTo],
+    [camera, go, now],
   )
 
   // Keys move the camera at once: they repeat, and a glide would lag behind them.

@@ -7,9 +7,10 @@ export interface Camera {
   limits(): Limits
   /** The size of the map, and how much of its top the notices cover. */
   size(): Size & { top: number }
-  move(viewport: Viewport, duration?: number): void
+  /** Returns where the camera goes, after the limits. */
+  move(viewport: Viewport, duration?: number): Viewport
   /** Frames the whole content, or a box of it. */
-  frame(options?: Frame, duration?: number): void
+  frame(options?: Frame, duration?: number): Viewport
 }
 
 export const CameraContext = createContext<Camera | undefined>(undefined)
