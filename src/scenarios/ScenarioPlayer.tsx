@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import clsx from 'clsx'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
 import styles from './ScenarioPlayer.module.css'
@@ -7,7 +8,7 @@ import { currentStep } from './step'
 
 /**
  * The bar that walks through one scenario, one step at a time.
- * A scenario is a written sequence. Playing it moves the highlight on the map and runs nothing.
+ * Playing a scenario moves the highlight on the map. It runs nothing.
  */
 export function ScenarioPlayer({ onClose }: { onClose: () => void }) {
   const { board, scenario } = useAppStore(useShallow((s) => ({ board: s.board, scenario: s.scenario })))
@@ -43,15 +44,14 @@ export function ScenarioPlayer({ onClose }: { onClose: () => void }) {
         <p className={styles.count}>
           Step {step.index + 1} of {total}
         </p>
-        <button type="button" className={styles.close} onClick={onClose}>
-          Close
+        <button type="button" className={styles.close} onClick={onClose} aria-label="Close" title="Close">
+          <X size={16} strokeWidth={1.5} aria-hidden="true" />
         </button>
       </div>
       <p className={styles.caption} aria-live="polite" aria-atomic="true">
         {step.caption}
       </p>
       <div className={styles.foot}>
-        <p className={styles.note}>Teaching sequence. Nothing runs.</p>
         <div className={styles.buttons}>
           <button
             type="button"
@@ -59,6 +59,7 @@ export function ScenarioPlayer({ onClose }: { onClose: () => void }) {
             aria-disabled={atStart || undefined}
             onClick={() => dispatch({ type: 'scenarioPrevious' })}
           >
+            <ChevronLeft size={16} strokeWidth={1.5} aria-hidden="true" />
             Previous
           </button>
           <button
@@ -69,6 +70,7 @@ export function ScenarioPlayer({ onClose }: { onClose: () => void }) {
             onClick={() => dispatch({ type: 'scenarioNext' })}
           >
             Next
+            <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
       </div>

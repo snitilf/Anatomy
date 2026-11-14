@@ -1,32 +1,19 @@
 /* oxlint-disable react/refs -- callback refs hand ref lists to the static art, they are not read while rendering */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { Plate } from '../kit/react/draw'
 import { spring, type Spring } from '../kit/react/live'
 import { Base, CardArt, Deck, DeckFront, GateArch, LedgerArch, LockArch, PusherArt, Stack, Switch } from './art'
+import { useTheme } from '../../theme/theme'
 import './lesson.css'
 import { HEIGHT, LIFT, SHUTTER_LIFT, SLOTS, SWITCH_TRAVEL, TAB_TIP, TRAVEL_END, WIDTH, CARD, shift } from './geometry'
 import { MAX_VERSION, canEdit, caption, initialState, readout, step as stepModel, type LessonEvent, type LessonState } from './model'
 import { layerOf, litOf, reachOf, stopOf, targetsOf } from './scene'
 
-const DARK = '(prefers-color-scheme: dark)'
 const STILL = '(prefers-reduced-motion: reduce)'
 const LAYERS = [0, 1, 2, 3] as const
 
 const hasMedia = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
 const stillNow = () => hasMedia() && window.matchMedia(STILL).matches
-
-function useMedia(query: string): boolean {
-  return useSyncExternalStore(
-    (notify) => {
-      if (!hasMedia()) return () => {}
-      const list = window.matchMedia(query)
-      list.addEventListener('change', notify)
-      return () => list.removeEventListener('change', notify)
-    },
-    () => hasMedia() && window.matchMedia(query).matches,
-    () => false,
-  )
-}
 
 function useVisible(ref: RefObject<Element | null>): boolean {
   const [visible, setVisible] = useState(true)
@@ -124,7 +111,7 @@ const LABEL =
 const KEYS: Record<string, LessonEvent> = { a: 'approve', r: 'reject', e: 'edit', s: 'trySend', p: 'restart', '0': 'reset' }
 
 export default function ApprovalGateLesson() {
-  const dark = useMedia(DARK)
+  const dark = useTheme() === 'dark'
   const [state, setState] = useState<LessonState>(initialState)
   const [visual, setVisual] = useState<Visual>({ cardVersion: 1, delivered: [], keyVersion: null })
   const [announcement, setAnnouncement] = useState('')
@@ -462,7 +449,6 @@ export default function ApprovalGateLesson() {
       </div>
 
       <section className="ag-notes" aria-label="About this model">
-        <span className="ag-label">Teaching model, not live execution</span>
         <div>
           <dl className="ag-map">
             <div>

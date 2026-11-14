@@ -50,7 +50,6 @@ describe('walkthroughs', () => {
     const player = within(bar())
     expect(player.getByText(`Step 1 of ${walk.steps.length}`)).toBeInTheDocument()
     expect(player.getByText(walk.steps[0]!.caption)).toBeInTheDocument()
-    expect(player.getByText('Teaching sequence. Nothing runs.')).toBeInTheDocument()
     expect(player.getByText(walk.steps[0]!.caption)).toHaveAttribute('aria-live', 'polite')
   })
 
@@ -128,8 +127,7 @@ describe('lessons in the inspector', () => {
     const approval = example.components.find((c) => c.lesson)!
     const panel = screen.getByTestId('inspector')
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${approval.label}`) })[0]!)
-    expect(within(panel).getByRole('heading', { name: 'Interactive lesson' })).toBeInTheDocument()
-    expect(within(panel).getByText('Teaching model')).toBeInTheDocument()
+    expect(within(panel).getByRole('heading', { name: 'Lesson' })).toBeInTheDocument()
     const open = within(panel).getByRole('button', { name: 'Open lesson' })
     open.focus()
     fireEvent.click(open)
@@ -152,7 +150,7 @@ describe('lessons in the inspector', () => {
     const plain = example.components.find((c) => !c.lesson)!
     const panel = screen.getByTestId('inspector')
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${plain.label}`) })[0]!)
-    expect(within(panel).queryByText('Interactive lesson')).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('heading', { name: 'Lesson' })).not.toBeInTheDocument()
   })
 })
 
