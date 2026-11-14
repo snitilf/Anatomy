@@ -87,11 +87,13 @@ samp {
   white-space: nowrap;
 }
 
+/* Less motion: nothing moves or scales. Fades stay, at most 120 ms. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    transition: none !important;
+    transition-property: opacity !important;
+    transition-duration: 120ms !important;
     animation: none !important;
     scroll-behavior: auto !important;
   }

@@ -97,4 +97,9 @@
   .key {
     display: none;
   }
+
+  /* The walkthrough bar takes the bottom of the map while it plays. */
+  :global([data-playing]) .dock {
+    display: none;
+  }
 }

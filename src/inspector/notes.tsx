@@ -171,7 +171,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
           ) : (
             <p className={styles.text}>{note.text}</p>
           )}
-          <p className={styles.meta}>
+          <div className={styles.meta}>
             {showTarget && note.target.type !== 'board' && (
               <>
                 <button type="button" className={styles.on} onClick={() => choose(note.target as { type: 'component' | 'relationship'; id: string })}>
@@ -187,38 +187,38 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
                 <span>Sent</span>
               </>
             )}
-          </p>
-        </div>
-        {!editing && (
-          <div className={styles.tools}>
-            <Tip label="Edit">
-              <button
-                type="button"
-                className={styles.tool}
-                aria-label={`Edit ${kind.toLowerCase()}`}
-                onClick={() => {
-                  setDraft(note.text)
-                  setEditing(true)
-                }}
-              >
-                <Pencil size={14} strokeWidth={1.5} aria-hidden="true" />
-              </button>
-            </Tip>
-            <Tip label="Delete">
-              <button
-                type="button"
-                className={styles.tool}
-                aria-label={`Delete ${kind.toLowerCase()}`}
-                onClick={() => {
-                  dispatch({ type: 'noteDeleted', id: note.id })
-                  deletedToast(`${kind} deleted`, dispatch)
-                }}
-              >
-                <Trash2 size={14} strokeWidth={1.5} aria-hidden="true" />
-              </button>
-            </Tip>
+            {!editing && (
+              <div className={styles.tools}>
+                <Tip label="Edit">
+                  <button
+                    type="button"
+                    className={styles.tool}
+                    aria-label={`Edit ${kind.toLowerCase()}`}
+                    onClick={() => {
+                      setDraft(note.text)
+                      setEditing(true)
+                    }}
+                  >
+                    <Pencil size={14} strokeWidth={1.5} aria-hidden="true" />
+                  </button>
+                </Tip>
+                <Tip label="Delete">
+                  <button
+                    type="button"
+                    className={styles.tool}
+                    aria-label={`Delete ${kind.toLowerCase()}`}
+                    onClick={() => {
+                      dispatch({ type: 'noteDeleted', id: note.id })
+                      deletedToast(`${kind} deleted`, dispatch)
+                    }}
+                  >
+                    <Trash2 size={14} strokeWidth={1.5} aria-hidden="true" />
+                  </button>
+                </Tip>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
       {status !== 'current' && (
         <StatusLine

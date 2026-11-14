@@ -106,14 +106,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bar {
-    transition: opacity 120ms var(--ease-out);
-  }
-
   @starting-style {
     .bar:not([data-instant]) {
       transform: translateX(-50%);
     }
+  }
+}
+
+/* A narrow map has no room beside the zoom bar, so the bar sits above it. */
+@container map (max-width: 1040px) {
+  .bar {
+    bottom: 60px;
   }
 }
 

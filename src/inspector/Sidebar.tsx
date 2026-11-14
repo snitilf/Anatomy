@@ -124,7 +124,7 @@ function Body({ header }: { header?: ReactNode }) {
           </Tabs.List>
         </Tabs.Root>
       )}
-      <div ref={scroll} className={styles.scroll}>
+      <div ref={scroll} className={styles.scroll} data-scroll="">
         <div key={reviewing ? 'review' : key} className={styles.content}>
           {content}
         </div>

@@ -6,7 +6,7 @@ const BOARD_FILE = 'src/examples/nordet.board.json'
 
 test('Escape during a drag puts the card back and keeps the selection', async ({ page }) => {
   await open(page, BOARD_FILE)
-  const inspector = page.getByRole('complementary', { name: 'Details' })
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const spot = await grabbable(page)
   const start = await cardTransform(page, spot.id)
 
@@ -38,10 +38,10 @@ test('Escape during a drag puts the card back and keeps the selection', async ({
 
 test('dragging a card during a walkthrough keeps the panel and never dims the held card', async ({ page }) => {
   await open(page, BOARD_FILE)
-  const inspector = page.getByRole('complementary', { name: 'Details' })
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   await inspector.getByRole('button', { name: 'Play Approve and simulate' }).click()
   const player = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
-  await expect(player.getByText('Step 1 of 5')).toBeVisible()
+  await expect(player.getByText('1 / 5')).toBeVisible()
   await page.waitForTimeout(400)
 
   const dimmedCard = page.locator('.react-flow__node-card:has([data-dimmed="true"])').first()
@@ -149,7 +149,7 @@ const BOARDS_FOR_LINKS = [
 for (const board of BOARDS_FOR_LINKS) {
   test(`a link dropped on the middle of another card joins them: ${board.name}`, async ({ page }) => {
     await open(page, board.file)
-    const inspector = page.getByRole('complementary', { name: 'Details' })
+    const inspector = page.getByRole('complementary', { name: 'Sidebar' })
     const pair = await linkPair(page)
     const mine = page.locator('.react-flow__edge[data-id^="manual:"]')
     const before = await mine.count()
@@ -162,14 +162,14 @@ for (const board of BOARDS_FOR_LINKS) {
     }
     await page.mouse.up()
 
-    await expect(inspector.getByRole('heading', { name: 'Your link', level: 2 })).toBeVisible()
+    await expect(inspector.getByRole('heading', { name: 'Link', level: 2 })).toBeVisible()
     await expect(mine).toHaveCount(before + 1)
     await expect(page.getByText('Link added')).toBeVisible()
   })
 
   test(`a link dropped on empty space does nothing and keeps the selection: ${board.name}`, async ({ page }) => {
     await open(page, board.file)
-    const inspector = page.getByRole('complementary', { name: 'Details' })
+    const inspector = page.getByRole('complementary', { name: 'Sidebar' })
     const pair = await linkPair(page)
     const mine = page.locator('.react-flow__edge[data-id^="manual:"]')
     const before = await mine.count()

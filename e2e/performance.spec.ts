@@ -144,7 +144,7 @@ test('dragging a card on a board with 150 strokes and 20 sticky notes stays smoo
     ['anatomy:test-folder', { 'board.json': { text: board, lastModified: 1 }, 'layer.json': { text: JSON.stringify(layer), lastModified: 1 } }] as const,
   )
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open repository folder' }).click()
+  await page.getByRole('button', { name: 'Open folder' }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await page.waitForTimeout(400)
   const spot = await grabbable(page)
