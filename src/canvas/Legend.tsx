@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
-import { Spline } from 'lucide-react'
+import { CircleHelp } from 'lucide-react'
 import { KIND_ORDER, KIND_WORDS } from '../app/labels'
 import { KIND_STYLE, MANUAL_STYLE, TONE_COLOR } from './kinds'
 import styles from './Legend.module.css'
@@ -14,13 +14,12 @@ const SHORT: Record<(typeof KIND_ORDER)[number], string> = {
   unknown: 'Not known',
 }
 
-export function Legend() {
+/** What each kind of line means, behind a small button next to the zoom bar. */
+export function LineKey() {
   return (
-    <div className={styles.legend}>
     <Popover.Root>
-      <Popover.Trigger className={styles.button} aria-label="Line key">
-        <Spline className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
-        <span className={styles.text}>Line key</span>
+      <Popover.Trigger className={styles.button} aria-label="Line key" title="Line key">
+        <CircleHelp size={16} strokeWidth={1.5} aria-hidden="true" />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner className={styles.positioner} side="top" align="start" sideOffset={6} collisionPadding={8}>
@@ -57,6 +56,5 @@ export function Legend() {
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
-    </div>
   )
 }

@@ -1,6 +1,7 @@
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
+import { Handle, NodeResizeControl, Position, type Node, type NodeProps } from '@xyflow/react'
 import { GraduationCap, StickyNote } from 'lucide-react'
 import { memo } from 'react'
+import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
@@ -43,6 +44,18 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
       </div>
+      <NodeResizeControl
+        position="bottom-right"
+        className={styles.resize ?? ''}
+        minWidth={CARD_MIN.width}
+        minHeight={CARD_MIN.height}
+        maxWidth={CARD_MAX.width}
+        maxHeight={CARD_MAX.height}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M9 3 L3 9 M9 6.5 L6.5 9" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" fill="none" />
+        </svg>
+      </NodeResizeControl>
     </>
   )
 })

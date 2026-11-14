@@ -140,8 +140,10 @@ export function placeCards(board: Board, placement: CardPlacement): Record<strin
   let auto: Record<string, Point> = {}
   if (pending.size > 0) {
     // Every card without a board position takes part in the layout, so a card the user moved keeps its neighbors in flow.
+    // It uses the size each card has before the user resizes it, so a resize never moves the other cards around.
     const unplaced = new Set(board.components.filter((c) => !c.position).map((c) => c.id))
-    auto = autoLayout(board, sizeOf, unplaced)
+    const natural = new Map(board.components.map((c) => [c.id, contentSize(c)]))
+    auto = autoLayout(board, (id) => natural.get(id) ?? { ...CARD_SIZE }, unplaced)
     if (boardPlaced.length > 0) {
       const right = Math.max(...boardPlaced.map((r) => r.x + r.width))
       const top = Math.min(...boardPlaced.map((r) => r.y))

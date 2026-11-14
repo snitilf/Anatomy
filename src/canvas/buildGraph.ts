@@ -57,7 +57,7 @@ export interface ManualEdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
-  /** The line is a cheap curve while a card moves, so the label has no place yet and stays hidden. */
+  /** The line is a cheap elbow while a card moves, so the label has no place yet and stays hidden. */
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
   depth: number
@@ -81,7 +81,7 @@ export interface EdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
-  /** The line is a cheap curve while a card moves, so the label has no place yet and stays hidden. */
+  /** The line is a cheap elbow while a card moves, so the label has no place yet and stays hidden. */
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
   depth: number
@@ -119,7 +119,7 @@ export interface EdgeShape {
   /** The sampled points of the drawn line, kept so a later build can check that the line still keeps clear of the cards. */
   points: readonly Point[]
   runs?: readonly (readonly [Point, Point])[]
-  /** Drawn as a plain curve with the label at the middle while a card moves. Never kept by a later build. */
+  /** Drawn as a plain elbow with the label at the middle while a card moves. Never kept by a later build. */
   cheap?: true
 }
 
@@ -268,7 +268,7 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
 }
 
 /**
- * The cheap update while a card moves. Only the connections of that card are redrawn, as plain curves with the
+ * The cheap update while a card moves. Only the connections of that card are redrawn, as plain elbows with the
  * label at the middle, and only the group area around it. Every other shape keeps its object.
  */
 export function moveCard(board: Board, geometry: Geometry, rects: Readonly<Record<string, Rect>>, id: string): Geometry {
@@ -357,6 +357,8 @@ export function assembleGraph(
   cache: GraphCache,
   /** The card being dragged. It is never dimmed. */
   held?: string,
+  /** Cards a drop just pushed aside. They glide to their new place. */
+  pushed?: ReadonlySet<string>,
 ): { nodes: Node[]; edges: Edge[] } {
   const playing = highlight !== undefined && highlight.size > 0
   const names = new Map(board.components.map((c) => [c.id, c.label]))
@@ -404,6 +406,7 @@ export function assembleGraph(
         summaryLines: summaryLinesFor(c, rect),
       },
       selected: c.id === selectedPart,
+      ...(pushed?.has(c.id) ? { className: 'pushed' } : {}),
       connectable: true,
       deletable: false,
       ariaLabel: `${c.label}. ${c.summary}`,

@@ -8,13 +8,14 @@ import styles from './RelationshipEdge.module.css'
 
 /** An arrow the user drew. It never looks like a connection the agent supplied. */
 export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualEdgeData>>) {
-  const { id, data, selected, markerEnd, interactionWidth } = props
+  const { id, data, selected, markerEnd, interactionWidth, source, target } = props
   const dispatch = useAppDispatch()
   if (!data) return null
+  const ends = `${source} ${target}`
   const emphasized = selected || data.active
   return (
     <>
-      <g className={styles.line} data-faded={data.faded || undefined}>
+      <g className={styles.line} data-faded={data.faded || undefined} data-ends={ends}>
         <BaseEdge
           id={id}
           path={data.path}
@@ -31,6 +32,8 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
       <EdgeLabelRenderer>
         <div
           className={clsx(styles.pill, styles.mine, 'nodrag nopan')}
+          data-label=""
+          data-ends={ends}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
           data-faded={data.faded || undefined}

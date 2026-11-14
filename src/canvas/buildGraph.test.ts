@@ -234,7 +234,7 @@ describe.each([
     for (const [edgeId, shape] of solved.edges) expect(again.edges.get(edgeId)).toBe(shape)
   })
 
-  it('never keeps a plain curve from the drag, even when the card returns to its start', () => {
+  it('never keeps the cheap line from the drag, even when the card returns to its start', () => {
     const { positions, solved } = start()
     const away = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 30, y: positions[id]!.y + 30 } }
     const cheap = moveCard(board, solved, away, id)
