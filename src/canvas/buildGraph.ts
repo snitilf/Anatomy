@@ -4,13 +4,17 @@ import { KIND_WORDS } from '../app/labels'
 import type { Selection } from '../app/state'
 import { groupAreas, GROUP_PADDING, summaryLinesFor } from '../layout/cards'
 import { inflate, overlaps, type Point, type Rect } from '../layout/geometry'
-import type { Link } from '../layer/model'
+import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { pillHeight, placeLabel, PointIndex, textArea } from './labelPlacement'
 import { Drawn, lineHitsCards, Obstacles, planEdges, quickRoute, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
+/** The line of a connection whose ends the user moved, as the user wants it. Its original stays, dimmed, under its own ID. */
+export const EDITED_PREFIX = 'edit:'
+/** Node IDs of text and sticky notes on the map. */
+export const MARK_PREFIX = 'mark:'
 
 export { GROUP_PADDING }
 
@@ -85,7 +89,38 @@ export interface EdgeData extends Record<string, unknown> {
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
   depth: number
+  /** The user moved an end: the line is drawn where the user wants it, and `ghost` is the original, dimmed. */
+  edited: boolean
+  ghost?: string
 }
+
+export interface ProposalData extends Record<string, unknown> {
+  proposalId: string
+  label: string
+  summary: string
+  summaryLines: number
+  noteCount: number
+}
+
+export interface MarkNodeData extends Record<string, unknown> {
+  mark: Extract<Mark, { kind: 'text' | 'sticky' }>
+}
+
+/** What the user added that the map draws as nodes and lines: proposed parts, moved connection ends, text, and sticky notes. */
+export interface UserParts {
+  proposals: readonly Proposal[]
+  reconnects: readonly Reconnect[]
+  marks: readonly Mark[]
+  /** A text or sticky note in motion, drawn at this spot and size until it is dropped. */
+  moving?: { id: string; x: number; y: number; width?: number; height?: number } | undefined
+  /** The mark or proposed part being typed in place. Its node hides under the editor. */
+  editing?: string | undefined
+}
+
+/** Text and sticky notes sit above the ink layer, which sits above the cards and the connection labels. */
+export const MARK_NODE_Z = 1160
+
+const NO_USER_PARTS: UserParts = { proposals: [], reconnects: [], marks: [] }
 
 export interface GroupBox {
   id: string
@@ -140,6 +175,7 @@ function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'la
 }
 
 const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
+export const editedId = (id: string) => `${EDITED_PREFIX}${id}`
 
 /**
  * Routes every line, then places every label so it keeps off all of them.
@@ -148,12 +184,15 @@ const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
  * did not move keeps its line, and its label keeps its place, as long as they are still clear of the moved cards and
  * every other label. Only the connections of moved cards, and those that a moved card now covers, are solved again.
  */
-export function computeGeometry(board: Board, rects: Readonly<Record<string, Rect>>, links: readonly Link[] = [], previous?: Geometry): Geometry {
-  const boxOf = new Map<string, Rect>()
-  for (const c of board.components) {
-    const r = rects[c.id]
-    if (r) boxOf.set(c.id, r)
-  }
+export function computeGeometry(
+  board: Board,
+  rects: Readonly<Record<string, Rect>>,
+  links: readonly Link[] = [],
+  previous?: Geometry,
+  reconnects: readonly Reconnect[] = [],
+): Geometry {
+  // The board's parts and the user's proposed parts. Both are cards the lines keep out of.
+  const boxOf = new Map<string, Rect>(Object.entries(rects))
   const boxes = [...boxOf.values()]
   const groups = groupBounds(board, rects)
   const groupRect = new Map<string, Rect>(groups.map((g) => [g.id, g]))
@@ -169,10 +208,24 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
   }
   const obstacles = new Obstacles(boxes, groups)
   const drawn = links.filter((l) => boxOf.has(l.from) && boxOf.has(l.to))
-  const ends: EdgeEnds[] = [...board.relationships, ...drawn.map((l) => ({ id: manualId(l.id), from: l.from, to: l.to }))]
-  const plans = planEdges(rects, ends)
+  const editOf = new Map(reconnects.map((e) => [e.relationshipId, e]))
+  const ends: EdgeEnds[] = []
   const texts = new Map<string, string>()
-  for (const r of board.relationships) texts.set(r.id, r.kind === 'unknown' ? `? ${r.label}` : r.label)
+  for (const r of board.relationships) {
+    ends.push(r)
+    const text = r.kind === 'unknown' ? `? ${r.label}` : r.label
+    const edit = editOf.get(r.id)
+    const from = edit?.from ?? r.from
+    const to = edit?.to ?? r.to
+    if (edit && from !== to && boxOf.has(from) && boxOf.has(to)) {
+      // The label moves with the line the user drew. The original keeps its line only.
+      ends.push({ id: editedId(r.id), from, to })
+      texts.set(editedId(r.id), text)
+      texts.set(r.id, '')
+    } else texts.set(r.id, text)
+  }
+  for (const l of drawn) ends.push({ id: manualId(l.id), from: l.from, to: l.to })
+  const plans = planEdges(rects, ends)
   // The chip adds a few characters, so the width is measured with them.
   for (const l of drawn) texts.set(manualId(l.id), l.label === '' ? 'Your link' : `You ${l.label}`)
 
@@ -244,6 +297,11 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
     ...(r.route.runs ? { runs: r.route.runs } : {}),
   })
   const place = (r: (typeof routes)[number], i: number) => {
+    if (r.text === '') {
+      const middle = r.route.points[Math.floor(r.route.points.length / 2)] ?? { x: 0, y: 0 }
+      edges.set(r.id, shapeOf(r, { ...middle, width: 0, lines: 0 }))
+      return
+    }
     const label = placeLabel(r.route.points, r.text, boxes, taken, lines, i)
     taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
     edges.set(r.id, shapeOf(r, label))
@@ -252,7 +310,11 @@ export function computeGeometry(board: Board, rects: Readonly<Record<string, Rec
   const later: number[] = []
   routes.forEach((r, i) => {
     const old = r.stays
-    if (old) {
+    if (old && r.text === '') {
+      edges.set(r.id, old)
+      return
+    }
+    if (old && old.labelWidth > 0) {
       const box = pillBox(old)
       const clear = !movedAreas.some((a) => overlaps(box, a)) && !taken.some((t) => overlaps(box, inflate(t, 3)))
       if (clear) {
@@ -359,9 +421,11 @@ export function assembleGraph(
   held?: string,
   /** Cards a drop just pushed aside. They glide to their new place. */
   pushed?: ReadonlySet<string>,
+  user: UserParts = NO_USER_PARTS,
 ): { nodes: Node[]; edges: Edge[] } {
   const playing = highlight !== undefined && highlight.size > 0
-  const names = new Map(board.components.map((c) => [c.id, c.label]))
+  const names = new Map([...board.components.map((c) => [c.id, c.label] as const), ...user.proposals.map((p) => [p.id, p.label] as const)])
+  const editOf = new Map(user.reconnects.map((e) => [e.relationshipId, e]))
   const selectedPart = selection?.type === 'component' ? selection.id : undefined
   // Picking a part leaves its own lines strong and softens the rest. Not while a card is held, and not during a walkthrough.
   const softening = selectedPart !== undefined && !playing && held === undefined
@@ -413,20 +477,70 @@ export function assembleGraph(
     } satisfies Node<CardData>)
   })
 
+  const selectedProposal = selection?.type === 'proposal' ? selection.id : undefined
+  const proposals = user.proposals.flatMap((p) => {
+    const rect = rects[p.id]
+    if (!rect) return []
+    return [
+      stable(cache.nodes, {
+        id: p.id,
+        type: 'proposal',
+        position: { x: rect.x, y: rect.y },
+        width: rect.width,
+        height: rect.height,
+        measured: { width: rect.width, height: rect.height },
+        data: { proposalId: p.id, label: p.label, summary: p.summary, summaryLines: summaryLinesFor({ label: p.label }, rect), noteCount: noteCounts.get(p.id) ?? 0 },
+        selected: p.id === selectedProposal,
+        ...(p.id === user.editing ? { className: 'editing' } : p.id === held ? { className: 'held' } : pushed?.has(p.id) ? { className: 'pushed' } : {}),
+        connectable: true,
+        deletable: false,
+        ariaLabel: `New part: ${p.label}${p.summary ? `. ${p.summary}` : ''}`,
+      } satisfies Node<ProposalData>),
+    ]
+  })
+
+  const selectedMark = selection?.type === 'mark' ? selection.id : undefined
+  const notes = user.marks.flatMap((m) => {
+    if (m.kind !== 'text' && m.kind !== 'sticky') return []
+    const at = user.moving?.id === m.id ? { ...m, ...user.moving } : m
+    return [
+      stable(cache.nodes, {
+        id: `${MARK_PREFIX}${m.id}`,
+        type: m.kind === 'text' ? 'mark-text' : 'mark-sticky',
+        position: { x: at.x, y: at.y },
+        width: at.width,
+        height: at.height,
+        measured: { width: at.width, height: at.height },
+        data: { mark: m },
+        selected: m.id === selectedMark,
+        ...(m.id === user.editing ? { className: 'editing' } : {}),
+        connectable: false,
+        deletable: false,
+        zIndex: MARK_NODE_Z,
+        ariaLabel: `${m.kind === 'text' ? 'Text' : 'Sticky note'}: ${m.text || 'empty'}`,
+      } satisfies Node<MarkNodeData>),
+    ]
+  })
+
   const edges: Edge[] = []
   for (const r of board.relationships) {
-    const shape = geometry.edges.get(r.id)
-    if (!shape) continue
+    const original = geometry.edges.get(r.id)
+    const edit = editOf.get(r.id)
+    const moved = edit ? geometry.edges.get(editedId(r.id)) : undefined
+    const shape = moved ?? original
+    if (!shape || !original) continue
+    const from = moved ? (edit?.from ?? r.from) : r.from
+    const to = moved ? (edit?.to ?? r.to) : r.to
     const selected = selection?.type === 'relationship' && selection.id === r.id
-    const active = selected || (selectedPart !== undefined && (r.from === selectedPart || r.to === selectedPart))
+    const active = selected || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
     const highlighted = playing && highlight.has(r.id)
-    const color = active || highlighted ? 'var(--accent)' : TONE_COLOR[KIND_STYLE[r.kind].tone]
+    const color = active || highlighted ? 'var(--accent)' : moved ? 'var(--yours)' : TONE_COLOR[KIND_STYLE[r.kind].tone]
     edges.push(
       stable(cache.edges, {
         id: r.id,
         type: 'relationship',
-        source: r.from,
-        target: r.to,
+        source: from,
+        target: to,
         sourceHandle: EDGE_OUT_HANDLE,
         targetHandle: EDGE_IN_HANDLE,
         selected,
@@ -434,7 +548,7 @@ export function assembleGraph(
         deletable: false,
         interactionWidth: 28,
         markerEnd: markerFor(color),
-        ariaLabel: `${names.get(r.from) ?? r.from} ${r.kind === 'unknown' ? 'connects to' : KIND_WORDS[r.kind]} ${names.get(r.to) ?? r.to}: ${r.label}`,
+        ariaLabel: `${names.get(from) ?? from} ${r.kind === 'unknown' ? 'connects to' : KIND_WORDS[r.kind]} ${names.get(to) ?? to}: ${r.label}${moved ? '. You moved its end.' : ''}`,
         data: {
           relationshipId: r.id,
           label: r.label,
@@ -450,6 +564,8 @@ export function assembleGraph(
           labelLines: shape.labelLines,
           moving: shape.cheap === true,
           depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
+          edited: moved !== undefined,
+          ...(moved ? { ghost: original.path } : {}),
         },
       } satisfies Edge<EdgeData>),
     )
@@ -491,7 +607,7 @@ export function assembleGraph(
     )
   }
 
-  const nodes = [...groups, ...cards]
+  const nodes = [...groups, ...cards, ...proposals, ...notes]
   forget(cache.nodes, nodes)
   forget(cache.edges, edges)
   return { nodes, edges }

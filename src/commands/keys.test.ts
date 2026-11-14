@@ -59,10 +59,11 @@ describe('the command list', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('leaves the whiteboard tool keys free', () => {
-    const used = COMMANDS.flatMap((c) => c.keys ?? [])
+  it('leaves the whiteboard tool keys to the tools', () => {
+    const used = COMMANDS.filter((c) => !c.id.startsWith('tool.')).flatMap((c) => c.keys ?? [])
     for (const key of TOOL_KEYS) {
       expect(used.filter((k) => isSingleKey(k) && matches(k, press(key.toLowerCase())))).toEqual([])
+      expect(COMMANDS.filter((c) => c.id.startsWith('tool.') && c.keys?.includes(key))).toHaveLength(1)
     }
   })
 })

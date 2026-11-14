@@ -16,8 +16,18 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
   const style = KIND_STYLE[data.kind]
   const ends = `${source} ${target}`
   const emphasized = selected || data.active || data.highlighted
+  const ink = data.edited ? 'var(--yours)' : `var(--line-ink, ${TONE_COLOR[style.tone]})`
   return (
     <>
+      {data.ghost && (
+        <path
+          className={styles.ghost}
+          d={data.ghost}
+          data-ends={ends}
+          style={{ stroke: TONE_COLOR[style.tone], strokeWidth: style.width, strokeDasharray: style.dash || undefined }}
+          aria-hidden="true"
+        />
+      )}
       <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
@@ -25,7 +35,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           {...(markerEnd ? { markerEnd } : {})}
           interactionWidth={interactionWidth ?? 28}
           style={{
-            stroke: emphasized ? 'var(--accent)' : `var(--line-ink, ${TONE_COLOR[style.tone]})`,
+            stroke: emphasized ? 'var(--accent)' : ink,
             strokeWidth: emphasized ? Math.max(SELECTED_WIDTH, style.width) : style.width,
             strokeDasharray: style.dash || undefined,
             strokeLinecap: style.dash.startsWith('1.5') ? 'round' : 'butt',
@@ -46,6 +56,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-moving={data.moving || undefined}
           data-depth={data.depth || undefined}
           data-kind={data.kind}
+          data-edited={data.edited || undefined}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
           title={text}
           onClick={() => dispatch({ type: 'select', selection: { type: 'relationship', id: data.relationshipId } })}

@@ -1,0 +1,151 @@
+/*
+ * The ink layer: everything the user drew, in board coordinates, above the cards and the connection labels and below
+ * text and sticky notes. The SVG itself takes no pointer; only the wide invisible copy of each line does.
+ */
+.ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1150;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.pen {
+  fill: var(--yours);
+}
+
+.shape,
+.arrow {
+  fill: none;
+  stroke: var(--yours);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.head {
+  fill: none;
+  stroke: var(--yours);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.headSelected {
+  composes: head;
+  stroke: var(--accent);
+}
+
+.mark[data-selected] .arrow {
+  stroke: var(--accent);
+}
+
+.hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.ink[data-interactive] .hit {
+  pointer-events: stroke;
+  cursor: grab;
+}
+
+.mark:focus {
+  outline: none;
+}
+
+.mark:focus-visible .shape,
+.mark:focus-visible .arrow {
+  stroke: var(--accent);
+}
+
+.mark:focus-visible .pen {
+  fill: var(--accent);
+}
+
+/* The box around a selected drawing or shape. */
+.selection {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* The two ends of a selected connection, link, or arrow. Drag one onto another part to move that end. */
+.handle {
+  fill: var(--raised);
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.handleHit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: grab;
+  touch-action: none;
+}
+
+.handleHit:hover + .handle,
+.handleHit:focus-visible + .handle {
+  fill: var(--accent);
+}
+
+.handleHit:focus {
+  outline: none;
+}
+
+/* While an end is dragged: a straight line from the end that stays to the pointer. */
+.ghost {
+  fill: none;
+  stroke: var(--yours);
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* What is drawn while the pointer is down, before it is saved. */
+.preview {
+  fill: none;
+  stroke: var(--yours);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.previewPen {
+  fill: var(--yours);
+  pointer-events: none;
+}
+
+/* Takes the pointer while a drawing tool is in use, so the map neither pans nor moves cards under it. */
+.surface {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.surface[data-tool='text'] {
+  cursor: text;
+}
+
+/* The part, connection, or card an end would attach to if let go now. */
+:global(.react-flow__node[data-drop-target]) {
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

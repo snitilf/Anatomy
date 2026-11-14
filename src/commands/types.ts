@@ -28,9 +28,9 @@ export interface CommandContext {
   camera: Camera | undefined
 }
 
-export type Group = 'Board' | 'Go to' | 'Walkthrough' | 'Selection' | 'View' | 'Theme' | 'Help'
+export type Group = 'Board' | 'Go to' | 'Walkthrough' | 'Selection' | 'Tools' | 'View' | 'Theme' | 'Help'
 
-export const GROUP_ORDER: readonly Group[] = ['Board', 'Go to', 'Walkthrough', 'Selection', 'View', 'Theme', 'Help']
+export const GROUP_ORDER: readonly Group[] = ['Board', 'Go to', 'Walkthrough', 'Selection', 'Tools', 'View', 'Theme', 'Help']
 
 export interface Command {
   id: string
