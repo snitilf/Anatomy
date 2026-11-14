@@ -1,5 +1,5 @@
 import type { Board, BoardComponent, BoardRelationship } from '../board/schema'
-import type { Target } from './types'
+import type { Target } from './model'
 
 /** JSON with sorted keys and no undefined values, so equal data gives equal text. */
 function canonical(value: unknown): string {
@@ -75,4 +75,9 @@ export function fingerprintTarget(board: Board, target: Target): string | undefi
       return r ? fingerprintRelationship(r) : undefined
     }
   }
+}
+
+/** The fingerprint of any JSON value, such as one of the user's items. */
+export function fingerprintValue(value: unknown): string {
+  return cyrb53(canonical(value))
 }

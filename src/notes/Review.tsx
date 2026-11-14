@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
-import type { BoardDiff } from '../overlay/diff'
-import { summarizeOverlay } from '../overlay/status'
+import type { BoardDiff } from '../layer/diff'
+import { summarizeLayer } from '../layer/status'
 import { usePanel } from '../inspector/panelContext'
 import { Section } from '../inspector/parts'
 import { DeleteLink, RelinkLinkEnd } from './Links'
@@ -11,7 +11,7 @@ import { NoteCard, StillTrue } from './NoteCard'
 import styles from './notes.module.css'
 import { TargetSelect } from './TargetSelect'
 import { targetName } from './targets'
-import type { Note, Overlay, Target } from '../overlay/types'
+import type { Note, Target } from '../layer/model'
 
 function componentName(board: Board, id: string): string {
   return board.components.find((c) => c.id === id)?.label ?? id
@@ -121,11 +121,11 @@ function RelinkNote({ note, board }: { note: Note; board: Board }) {
  * It stays while any note is outdated or homeless, even after the change list is cleared.
  */
 export function NotesToReview({ board, previous }: { board: Board; previous: Board | undefined }) {
-  const { notes, manualLinks } = useAppStore(useShallow((s) => ({ notes: s.overlay?.notes, manualLinks: s.overlay?.manualLinks })))
+  const { notes, links, proposals } = useAppStore(useShallow((s) => ({ notes: s.layer?.notes, links: s.layer?.links, proposals: s.layer?.proposals })))
   const { choose } = usePanel()
-  if (!notes || !manualLinks) return null
+  if (!notes || !links || !proposals) return null
   // Positions play no part here, so only the notes and links are read.
-  const { outdated, needsRelinking, brokenLinks } = summarizeOverlay(board, { notes, manualLinks } as Overlay)
+  const { outdated, needsRelinking, brokenLinks } = summarizeLayer(board, { notes, links, proposals })
   if (outdated.length + needsRelinking.length + brokenLinks.length === 0) return null
   const ids = new Set(board.components.map((c) => c.id))
   const was = previous ?? board

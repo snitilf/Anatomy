@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import type { Board } from '../board/schema'
-import type { Target } from '../overlay/types'
+import type { Target } from '../layer/model'
 import styles from './notes.module.css'
 import { decodeTarget, encodeTarget } from './targets'
 

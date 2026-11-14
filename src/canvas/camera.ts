@@ -1,6 +1,5 @@
 import { getViewportForBounds, type ReactFlowInstance } from '@xyflow/react'
-import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
-import type { Point } from '../overlay/types'
+import type { Rect } from '../layout/geometry'
 
 /** Space around the framed parts, as a share of the free area. */
 export const FIT_PADDING = 0.08
@@ -72,16 +71,16 @@ const DROP_ROOM = 16
  * The card's middle must be inside the free area to leave it alone. Otherwise the view moves just far enough
  * to show the whole card, and no further. Returns true when it moved the view.
  */
-export function keepDroppedCardInView(flow: ReactFlowInstance, map: HTMLElement | null, at: Point, duration: number): boolean {
+export function keepDroppedCardInView(flow: ReactFlowInstance, map: HTMLElement | null, card: Rect, duration: number): boolean {
   if (!map) return false
   const free = freeArea(map)
   const height = map.getBoundingClientRect().height
   if (free.width <= 0 || height <= 0) return false
   const { x, y, zoom } = flow.getViewport()
-  const left = at.x * zoom + x
-  const top = at.y * zoom + y
-  const right = left + CARD_WIDTH * zoom
-  const bottom = top + CARD_HEIGHT * zoom
+  const left = card.x * zoom + x
+  const top = card.y * zoom + y
+  const right = left + card.width * zoom
+  const bottom = top + card.height * zoom
   const middleX = (left + right) / 2
   const middleY = (top + bottom) / 2
   if (middleX >= 0 && middleX <= free.width && middleY >= free.top && middleY <= height) return false

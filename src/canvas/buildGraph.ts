@@ -2,10 +2,10 @@ import { MarkerType, Position, type Edge, type EdgeMarker, type Node } from '@xy
 import type { Board, BoardRelationship, SourceKind } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
 import type { Selection } from '../app/state'
-import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
-import type { ManualLink, Point } from '../overlay/types'
+import { inflate, overlaps, type Point, type Rect } from '../layout/geometry'
+import type { Link } from '../layer/model'
 import { pillHeight, placeLabel, PointIndex, textArea } from './labelPlacement'
-import { curve, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Rect, type Route, type Side } from './routing'
+import { curve, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
@@ -93,16 +93,16 @@ export interface GroupBox {
   height: number
 }
 
-function groupBox(board: Board, g: Board['groups'][number], positions: Record<string, Point>): GroupBox | undefined {
+function groupBox(board: Board, g: Board['groups'][number], rects: Readonly<Record<string, Rect>>): GroupBox | undefined {
   const members = board.components
     .filter((c) => c.group === g.id)
-    .map((c) => positions[c.id])
-    .filter((p): p is Point => p !== undefined)
+    .map((c) => rects[c.id])
+    .filter((r): r is Rect => r !== undefined)
   if (members.length === 0) return undefined
-  const minX = Math.min(...members.map((p) => p.x))
-  const minY = Math.min(...members.map((p) => p.y))
-  const maxX = Math.max(...members.map((p) => p.x)) + CARD_WIDTH
-  const maxY = Math.max(...members.map((p) => p.y)) + CARD_HEIGHT
+  const minX = Math.min(...members.map((r) => r.x))
+  const minY = Math.min(...members.map((r) => r.y))
+  const maxX = Math.max(...members.map((r) => r.x + r.width))
+  const maxY = Math.max(...members.map((r) => r.y + r.height))
   return {
     id: g.id,
     label: g.label,
@@ -113,8 +113,8 @@ function groupBox(board: Board, g: Board['groups'][number], positions: Record<st
   }
 }
 
-export function groupBounds(board: Board, positions: Record<string, Point>): GroupBox[] {
-  return board.groups.flatMap((g) => groupBox(board, g, positions) ?? [])
+function groupBounds(board: Board, rects: Readonly<Record<string, Rect>>): GroupBox[] {
+  return board.groups.flatMap((g) => groupBox(board, g, rects) ?? [])
 }
 
 /** Where one connection is drawn and where its label sits. Identical shapes keep the same object. */
@@ -142,22 +142,14 @@ export interface Geometry {
   groups: readonly GroupBox[]
   /** Both ends of every drawn connection, in drawing order. */
   ends: readonly EdgeEnds[]
-  /** Where the cards were when the lines were last fully solved. A card that has since moved is the one that changes the picture. */
-  solved: Readonly<Record<string, Point>>
+  /** Where the cards were when the lines were last fully solved. A card that has since moved or changed size is the one that changes the picture. */
+  solved: Readonly<Record<string, Rect>>
 }
 
 /** A pill box, as it is drawn. */
 function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>): Rect {
   const height = pillHeight(shape.labelLines)
   return { x: shape.labelX - shape.labelWidth / 2, y: shape.labelY - height / 2, width: shape.labelWidth, height }
-}
-
-function overlaps(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
-}
-
-function around(r: Rect, by: number): Rect {
-  return { x: r.x - by, y: r.y - by, width: r.width + by * 2, height: r.height + by * 2 }
 }
 
 const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
@@ -169,17 +161,17 @@ const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
  * did not move keeps its line, and its label keeps its place, as long as they are still clear of the moved cards and
  * every other label. Only the connections of moved cards, and those that a moved card now covers, are solved again.
  */
-export function computeGeometry(board: Board, positions: Record<string, Point>, links: readonly ManualLink[] = [], previous?: Geometry): Geometry {
+export function computeGeometry(board: Board, rects: Readonly<Record<string, Rect>>, links: readonly Link[] = [], previous?: Geometry): Geometry {
   const boxOf = new Map<string, Rect>()
   for (const c of board.components) {
-    const p = positions[c.id]
-    if (p) boxOf.set(c.id, { x: p.x, y: p.y, width: CARD_WIDTH, height: CARD_HEIGHT })
+    const r = rects[c.id]
+    if (r) boxOf.set(c.id, r)
   }
   const boxes = [...boxOf.values()]
   const obstacles = new Obstacles(boxes)
   const drawn = links.filter((l) => boxOf.has(l.from) && boxOf.has(l.to))
   const ends: EdgeEnds[] = [...board.relationships, ...drawn.map((l) => ({ id: manualId(l.id), from: l.from, to: l.to }))]
-  const plans = planEdges(positions, ends)
+  const plans = planEdges(rects, ends)
   const texts = new Map<string, string>()
   for (const r of board.relationships) texts.set(r.id, r.kind === 'unknown' ? `? ${r.label}` : r.label)
   // The chip adds a few characters, so the width is measured with them.
@@ -191,7 +183,7 @@ export function computeGeometry(board: Board, positions: Record<string, Point>, 
   if (previous) {
     for (const [id, box] of boxOf) {
       const was = previous.solved[id]
-      if (!was || was.x !== box.x || was.y !== box.y) {
+      if (!was || was.x !== box.x || was.y !== box.y || was.width !== box.width || was.height !== box.height) {
         movedIds.add(id)
         movedBoxes.push(box)
       }
@@ -254,7 +246,7 @@ export function computeGeometry(board: Board, positions: Record<string, Point>, 
     const old = r.stays
     if (old) {
       const box = pillBox(old)
-      const clear = !movedAreas.some((a) => overlaps(box, a)) && !taken.some((t) => overlaps(box, around(t, 3)))
+      const clear = !movedAreas.some((a) => overlaps(box, a)) && !taken.some((t) => overlaps(box, inflate(t, 3)))
       if (clear) {
         taken.push(box)
         edges.set(r.id, old)
@@ -264,15 +256,15 @@ export function computeGeometry(board: Board, positions: Record<string, Point>, 
     later.push(i)
   })
   for (const i of later) place(routes[i] as (typeof routes)[number], i)
-  return { edges, groups: groupBounds(board, positions), ends, solved: positions }
+  return { edges, groups: groupBounds(board, rects), ends, solved: rects }
 }
 
 /**
  * The cheap update while a card moves. Only the connections of that card are redrawn, as plain curves with the
  * label at the middle, and only the group area around it. Every other shape keeps its object.
  */
-export function moveCard(board: Board, geometry: Geometry, positions: Record<string, Point>, id: string): Geometry {
-  const plans = planEdges(positions, geometry.ends)
+export function moveCard(board: Board, geometry: Geometry, rects: Readonly<Record<string, Rect>>, id: string): Geometry {
+  const plans = planEdges(rects, geometry.ends)
   let edges: Map<string, EdgeShape> | undefined
   for (const [edgeId, shape] of geometry.edges) {
     if (shape.from !== id && shape.to !== id) continue
@@ -295,7 +287,7 @@ export function moveCard(board: Board, geometry: Geometry, positions: Record<str
   let groups = geometry.groups
   if (group !== undefined) {
     const def = board.groups.find((g) => g.id === group)
-    const box = def ? groupBox(board, def, positions) : undefined
+    const box = def ? groupBox(board, def, rects) : undefined
     if (box) groups = geometry.groups.map((g) => (g.id === group ? box : g))
   }
   return { edges: edges ?? geometry.edges, groups, ends: geometry.ends, solved: geometry.solved }
@@ -348,11 +340,11 @@ function depthAt(groups: readonly GroupBox[], x: number, y: number): number {
 /** Turns the geometry and the current selection into React Flow nodes and edges. Cheap, so it runs on every change. */
 export function assembleGraph(
   board: Board,
-  positions: Record<string, Point>,
+  rects: Readonly<Record<string, Rect>>,
   geometry: Geometry,
   selection: Selection | undefined,
   highlight: ReadonlySet<string> | undefined,
-  links: readonly ManualLink[],
+  links: readonly Link[],
   noteCounts: ReadonlyMap<string, number>,
   cache: GraphCache,
   /** The card being dragged. It is never dimmed. */
@@ -381,16 +373,17 @@ export function assembleGraph(
     } satisfies Node<GroupData>),
   )
 
-  const cards = board.components.map((c) =>
-    stable(cache.nodes, {
+  const cards = board.components.map((c) => {
+    const rect = rects[c.id] ?? { x: 0, y: 0, width: 0, height: 0 }
+    return stable(cache.nodes, {
       id: c.id,
       type: 'card',
-      position: positions[c.id] ?? { x: 0, y: 0 },
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
+      position: { x: rect.x, y: rect.y },
+      width: rect.width,
+      height: rect.height,
       // The map never applies measured sizes back to its nodes. Without this React Flow forgets the card's handles each
       // time the card object changes, and every line of a held card is gone until the next measurement.
-      measured: { width: CARD_WIDTH, height: CARD_HEIGHT },
+      measured: { width: rect.width, height: rect.height },
       data: {
         componentId: c.id,
         highlighted: playing && highlight.has(c.id),
@@ -405,8 +398,8 @@ export function assembleGraph(
       connectable: true,
       deletable: false,
       ariaLabel: `${c.label}. ${c.summary}`,
-    } satisfies Node<CardData>),
-  )
+    } satisfies Node<CardData>)
+  })
 
   const edges: Edge[] = []
   for (const r of board.relationships) {
@@ -500,15 +493,15 @@ function forget<T extends { id: string }>(cache: Map<string, T>, live: readonly 
 
 export function buildGraph(
   board: Board,
-  positions: Record<string, Point>,
+  rects: Readonly<Record<string, Rect>>,
   selection: Selection | undefined,
   /** IDs of the parts and connections a walkthrough step is about. Undefined or empty shows everything. */
   highlight?: ReadonlySet<string>,
   /** Links the user drew. A link whose end is missing is not drawn. */
-  links: readonly ManualLink[] = [],
+  links: readonly Link[] = [],
   /** Notes and questions per part ID. */
   noteCounts: ReadonlyMap<string, number> = new Map(),
 ): { nodes: Node[]; edges: Edge[] } {
-  const geometry = computeGeometry(board, positions, links)
-  return assembleGraph(board, positions, geometry, selection, highlight, links, noteCounts, new GraphCache())
+  const geometry = computeGeometry(board, rects, links)
+  return assembleGraph(board, rects, geometry, selection, highlight, links, noteCounts, new GraphCache())
 }

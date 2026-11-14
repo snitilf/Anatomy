@@ -1,14 +1,7 @@
-import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
-import type { Point } from '../overlay/types'
+import { center, contains as inside, inflate, type Point, type Rect } from '../layout/geometry'
 
+export type { Rect }
 export type Side = 'left' | 'right' | 'top' | 'bottom'
-
-export interface Rect {
-  x: number
-  y: number
-  width: number
-  height: number
-}
 
 /** A drawn connection: the SVG path, and points along it for placing the label. */
 export interface Route {
@@ -35,9 +28,9 @@ const NORMAL: Record<Side, Point> = {
 }
 
 /** Which sides of the two cards a connection leaves from and arrives at. */
-export function pickSides(from: Point, to: Point): { out: Side; in: Side } {
-  if (to.x >= from.x + CARD_WIDTH) return { out: 'right', in: 'left' }
-  if (to.x + CARD_WIDTH <= from.x) return { out: 'left', in: 'right' }
+export function pickSides(from: Rect, to: Rect): { out: Side; in: Side } {
+  if (to.x >= from.x + from.width) return { out: 'right', in: 'left' }
+  if (to.x + to.width <= from.x) return { out: 'left', in: 'right' }
   return to.y >= from.y ? { out: 'bottom', in: 'top' } : { out: 'top', in: 'bottom' }
 }
 
@@ -45,11 +38,11 @@ const SPREAD = 28
 /** How far apart, across the middle, connections between the same two cards are drawn. */
 const BUNDLE_GAP = 46
 
-function sideMiddle(p: Point, side: Side): Point {
-  if (side === 'left') return { x: p.x, y: p.y + CARD_HEIGHT / 2 }
-  if (side === 'right') return { x: p.x + CARD_WIDTH, y: p.y + CARD_HEIGHT / 2 }
-  if (side === 'top') return { x: p.x + CARD_WIDTH / 2, y: p.y }
-  return { x: p.x + CARD_WIDTH / 2, y: p.y + CARD_HEIGHT }
+function sideMiddle(r: Rect, side: Side): Point {
+  if (side === 'left') return { x: r.x, y: r.y + r.height / 2 }
+  if (side === 'right') return { x: r.x + r.width, y: r.y + r.height / 2 }
+  if (side === 'top') return { x: r.x + r.width / 2, y: r.y }
+  return { x: r.x + r.width / 2, y: r.y + r.height }
 }
 
 export interface EdgeEnds {
@@ -63,11 +56,10 @@ export interface EdgeEnds {
  * Connections that share a side of a card spread out along it, ordered by where
  * the other end is, so two connections between the same pair run side by side.
  */
-export function planEdges(positions: Readonly<Record<string, Point>>, edges: readonly EdgeEnds[]): Map<string, Plan> {
+export function planEdges(rects: Readonly<Record<string, Rect>>, edges: readonly EdgeEnds[]): Map<string, Plan> {
   type Use = { edge: string; end: 'a' | 'b'; across: number }
   const uses = new Map<string, Use[]>()
   const plans = new Map<string, Plan>()
-  const centerOf = (p: Point): Point => ({ x: p.x + CARD_WIDTH / 2, y: p.y + CARD_HEIGHT / 2 })
   const add = (card: string, side: Side, use: Use) => {
     const key = `${card}|${side}`
     const list = uses.get(key)
@@ -76,23 +68,26 @@ export function planEdges(positions: Readonly<Record<string, Point>>, edges: rea
   }
 
   for (const e of edges) {
-    const from = positions[e.from]
-    const to = positions[e.to]
+    const from = rects[e.from]
+    const to = rects[e.to]
     if (!from || !to) continue
     const sides = pickSides(from, to)
     plans.set(e.id, { out: sides.out, in: sides.in, a: sideMiddle(from, sides.out), b: sideMiddle(to, sides.in) })
     const vertical = (s: Side) => s === 'left' || s === 'right'
-    const fromC = centerOf(from)
-    const toC = centerOf(to)
+    const fromC = center(from)
+    const toC = center(to)
     add(e.from, sides.out, { edge: e.id, end: 'a', across: vertical(sides.out) ? toC.y : toC.x })
     add(e.to, sides.in, { edge: e.id, end: 'b', across: vertical(sides.in) ? fromC.y : fromC.x })
   }
 
   for (const [key, list] of uses) {
     if (list.length < 2) continue
-    const side = key.slice(key.lastIndexOf('|') + 1) as Side
+    const cut = key.lastIndexOf('|')
+    const side = key.slice(cut + 1) as Side
+    const card = rects[key.slice(0, cut)]
+    if (!card) continue
     const along = side === 'left' || side === 'right' ? 'y' : 'x'
-    const room = (side === 'left' || side === 'right' ? CARD_HEIGHT : CARD_WIDTH) - 44
+    const room = (side === 'left' || side === 'right' ? card.height : card.width) - 44
     const gap = Math.min(SPREAD, room / (list.length - 1))
     list.sort((p, q) => p.across - q.across || (p.edge < q.edge ? -1 : 1))
     list.forEach((use, i) => {
@@ -151,13 +146,6 @@ export function curve(a: Point, sideA: Side, b: Point, sideB: Side, bend: Point 
   return { d: `M ${a.x} ${a.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${b.x} ${b.y}`, points }
 }
 
-function inflate(r: Rect, by: number): Rect {
-  return { x: r.x - by, y: r.y - by, width: r.width + by * 2, height: r.height + by * 2 }
-}
-
-function inside(p: Point, r: Rect): boolean {
-  return p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height
-}
 
 /** True when the straight run from p to q crosses the inside of the rectangle. */
 function crosses(p: Point, q: Point, r: Rect): boolean {
@@ -184,7 +172,7 @@ export function lineHitsCards(points: readonly Point[], cards: readonly Rect[]):
 
 export function hitsAnyCard(route: Route, cards: readonly Rect[]): boolean {
   const boxes = cards.map((c) => inflate(c, 4))
-  return route.points.some((p) => boxes.some((b) => inside(p, b)))
+  return route.points.some((p) => boxes.some((b) => inside(b, p)))
 }
 
 const MARGIN = 16
@@ -252,7 +240,7 @@ export class Obstacles {
   /** True when a point lies inside the keep-out zone of any card. */
   blocksPoint(p: Point): boolean {
     const list = this.buckets.get(bucketKey(Math.floor(p.x / BUCKET), Math.floor(p.y / BUCKET)))
-    return list !== undefined && list.some((i) => inside(p, this.boxes[i] as Rect))
+    return list !== undefined && list.some((i) => inside(this.boxes[i] as Rect, p))
   }
 
   /** True when a straight run crosses the keep-out zone of any card. */
@@ -277,7 +265,7 @@ export class Obstacles {
       const near = this.buckets.get(bucketKey(Math.floor(p.x / BUCKET), Math.floor(p.y / BUCKET)))
       return near?.some((i) => {
         const card = list[i] as Rect
-        return card !== ends[0] && card !== ends[1] && inside(p, inflate(card, 4))
+        return card !== ends[0] && card !== ends[1] && inside(inflate(card, 4), p)
       })
     })
   }

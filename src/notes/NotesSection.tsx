@@ -2,10 +2,10 @@ import { useId, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
 import { Disclosure } from '../inspector/parts'
-import { newId } from '../overlay/notes'
-import { OVERLAY_LIMITS } from '../overlay/schema'
-import { noteStatus } from '../overlay/status'
-import type { Note, Target } from '../overlay/types'
+import { newId } from '../layer/edits'
+import { LAYER_LIMITS } from '../layer/model'
+import { noteStatus } from '../layer/status'
+import type { Note, Target } from '../layer/model'
 import { NoteCard, StillTrue } from './NoteCard'
 import styles from './notes.module.css'
 import { sameTarget } from './targets'
@@ -46,7 +46,7 @@ function NoteForm({ target }: { target: Target }) {
         className={styles.textarea}
         aria-label={kind === 'note' ? 'Your note' : 'Your question'}
         value={text}
-        maxLength={OVERLAY_LIMITS.noteText}
+        maxLength={LAYER_LIMITS.noteText}
         rows={3}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
@@ -59,7 +59,7 @@ function NoteForm({ target }: { target: Target }) {
       <div className={styles.formFoot}>
         {text.length >= COUNTER_FROM && (
           <span className={styles.counter} role="status">
-            {text.length} of {OVERLAY_LIMITS.noteText}
+            {text.length} of {LAYER_LIMITS.noteText}
           </span>
         )}
         <button type="submit" className={styles.solid} disabled={empty}>
@@ -72,7 +72,7 @@ function NoteForm({ target }: { target: Target }) {
 
 /** The user's own notes and questions about one target, and a form to add more. */
 export function NotesSection({ target }: { target: Target }) {
-  const { board, allNotes } = useAppStore(useShallow((s) => ({ board: s.board, allNotes: s.overlay?.notes })))
+  const { board, allNotes } = useAppStore(useShallow((s) => ({ board: s.board, allNotes: s.layer?.notes })))
   if (!board || !allNotes) return null
   const notes = allNotes.filter((n) => sameTarget(n.target, target))
   const needsReview = notes.some((n) => noteStatus(board, n) !== 'current')

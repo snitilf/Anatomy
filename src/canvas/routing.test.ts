@@ -1,25 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { CARD_HEIGHT, CARD_WIDTH } from '../overlay/layout'
+import { CARD_SIZE } from '../layout/cards'
 import { pillHeight, placeLabel, wrap } from './labelPlacement'
 import { hitsAnyCard, pickSides, planEdges, routeConnection, type Rect } from './routing'
 
-const at = (x: number, y: number): Rect => ({ x, y, width: CARD_WIDTH, height: CARD_HEIGHT })
+const CARD_WIDTH = CARD_SIZE.width
+const CARD_HEIGHT = CARD_SIZE.height
+const at = (x: number, y: number, width = CARD_WIDTH, height = CARD_HEIGHT): Rect => ({ x, y, width, height })
 
 describe('pickSides', () => {
   it('uses right and left for cards side by side', () => {
-    expect(pickSides({ x: 0, y: 0 }, { x: 320, y: 0 })).toEqual({ out: 'right', in: 'left' })
-    expect(pickSides({ x: 320, y: 0 }, { x: 0, y: 0 })).toEqual({ out: 'left', in: 'right' })
+    expect(pickSides(at(0, 0), at(320, 0))).toEqual({ out: 'right', in: 'left' })
+    expect(pickSides(at(320, 0), at(0, 0))).toEqual({ out: 'left', in: 'right' })
   })
 
   it('uses bottom and top for cards in one column', () => {
-    expect(pickSides({ x: 0, y: 0 }, { x: 0, y: 180 })).toEqual({ out: 'bottom', in: 'top' })
-    expect(pickSides({ x: 0, y: 180 }, { x: 0, y: 0 })).toEqual({ out: 'top', in: 'bottom' })
+    expect(pickSides(at(0, 0), at(0, 180))).toEqual({ out: 'bottom', in: 'top' })
+    expect(pickSides(at(0, 180), at(0, 0))).toEqual({ out: 'top', in: 'bottom' })
   })
 })
 
 describe('planEdges', () => {
   it('keeps two connections between the same pair apart and parallel', () => {
-    const positions = { a: { x: 0, y: 0 }, b: { x: 320, y: 0 } }
+    const positions = { a: at(0, 0), b: at(320, 0) }
     const plans = planEdges(positions, [
       { id: 'one', from: 'a', to: 'b' },
       { id: 'two', from: 'b', to: 'a' },
@@ -33,9 +35,20 @@ describe('planEdges', () => {
   })
 
   it('leaves a lone connection at the middle of the side', () => {
-    const plans = planEdges({ a: { x: 0, y: 0 }, b: { x: 0, y: 180 } }, [{ id: 'e', from: 'a', to: 'b' }])
+    const plans = planEdges({ a: at(0, 0), b: at(0, 180) }, [{ id: 'e', from: 'a', to: 'b' }])
     expect(plans.get('e')?.a).toEqual({ x: CARD_WIDTH / 2, y: CARD_HEIGHT })
     expect(plans.get('e')?.b).toEqual({ x: CARD_WIDTH / 2, y: 180 })
+  })
+
+  it('meets each card at the middle of its own side when the cards differ in size', () => {
+    const plans = planEdges({ a: at(0, 0, 400, 300), b: at(600, 40) }, [{ id: 'e', from: 'a', to: 'b' }])
+    expect(plans.get('e')?.a).toEqual({ x: 400, y: 150 })
+    expect(plans.get('e')?.b).toEqual({ x: 600, y: 40 + CARD_HEIGHT / 2 })
+  })
+
+  it('takes the side by the real width: a wide card next to another leaves from its right edge', () => {
+    expect(pickSides(at(0, 0, 400, 150), at(380, 0))).toEqual({ out: 'bottom', in: 'top' })
+    expect(pickSides(at(0, 0, 400, 150), at(420, 0))).toEqual({ out: 'right', in: 'left' })
   })
 })
 
