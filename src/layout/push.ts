@@ -8,6 +8,8 @@ const PASSES = 3
 const GROUP_COST = 240
 /** A spot on top of a card that is already settled is the last choice. */
 const SETTLED_COST = 100_000
+/** A spot on top of another card is allowed, since that card is pushed in turn, but a free spot wins when it is near. */
+const CASCADE_COST = 320
 
 export interface PushOptions {
   /** The group of each card, if it has one. */
@@ -20,8 +22,8 @@ export interface PushOptions {
 const within = (outer: Rect, r: Rect) => r.x >= outer.x && r.y >= outer.y && r.x + r.width <= outer.x + outer.width && r.y + r.height <= outer.y + outer.height
 
 /**
- * Moves cards out from under the pinned cards, each along the shorter way out, to `gap` away. A card that was pushed may push others
- * in the next pass. Pinned cards never move, and a pushed card avoids spots on top of cards that have already settled.
+ * Moves cards out from under the pinned cards, each along the shorter way out, to `gap` away. A card that was pushed may
+ * push others in the next pass, though a free spot a little further away is preferred. Pinned cards never move, and a pushed card avoids spots on top of cards that have already settled.
  * Returns the new top-left corner of every card that moved. Keys of `rects` set the order, so the result is stable.
  */
 export function pushApart(rects: Readonly<Record<string, Rect>>, pinned: ReadonlySet<string>, options: PushOptions = {}): Record<string, Point> {
@@ -33,10 +35,10 @@ export function pushApart(rects: Readonly<Record<string, Rect>>, pinned: Readonl
 
   const cost = (id: string, spot: Rect, distance: number): number => {
     let total = distance
-    for (const other of settled) {
-      if (other === id) continue
-      const r = current.get(other)
-      if (r && overlaps(inflate(spot, gap / 2 - 1), inflate(r, gap / 2 - 1))) total += SETTLED_COST
+    const room = inflate(spot, gap / 2 - 1)
+    for (const [other, r] of current) {
+      if (other === id || !overlaps(room, inflate(r, gap / 2 - 1))) continue
+      total += settled.has(other) ? SETTLED_COST : CASCADE_COST
     }
     const group = options.groupOf?.(id)
     const areas = options.areas
