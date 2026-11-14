@@ -60,7 +60,8 @@ export type LayerAction =
   | { type: 'linkDeleted'; id: string }
   /** One drop or one run of arrow keys. Several cards move together when a drop pushes others aside. */
   | { type: 'cardsMoved'; positions: Readonly<Record<string, Point>> }
-  | { type: 'cardResized'; id: string; size: Size }
+  /** One resize. `positions` holds the cards it pushed aside, so the whole change is one step of undo. */
+  | { type: 'cardResized'; id: string; size: Size; positions?: Readonly<Record<string, Point>> }
   | { type: 'markAdded'; mark: Mark }
   | { type: 'markChanged'; id: string; mark: Mark }
   | { type: 'markDeleted'; id: string }
@@ -104,6 +105,8 @@ export const initialState: AppState = { warnings: [], history: emptyHistory }
 
 type Edit<T extends LayerAction['type']> = (layer: Layer, board: Board, action: Extract<LayerAction, { type: T }>) => Layer
 
+const onBoard = (b: Board, positions: Readonly<Record<string, Point>>) => Object.fromEntries(Object.entries(positions).filter(([id]) => b.components.some((c) => c.id === id)))
+
 const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
   noteAdded: (l, b, a) => addNote(l, b, { kind: a.kind, text: a.text, target: a.target }, a.now, a.id),
   noteEdited: (l, _b, a) => editNote(l, a.id, a.text, a.now),
@@ -113,8 +116,8 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
   linkAdded: (l, b, a) => addLink(l, b, { from: a.from, to: a.to, label: a.label }, a.now, a.id).layer,
   linkEdited: (l, b, a) => editLink(l, b, a.id, a.change).layer,
   linkDeleted: (l, _b, a) => deleteLink(l, a.id),
-  cardsMoved: (l, b, a) => moveCards(l, Object.fromEntries(Object.entries(a.positions).filter(([id]) => b.components.some((c) => c.id === id)))),
-  cardResized: (l, b, a) => (b.components.some((c) => c.id === a.id) ? resizeCard(l, a.id, a.size) : l),
+  cardsMoved: (l, b, a) => moveCards(l, onBoard(b, a.positions)),
+  cardResized: (l, b, a) => (b.components.some((c) => c.id === a.id) ? moveCards(resizeCard(l, a.id, a.size), onBoard(b, a.positions ?? {})) : l),
   markAdded: (l, _b, a) => addMark(l, a.mark),
   markChanged: (l, _b, a) => updateMark(l, a.id, () => a.mark),
   markDeleted: (l, _b, a) => deleteMark(l, a.id),

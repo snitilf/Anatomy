@@ -147,3 +147,40 @@
     opacity: 1;
   }
 }
+
+/*
+ * The resize grip in the bottom-right corner. It shows when the pointer is on the card, or the card is selected.
+ * The base styles of React Flow draw a small square; these replace them.
+ */
+:global(.react-flow__resize-control.handle.bottom.right).resize {
+  left: 100%;
+  top: 100%;
+  width: 18px;
+  height: 18px;
+  translate: -100% -100%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0 0 var(--radius-md) 0;
+  background: transparent;
+  color: var(--fg-3);
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+
+:global(.react-flow__node:hover) .resize,
+:global(.react-flow__node.selected) .resize,
+:global(.react-flow__node:focus-visible) .resize {
+  opacity: 1;
+}
+
+:global(.react-flow__resize-control.handle.bottom.right).resize:hover {
+  color: var(--fg);
+}
+
+@media (hover: none) {
+  :global(.react-flow__resize-control.handle.bottom.right).resize {
+    width: 28px;
+    height: 28px;
+  }
+}

@@ -2,40 +2,42 @@ import {
   Background,
   BackgroundVariant,
   ConnectionMode,
-  ControlButton,
-  Controls,
   ReactFlow,
   type EdgeChange,
   type Connection,
   type NodeChange,
   type NodeTypes,
-  useReactFlow,
-  useStore,
   type EdgeTypes,
   type FinalConnectionState,
   type ReactFlowInstance,
+  type Viewport,
+  useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
-import { Maximize, Minus, Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { currentStep } from '../scenarios/step'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
-import { placeCards, type CardPlacement } from '../layout/cards'
-import type { Point, Rect } from '../layout/geometry'
+import { CARD_MAX, CARD_MIN, CARD_WIDTH, groupAreas, placeCards, snap, type CardPlacement } from '../layout/cards'
+import type { Point, Rect, Size } from '../layout/geometry'
+import { pushApart } from '../layout/push'
 import { newId } from '../layer/edits'
 import type { Board } from '../board/schema'
 import type { Link } from '../layer/model'
 import { assembleGraph, computeGeometry, GraphCache, MANUAL_PREFIX, moveCard, type Geometry } from './buildGraph'
-import { frame, keepDroppedCardInView } from './camera'
+import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, viewportShowing, zoomLimits, type Limits } from './camera'
+import { CameraContext, prefersStillness, type Camera as CameraApi } from './cameraContext'
+import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, WheelZoom } from './CameraControls'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
-import { Legend } from './Legend'
 import { MapHint } from './MapHint'
 import { ManualEdge } from './ManualEdge'
 import { RelationshipEdge } from './RelationshipEdge'
+import { inView, SNAP_PX, SnapTargets } from './snap'
+import { SnapGuides, type GuideLines } from './SnapGuides'
+import { ZoomBar } from './ZoomBar'
 
 const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode }
 const edgeTypes: EdgeTypes = { relationship: RelationshipEdge, 'manual-link': ManualEdge }
@@ -46,208 +48,8 @@ const ARIA_LABELS = {
     `Moved ${direction}. Position ${x}, ${y}.`,
   'edge.a11yDescription.default': 'Press Enter to select this connection. Press Escape to go back to the overview.',
 }
-/**
- * Keeps the selected part in view. On a narrow screen the whole map is tiny, so it zooms in on the part.
- * A part picked on the map itself (a click, or the start of a drag) is under the pointer already, so the view stays put.
- */
-function KeepSelectionInView({ takePicked }: { takePicked: () => string | undefined }) {
-  const { selection, board } = useAppStore(useShallow((s) => ({ selection: s.selection, board: s.board })))
-  const flow = useReactFlow()
-  const width = useStore((s) => s.width)
-  const height = useStore((s) => s.height)
-  const previous = useRef<string | undefined>(undefined)
-  const key = selection && selection.type !== 'board' ? `${selection.type}:${selection.id}` : undefined
 
-  useEffect(() => {
-    if (previous.current === key) return
-    previous.current = key
-    const here = takePicked()
-    if (selection?.type === 'component' && here === selection.id) return
-    if (!selection || selection.type === 'board' || !board) return
-    const narrow = width > 0 && width < 600
-    if (selection.type === 'relationship') {
-      const r = board.relationships.find((x) => x.id === selection.id)
-      if (r && narrow) void flow.fitView({ nodes: [{ id: r.from }, { id: r.to }], padding: 0.25, maxZoom: 0.9, duration: 0 })
-      return
-    }
-    const node = flow.getNode(selection.id)
-    if (!node) return
-    const w = node.width ?? 0
-    const h = node.height ?? 0
-    const { zoom, x, y } = flow.getViewport()
-    const left = node.position.x * zoom + x
-    const top = node.position.y * zoom + y
-    const visible = left >= 0 && top >= 0 && left + w * zoom <= width && top + h * zoom <= height
-    if (narrow || !visible) {
-      void flow.setCenter(node.position.x + w / 2, node.position.y + h / 2, {
-        zoom: narrow ? Math.max(zoom, 0.8) : zoom,
-        duration: 0,
-      })
-    }
-  }, [key, selection, board, flow, width, height, takePicked])
-
-  return null
-}
-
-const STEP_MS = 220
-const RESIZE_MS = 150
-const DROP_PAN_MS = 160
-
-function prefersStillness(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
-const sameSize = (a: { width: number; height: number } | undefined, b: { width: number; height: number }) =>
-  a !== undefined && Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height)
-
-/**
- * Frames the map in the room that notices and the walkthrough player leave free. The first frame, and every later
- * resize, shows the whole board, or its top-left corner at a readable zoom when the whole board would be too small to read.
- * A walkthrough step frames the parts it is about, and the whole board when it names none.
- */
-function Camera({ stepKey, focus, dragging }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean }) {
-  const flow = useReactFlow()
-  const map = useStore((s) => s.domNode)
-  const width = useStore((s) => s.width)
-  const height = useStore((s) => s.height)
-  const latest = useRef({ stepKey, focus })
-  const shown = useRef<string | undefined>(undefined)
-  const framed = useRef<{ width: number; height: number } | undefined>(undefined)
-  const started = useRef(false)
-  const busy = useRef(dragging)
-  const waiting = useRef(false)
-
-  useEffect(() => {
-    latest.current = { stepKey, focus }
-  })
-
-  // A step chosen with the keyboard moves the camera at once: arrow keys repeat, and a glide would lag behind them.
-  const byKeyboard = useRef(false)
-  useEffect(() => {
-    const key = () => {
-      byKeyboard.current = true
-    }
-    const pointer = () => {
-      byKeyboard.current = false
-    }
-    window.addEventListener('keydown', key, true)
-    window.addEventListener('pointerdown', pointer, true)
-    return () => {
-      window.removeEventListener('keydown', key, true)
-      window.removeEventListener('pointerdown', pointer, true)
-    }
-  }, [])
-
-  const fit = useCallback(
-    (animate: boolean) => {
-      const { stepKey: key, focus: parts } = latest.current
-      const duration = animate && !prefersStillness() ? STEP_MS : 0
-      framed.current =
-        key !== undefined && parts.length > 0
-          ? frame(flow, map, { ids: parts, padding: 0.25, maxZoom: 1.1, duration })
-          : frame(flow, map, { readable: true, duration })
-    },
-    [flow, map],
-  )
-
-  // The first frame waits for the map to have a size.
-  useEffect(() => {
-    if (started.current || !map || width === 0 || height === 0) return
-    started.current = true
-    fit(false)
-  }, [map, width, height, fit])
-
-  useEffect(() => {
-    if (shown.current === stepKey) return
-    const before = shown.current
-    shown.current = stepKey
-    // A walkthrough that ends frames the whole board.
-    if (before === undefined && stepKey === undefined) return
-    fit(!byKeyboard.current)
-  }, [stepKey, fit])
-
-  useEffect(() => {
-    if (!started.current) return
-    const timer = window.setTimeout(() => {
-      // A step that framed the map has already used the new size.
-      if (map && sameSize(framed.current, map.getBoundingClientRect())) return
-      // Refitting under a held card would move it away from the pointer. It waits for the drop.
-      if (busy.current) waiting.current = true
-      else fit(false)
-    }, RESIZE_MS)
-    return () => window.clearTimeout(timer)
-  }, [width, height, fit, map])
-
-  useEffect(() => {
-    busy.current = dragging
-    if (dragging || !waiting.current) return
-    waiting.current = false
-    fit(false)
-  }, [dragging, fit])
-
-  return null
-}
-
-/** The most one wheel event may change the zoom: a share of 20 per cent either way. */
-const WHEEL_STEP = 1.2
-const MIN_ZOOM = 0.15
-const MAX_ZOOM = 1.6
-
-/**
- * Ctrl and wheel zooms, and so does a pinch on a trackpad. A mouse wheel notch sends a large delta, and React Flow
- * turns the largest ones into a jump of several times the size. This takes those events first and keeps each one to
- * a step of about 20 per cent. Small pinch deltas are not changed.
- */
-function WheelZoom() {
-  const flow = useReactFlow()
-  const map = useStore((s) => s.domNode)
-  useEffect(() => {
-    if (!map) return
-    const mac = /Mac/i.test(navigator.platform)
-    const onWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey || (event.target as Element | null)?.closest('.nowheel')) return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      const unit = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002
-      const octaves = -event.deltaY * unit * (mac ? 10 : 1)
-      const limit = Math.log2(WHEEL_STEP)
-      const { x, y, zoom } = flow.getViewport()
-      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * 2 ** Math.max(-limit, Math.min(limit, octaves))))
-      if (next === zoom) return
-      // The point under the pointer stays where it is.
-      const box = map.getBoundingClientRect()
-      const px = event.clientX - box.left
-      const py = event.clientY - box.top
-      const ratio = next / zoom
-      void flow.setViewport({ x: px - (px - x) * ratio, y: py - (py - y) * ratio, zoom: next }, { duration: 0 })
-    }
-    map.addEventListener('wheel', onWheel, { capture: true, passive: false })
-    return () => map.removeEventListener('wheel', onWheel, { capture: true })
-  }, [map, flow])
-  return null
-}
-
-/** Zoom buttons. Fit shows the whole board, however small that makes the text. */
-function ZoomButtons() {
-  const flow = useReactFlow()
-  const map = useStore((s) => s.domNode)
-  const duration = () => (prefersStillness() ? 0 : STEP_MS)
-  return (
-    <Controls showZoom={false} showFitView={false} showInteractive={false} position="bottom-right" className={styles.controls ?? ''}>
-      <ControlButton className={styles.zoomStep ?? ''} onClick={() => void flow.zoomIn({ duration: duration() })} aria-label="Zoom in" title="Zoom in">
-        <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-      </ControlButton>
-      <ControlButton className={styles.zoomStep ?? ''} onClick={() => void flow.zoomOut({ duration: duration() })} aria-label="Zoom out" title="Zoom out">
-        <Minus size={16} strokeWidth={1.5} aria-hidden="true" />
-      </ControlButton>
-      <ControlButton onClick={() => frame(flow, map, { duration: duration() })} aria-label="Fit view" title="Fit view">
-        <Maximize size={16} strokeWidth={1.5} aria-hidden="true" />
-      </ControlButton>
-    </Controls>
-  )
-}
-
-/** The map as it is drawn now. While a card moves, the lines are cheap curves. A full build follows the drop. */
+/** The map as it is drawn now. While a card moves, the lines are cheap elbows. A full build follows the drop. */
 interface View {
   board: Board
   links: readonly Link[] | undefined
@@ -255,9 +57,9 @@ interface View {
   base: CardPlacement | undefined
   rects: Record<string, Rect>
   geometry: Geometry
-  /** The card under the pointer. */
+  /** The card under the pointer, moved or resized. */
   held?: string
-  /** Set while the lines are cheap curves: milliseconds to wait before the full build. */
+  /** Set while the lines are cheap elbows: milliseconds to wait before the full build. */
   settle?: number
 }
 
@@ -286,15 +88,19 @@ function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
   )
 }
 
-function moved(view: View, id: string, point: Point, settle: number): View {
+/** The cheap update for one card that moved or changed size: only its own lines and its group area are redrawn. */
+function changed(view: View, id: string, rect: Rect, settle: number): View {
   const at = view.rects[id]
-  if (!at || (at.x === point.x && at.y === point.y)) return view
-  const rects = { ...view.rects, [id]: { ...at, x: point.x, y: point.y } }
+  if (!at || (at.x === rect.x && at.y === rect.y && at.width === rect.width && at.height === rect.height)) return view
+  const rects = { ...view.rects, [id]: rect }
   return { ...view, rects, geometry: moveCard(view.board, view.geometry, rects, id), settle }
 }
 
 /** Arrow keys repeat quickly. The full build and the save wait until they stop. */
 const KEY_SETTLE_MS = 250
+const DROP_PAN_MS = 160
+/** How long cards glide when a drop pushes them aside. */
+const PUSH_MS = 150
 
 /** Runs after the next frame has been drawn, so a drop shows before the slow work starts. */
 function afterPaint(run: () => void): () => void {
@@ -308,21 +114,50 @@ function afterPaint(run: () => void): () => void {
   }
 }
 
-interface Drag {
+/** A card in hand: moved by a drag, or resized from its corner. */
+interface Hold {
   id: string
+  kind: 'drag' | 'resize'
   /** The map as it was when the card was picked up. Escape puts it back. */
   before: View
   cancelled: boolean
+  /** The edges and middles of the other cards in view, for the alignment guides. */
+  targets: SnapTargets
+  /** Snapping reach in board pixels at the zoom of the moment. */
+  reach: number
 }
 
+/** Moves the cards that a dropped or resized card covers out of its way. Group areas are taken from before the change. */
+function pushAside(view: View, ids: readonly string[], before: View): Record<string, Point> {
+  const groupOf = new Map(view.board.components.map((c) => [c.id, c.group]))
+  return pushApart(view.rects, new Set(ids), { groupOf: (id) => groupOf.get(id), areas: groupAreas(view.board, before.rects) })
+}
+
+/** The cards in the first column on the left, where the flow starts. */
+function flowStart(rects: readonly Rect[]): Rect | undefined {
+  if (rects.length === 0) return undefined
+  const left = Math.min(...rects.map((r) => r.x))
+  const first = rects.filter((r) => r.x < left + CARD_WIDTH)
+  const top = Math.min(...first.map((r) => r.y))
+  return { x: left, y: top, width: CARD_WIDTH, height: Math.max(...first.map((r) => r.y + r.height)) - top }
+}
+
+const clampTo = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value))
+
+/** More connections than this, or more than this many per card, and labels give way below the full-label zoom. */
+const CROWDED_LINES = 20
+const CROWDED_RATIO = 1.5
+
 export function Canvas() {
-  const { board, positions, sizes, links, notes, selection, scenario } = useAppStore(
+  const { board, positions, sizes, links, notes, marks, proposals, selection, scenario } = useAppStore(
     useShallow((s) => ({
       board: s.board,
       positions: s.layer?.positions,
       sizes: s.layer?.sizes,
       links: s.layer?.links,
       notes: s.layer?.notes,
+      marks: s.layer?.marks,
+      proposals: s.layer?.proposals,
       selection: s.selection,
       scenario: s.scenario,
     })),
@@ -341,11 +176,25 @@ export function Canvas() {
     setView(shown)
   }
   const viewRef = useRef(shown)
-  const drag = useRef<Drag | undefined>(undefined)
+  const hold = useRef<Hold | undefined>(undefined)
   const keyMoves = useRef(new Set<string>())
   const pickedOnMap = useRef<string | undefined>(undefined)
   const playing = useRef(false)
-  /** Arrow-key moves are saved together, as one step of undo, once the keys stop. */
+  const guides = useRef<GuideLines>(null)
+  const hoverStyle = useRef<HTMLStyleElement>(null)
+  /** Cards that a drop just pushed aside. They glide to their new place. */
+  const [pushed, setPushed] = useState<ReadonlySet<string> | undefined>(undefined)
+  const showPushed = useCallback((ids: readonly string[]) => {
+    if (ids.length === 0 || prefersStillness()) return
+    setPushed(new Set(ids))
+  }, [])
+  useEffect(() => {
+    if (!pushed) return
+    const timer = window.setTimeout(() => setPushed(undefined), PUSH_MS + 60)
+    return () => window.clearTimeout(timer)
+  }, [pushed])
+
+  /** Arrow-key moves are saved together, as one step of undo, once the keys stop. Cards they cover step aside. */
   const saveKeyMoves = useCallback(
     (current: View) => {
       const moves: Record<string, Point> = {}
@@ -354,18 +203,77 @@ export function Canvas() {
         if (rect) moves[id] = { x: rect.x, y: rect.y }
       }
       keyMoves.current.clear()
-      if (Object.keys(moves).length > 0) dispatch({ type: 'cardsMoved', positions: moves })
+      if (Object.keys(moves).length === 0) return
+      const aside = pushAside(current, Object.keys(moves), current)
+      dispatch({ type: 'cardsMoved', positions: { ...aside, ...moves } })
+      showPushed(Object.keys(aside))
     },
-    [dispatch],
+    [dispatch, showPushed],
   )
   const [cache] = useState(() => new GraphCache())
   const mapBox = useRef<HTMLDivElement>(null)
   const flowRef = useRef<ReactFlowInstance | undefined>(undefined)
+  const setFlow = useCallback((flow: ReactFlowInstance) => {
+    flowRef.current = flow
+  }, [])
+  /** Labels give way on a crowded map below the full-label zoom. Only the selection's and the hovered card's show. */
+  const [quiet, setQuiet] = useState(false)
   const takePicked = useCallback(() => {
     const id = pickedOnMap.current
     pickedOnMap.current = undefined
     return id
   }, [])
+
+  // The size of the map, for the zoom limits. Read before the first paint and on every change.
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
+  useLayoutEffect(() => {
+    const el = mapBox.current
+    if (!el) return
+    const measure = () => {
+      const r = el.getBoundingClientRect()
+      setMapSize((s) => (s.width === r.width && s.height === r.height ? s : { width: r.width, height: r.height }))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [board])
+
+  // The limits follow what is on the map once it is solved, never a card in hand.
+  const solved = shown?.geometry.solved
+  const bounds = useMemo(
+    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
+    [board, solved, marks, proposals],
+  )
+  const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])
+  const boundsRef = useRef(bounds)
+  useLayoutEffect(() => {
+    boundsRef.current = bounds
+  })
+  const camera = useMemo<CameraApi>(() => {
+    const size = () => {
+      const el = mapBox.current
+      const r = el?.getBoundingClientRect()
+      return { width: r?.width ?? 0, height: r?.height ?? 0, top: el ? coveredTop(el) : 0 }
+    }
+    const current = (): Limits => zoomLimits(boundsRef.current, size())
+    const move = (viewport: Viewport, duration = 0) => {
+      const flow = flowRef.current
+      if (flow) moveCamera(flow, viewport, current(), size(), duration)
+    }
+    return {
+      limits: current,
+      size,
+      move,
+      frame: (options = {}, duration = 0) => {
+        const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
+        const start = options.readable ? flowStart(rects) : undefined
+        move(frameViewport(current(), size(), start ? { ...options, start } : options), duration)
+      },
+    }
+  }, [])
+  const rectOf = useCallback((id: string) => viewRef.current?.rects[id], [])
 
   const step = useMemo(() => currentStep({ board, scenario }), [board, scenario])
   useEffect(() => {
@@ -380,9 +288,12 @@ export function Canvas() {
     return counts
   }, [notes])
   const graph = useMemo(
-    () => (board && shown ? assembleGraph(board, shown.rects, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held) : undefined),
-    [board, shown, selection, step, links, noteCounts, cache],
+    () =>
+      board && shown ? assembleGraph(board, shown.rects, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held, pushed) : undefined,
+    [board, shown, selection, step, links, noteCounts, cache, pushed],
   )
+  const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
+  const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
 
   // The full build comes after the drop, or after the last arrow key, and so does the save of keyboard moves.
   const settle = shown?.held === undefined ? shown?.settle : undefined
@@ -400,12 +311,13 @@ export function Canvas() {
   // Escape while a card is held puts it back and leaves the selection and focus alone.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const held = drag.current
+      const held = hold.current
       if (event.key !== 'Escape' || !held) return
       event.stopPropagation()
       event.preventDefault()
       if (held.cancelled) return
       held.cancelled = true
+      guides.current?.hide()
       setView((v) => (v ? { ...v, rects: held.before.rects, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) } : v))
     }
     window.addEventListener('keydown', onKey, true)
@@ -423,20 +335,83 @@ export function Canvas() {
   const connectEndedAt = useRef(-Infinity)
   const stepKey = step ? `${step.scenario.id}:${step.index}` : undefined
 
+  /** Picks a card up: remembers the map for Escape, and the other cards in view for the guides. */
+  const pickUp = useCallback((id: string, kind: Hold['kind']) => {
+    const before = viewRef.current
+    if (!before) return
+    const flow = flowRef.current
+    const viewport = flow?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+    const size = camera.size()
+    const others = Object.entries(before.rects).flatMap(([other, r]) => (other === id ? [] : [r]))
+    hold.current = { id, kind, before, cancelled: false, targets: new SnapTargets(inView(others, viewport, size)), reach: SNAP_PX / viewport.zoom }
+    if (hoverStyle.current) hoverStyle.current.textContent = ''
+    setView((v) => (v ? { ...v, held: id } : v))
+  }, [camera])
+
+  /** Lets go of the card in hand. Returns the hold, unless Escape cancelled it. */
+  const letGo = useCallback((): Hold | undefined => {
+    const held = hold.current
+    hold.current = undefined
+    guides.current?.hide()
+    setView((v) => {
+      if (!v) return v
+      const { held: _dropped, ...rest } = v
+      return rest
+    })
+    return held && !held.cancelled ? held : undefined
+  }, [])
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       for (const change of changes) {
         if (!('id' in change) || change.id.startsWith('group:')) continue
         if (change.type === 'position' && change.position) {
           const { id, position } = change
-          const held = drag.current
+          const held = hold.current
+          if (held?.kind === 'resize') continue
           if (held) {
-            // A drag saves once, when the card is dropped.
-            if (!held.cancelled) setView((v) => (v ? moved(v, id, position, 0) : v))
+            // A drag saves once, when the card is dropped. The card lines up with its neighbors on the way.
+            if (held.cancelled) continue
+            const rect = viewRef.current?.rects[id]
+            if (!rect) continue
+            const lined = held.targets.move({ ...rect, ...position }, held.reach)
+            guides.current?.show(lined.vertical, lined.horizontal)
+            setView((v) => (v ? changed(v, id, { ...rect, x: Math.round(lined.x), y: Math.round(lined.y) }, 0) : v))
           } else {
             // Arrow keys move a card without a drag.
             keyMoves.current.add(id)
-            setView((v) => (v ? moved(v, id, position, KEY_SETTLE_MS) : v))
+            setView((v) => {
+              const rect = v?.rects[id]
+              return v && rect ? changed(v, id, { ...rect, ...position }, KEY_SETTLE_MS) : v
+            })
+          }
+        } else if (change.type === 'dimensions' && change.resizing !== undefined && change.dimensions) {
+          const { id } = change
+          if (change.resizing) {
+            if (!hold.current) pickUp(id, 'resize')
+            const held = hold.current
+            const rect = viewRef.current?.rects[id]
+            if (!held || held.cancelled || held.id !== id || !rect) continue
+            const raw = {
+              width: clampTo(change.dimensions.width, CARD_MIN.width, CARD_MAX.width),
+              height: clampTo(change.dimensions.height, CARD_MIN.height, CARD_MAX.height),
+            }
+            // An edge that lines up with a neighbor wins over the 8 px grid.
+            const lined = held.targets.resize({ ...rect, ...raw }, held.reach)
+            const size: Size = {
+              width: clampTo(lined.vertical ? Math.round(lined.width) : snap(raw.width), CARD_MIN.width, CARD_MAX.width),
+              height: clampTo(lined.horizontal ? Math.round(lined.height) : snap(raw.height), CARD_MIN.height, CARD_MAX.height),
+            }
+            guides.current?.show(lined.vertical, lined.horizontal)
+            setView((v) => (v ? changed(v, id, { ...rect, ...size }, 0) : v))
+          } else if (hold.current?.kind === 'resize') {
+            const held = letGo()
+            const current = viewRef.current
+            const rect = current?.rects[id]
+            if (!held || !current || !rect) continue
+            const aside = pushAside(current, [id], held.before)
+            dispatch({ type: 'cardResized', id, size: { width: rect.width, height: rect.height }, positions: aside })
+            showPushed(Object.keys(aside))
           }
         } else if (change.type === 'select' && change.selected) {
           // While a walkthrough plays, picking up a card must not change what the panel shows. A click still does.
@@ -446,33 +421,28 @@ export function Canvas() {
         }
       }
     },
-    [dispatch],
+    [dispatch, pickUp, letGo, showPushed],
   )
 
-  const onDragStart = useCallback((_: unknown, node: { id: string }) => {
-    const before = viewRef.current
-    if (!before) return
-    drag.current = { id: node.id, before, cancelled: false }
-    setView((v) => (v ? { ...v, held: node.id } : v))
-  }, [])
+  const onDragStart = useCallback((_: unknown, node: { id: string }) => pickUp(node.id, 'drag'), [pickUp])
 
   const onDragStop = useCallback(
-    (_: unknown, node: { id: string; position: Point }) => {
-      const held = drag.current
-      drag.current = undefined
-      setView((v) => {
-        if (!v) return v
-        const { held: _dropped, ...rest } = v
-        return rest
-      })
-      if (!held || held.cancelled) return
+    (_: unknown, node: { id: string }) => {
+      const held = letGo()
+      const current = viewRef.current
+      // React Flow's own position has no snapping, so the drop is read from the map.
+      const rect = current?.rects[node.id]
+      if (!held || !current || !rect) return
       keyMoves.current.delete(node.id)
-      dispatch({ type: 'cardsMoved', positions: { [node.id]: { x: node.position.x, y: node.position.y } } })
+      const aside = pushAside(current, [node.id], held.before)
+      dispatch({ type: 'cardsMoved', positions: { ...aside, [node.id]: { x: rect.x, y: rect.y } } })
+      showPushed(Object.keys(aside))
       // The card is not held back while it moves. After the drop, a card that landed out of sight is brought back.
-      const rect = viewRef.current?.rects[node.id]
-      if (flowRef.current && rect) keepDroppedCardInView(flowRef.current, mapBox.current, { ...rect, ...node.position }, prefersStillness() ? 0 : DROP_PAN_MS)
+      const flow = flowRef.current
+      const next = flow ? viewportShowing(flow.getViewport(), camera.size(), rect) : undefined
+      if (next) camera.move(next, prefersStillness() ? 0 : DROP_PAN_MS)
     },
-    [dispatch],
+    [dispatch, letGo, showPushed, camera],
   )
 
   // During a walkthrough a click on a part still opens it. Picking a part up does not.
@@ -484,6 +454,19 @@ export function Canvas() {
     },
     [dispatch],
   )
+
+  // The card under the pointer brings its own lines forward and lets the rest step back. One style rule, no render.
+  const onNodeMouseEnter = useCallback((_: unknown, node: { id: string }) => {
+    const style = hoverStyle.current
+    if (!style || hold.current || node.id.startsWith('group:')) return
+    const id = CSS.escape(node.id)
+    style.textContent = `[data-hover-scope] [data-ends]:not([data-ends~="${id}"]) { opacity: 0.22; }
+[data-hover-scope] [data-ends~="${id}"] { opacity: 1; --line-ink: var(--fg-2); }
+[data-hover-scope][data-labels="quiet"] [data-label][data-ends~="${id}"] { visibility: visible !important; }`
+  }, [])
+  const onNodeMouseLeave = useCallback(() => {
+    if (hoverStyle.current) hoverStyle.current.textContent = ''
+  }, [])
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
@@ -545,54 +528,67 @@ export function Canvas() {
   if (!board || !graph) return null
 
   return (
-    <div ref={mapBox} className={styles.canvas} data-connecting={connecting || undefined}>
-      <ReactFlow
-        key={board.id}
-        onInit={(instance) => {
-          flowRef.current = instance
-        }}
-        nodes={graph.nodes}
-        edges={graph.edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeDragStart={onDragStart}
-        onNodeDragStop={onDragStop}
-        onNodeClick={onNodeClick}
-        autoPanOnNodeDrag={false}
-        panOnScroll
-        panOnScrollSpeed={0.8}
-        zoomOnScroll={false}
-        zoomOnPinch
-        onPaneClick={onPaneClick}
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        nodesConnectable
-        connectionMode={ConnectionMode.Loose}
-        onConnect={onConnect}
-        onConnectStart={() => setConnecting(true)}
-        onConnectEnd={onConnectEnd}
-        edgesFocusable
-        nodesFocusable
-        deleteKeyCode={null}
-        selectionKeyCode={null}
-        multiSelectionKeyCode={null}
-        zoomOnDoubleClick={false}
-        ariaLabelConfig={ARIA_LABELS}
-        proOptions={{ hideAttribution: true }}
-        aria-label="Map of the board"
-      >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} className={styles.dots ?? ''} />
-        <KeepSelectionInView takePicked={takePicked} />
-        <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} />
-        <ZoomButtons />
-        <WheelZoom />
-        <MapHint />
-      </ReactFlow>
-      <Legend />
+    <div ref={mapBox} className={styles.canvas} data-connecting={connecting || undefined} data-labels={quiet ? 'quiet' : undefined} data-hover-scope="">
+      <style ref={hoverStyle} />
+      <CameraContext.Provider value={camera}>
+        <ReactFlow
+          key={board.id}
+          nodes={graph.nodes}
+          edges={graph.edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeDragStart={onDragStart}
+          onNodeDragStop={onDragStop}
+          onNodeClick={onNodeClick}
+          onNodeMouseEnter={onNodeMouseEnter}
+          onNodeMouseLeave={onNodeMouseLeave}
+          autoPanOnNodeDrag={false}
+          panOnScroll
+          panOnScrollSpeed={0.8}
+          zoomOnScroll={false}
+          zoomOnPinch
+          onPaneClick={onPaneClick}
+          minZoom={limits.minZoom}
+          maxZoom={MAX_ZOOM}
+          translateExtent={limits.extent}
+          nodesConnectable
+          connectionMode={ConnectionMode.Loose}
+          onConnect={onConnect}
+          onConnectStart={() => setConnecting(true)}
+          onConnectEnd={onConnectEnd}
+          edgesFocusable
+          nodesFocusable
+          deleteKeyCode={null}
+          selectionKeyCode={null}
+          multiSelectionKeyCode={null}
+          zoomOnDoubleClick={false}
+          ariaLabelConfig={ARIA_LABELS}
+          proOptions={{ hideAttribution: true }}
+          aria-label="Map of the board"
+        >
+          <FlowHandle onFlow={setFlow} />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} className={styles.dots ?? ''} />
+          <KeepSelectionInView takePicked={takePicked} rectOf={rectOf} />
+          <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} rectOf={rectOf} />
+          <KeepInLimits limits={limits} />
+          <LabelMode crowded={crowded} onChange={setQuiet} />
+          <SnapGuides ref={guides} />
+          <ZoomBar />
+          <WheelZoom />
+          <MapHint />
+        </ReactFlow>
+      </CameraContext.Provider>
     </div>
   )
+}
+
+/** Hands the map's instance to the canvas before any effect of the map runs, so the first camera move has it. */
+function FlowHandle({ onFlow }: { onFlow: (flow: ReactFlowInstance) => void }) {
+  const flow = useReactFlow()
+  useLayoutEffect(() => onFlow(flow), [flow, onFlow])
+  return null
 }
 
 /** The click that ends a connection drag arrives within a frame or two of the drop. */
