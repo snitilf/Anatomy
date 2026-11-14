@@ -1,4 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
+import { Spline } from 'lucide-react'
 import { KIND_ORDER, KIND_WORDS } from '../app/labels'
 import { KIND_STYLE, MANUAL_STYLE, TONE_COLOR } from './kinds'
 import styles from './Legend.module.css'
@@ -18,11 +19,7 @@ export function Legend() {
     <div className={styles.legend}>
     <Popover.Root>
       <Popover.Trigger className={styles.button} aria-label="Line key">
-        <svg className={styles.icon} width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-          <path d="M2 5h14" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="M2 9h14" stroke="currentColor" strokeWidth="1.6" strokeDasharray="4 3" fill="none" />
-          <path d="M2 13h14" stroke="currentColor" strokeWidth="1.8" strokeDasharray="1.5 3" strokeLinecap="round" fill="none" />
-        </svg>
+        <Spline className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
         <span className={styles.text}>Line key</span>
       </Popover.Trigger>
       <Popover.Portal>
@@ -33,11 +30,11 @@ export function Legend() {
               const s = KIND_STYLE[kind]
               return (
                 <li key={kind} className={styles.row} title={KIND_WORDS[kind]}>
-                  <svg width="36" height="10" viewBox="0 0 36 10" aria-hidden="true">
+                  <svg width="32" height="10" viewBox="0 0 32 10" aria-hidden="true">
                     <line
                       x1="2"
                       y1="5"
-                      x2="34"
+                      x2="30"
                       y2="5"
                       stroke={TONE_COLOR[s.tone]}
                       strokeWidth={s.width}
@@ -50,8 +47,8 @@ export function Legend() {
               )
             })}
             <li className={styles.row}>
-              <svg width="36" height="10" viewBox="0 0 36 10" aria-hidden="true">
-                <line x1="2" y1="5" x2="34" y2="5" stroke="var(--ink)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={MANUAL_STYLE.dash} strokeLinecap="round" />
+              <svg width="32" height="10" viewBox="0 0 32 10" aria-hidden="true">
+                <line x1="2" y1="5" x2="30" y2="5" stroke="var(--yours)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={MANUAL_STYLE.dash} strokeLinecap="round" />
               </svg>
               <span>Your link</span>
             </li>

@@ -1,6 +1,8 @@
 import {
   Background,
+  BackgroundVariant,
   ConnectionMode,
+  ControlButton,
   Controls,
   ReactFlow,
   type EdgeChange,
@@ -14,6 +16,7 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
+import { Maximize, Minus, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { currentStep } from '../scenarios/step'
 import { toast } from 'sonner'
@@ -222,11 +225,24 @@ function WheelZoom() {
   return null
 }
 
-/** The fit button shows the whole board, however small that makes the text. */
-function FitButton() {
+/** Zoom buttons. Fit shows the whole board, however small that makes the text. */
+function ZoomButtons() {
   const flow = useReactFlow()
   const map = useStore((s) => s.domNode)
-  return <Controls showInteractive={false} position="bottom-right" onFitView={() => frame(flow, map, { duration: prefersStillness() ? 0 : STEP_MS })} />
+  const duration = () => (prefersStillness() ? 0 : STEP_MS)
+  return (
+    <Controls showZoom={false} showFitView={false} showInteractive={false} position="bottom-right" className={styles.controls ?? ''}>
+      <ControlButton className={styles.zoomStep ?? ''} onClick={() => void flow.zoomIn({ duration: duration() })} aria-label="Zoom in" title="Zoom in">
+        <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+      </ControlButton>
+      <ControlButton className={styles.zoomStep ?? ''} onClick={() => void flow.zoomOut({ duration: duration() })} aria-label="Zoom out" title="Zoom out">
+        <Minus size={16} strokeWidth={1.5} aria-hidden="true" />
+      </ControlButton>
+      <ControlButton onClick={() => frame(flow, map, { duration: duration() })} aria-label="Fit view" title="Fit view">
+        <Maximize size={16} strokeWidth={1.5} aria-hidden="true" />
+      </ControlButton>
+    </Controls>
+  )
 }
 
 /** The map as it is drawn now. While a card moves, the lines are cheap curves. A full build follows the drop. */
@@ -545,12 +561,13 @@ export function Canvas() {
         multiSelectionKeyCode={null}
         zoomOnDoubleClick={false}
         ariaLabelConfig={ARIA_LABELS}
+        proOptions={{ hideAttribution: true }}
         aria-label="Map of the board"
       >
-        <Background gap={24} size={1.2} className={styles.dots ?? ""} />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} className={styles.dots ?? ''} />
         <KeepSelectionInView takePicked={takePicked} />
         <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} />
-        <FitButton />
+        <ZoomButtons />
         <WheelZoom />
         <MapHint />
       </ReactFlow>

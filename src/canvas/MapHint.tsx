@@ -1,4 +1,5 @@
 import { useStore } from '@xyflow/react'
+import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import styles from './MapHint.module.css'
 
@@ -66,9 +67,7 @@ export function MapHint() {
           setOpen(false)
         }}
       >
-        <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
-          <path d="M1.5 1.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        </svg>
+        <X size={16} strokeWidth={1.5} aria-hidden="true" />
       </button>
     </div>
   )
