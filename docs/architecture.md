@@ -35,7 +35,7 @@ Logic lives in pure functions with unit tests.
 While a card is dragged, only the connections of that card are redrawn with simple curves.
 After the drop, one full layout pass routes the connections and places the labels.
 Connections whose cards did not move keep their route and label when those are still clear.
-The default layout places groups in columns 440 units apart and cards in rows 230 units apart.
+The default layout places groups in columns 440 units apart and cards in rows 240 units apart.
 When a board opens, every card position is saved in the overlay, so a later revision never moves an existing card.
 React components read from the app state and dispatch actions.
 
