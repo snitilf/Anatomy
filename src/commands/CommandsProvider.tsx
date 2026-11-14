@@ -68,9 +68,10 @@ export function CommandsProvider({ shell, children }: { shell: ShellActions; chi
         return
       }
     }
-    // Capture, so the shortcut wins over a focused card on the map.
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
+    // Capture on the document: after the map's own capture on the window, which takes Escape while a card is held,
+    // and before a focused card, which would move on an arrow key.
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
   }, [context])
 
   const api = useMemo(() => ({ context, run }), [context, run])

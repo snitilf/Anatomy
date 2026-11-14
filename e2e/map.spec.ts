@@ -84,7 +84,8 @@ test.describe('zoom bar', () => {
       const out = page.getByRole('toolbar', { name: 'Zoom' }).getByRole('button', { name: 'Zoom out' })
       for (let i = 0; i < 12 && (await out.isEnabled()); i++) await out.click()
       await expect(out).toBeDisabled()
-      // A wheel past the limit changes nothing.
+      // The last step glides for 160 ms. A wheel past the limit, once it lands, changes nothing.
+      await page.waitForTimeout(300)
       const min = await zoomOf(page)
       const pane = (await page.locator('.react-flow__pane').boundingBox())!
       await page.mouse.move(pane.x + pane.width / 2, pane.y + pane.height / 2)

@@ -115,9 +115,10 @@ export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
       place(all[next], true)
       return
     }
-    const first = d.samples[0]
-    const last = d.samples[d.samples.length - 1]
-    const velocity = first && last && last.t > first.t ? (last.y - first.y) / (last.t - first.t) : 0
+    // Only the last 100 ms count, so a finger that stopped before it lifted does not fling.
+    const recent = d.samples.filter((x) => event.timeStamp - x.t <= 100)
+    const first = recent[0]
+    const velocity = first && event.timeStamp > first.t ? (event.clientY - first.y) / (event.timeStamp - first.t) : 0
     const at = d.start + moved
     const stops = ([0, 1, 2] as const).map((s) => ({ s, y: all[s] }))
     let next: Stop

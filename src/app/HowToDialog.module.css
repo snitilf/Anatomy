@@ -14,11 +14,13 @@
 }
 
 .dialog[open] {
-  animation: enter 180ms var(--ease-out);
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
 }
 
-@keyframes enter {
-  from {
+@starting-style {
+  .dialog[open] {
     opacity: 0;
     transform: scale(0.98);
   }
