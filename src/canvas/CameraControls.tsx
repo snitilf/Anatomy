@@ -63,10 +63,11 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
 /**
  * Frames the map in the room that notices leave free. The first frame shows the whole board when it is readable that
  * way, else the start of the flow at a readable zoom. A walkthrough step frames the parts it is about, and the whole
- * board when it names none. A resize of the map frames it again, once nothing is held.
+ * board when it names none. A resize of the map keeps the middle of the view, once nothing is held.
  */
 export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean; rectOf: (id: string) => Rect | undefined }) {
   const camera = useCamera()
+  const flow = useReactFlow()
   const map = useStore((s) => s.domNode)
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
@@ -126,24 +127,34 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
     fit(!byKeyboard.current)
   }, [stepKey, fit])
 
+  // A new size of the map, such as the sidebar opening, closing, or changing width, keeps what is in the middle of the
+  // view where it was. The zoom stays unless the new limits ask for another one.
+  const keepMiddle = useCallback(() => {
+    if (!map) return
+    const now = map.getBoundingClientRect()
+    const before = framed.current
+    framed.current = now
+    if (!before || sameSize(before, now)) return
+    const view = flow.getViewport()
+    camera.move({ x: view.x + (now.width - before.width) / 2, y: view.y + (now.height - before.height) / 2, zoom: view.zoom })
+  }, [camera, flow, map])
+
   useEffect(() => {
     if (!started.current) return
     const timer = window.setTimeout(() => {
-      // A step that framed the map has already used the new size.
-      if (map && sameSize(framed.current, map.getBoundingClientRect())) return
-      // Refitting under a held card would move it away from the pointer. It waits for the drop.
+      // Moving the view under a held card would move it away from the pointer. It waits for the drop.
       if (busy.current) waiting.current = true
-      else fit(false)
+      else keepMiddle()
     }, RESIZE_MS)
     return () => window.clearTimeout(timer)
-  }, [width, height, fit, map])
+  }, [width, height, keepMiddle])
 
   useEffect(() => {
     busy.current = dragging
     if (dragging || !waiting.current) return
     waiting.current = false
-    fit(false)
-  }, [dragging, fit])
+    keepMiddle()
+  }, [dragging, keepMiddle])
 
   return null
 }
