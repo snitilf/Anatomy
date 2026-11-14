@@ -1,19 +1,19 @@
 import clsx from 'clsx'
-import { ArrowRight, Unlink } from 'lucide-react'
+import { ArrowRight, CircleCheck, CircleDashed, Unlink } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Selection } from '../app/state'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
-import { itemsOf, type Item, type Layer } from '../layer/model'
+import { itemsOf, type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
 import { summarizeLayer } from '../layer/status'
-import { hasChanges } from '../notes/review'
+import { adoptedNow, hasChanges } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
 import { answerFor } from './answers'
-import { Section } from './bits'
+import { Disclosure, Section } from './bits'
 import { partName } from './names'
-import { AgentAnswer, NoteBlock } from './notes'
+import { AgentAnswer, ItemAnswer, NoteBlock } from './notes'
 import notes from './notes.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
@@ -48,8 +48,17 @@ function selectionOf(entry: Item): Selection {
   }
 }
 
-function ItemRow({ board, layer, entry }: { board: Board; layer: Layer; entry: Item }) {
+function ItemRow({ board, layer, entry, live = true }: { board: Board; layer: Layer; entry: Item; live?: boolean }) {
   const { choose } = usePanel()
+  if (!live) {
+    return (
+      <p className={clsx(styles.row, styles.yours)}>
+        <span className={styles.rowMain}>
+          <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
+        </span>
+      </p>
+    )
+  }
   return (
     <button type="button" className={clsx(styles.row, styles.yours)} onClick={() => choose(selectionOf(entry))}>
       <span className={styles.rowMain}>
@@ -59,36 +68,89 @@ function ItemRow({ board, layer, entry }: { board: Board; layer: Layer; entry: I
   )
 }
 
-function Answers({ board, layer }: { board: Board; layer: Layer }) {
+/**
+ * A moved connection, before and after: where the agent drew it, where the user asked for it, and whether this revision
+ * has a connection between the parts the user asked for.
+ */
+function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board; previous: Board | undefined; layer: Layer; reconnect: Reconnect }) {
+  const was = previous?.relationships.find((r) => r.id === reconnect.relationshipId) ?? board.relationships.find((r) => r.id === reconnect.relationshipId)
+  if (!was) return null
+  const name = (id: string) => partName(board, id, layer.proposals) ?? (previous && partName(previous, id)) ?? id
+  const from = reconnect.from ?? was.from
+  const to = reconnect.to ?? was.to
+  const landed = board.relationships.some((r) => r.from === from && r.to === to)
+  const Icon = landed ? CircleCheck : CircleDashed
+  return (
+    <div className={notes.state}>
+      <p className={styles.rowMeta}>
+        <s>
+          {name(was.from)} to {name(was.to)}
+        </s>
+        <ArrowRight className={styles.inlineArrow} size={12} strokeWidth={1.5} aria-hidden="true" />
+        <span className="sr-only"> asked for </span>
+        {name(from)} to {name(to)}
+      </p>
+      <p className={notes.stateLine}>
+        <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+        <span>{landed ? `On the board in revision ${board.revision}.` : 'Not on the board.'}</span>
+      </p>
+    </div>
+  )
+}
+
+/** An item that left the map, with the answer it left with, and the way back. */
+function ArchivedItem({ board, previous, layer, entry }: { board: Board; previous: Board | undefined; layer: Layer; entry: ArchiveEntry }) {
   const dispatch = useAppDispatch()
-  const answered = itemsOf(layer).filter((e) => answerFor(board, e.item.id))
-  const adopted = layer.archive.filter((e) => e.response.status === 'adopted')
+  const item = { type: entry.type, item: entry.item } as Item
+  return (
+    <li className={notes.item}>
+      <ItemRow board={board} layer={layer} entry={item} live={false} />
+      {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
+      <AgentAnswer board={board} answer={entry.response} />
+      <div className={notes.stateActions}>
+        <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
+          Restore
+        </button>
+      </div>
+    </li>
+  )
+}
+
+function Answers({ board, previous, layer }: { board: Board; previous: Board | undefined; layer: Layer }) {
+  const answered = itemsOf(layer).filter((e) => answerFor(layer, e.item.id))
+  const adopted = adoptedNow(board, layer)
   if (answered.length + adopted.length === 0) return null
   return (
     <Section title="Answers" count={answered.length + adopted.length}>
       <ul className={notes.list}>
-        {answered.map((entry) => {
-          const answer = answerFor(board, entry.item.id)
-          return (
-            <li key={entry.item.id} className={notes.item}>
-              <ItemRow board={board} layer={layer} entry={entry} />
-              {answer && <AgentAnswer board={board} answer={answer} />}
-            </li>
-          )
-        })}
-        {adopted.map((entry) => (
+        {answered.map((entry) => (
           <li key={entry.item.id} className={notes.item}>
-            <p className={clsx(styles.row, styles.yours)}>{itemWords(board, layer, { type: entry.type, item: entry.item } as Item)}</p>
-            <AgentAnswer board={board} answer={{ feedbackId: entry.item.id, status: 'adopted', text: entry.response.text, changed: entry.response.changed }} />
-            <div className={notes.stateActions}>
-              <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
-                Restore
-              </button>
-            </div>
+            <ItemRow board={board} layer={layer} entry={entry} />
+            {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
+            <ItemAnswer board={board} id={entry.item.id} />
           </li>
+        ))}
+        {adopted.map((entry) => (
+          <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />
         ))}
       </ul>
     </Section>
+  )
+}
+
+/** Everything archived before this revision's answers: dismissed items and earlier adoptions. Closed, and restorable. */
+function Archive({ board, previous, layer }: { board: Board; previous: Board | undefined; layer: Layer }) {
+  const now = new Set(adoptedNow(board, layer))
+  const older = layer.archive.filter((e) => !now.has(e)).reverse()
+  if (older.length === 0) return null
+  return (
+    <Disclosure title="Archive" count={older.length}>
+      <ul className={notes.list}>
+        {older.map((entry) => (
+          <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />
+        ))}
+      </ul>
+    </Disclosure>
   )
 }
 
@@ -240,7 +302,7 @@ export function Review() {
   const outdated = summarizeLayer(board, layer).outdated
   return (
     <div className={styles.view}>
-      <Answers board={board} layer={layer} />
+      <Answers board={board} previous={previous} layer={layer} />
       <NeedsRelinking board={board} layer={layer} previous={previous} />
       {outdated.length > 0 && (
         <Section title="Possibly outdated" count={outdated.length}>
@@ -252,6 +314,7 @@ export function Review() {
         </Section>
       )}
       {hasChanges(changes) && <Changes board={board} previous={previous} changes={changes} />}
+      <Archive board={board} previous={previous} layer={layer} />
     </div>
   )
 }

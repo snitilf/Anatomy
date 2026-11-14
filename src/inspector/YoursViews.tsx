@@ -10,11 +10,10 @@ import type { MissingRef, Pointed, Ref } from '../feedback/types'
 import { LAYER_LIMITS, type Link, type Mark, type Proposal } from '../layer/model'
 import { linkStatus } from '../layer/status'
 import { deletedToast } from '../notes/undoToast'
-import { answerFor } from './answers'
 import { BackButton, Heading, PartLink } from './bits'
 import { FlowBlock } from './Flow'
 import { partName } from './names'
-import { AgentAnswer } from './notes'
+import { ItemAnswer } from './notes'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
 import { partItems } from './pickerItems'
@@ -91,8 +90,7 @@ function DeleteButton({ label, onDelete }: { label: string; onDelete: () => void
 }
 
 function Answer({ board, id }: { board: Board; id: string }) {
-  const answer = answerFor(board, id)
-  return answer ? <AgentAnswer board={board} answer={answer} /> : null
+  return <ItemAnswer board={board} id={id} />
 }
 
 /** A link the user drew between two parts. */

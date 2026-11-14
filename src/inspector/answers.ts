@@ -1,9 +1,10 @@
-import type { Board, BoardResponse } from '../board/schema'
+import type { Board } from '../board/schema'
+import type { Layer, Response } from '../layer/model'
 import type { PickerItem } from './pickerItems'
 
-/** The agent's answer to one of the user's items, from the open revision. */
-export function answerFor(board: Board, id: string): BoardResponse | undefined {
-  return board.responses?.items.find((r) => r.feedbackId === id)
+/** The agent's latest answer to one of the user's items. Answers are kept in the layer, so a later revision does not lose them. */
+export function answerFor(layer: Pick<Layer, 'answers'> | undefined, id: string): Response | undefined {
+  return layer?.answers.find((a) => a.id === id)?.response
 }
 
 /** Every target a note can be attached to, as picker rows. */
