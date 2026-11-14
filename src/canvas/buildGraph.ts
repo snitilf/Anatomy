@@ -6,7 +6,7 @@ import { groupAreas, GROUP_PADDING, summaryLinesFor } from '../layout/cards'
 import { inflate, overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { pillHeight, placeLabel, PointIndex, textArea } from './labelPlacement'
-import { Drawn, lineHitsCards, Obstacles, planEdges, quickRoute, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
+import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
@@ -61,7 +61,7 @@ export interface ManualEdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
-  /** The line is a cheap elbow while a card moves, so the label has no place yet and stays hidden. */
+  /** The line is hidden while a card moves. */
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
   depth: number
@@ -85,7 +85,7 @@ export interface EdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
-  /** The line is a cheap elbow while a card moves, so the label has no place yet and stays hidden. */
+  /** The line is hidden while a card moves. */
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
   depth: number
@@ -154,7 +154,7 @@ export interface EdgeShape {
   /** The sampled points of the drawn line, kept so a later build can check that the line still keeps clear of the cards. */
   points: readonly Point[]
   runs?: readonly (readonly [Point, Point])[]
-  /** Drawn as a plain elbow with the label at the middle while a card moves. Never kept by a later build. */
+  /** Hidden while a card moves: the shape is stale until the full build. Never kept by a later build. */
   cheap?: true
 }
 
@@ -330,28 +330,16 @@ export function computeGeometry(
 }
 
 /**
- * The cheap update while a card moves. Only the connections of that card are redrawn, as plain elbows with the
- * label at the middle, and only the group area around it. Every other shape keeps its object.
+ * The cheap update while a card moves. The connections of that card are marked as moving and drawn by nobody: the map
+ * hides them until the full build after the drop, so no line is redrawn per frame. Only the group area around the
+ * card follows it. Every other shape keeps its object.
  */
 export function moveCard(board: Board, geometry: Geometry, rects: Readonly<Record<string, Rect>>, id: string): Geometry {
-  const plans = planEdges(rects, geometry.ends)
   let edges: Map<string, EdgeShape> | undefined
   for (const [edgeId, shape] of geometry.edges) {
-    if (shape.from !== id && shape.to !== id) continue
-    const plan = plans.get(edgeId)
-    if (!plan) continue
-    const line = quickRoute(plan)
-    const middle = line.points[Math.floor(line.points.length / 2)] ?? plan.a
-    const next: EdgeShape = {
-      ...shape,
-      path: line.d,
-      labelX: middle.x,
-      labelY: middle.y,
-      points: line.points,
-      cheap: true,
-    }
+    if ((shape.from !== id && shape.to !== id) || shape.cheap) continue
     edges ??= new Map(geometry.edges)
-    edges.set(edgeId, next)
+    edges.set(edgeId, { ...shape, cheap: true })
   }
   const group = board.components.find((c) => c.id === id)?.group
   let groups = geometry.groups
@@ -430,6 +418,13 @@ export function assembleGraph(
   // Picking a part leaves its own lines strong and softens the rest. Not while a card is held, and not during a walkthrough.
   const softening = selectedPart !== undefined && !playing && held === undefined
 
+  const movedGroups = new Set<string>()
+  if (pushed && pushed.size > 0) {
+    for (const g of geometry.groups) {
+      const members = board.components.filter((c) => c.group === g.id)
+      if (members.length > 0 && members.every((c) => pushed.has(c.id))) movedGroups.add(g.id)
+    }
+  }
   const groups = geometry.groups.map((g) =>
     stable(cache.nodes, {
       id: `group:${g.id}`,
@@ -444,6 +439,8 @@ export function assembleGraph(
       connectable: false,
       deletable: false,
       zIndex: -1,
+      // An area that moved as a whole, with all its cards, glides with them.
+      ...(movedGroups.has(g.id) ? { className: 'pushed' } : {}),
     } satisfies Node<GroupData>),
   )
 
@@ -546,6 +543,7 @@ export function assembleGraph(
         selected,
         focusable: true,
         deletable: false,
+        hidden: shape.cheap === true,
         interactionWidth: 28,
         markerEnd: markerFor(color),
         ariaLabel: `${names.get(from) ?? from} ${r.kind === 'unknown' ? 'connects to' : KIND_WORDS[r.kind]} ${names.get(to) ?? to}: ${r.label}${moved ? '. You moved its end.' : ''}`,
@@ -586,6 +584,7 @@ export function assembleGraph(
         selected,
         focusable: true,
         deletable: false,
+        hidden: shape.cheap === true,
         interactionWidth: 28,
         markerEnd: markerFor(active ? 'var(--accent)' : 'var(--yours)'),
         ariaLabel: `Your link from ${names.get(l.from) ?? l.from} to ${names.get(l.to) ?? l.to}${l.label === '' ? '' : `: ${l.label}`}`,
