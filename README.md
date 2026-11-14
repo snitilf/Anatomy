@@ -8,7 +8,7 @@ The app runs in the browser on your own machine and does not send board data to 
 
 - [Board format](docs/board-format.md): every field of a board file and what Anatomy checks.
 - [Authoring guide](docs/authoring-guide.md): give this and the JSON Schema to your coding agent so it can write a board.
-- [Architecture](docs/architecture.md): modules, the human overlay, storage, and safety.
+- [Architecture](docs/architecture.md): modules, the user layer, the repository folder, storage, undo, and safety.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ The app runs in the browser on your own machine and does not send board data to 
 | `npm run lint` | Runs oxlint. |
 | `npm test` | Runs the unit tests once with Vitest. |
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
-| `npm run test:e2e` | Builds the app and runs the browser journey with the installed Google Chrome. |
+| `npm run test:e2e` | Builds the app in the `e2e` mode and runs the browser tests with the installed Google Chrome. |
 | `npm run schema` | Writes `schema/board.v1.schema.json` from the Zod schema. Run it after a schema change. |
 
 The dev and preview servers listen on the loopback interface only.
