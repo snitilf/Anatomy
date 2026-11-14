@@ -3,22 +3,21 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { StorageError, openStore } from './persistence/store'
-import { resolvePositions } from './overlay/layout'
-import { nordetBoard } from './overlay/testBoards'
-import { emptyOverlay } from './overlay/types'
+import { StorageError, openStore } from './workspace/db'
+import { placeCards } from './layout/cards'
+import { nordetBoard } from './layer/testBoards'
 import nordetRaw from './examples/nordet.board.json?raw'
 import { press } from './test/press'
 
 // A test can make saving fail by setting this. The store itself stays the real one.
 const failing = vi.hoisted(() => ({ on: false }))
-vi.mock('./persistence/store', async (original) => {
-  const actual = await original<typeof import('./persistence/store')>()
+vi.mock('./workspace/db', async (original) => {
+  const actual = await original<typeof import('./workspace/db')>()
   return {
     ...actual,
     openStore: async (...args: Parameters<typeof actual.openStore>) => {
       const store = await actual.openStore(...args)
-      return failing.on ? { ...store, saveOverlay: () => Promise.reject(new actual.StorageError('quota', 'full')) } : store
+      return failing.on ? { ...store, saveLayer: () => Promise.reject(new actual.StorageError('quota', 'full')) } : store
     },
   }
 })
@@ -76,8 +75,8 @@ async function loadNordet() {
   fireEvent.click(await screen.findByRole('menuitem', { name: /Nordet follow-up/ }))
 }
 
-function positionOf(stored: { overlay?: unknown } | undefined, id: string): { x: number; y: number } {
-  const positions = (stored as { overlay: { positions: Record<string, { x: number; y: number }> } }).overlay.positions
+function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: number; y: number } {
+  const positions = (stored as { layer: { positions: Record<string, { x: number; y: number }> } }).layer.positions
   return positions[id]!
 }
 const links = () => within(screen.getByTestId('inspector')).getByText('Your links').closest('details')!
@@ -216,11 +215,11 @@ describe('saving', () => {
     await saved()
     first.unmount()
 
-    const store = await openStore('home')
+    const store = await openStore()
     const raw = await store.loadBoard('nordet-invoice-follow-up')
     store.close()
     const moved = positionOf(raw, 'approval')
-    const start = resolvePositions(nordetBoard(), emptyOverlay('nordet-invoice-follow-up'))['approval']!
+    const start = placeCards(nordetBoard(), { positions: {}, sizes: {} })['approval']!
     expect(moved).not.toEqual(start)
 
     render(<App />)
@@ -229,24 +228,10 @@ describe('saving', () => {
     expect(panel().getByText('Survives a reload')).toBeInTheDocument()
     expect(within(links()).getByRole('button', { name: /Saved record/ })).toBeInTheDocument()
     await saved()
-    const again = await openStore('home')
+    const again = await openStore()
     const reloaded = await again.loadBoard('nordet-invoice-follow-up')
     again.close()
     expect(positionOf(reloaded, 'approval').x).toBe(moved.x)
-  })
-
-  it('keeps Home and Work apart', async () => {
-    render(<App />)
-    await loadNordet()
-    await saved()
-    fireEvent.click(screen.getByRole('radio', { name: 'Work' }))
-    expect(await screen.findByRole('button', { name: 'Load an example' })).toBeInTheDocument()
-    expect(screen.queryByText(nordet.title)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: `Open ${nordet.title}` })).not.toBeInTheDocument()
-    expect(localStorage.getItem('anatomy.namespace')).toBe('work')
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Home' }))
-    expect(await screen.findByRole('heading', { name: nordet.title })).toBeInTheDocument()
   })
 
   it('says Not saved and offers an export when the write fails, and keeps the note', async () => {
@@ -279,7 +264,7 @@ describe('saving', () => {
 })
 
 describe('export and open', () => {
-  it('restores notes, positions, and links from an export in a fresh space', async () => {
+  it('restores notes, positions, and links from an export in a fresh browser', async () => {
     const first = render(<App />)
     await loadNordet()
     selectPart('approval')
@@ -288,10 +273,12 @@ describe('export and open', () => {
     fireEvent.click(panel().getByRole('button', { name: 'Add link' }))
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
+    // A keyboard move joins the layer once the keys stop, a quarter of a second later.
+    await new Promise((resolve) => setTimeout(resolve, 350))
     const text = await exportText()
     expect(await screen.findByText('Exported')).toBeInTheDocument()
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled()
-    const file = JSON.parse(text) as { overlay: { positions: Record<string, { y: number }> } }
+    const file = JSON.parse(text) as { layer: { positions: Record<string, { y: number }> } }
     first.unmount()
 
     globalThis.indexedDB = new IDBFactory()
@@ -302,10 +289,10 @@ describe('export and open', () => {
     expect(panel().getByText('Travels with the file')).toBeInTheDocument()
     expect(within(links()).getByRole('button', { name: /Saved record/ })).toBeInTheDocument()
     await saved()
-    const store = await openStore('home')
+    const store = await openStore()
     const raw = await store.loadBoard('nordet-invoice-follow-up')
     store.close()
-    expect(positionOf(raw, 'approval').y).toBe(file.overlay.positions['approval']!.y)
+    expect(positionOf(raw, 'approval').y).toBe(file.layer.positions['approval']!.y)
   })
 
   it('asks which notes to keep when a file and this browser both have notes', async () => {

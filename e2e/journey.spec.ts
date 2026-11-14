@@ -7,7 +7,7 @@ const BOARD_TITLE = 'Nordet: follow-up on an overdue invoice'
 // A part row in the overview reads "Label Group". Connection rows read "Label to Other".
 const partRow = (label: string) => new RegExp(`^${label} (?!to )`)
 
-test('open, inspect, walk through, learn, take a note, reload, export, and open the export', async ({ page }, testInfo) => {
+test('open, inspect, walk through, learn, take a note, reload, export, and open the export in a fresh browser', async ({ page }, testInfo) => {
   const requests: string[] = []
   page.on('request', (request) => requests.push(request.url()))
 
@@ -84,8 +84,12 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   const exported = JSON.parse(await readFile(exportPath, 'utf8')) as { format: string }
   expect(exported.format).toBe('anatomy-export')
 
-  // The Work space is separate and starts empty. Opening the export there brings the note back.
-  await page.getByRole('radio', { name: 'Work' }).check({ force: true })
+  // A fresh browser has nothing saved. Opening the export there brings the note back.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    const request = indexedDB.deleteDatabase('anatomy')
+    request.onsuccess = request.onerror = request.onblocked = () => resolve()
+  }))
+  await page.goto('/')
   await expect(page.getByText('Open a board to see how it fits together.')).toBeVisible()
   await expect(page.getByRole('heading', { name: BOARD_TITLE })).toHaveCount(0)
   await page.getByLabel('Board file').setInputFiles(exportPath)

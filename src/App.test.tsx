@@ -23,7 +23,7 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Anatomy' })).toBeInTheDocument()
     const main = within(screen.getByRole('main'))
-    expect(main.getByRole('button', { name: 'Open board' })).toBeInTheDocument()
+    expect(main.getByRole('button', { name: 'Open board file' })).toBeInTheDocument()
     expect(main.getByRole('button', { name: 'Load an example' })).toBeInTheDocument()
     // The toolbar has the how-to button, so the start screen does not repeat it.
     expect(main.queryByRole('button', { name: 'How to make a board' })).not.toBeInTheDocument()

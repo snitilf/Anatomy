@@ -2,13 +2,13 @@ import clsx from 'clsx'
 import { CircleAlert } from 'lucide-react'
 import { useAppStore } from './store'
 import buttons from './buttons.module.css'
-import { storageProblem, usePersistence } from './persistenceContext'
+import { storageProblem, useWorkspace } from './workspaceContext'
 import styles from './SaveStatus.module.css'
 
 /** Whether the work is in browser storage, and a way out when it is not. Always shown while a board is open. */
 export function SaveStatus() {
   const hasBoard = useAppStore((s) => s.board !== undefined)
-  const { save, retrySave, exportNow } = usePersistence()
+  const { save, retrySave, exportNow } = useWorkspace()
   if (!hasBoard || save.kind === 'none') return null
   return (
     <div className={styles.root}>
@@ -29,7 +29,7 @@ export function SaveStatus() {
           </button>
         </div>
       ) : (
-        <p className={styles.line} role="status" data-state={save.kind} title={save.kind === 'saved' ? 'Saved in this browser' : undefined}>
+        <p className={styles.line} role="status" data-state={save.kind} title={save.kind === 'saved' ? (save.where === 'folder' ? 'Saved to .anatomy/layer.json' : 'Saved in this browser') : undefined}>
           {save.kind === 'saving' ? 'Saving' : 'Saved'}
         </p>
       )}

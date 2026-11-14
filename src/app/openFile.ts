@@ -1,6 +1,6 @@
 import { parseBoard } from '../board/validate'
 import { LESSON_IDS } from '../lessons/catalog'
-import { parseOpenedFile } from '../overlay/exportFile'
+import { parseOpenedFile } from '../layer/files'
 import type { Action } from './state'
 
 /** Turns the text of a file into the action that opens it, or the action that reports why it could not open. */
@@ -11,7 +11,7 @@ export function openFromText(fileName: string, text: string): Action {
   const checked = parseBoard(JSON.stringify(opened.board), { knownLessons: LESSON_IDS })
   const warnings = checked.ok ? checked.warnings : opened.warnings
   return opened.kind === 'export'
-    ? { type: 'boardOpened', board: opened.board, overlay: opened.overlay, warnings }
+    ? { type: 'boardOpened', board: opened.board, layer: opened.layer, warnings }
     : { type: 'boardOpened', board: opened.board, warnings }
 }
 
