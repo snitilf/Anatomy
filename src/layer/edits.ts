@@ -61,10 +61,12 @@ function mapItem<K extends ItemType>(layer: Layer, type: K, id: string, change: 
   return withList(layer, type, items.map((x, i) => (i === at ? after : x)))
 }
 
+/** Removes one item, and the agent's answer to it. */
 function removeItem(layer: Layer, type: ItemType, id: string): Layer {
   const items: readonly Entry[] = list(layer, type)
   if (!items.some((x) => x.id === id)) return layer
-  return withList(layer, type, items.filter((x) => x.id !== id))
+  const removed = withList(layer, type, items.filter((x) => x.id !== id))
+  return layer.answers.some((a) => a.id === id) ? { ...removed, answers: layer.answers.filter((a) => a.id !== id) } : removed
 }
 
 /** Finds any of the user's items by ID. */
@@ -328,7 +330,47 @@ export const deleteReconnect = (layer: Layer, id: string): Layer => removeItem(l
 
 // The agent's answers
 
-/** Moves the items the agent resolved into the archive, each with its answer. Unknown IDs are skipped. */
+const sameResponse = (a: Response, b: Response) => JSON.stringify(a) === JSON.stringify(b)
+
+/**
+ * True when the agent adopted an item and the board shows it: the answer names what changed, and every ID it names is
+ * on this revision. An adopted answer that names nothing, or names something missing, stays next to the item instead.
+ */
+export function adoptionLanded(board: Board, response: Response): boolean {
+  if (response.status !== 'adopted' || response.changed.length === 0) return false
+  const ids = new Set([...board.components.map((c) => c.id), ...board.relationships.map((r) => r.id)])
+  return response.changed.every((id) => ids.has(id))
+}
+
+/**
+ * Takes in the answers of a revision. Each answer is kept next to its item, and an adopted item that landed on the board
+ * moves to the archive. An answer already taken in is skipped, so an item the user restored stays restored when the same
+ * revision opens again. Answers to items the user no longer has are dropped. Nothing is ever deleted.
+ */
+export function receiveAnswers(layer: Layer, board: Board, now: Date): Layer {
+  const live = new Set(itemsOfLayer(layer).map((x) => x.id))
+  let answers = layer.answers.filter((a) => live.has(a.id))
+  const toArchive: { id: string; response: Response }[] = []
+  for (const r of board.responses?.items ?? []) {
+    if (!live.has(r.feedbackId)) continue
+    const response: Response = { respondsTo: board.responses?.respondsTo ?? '', status: r.status, text: r.text, changed: r.changed }
+    const known = answers.find((a) => a.id === r.feedbackId)
+    if (known && sameResponse(known.response, response)) continue
+    if (adoptionLanded(board, response)) {
+      toArchive.push({ id: r.feedbackId, response })
+      continue
+    }
+    answers = [...answers.filter((a) => a.id !== r.feedbackId), { id: r.feedbackId, response }]
+  }
+  const kept = answers.length === layer.answers.length && answers.every((a, i) => a === layer.answers[i]) ? layer : { ...layer, answers: answers.slice(-LAYER_LIMITS.answers) }
+  return toArchive.length === 0 ? kept : archiveItems(kept, toArchive, now)
+}
+
+function itemsOfLayer(layer: Layer): Entry[] {
+  return (Object.keys(COLLECTION) as ItemType[]).flatMap((type) => list(layer, type) as readonly Entry[])
+}
+
+/** Moves the items the agent resolved, or the user dismissed, into the archive, each with its answer. Unknown IDs are skipped. */
 export function archiveItems(layer: Layer, answers: readonly { id: string; response: Response }[], now: Date): Layer {
   let next = layer
   const added: ArchiveEntry[] = []
@@ -343,12 +385,16 @@ export function archiveItems(layer: Layer, answers: readonly { id: string; respo
   return added.length === 0 ? layer : { ...next, archive: [...next.archive, ...added] }
 }
 
-/** Puts an archived item back on the map. */
+/** Puts an archived item back on the map, with the answer it had, so the same answer does not archive it again. */
 export function restoreArchived(layer: Layer, id: string): Layer {
   const entry = layer.archive.find((e) => e.item.id === id)
   if (!entry || findItem(layer, id)) return layer
   const back = withList(layer, entry.type, [...(list(layer, entry.type) as readonly Entry[]), entry.item])
-  return { ...back, archive: layer.archive.filter((e) => e !== entry) }
+  return {
+    ...back,
+    archive: layer.archive.filter((e) => e !== entry),
+    answers: [...layer.answers.filter((a) => a.id !== id), { id, response: entry.response }].slice(-LAYER_LIMITS.answers),
+  }
 }
 
 /** Forgets an archived item for good. */

@@ -51,6 +51,36 @@ describe('reducer', () => {
     expect(state.changes?.changed.components).toContain(first)
   })
 
+  it('takes in the answers of a new revision: adopted items that landed are archived, the rest keep their answer', () => {
+    const board = exampleBoard()
+    const part = board.components[0]!.id
+    let state = run(
+      opened(),
+      { type: 'noteAdded', kind: 'note', text: 'Rename it.', target: { type: 'component', id: part }, id: 'note-aaaaaa', now },
+      { type: 'noteAdded', kind: 'question', text: 'Why?', target: { type: 'board' }, id: 'note-bbbbbb', now },
+    )
+    const next = clone(board)
+    next.revision = 2
+    next.components[0]!.label = 'Renamed'
+    next.responses = {
+      respondsTo: 'feedback-aaaaaa',
+      items: [
+        { feedbackId: 'note-aaaaaa', status: 'adopted', text: 'Renamed.', changed: [part] },
+        { feedbackId: 'note-bbbbbb', status: 'answered', text: 'Because.', changed: [] },
+      ],
+    }
+    state = reducer(state, { type: 'boardOpened', board: next, warnings: [], previous: board, now })
+    expect(state.layer!.notes.map((n) => n.id)).toEqual(['note-bbbbbb'])
+    expect(state.layer!.archive.map((e) => e.item.id)).toEqual(['note-aaaaaa'])
+    expect(state.layer!.answers.map((a) => a.id)).toEqual(['note-bbbbbb'])
+    // Dismiss is one step of undo.
+    const answer = state.layer!.answers[0]!.response
+    state = reducer(state, { type: 'itemsArchived', answers: [{ id: 'note-bbbbbb', response: answer }], now })
+    expect(state.layer!.notes).toEqual([])
+    state = reducer(state, { type: 'undo' })
+    expect(state.layer!.notes.map((n) => n.id)).toEqual(['note-bbbbbb'])
+  })
+
   it('starts fresh for a different board', () => {
     const state = opened()
     const other = clone(exampleBoard())
