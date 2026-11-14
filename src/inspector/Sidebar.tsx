@@ -93,7 +93,8 @@ function Body({ header }: { header?: ReactNode }) {
     if (revision.current === now) return
     const sameBoard = revision.current.split(':')[0] === board?.id
     revision.current = now
-    if (board && sameBoard && hasChanges(changes)) {
+    // Answers count too: a revision can answer the user without changing a part.
+    if (board && sameBoard && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
       toast(`Revision ${board.revision} is open`, {
         action: {
           label: 'Review',
