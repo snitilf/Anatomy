@@ -2,190 +2,429 @@
   "format": "anatomy-board",
   "schemaVersion": 1,
   "id": "anatomy-app",
-  "revision": 2,
+  "revision": 3,
   "title": "Anatomy: how a board becomes a map",
-  "goal": "Understand how a board file written by an agent becomes a map you can explore, and how your own notes stay safe when the agent writes a new version.",
+  "goal": "Understand how a board your agent writes into the repository becomes a map you can explore and mark up, and how your marks go back to the agent and come back answered.",
   "scope": {
     "includes": [
-      "Opening, checking, and showing a board file",
-      "Exploring the map, the inspector, walkthroughs, and lessons",
-      "Where your notes, links, and card positions are kept, and how they survive an updated board"
+      "Opening a repository folder or a file, checking the board, and showing it as a map",
+      "Your layer: notes, links, drawings, proposed parts, and moved connections, with undo",
+      "Send to agent and the answers that come back in the next revision"
     ],
     "excludes": [
-      "How the agent decides what to write: the app only reads the file",
+      "How the agent decides what to write: the app only reads the board",
       "How the map routes lines and places labels in detail"
     ]
   },
   "groups": [
-    { "id": "outside", "label": "Outside the app", "description": "Files and tools that the app reads but does not control." },
-    { "id": "browser-app", "label": "In the browser tab", "description": "Code that runs in this tab. Nothing is sent over the network." },
-    { "id": "your-layer", "label": "Your layer", "description": "Everything you add or change. The agent's file never overwrites it." }
+    {
+      "id": "repository",
+      "label": "In your repository"
+    },
+    {
+      "id": "browser-app",
+      "label": "In the browser tab"
+    }
   ],
   "components": [
     {
       "id": "agent",
-      "position": { "x": 0, "y": 0 },
       "label": "Your agent",
-      "summary": "Any coding agent you already use. You ask it to explain a plan, feature, or project, and it writes a board file.",
-      "explanation": "Anatomy has no AI inside it. The **How to make a board** button gives you a prompt, the authoring guide, and the JSON Schema to hand to your agent.",
-      "group": "outside",
-      "inputs": ["Your request", "The authoring guide", "Material you allow it to read"],
-      "outputs": ["A board file"],
-      "source": { "kind": "agent-explanation" }
+      "summary": "Any coding agent you already use. It writes the board, and later reads your feedback and answers it in a new revision.",
+      "explanation": "Anatomy has no built-in AI and makes no network calls. Your agent works in the repository as it always does. `.anatomy/README.md`, which Anatomy writes, tells it the board format and how to answer feedback.",
+      "inputs": [
+        "What you ask it to explain",
+        "Your feedback"
+      ],
+      "outputs": [
+        "A board revision"
+      ],
+      "source": {
+        "kind": "user-stated"
+      }
     },
     {
       "id": "board-file",
-      "position": { "x": 0, "y": 240 },
       "label": "Board file",
-      "summary": "A JSON file that lists parts, connections, open questions, and walkthroughs, each with a label that says where it came from.",
-      "explanation": "The file is **data only**. The app never runs anything from it, and file paths in it are shown as text, never opened.\n\nEvery part and connection carries a source: an agent explanation, an agent proposal, a documented plan, or something you said.",
-      "group": "outside",
-      "inputs": ["Written by an agent or a person"],
-      "outputs": ["File text for the validator"],
-      "source": { "kind": "documented-intent", "references": [{ "label": "Board format", "path": "docs/board-format.md" }] }
+      "group": "repository",
+      "summary": "The agent's explanation in .anatomy/board.json: parts, connections, open questions, walkthroughs, and answers to your feedback.",
+      "explanation": "Each part and connection says where the claim comes from. A new revision has a higher `revision` number and keeps the IDs of what stayed, so your notes stay attached. Commit it with the code it explains.",
+      "inputs": [
+        "A revision from your agent"
+      ],
+      "outputs": [
+        "The board the app shows"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
-      "id": "export-file",
-      "position": { "x": 0, "y": 760 },
-      "label": "Export file",
-      "summary": "One file that holds a board together with your notes, links, and card positions. It is the only backup that survives clearing the browser.",
-      "group": "outside",
-      "inputs": ["The open board", "Your layer"],
-      "outputs": ["A file you can keep, move, or share"],
-      "source": { "kind": "documented-intent", "references": [{ "label": "Architecture: export file", "path": "docs/architecture.md" }] }
+      "id": "feedback-file",
+      "label": "Feedback file",
+      "group": "repository",
+      "summary": "What you send to the agent, in .anatomy/feedback.json. Every mark is described by what it means on the board, never in pixels.",
+      "explanation": "A drawing becomes the parts it encloses and the lines it touches. A moved connection becomes its old and new ends. Each item has an ID, and the agent answers each one by that ID.",
+      "inputs": [
+        "Your marks, from Send to agent"
+      ],
+      "outputs": [
+        "Items for the agent to answer"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "layer-file",
+      "label": "Layer file",
+      "group": "repository",
+      "summary": "Your own layer, saved in .anatomy/layer.json a moment after each change. Other browsers keep it in this browser instead.",
+      "explanation": "It is kept apart from the board, so a new revision never overwrites your work. It holds only the cards you moved, so new parts still follow the layout. Keep it out of version control.",
+      "inputs": [
+        "Your layer"
+      ],
+      "outputs": [
+        "Your layer when you open the folder again"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "workspace",
+      "label": "Workspace",
+      "group": "browser-app",
+      "summary": "Opens the repository folder in Chrome or Edge, or a single file elsewhere. It watches the board file and opens each new revision.",
+      "explanation": "The folder is remembered, so the next visit asks only for permission again. The board file is checked every two seconds while the tab is visible, and read once it stops changing.",
+      "inputs": [
+        "Your choice of folder or file",
+        "Changes to the board file"
+      ],
+      "outputs": [
+        "File text to check",
+        "Saved layer"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
       "id": "validator",
-      "position": { "x": 440, "y": 240 },
       "label": "Validator",
-      "summary": "Checks the file's size, format, fields, and IDs, and that every connection points at a real part. A broken file is rejected with a list of problems.",
-      "explanation": "Checks run in order: size (at most 1,000,000 bytes), JSON syntax, format and version, the shape of every field, then cross-references.\n\nA rejected file never replaces the board that is already open. A board with more than 15 parts opens with a warning, and one with more than 60 is rejected.",
       "group": "browser-app",
-      "inputs": ["Board file text", "Export file text"],
-      "outputs": ["A checked board, or a list of problems"],
-      "source": { "kind": "agent-explanation" }
+      "summary": "Checks the size, format, fields, and IDs of a board, and that every connection points at a real part.",
+      "explanation": "A board is data only. Nothing in it is run, fetched, or shown as HTML. A broken file is rejected with a list of what is wrong, and the open board stays.",
+      "inputs": [
+        "File text"
+      ],
+      "outputs": [
+        "A checked board",
+        "Problems to fix"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
       "id": "app-state",
-      "position": { "x": 880, "y": 240 },
       "label": "App state",
-      "summary": "One central store that holds the open board, your layer, the selection, and the walkthrough step. Every screen reads from it.",
-      "explanation": "Every change goes through one pure function that takes the old state and an action and returns the new state. This keeps the map, the inspector, and storage in agreement.",
       "group": "browser-app",
-      "inputs": ["Checked board", "Saved boards", "Your clicks and drags"],
-      "outputs": ["What each screen shows", "Changes to save"],
-      "source": { "kind": "agent-explanation" }
+      "summary": "One store that holds the open board, your layer, the selection, and the history for undo and redo.",
+      "explanation": "Every change to your layer is one step of undo. A new revision and a send are barriers that undo does not cross. When a revision arrives, the answers in it are put next to your items.",
+      "inputs": [
+        "Checked board",
+        "Your changes",
+        "Commands"
+      ],
+      "outputs": [
+        "What each screen shows",
+        "Changes to save"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
       "id": "canvas",
-      "position": { "x": 1320, "y": 0 },
       "label": "Map",
-      "summary": "Draws each part as a card and each connection as a labeled line. You can drag cards, pan, zoom, and draw your own links.",
-      "explanation": "While you drag a card, only that card's lines are redrawn, as simple curves. After you drop it, one full pass routes every line around the cards and places the labels so they do not overlap.\n\nGroups are the shaded areas behind the cards. They grow and move with the cards inside them.",
       "group": "browser-app",
-      "inputs": ["Board and card positions", "Walkthrough highlights"],
-      "outputs": ["The selected part or connection", "New card positions"],
-      "source": { "kind": "agent-explanation" }
+      "summary": "Draws each part as a card and each connection as a line that routes around the cards. You can drag, resize, pan, and zoom.",
+      "explanation": "Cards are laid out as a flow from the connections. A card you move keeps its place, and a drop pushes overlapped cards aside.",
+      "inputs": [
+        "Cards and lines"
+      ],
+      "outputs": [
+        "Clicks, drags, and drops"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "whiteboard",
+      "label": "Whiteboard",
+      "group": "browser-app",
+      "summary": "Tools to mark up the map: pen, rectangle, ellipse, arrow, text, sticky note, and new part. You can also drag the end of a connection to another part.",
+      "explanation": "Everything you make is drawn in your color, apart from the agent's content. A moved connection shows your new line, with the original dimmed until the agent answers.",
+      "inputs": [
+        "Your drawing"
+      ],
+      "outputs": [
+        "Marks, new parts, and moved ends"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
       "id": "inspector",
-      "position": { "x": 1320, "y": 240 },
-      "label": "Inspector",
-      "summary": "The panel on the right. It explains the selected part or connection in plain English, with its source and any open questions.",
-      "explanation": "It leads with what the part does. The longer explanation, open items, citations, your links, and your notes sit in sections that you can open and close. A section opens by itself when something in it needs review.",
+      "label": "Sidebar",
       "group": "browser-app",
-      "inputs": ["The selection"],
-      "outputs": ["Plain-English explanation", "New notes and questions"],
-      "source": { "kind": "agent-explanation" }
+      "summary": "Shows the board overview or the selection: what flows in and out of a part, its explanation, open items, notes, and the agent's answers.",
+      "explanation": "The Review tab appears after a new revision. It lists answers, notes that need a look, and what changed, including moved connections with their old and new ends.",
+      "inputs": [
+        "Selection"
+      ],
+      "outputs": [
+        "Notes, questions, and links"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
-      "id": "walkthrough",
-      "position": { "x": 880, "y": 0 },
-      "label": "Walkthrough player",
-      "summary": "Plays a scenario from the board one step at a time. Each step has a caption and lights up the parts and connections it is about.",
+      "id": "command-menu",
+      "label": "Command menu",
       "group": "browser-app",
-      "inputs": ["A scenario from the board"],
-      "outputs": ["Highlights on the map", "A caption for each step"],
-      "source": { "kind": "agent-explanation" }
-    },
-    {
-      "id": "lessons",
-      "position": { "x": 1320, "y": 480 },
-      "label": "Lessons",
-      "summary": "Hand-built interactive lessons that ship with the app. A board can attach one to a part by its ID.",
-      "explanation": "A board only names a lesson, it never contains one. If the app does not know the name, the board still opens and shows a warning.",
-      "group": "browser-app",
-      "inputs": ["A lesson ID on a part"],
-      "outputs": ["An interactive figure"],
-      "source": { "kind": "agent-explanation" }
-    },
-    {
-      "id": "update-review",
-      "position": { "x": 440, "y": 480 },
-      "label": "Update review",
-      "summary": "When you open a newer version of a board you already have, it compares the two and lists what was added, removed, and changed.",
-      "explanation": "Existing cards stay where you put them, and new cards get a free spot. Notes on changed parts are marked **possibly outdated**, and notes on removed parts are marked **needs relinking**.",
-      "group": "browser-app",
-      "inputs": ["The saved board", "The new board"],
-      "outputs": ["A list of changes", "Notes to review"],
-      "source": { "kind": "agent-explanation" }
+      "summary": "Every action in one searchable list, with its shortcut. It also finds parts and connections by name.",
+      "explanation": "Buttons, tooltips, and keys all read the same list, so a shortcut shown anywhere is the one that works.",
+      "inputs": [
+        "What you type"
+      ],
+      "outputs": [
+        "Commands"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
       "id": "human-overlay",
-      "position": { "x": 880, "y": 760 },
-      "label": "Your notes and links",
-      "summary": "Your notes, questions, links between cards, and card positions. They are kept apart from the agent's board.",
-      "explanation": "Each note remembers a short fingerprint of what it was attached to. When the board changes, the app compares fingerprints to tell whether the note still fits. The app never deletes or moves a note by itself.",
-      "group": "your-layer",
-      "inputs": ["What you type and drag"],
-      "outputs": ["Notes and positions to save"],
-      "source": { "kind": "agent-explanation" }
+      "label": "Your layer",
+      "group": "browser-app",
+      "summary": "Everything you add on top of the board: positions, sizes, notes, links, drawings, proposed parts, and moved connections.",
+      "explanation": "Items the agent adopted move to an archive once the board shows the change. Declined and answered items keep their answer until you dismiss them. Nothing is deleted on its own, and the archive can be restored.",
+      "inputs": [
+        "Your marks",
+        "Answers from a revision"
+      ],
+      "outputs": [
+        "Items to send",
+        "Changes to save"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
     {
-      "id": "local-storage",
-      "position": { "x": 1320, "y": 760 },
-      "label": "Browser storage",
-      "summary": "Keeps your boards and your layer in this browser, so they survive a reload. Home and Work are two separate stores.",
-      "explanation": "Saving happens a moment after each change. The toolbar shows whether the work is saved. If saving fails, the work stays on screen and the app offers an export.",
-      "group": "your-layer",
-      "inputs": ["Boards", "Your notes and positions"],
-      "outputs": ["The same data after a reload"],
-      "source": { "kind": "agent-explanation" }
+      "id": "send-to-agent",
+      "label": "Send to agent",
+      "group": "browser-app",
+      "summary": "Writes your new and changed items to the feedback file and copies a short prompt that you paste to your agent.",
+      "explanation": "It shows what will go first, and lists drawings that say nothing so you can fix them. Items with no answer yet go again with the next send, so a second send never drops them.",
+      "inputs": [
+        "Your items"
+      ],
+      "outputs": [
+        "Feedback file",
+        "A prompt"
+      ],
+      "source": {
+        "kind": "user-stated"
+      }
+    },
+    {
+      "id": "update-review",
+      "label": "Review",
+      "group": "browser-app",
+      "summary": "Compares a new revision with the one you had, and shows the agent's answers next to your items.",
+      "explanation": "Each part and connection has a fingerprint. A note whose part changed is marked possibly outdated, and a note whose part left the board asks to be attached again.",
+      "inputs": [
+        "Old and new revision"
+      ],
+      "outputs": [
+        "Answers",
+        "What changed"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
     }
   ],
   "relationships": [
-    { "id": "agent-writes-file", "from": "agent", "to": "board-file", "kind": "sends-data-to", "label": "writes", "source": { "kind": "user-stated" } },
-    { "id": "file-to-validator", "from": "board-file", "to": "validator", "kind": "sends-data-to", "label": "you open it", "source": { "kind": "agent-explanation" } },
-    { "id": "export-to-validator", "from": "export-file", "to": "validator", "kind": "sends-data-to", "label": "board and notes", "source": { "kind": "agent-explanation" } },
-    { "id": "validator-to-state", "from": "validator", "to": "app-state", "kind": "sends-data-to", "label": "checked board", "source": { "kind": "agent-explanation" } },
-    { "id": "state-to-canvas", "from": "app-state", "to": "canvas", "kind": "sends-data-to", "label": "cards and lines", "source": { "kind": "agent-explanation" } },
+    {
+      "id": "agent-writes-file",
+      "from": "agent",
+      "to": "board-file",
+      "kind": "sends-data-to",
+      "label": "writes a revision",
+      "source": {
+        "kind": "user-stated"
+      }
+    },
+    {
+      "id": "board-to-workspace",
+      "from": "board-file",
+      "to": "workspace",
+      "kind": "sends-data-to",
+      "label": "each revision",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "file-to-validator",
+      "from": "workspace",
+      "to": "validator",
+      "kind": "sends-data-to",
+      "label": "file text",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "validator-to-state",
+      "from": "validator",
+      "to": "app-state",
+      "kind": "sends-data-to",
+      "label": "checked board",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "state-to-canvas",
+      "from": "app-state",
+      "to": "canvas",
+      "kind": "sends-data-to",
+      "label": "cards and lines",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
     {
       "id": "canvas-to-state",
       "from": "canvas",
       "to": "app-state",
       "kind": "triggers",
       "label": "clicks and drops",
-      "explanation": "A drag sends one change when you drop the card, not one per frame. Pressing Escape during a drag puts the card back.",
-      "source": { "kind": "agent-explanation" }
+      "source": {
+        "kind": "agent-explanation"
+      }
     },
-    { "id": "state-to-inspector", "from": "app-state", "to": "inspector", "kind": "sends-data-to", "label": "selection", "source": { "kind": "agent-explanation" } },
-    { "id": "walkthrough-highlights", "from": "walkthrough", "to": "canvas", "kind": "triggers", "label": "highlights", "source": { "kind": "agent-explanation" } },
-    { "id": "inspector-opens-lesson", "from": "inspector", "to": "lessons", "kind": "triggers", "label": "Open lesson", "source": { "kind": "agent-explanation" } },
-    { "id": "inspector-writes-notes", "from": "inspector", "to": "human-overlay", "kind": "sends-data-to", "label": "notes and questions", "source": { "kind": "agent-explanation" } },
-    { "id": "canvas-writes-positions", "from": "canvas", "to": "human-overlay", "kind": "sends-data-to", "label": "positions and links", "source": { "kind": "agent-explanation" } },
-    { "id": "overlay-to-storage", "from": "human-overlay", "to": "local-storage", "kind": "stores-in", "label": "saves", "source": { "kind": "agent-explanation" } },
-    { "id": "state-reads-storage", "from": "app-state", "to": "local-storage", "kind": "reads-from", "label": "saved boards", "source": { "kind": "agent-explanation" } },
-    { "id": "state-to-review", "from": "app-state", "to": "update-review", "kind": "triggers", "label": "same board, new version", "source": { "kind": "agent-explanation" } },
-    { "id": "review-checks-notes", "from": "update-review", "to": "human-overlay", "kind": "reads-from", "label": "fingerprints", "source": { "kind": "agent-explanation" } },
-    { "id": "overlay-to-export", "from": "human-overlay", "to": "export-file", "kind": "sends-data-to", "label": "Export", "source": { "kind": "agent-explanation" } }
+    {
+      "id": "state-to-inspector",
+      "from": "app-state",
+      "to": "inspector",
+      "kind": "sends-data-to",
+      "label": "selection",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "commands-to-state",
+      "from": "command-menu",
+      "to": "app-state",
+      "kind": "triggers",
+      "label": "commands",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "whiteboard-marks",
+      "from": "whiteboard",
+      "to": "human-overlay",
+      "kind": "sends-data-to",
+      "label": "marks and moved ends",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "inspector-writes-notes",
+      "from": "inspector",
+      "to": "human-overlay",
+      "kind": "sends-data-to",
+      "label": "notes and links",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "overlay-to-file",
+      "from": "human-overlay",
+      "to": "layer-file",
+      "kind": "stores-in",
+      "label": "saves",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "send-reads-layer",
+      "from": "send-to-agent",
+      "to": "human-overlay",
+      "kind": "reads-from",
+      "label": "your items",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "send-writes-feedback",
+      "from": "send-to-agent",
+      "to": "feedback-file",
+      "kind": "sends-data-to",
+      "label": "writes",
+      "source": {
+        "kind": "user-stated"
+      }
+    },
+    {
+      "id": "agent-reads-feedback",
+      "from": "agent",
+      "to": "feedback-file",
+      "kind": "reads-from",
+      "label": "reads",
+      "source": {
+        "kind": "user-stated"
+      }
+    },
+    {
+      "id": "state-to-review",
+      "from": "app-state",
+      "to": "update-review",
+      "kind": "triggers",
+      "label": "new revision",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "review-answers",
+      "from": "update-review",
+      "to": "human-overlay",
+      "kind": "sends-data-to",
+      "label": "answers and archive",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
   ],
   "items": [
-    {
-      "id": "a-browser-data-can-vanish",
-      "kind": "assumption",
-      "text": "Browser data can be cleared, so an export file is the only safe backup.",
-      "about": "local-storage"
-    },
     {
       "id": "a-agent-is-honest",
       "kind": "assumption",
@@ -193,16 +432,22 @@
       "about": "validator"
     },
     {
-      "id": "u-no-undo",
-      "kind": "unknown",
-      "text": "There is no undo yet for moving a card. Whether it is needed depends on how often cards get moved by mistake.",
-      "about": "canvas"
+      "id": "a-folder-access",
+      "kind": "assumption",
+      "text": "Opening a folder needs Chrome or Edge. Other browsers open a board file and download the feedback file instead.",
+      "about": "workspace"
     },
     {
-      "id": "q-overlap",
+      "id": "u-agent-answers",
+      "kind": "unknown",
+      "text": "Whether the agent answers every item depends on the agent. An item with no answer goes again with the next send.",
+      "about": "send-to-agent"
+    },
+    {
+      "id": "q-gitignore",
       "kind": "question",
-      "text": "Should the map stop you from dropping one card on top of another?",
-      "about": "canvas"
+      "text": "Should Anatomy add layer.json and feedback.json to .gitignore itself, or only recommend it?",
+      "about": "layer-file"
     }
   ],
   "scenarios": [
@@ -210,39 +455,141 @@
       "id": "open-a-board",
       "title": "Open a board",
       "steps": [
-        { "caption": "Your agent writes a board file.", "highlight": ["agent", "board-file", "agent-writes-file"] },
-        { "caption": "You open the file. The validator checks it before anything changes on screen.", "highlight": ["board-file", "validator", "file-to-validator"] },
-        { "caption": "The checked board goes into the app state, together with any card positions saved earlier.", "highlight": ["validator", "app-state", "validator-to-state", "local-storage", "state-reads-storage"] },
-        { "caption": "The map draws a card for each part and a line for each connection.", "highlight": ["app-state", "canvas", "state-to-canvas"] },
-        { "caption": "You click a card. The inspector explains it in plain English.", "highlight": ["canvas", "canvas-to-state", "app-state", "state-to-inspector", "inspector"] }
+        {
+          "caption": "Your agent writes .anatomy/board.json in the repository.",
+          "highlight": [
+            "agent",
+            "agent-writes-file",
+            "board-file"
+          ]
+        },
+        {
+          "caption": "You open the repository folder, and the workspace reads the board file.",
+          "highlight": [
+            "workspace",
+            "board-to-workspace"
+          ]
+        },
+        {
+          "caption": "The validator checks every field and ID before anything is shown.",
+          "highlight": [
+            "file-to-validator",
+            "validator"
+          ]
+        },
+        {
+          "caption": "The checked board goes into the app state, and the map lays out the cards.",
+          "highlight": [
+            "validator-to-state",
+            "app-state",
+            "state-to-canvas",
+            "canvas"
+          ]
+        },
+        {
+          "caption": "You click a card, and the sidebar explains it.",
+          "highlight": [
+            "canvas-to-state",
+            "state-to-inspector",
+            "inspector"
+          ]
+        }
       ]
     },
     {
-      "id": "add-a-note",
-      "title": "Add a note and keep it",
+      "id": "mark-up-and-send",
+      "title": "Mark it up and send it to the agent",
       "steps": [
-        { "caption": "In the inspector, you write a note or a question about the selected part.", "highlight": ["inspector", "inspector-writes-notes", "human-overlay"] },
-        { "caption": "You drag a card or draw a link. That also goes into your layer, not into the board.", "highlight": ["canvas", "canvas-writes-positions", "human-overlay"] },
-        { "caption": "A moment later, your layer is saved in this browser.", "highlight": ["human-overlay", "overlay-to-storage", "local-storage"] },
-        { "caption": "To keep it anywhere else, you export one file with the board and your layer.", "highlight": ["human-overlay", "overlay-to-export", "export-file"] }
+        {
+          "caption": "You circle two parts, ask a question, and drag a connection to another part. Each change is one step of undo.",
+          "highlight": [
+            "whiteboard",
+            "whiteboard-marks",
+            "inspector-writes-notes",
+            "human-overlay"
+          ]
+        },
+        {
+          "caption": "Your layer is saved to .anatomy/layer.json a moment later.",
+          "highlight": [
+            "overlay-to-file",
+            "layer-file"
+          ]
+        },
+        {
+          "caption": "Send to agent shows what will go, then writes the feedback file and copies a prompt.",
+          "highlight": [
+            "send-to-agent",
+            "send-reads-layer",
+            "send-writes-feedback",
+            "feedback-file"
+          ]
+        },
+        {
+          "caption": "You paste the prompt, and your agent reads the feedback file.",
+          "highlight": [
+            "agent",
+            "agent-reads-feedback"
+          ]
+        }
       ]
     },
     {
-      "id": "an-updated-board",
-      "title": "The agent writes a new version",
+      "id": "agent-answers",
+      "title": "The agent answers in a new revision",
       "steps": [
-        { "caption": "Your agent writes a new version of a board you already have, with the same ID.", "highlight": ["agent", "board-file", "agent-writes-file"] },
-        { "caption": "The validator checks it like any other file.", "highlight": ["file-to-validator", "validator", "validator-to-state"] },
-        { "caption": "The app sees a board with the same ID and starts an update review.", "highlight": ["app-state", "state-to-review", "update-review"] },
-        { "caption": "Your notes are checked against the new board by fingerprint. Notes on changed parts are marked for review. None are deleted.", "highlight": ["update-review", "review-checks-notes", "human-overlay"] }
+        {
+          "caption": "The agent writes the next revision with an answer to every item, and moves the connection you dragged.",
+          "highlight": [
+            "agent",
+            "agent-writes-file",
+            "board-file"
+          ]
+        },
+        {
+          "caption": "The workspace notices the new file and opens it once it stops changing.",
+          "highlight": [
+            "board-to-workspace",
+            "workspace",
+            "validator"
+          ]
+        },
+        {
+          "caption": "The answers go next to your items. The moved connection was adopted, so your line moves to the archive and the agent's line shows.",
+          "highlight": [
+            "state-to-review",
+            "update-review",
+            "review-answers",
+            "human-overlay"
+          ]
+        },
+        {
+          "caption": "The Review tab shows the answers and what changed. You dismiss what you read, and can restore anything from the archive.",
+          "highlight": [
+            "update-review",
+            "inspector"
+          ]
+        }
       ]
     },
     {
       "id": "reject-a-broken-file",
       "title": "A broken file is rejected",
       "steps": [
-        { "caption": "You open a file with a connection that points at a part that does not exist.", "highlight": ["board-file", "file-to-validator"] },
-        { "caption": "The validator lists the problem and stops. The board that was already open stays on screen.", "highlight": ["validator", "canvas"] }
+        {
+          "caption": "The agent writes a board with a connection that points at a part that does not exist.",
+          "highlight": [
+            "board-file",
+            "board-to-workspace"
+          ]
+        },
+        {
+          "caption": "The validator lists the problem and stops. The board that was already open stays on screen.",
+          "highlight": [
+            "validator",
+            "canvas"
+          ]
+        }
       ]
     }
   ]

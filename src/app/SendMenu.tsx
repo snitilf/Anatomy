@@ -186,7 +186,7 @@ export function SendMenu() {
           <DrawnCheck />
           {outcome.count === 1 ? 'Sent 1 item' : `Sent ${outcome.count} items`}
         </p>
-        <p className={styles.path}>{outcome.downloaded ? 'Downloaded feedback.json' : '.anatomy/feedback.json'}</p>
+        {outcome.downloaded ? <p className={styles.line}>Downloaded feedback.json.</p> : <p className={styles.path}>.anatomy/feedback.json</p>}
         <PromptBox prompt={outcome.prompt} />
         <p className={styles.line}>{outcome.copied ? 'Prompt copied. Paste it to your agent.' : 'Could not copy. Select the prompt and copy it.'}</p>
       </>
