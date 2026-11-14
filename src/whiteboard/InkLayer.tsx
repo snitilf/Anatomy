@@ -45,7 +45,7 @@ const InkMark = memo(function InkMark({ mark, selected, offset, handlers }: { ma
   const { ink, hit } = shapeOf(mark)
   return (
     <g
-      className={styles.mark}
+      className={`${styles.mark} nopan nodrag`}
       data-mark={mark.id}
       data-selected={selected || undefined}
       transform={offset ? `translate(${offset.x} ${offset.y})` : undefined}
@@ -68,7 +68,7 @@ const ArrowMark = memo(function ArrowMark({ mark, scene, selected, handlers }: {
   const d = `M${ends.a.x},${ends.a.y}L${ends.b.x},${ends.b.y}`
   return (
     <g
-      className={styles.mark}
+      className={`${styles.mark} nopan nodrag`}
       data-mark={mark.id}
       data-selected={selected || undefined}
       tabIndex={handlers.interactive ? 0 : -1}
