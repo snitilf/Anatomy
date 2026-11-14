@@ -21,8 +21,8 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           {...(markerEnd ? { markerEnd } : {})}
           interactionWidth={interactionWidth ?? 28}
           style={{
-            stroke: emphasized ? 'var(--accent)' : 'var(--ink)',
-            strokeWidth: selected ? SELECTED_WIDTH : MANUAL_STYLE.width,
+            stroke: emphasized ? 'var(--accent)' : 'var(--yours)',
+            strokeWidth: emphasized ? SELECTED_WIDTH : MANUAL_STYLE.width,
             strokeDasharray: MANUAL_STYLE.dash,
             strokeLinecap: 'round',
           }}
@@ -35,12 +35,12 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           data-active={data.active || undefined}
           data-faded={data.faded || undefined}
           data-moving={data.moving || undefined}
+          data-depth={data.depth || undefined}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
           title={data.hasLabel ? data.text : undefined}
           onClick={() => dispatch({ type: 'select', selection: { type: 'link', id: data.linkId } })}
         >
-          {data.hasLabel && <span className={styles.chip}>You</span>}
-          {data.text}
+          <span className={styles.cutout}>{data.text}</span>
         </div>
       </EdgeLabelRenderer>
     </>

@@ -56,6 +56,8 @@ export interface ManualEdgeData extends Record<string, unknown> {
   labelLines: number
   /** The line is a cheap curve while a card moves, so the label has no place yet and stays hidden. */
   moving: boolean
+  /** How many group areas lie under the label, so its cutout can match their tint. */
+  depth: number
 }
 export interface GroupData extends Record<string, unknown> {
   label: string
@@ -78,6 +80,8 @@ export interface EdgeData extends Record<string, unknown> {
   labelLines: number
   /** The line is a cheap curve while a card moves, so the label has no place yet and stays hidden. */
   moving: boolean
+  /** How many group areas lie under the label, so its cutout can match their tint. */
+  depth: number
 }
 
 export interface GroupBox {
@@ -334,6 +338,13 @@ function markerFor(color: string): EdgeMarker {
   return marker
 }
 
+/** How many group areas hold a point, at most two. */
+function depthAt(groups: readonly GroupBox[], x: number, y: number): number {
+  let depth = 0
+  for (const g of groups) if (x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height) depth++
+  return Math.min(depth, 2)
+}
+
 /** Turns the geometry and the current selection into React Flow nodes and edges. Cheap, so it runs on every change. */
 export function assembleGraph(
   board: Board,
@@ -433,6 +444,7 @@ export function assembleGraph(
           labelWidth: shape.labelWidth,
           labelLines: shape.labelLines,
           moving: shape.cheap === true,
+          depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
         },
       } satisfies Edge<EdgeData>),
     )
@@ -454,7 +466,7 @@ export function assembleGraph(
         focusable: true,
         deletable: false,
         interactionWidth: 28,
-        markerEnd: markerFor(active ? 'var(--accent)' : 'var(--ink)'),
+        markerEnd: markerFor(active ? 'var(--accent)' : 'var(--yours)'),
         ariaLabel: `Your link from ${names.get(l.from) ?? l.from} to ${names.get(l.to) ?? l.to}${l.label === '' ? '' : `: ${l.label}`}`,
         data: {
           linkId: l.id,
@@ -468,6 +480,7 @@ export function assembleGraph(
           labelWidth: shape.labelWidth,
           labelLines: shape.labelLines,
           moving: shape.cheap === true,
+          depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
         },
       } satisfies Edge<ManualEdgeData>),
     )

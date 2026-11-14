@@ -2,6 +2,12 @@
   transition: opacity 120ms var(--ease-out);
 }
 
+/* The pointer on a line draws it in the accent, like a selected one. */
+.line:hover :global(.react-flow__edge-path) {
+  stroke: var(--accent) !important;
+  stroke-width: 1.5px !important;
+}
+
 /* A part is selected: the lines that are not its own step back. */
 .line[data-faded] {
   opacity: 0.35;
@@ -19,16 +25,17 @@
   opacity: 1;
 }
 
+/*
+ * A label sits on a cutout in the color of the map under it, so the line breaks around the words. No border, no pill.
+ * Over a group area the cutout takes the area's tint, one layer for each area.
+ */
 .pill {
   position: absolute;
   box-sizing: border-box;
   width: var(--label-width, 150px);
-  padding: 3px 9px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 12px;
+  padding: 3px 6px;
+  color: var(--fg-2);
+  font-size: var(--text-xs);
   line-height: 16px;
   text-align: center;
   text-wrap: balance;
@@ -40,48 +47,62 @@
   overflow: hidden;
   pointer-events: all;
   cursor: pointer;
-  box-shadow: 0 1px 2px var(--shadow);
-  transition: opacity 120ms var(--ease-out);
+  transition:
+    opacity 120ms var(--ease-out),
+    color 120ms var(--ease-out);
 }
 
-.pill:hover,
+/* The cutout hugs the words, line by line. */
+.cutout {
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.pill[data-depth='1'] .cutout {
+  background: color-mix(in srgb, var(--fg) 2.5%, var(--bg));
+}
+
+.pill[data-depth='2'] .cutout {
+  background: color-mix(in srgb, var(--fg) 4.9%, var(--bg));
+}
+
+.pill:hover {
+  z-index: 1;
+  color: var(--fg);
+}
+
+.unknown {
+  display: inline;
+  margin-right: 3px;
+  vertical-align: -2px;
+  color: var(--fg-3);
+}
+
+.pill[data-active],
+.pill[data-highlighted] {
+  color: var(--fg);
+}
+
 .pill[data-selected] {
   z-index: 1;
-}
-
-.pill[data-selected] {
   -webkit-line-clamp: unset;
   overflow: visible;
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
 }
 
-.pill[data-kind='unknown'] {
-  color: var(--muted);
-  border-style: dashed;
-}
-
-.pill[data-active] {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-}
-
-.pill[data-highlighted] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.pill[data-dimmed] {
-  opacity: 0.28;
-}
-
-.pill[data-dimmed]:hover {
-  opacity: 1;
-}
-
+/* A faded label keeps its cutout. Only the words step back, so the line never shows through them. */
+.pill[data-dimmed],
 .pill[data-faded] {
-  opacity: 0.35;
+  color: color-mix(in srgb, var(--fg-2) 45%, transparent);
 }
 
+.pill[data-dimmed]:hover,
 .pill[data-faded]:hover {
-  opacity: 1;
+  color: var(--fg);
 }
 
 /* While a card moves, its labels have no place yet. They are gone at once and fade in at the final place. */
@@ -92,34 +113,15 @@
   pointer-events: none;
 }
 
-.pill[data-selected] {
-  border-color: var(--accent);
-  background: var(--soft);
-  font-weight: 600;
-}
-
-/* The pill on a link the user drew: a dashed ink border, and "You" when it has a label. */
+/* The label on a link the user drew is in the user's color. */
 .pill.mine {
-  border: 1px dashed var(--ink);
-  background: color-mix(in srgb, var(--paper) 40%, var(--surface));
+  color: var(--yours-text);
 }
 
-.pill.mine[data-selected],
-.pill.mine[data-active] {
-  border-color: var(--accent);
+.pill.mine[data-selected] {
+  color: var(--accent-text);
 }
 
-.chip {
-  display: inline-block;
-  margin-right: 6px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 14px;
-  text-transform: uppercase;
-  vertical-align: 1px;
+.pill.mine[data-faded] {
+  color: color-mix(in srgb, var(--yours-text) 45%, transparent);
 }

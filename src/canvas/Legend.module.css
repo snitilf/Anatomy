@@ -4,38 +4,38 @@
   bottom: 12px;
   z-index: 5;
   display: flex;
-  font-size: 13px;
 }
 
 .button {
   appearance: none;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 32px;
-  padding: 0 12px 0 9px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  background: var(--surface);
-  box-shadow: var(--lift);
-  color: var(--muted);
-  font-weight: 600;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  color: var(--fg-2);
+  font-weight: var(--weight-medium);
   cursor: pointer;
   transition:
     background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out),
     transform 120ms var(--ease-out);
 }
 
 .button:hover,
 .button[data-popup-open] {
-  background: var(--soft);
-  color: var(--ink);
+  background: color-mix(in srgb, var(--raised), var(--fg) 5%);
+  color: var(--fg);
 }
 
 .button:focus-visible {
   box-shadow:
     var(--ring),
-    var(--lift);
+    var(--shadow-float);
 }
 
 .button:active {
@@ -52,17 +52,17 @@
 
 .list {
   box-sizing: border-box;
-  min-width: 168px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  box-shadow: var(--lift);
-  font-size: 13px;
+  min-width: 176px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
   transform-origin: var(--transform-origin);
   transition:
-    opacity 120ms var(--ease-out),
-    transform 120ms var(--ease-out);
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
 }
 
 .list[data-starting-style],
@@ -73,17 +73,12 @@
 
 .list:focus-visible {
   outline: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .list {
-    transition: none;
-  }
+  box-shadow: var(--shadow-float);
 }
 
 .rows {
   display: grid;
-  gap: 6px;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -92,8 +87,8 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--ink);
+  gap: var(--space-3);
+  color: var(--fg-2);
 }
 
 /* On a narrow screen the key is an icon in the top corner. The map keeps a margin there when it fits. */
