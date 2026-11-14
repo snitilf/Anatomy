@@ -1,9 +1,8 @@
 import { useReactFlow, ViewportPortal } from '@xyflow/react'
-import { useEffect, useRef, type PointerEvent, type WheelEvent } from 'react'
+import { useEffect, useRef, type PointerEvent } from 'react'
 import type { Point } from '../layout/geometry'
 import { simplifyStroke } from '../layer/edits'
 import type { Mark, MarkEnd } from '../layer/model'
-import { useCamera } from '../canvas/cameraContext'
 import { partUnder } from './pointer'
 import { arrowEnds, attachAt, dragBox, type Scene } from './geometry'
 import { strokePath } from './stroke'
@@ -42,11 +41,10 @@ interface Gesture {
 /**
  * Takes the pointer while a drawing tool is in use. The line or shape in progress is kept in a ref and drawn once per
  * frame by setting attributes, never through React state. Letting go hands the result to `onDrawn` once.
- * Two-finger scrolling pans and pinching zooms, as on the map itself.
+ * The wheel and a pinch zoom, as on the map itself. The wheel never reaches the surface: the map takes it first.
  */
 export function DrawSurface({ tool, scene, onDrawn }: { tool: Tool; scene: () => Scene; onDrawn: (drawn: Drawn) => void }) {
   const flow = useReactFlow()
-  const camera = useCamera()
   const gesture = useRef<Gesture | undefined>(undefined)
   const pen = useRef<SVGPathElement>(null)
   const shape = useRef<SVGPathElement>(null)
@@ -145,14 +143,6 @@ export function DrawSurface({ tool, scene, onDrawn }: { tool: Tool; scene: () =>
     }
   }
 
-  // The surface covers the map, so scrolling reaches it instead of the map: it pans here. A pinch, or Ctrl and the
-  // wheel, is taken by the map's own wheel zoom before it gets here.
-  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (event.ctrlKey) return
-    const view = flow.getViewport()
-    camera.move({ x: view.x - event.deltaX * 0.8, y: view.y - event.deltaY * 0.8, zoom: view.zoom })
-  }
-
   return (
     <>
       <div
@@ -163,7 +153,6 @@ export function DrawSurface({ tool, scene, onDrawn }: { tool: Tool; scene: () =>
         onPointerMove={onPointerMove}
         onPointerUp={(e) => finish(e, true)}
         onPointerCancel={(e) => finish(e, false)}
-        onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
       />
       <ViewportPortal>

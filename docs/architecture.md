@@ -152,7 +152,7 @@ A drawing tool puts a surface over the map (`DrawSurface`) that captures the poi
 The line or shape in progress lives in a ref and is drawn once per frame by setting SVG attributes, never through React state.
 Letting go saves one mark: a pen line simplified to 0.75 screen pixels, a rectangle or ellipse (Shift keeps it square; a click with no drag makes a default size), or an arrow.
 A click with Text, Sticky note, or New part opens an editor in place; what is typed is saved as one change when the editor loses focus or on Escape, and nothing is saved when nothing was typed.
-Scrolling over the surface pans, and a pinch zooms.
+The wheel and a pinch zoom over the surface, as on the map.
 
 Pen lines, rectangles, ellipses, and arrows are one SVG in board coordinates, above the cards and the labels (`InkLayer`).
 Only a wide invisible copy of each line takes the pointer, so the cards under a shape stay reachable.
