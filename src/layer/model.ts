@@ -102,10 +102,13 @@ export const link = z.strictObject({
   createdAt: isoDate,
 })
 
-/** Where an arrow ends: on a part, on a connection, or at a free point. */
+/**
+ * Where an arrow ends: on a part, on a connection, or at a free point.
+ * On a connection, `t` is how far along the drawn line the end sits, from 0 at its start to 1 at its end.
+ */
 export const markEnd = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('part'), id: partId }),
-  z.strictObject({ type: z.literal('relationship'), id: boardId }),
+  z.strictObject({ type: z.literal('relationship'), id: boardId, t: z.number().min(0).max(1).optional() }),
   z.strictObject({ type: z.literal('point'), x: coordinate, y: coordinate }),
 ])
 

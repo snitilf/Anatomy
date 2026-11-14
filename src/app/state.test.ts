@@ -22,6 +22,21 @@ describe('reducer', () => {
     expect(reducer(state, { type: 'cardsMoved', positions: { ghost: { x: 5, y: 6 } } })).toBe(state)
   })
 
+  it('moves and resizes a proposed part like a card, together with the cards it pushed, as one step', () => {
+    const id = exampleBoard().components[0]!.id
+    const proposal = { id: 'part-abcdef', label: 'Cache', summary: '', x: 0, y: 0, width: 260, height: 112, createdAt: now.toISOString() }
+    let state = run(opened(), { type: 'proposalAdded', proposal })
+    state = run(state, { type: 'cardsMoved', positions: { 'part-abcdef': { x: 40, y: 80 }, [id]: { x: 400, y: 0 } } })
+    expect(state.layer!.proposals[0]).toMatchObject({ x: 40, y: 80 })
+    expect(state.layer!.positions[id]).toEqual({ x: 400, y: 0 })
+    state = run(state, { type: 'cardResized', id: 'part-abcdef', size: { width: 300, height: 160 }, positions: { [id]: { x: 500, y: 0 } } })
+    expect(state.layer!.proposals[0]).toMatchObject({ x: 40, y: 80, width: 300, height: 160 })
+    expect(state.layer!.positions[id]).toEqual({ x: 500, y: 0 })
+    state = run(state, { type: 'undo' })
+    expect(state.layer!.proposals[0]).toMatchObject({ width: 260, height: 112 })
+    expect(state.layer!.positions[id]).toEqual({ x: 400, y: 0 })
+  })
+
   it('keeps the layer and computes changes when the same board is opened again', () => {
     const first = exampleBoard().components[0]!.id
     let state = run(opened(), { type: 'cardsMoved', positions: { [first]: { x: 900, y: 700 } } })
