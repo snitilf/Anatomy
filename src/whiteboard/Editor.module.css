@@ -17,7 +17,18 @@
   background: transparent;
   font: inherit;
   color: inherit;
+  /* Form fields reset these. The saved text is drawn with the page's, so the editor uses them too and nothing reflows. */
+  letter-spacing: inherit;
+  word-spacing: inherit;
+  text-rendering: inherit;
+  font-feature-settings: inherit;
   resize: none;
+}
+
+/* The editor's own edge shows where typing goes. The usual focus ring would make it a form field. */
+.editor textarea:focus-visible,
+.editor input:focus-visible {
+  box-shadow: none;
 }
 
 .editor textarea::placeholder,
