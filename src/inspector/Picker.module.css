@@ -24,6 +24,11 @@
   transform: scale(0.97);
 }
 
+/* Opened from the keyboard, it shows at once. */
+.popup[data-instant] {
+  transition: none;
+}
+
 .root {
   display: flex;
   flex-direction: column;

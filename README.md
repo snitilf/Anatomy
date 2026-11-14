@@ -43,7 +43,8 @@ All versions are exact.
 | `@xyflow/react` | 12.12.1 | Canvas for cards and connections (React Flow, MIT core) |
 | `zod` | 4.6.7 | Runtime validation of board files |
 | `zustand` | 5.1.0 | App state store, read through selectors |
-| `@base-ui/react` | 1.9.0 | Accessible menus and popovers |
+| `@base-ui/react` | 1.9.0 | Accessible menus, popovers, tabs, and tooltips |
+| `cmdk` | 1.1.1 | The command menu and the searchable part pickers |
 | `sonner` | 2.0.8 | Short confirmations |
 | `clsx` | 2.1.1 | Conditional class names |
 | `lucide-react` | 1.72.0 | Icons |
