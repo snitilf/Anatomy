@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import exampleText from '../examples/example.board.json?raw'
 import { parseBoard } from '../board/validate'
 import type { Board } from '../board/schema'
-import type { Overlay } from '../overlay/types'
-import { openStore, StorageError, type BoardStore } from './store'
+import { emptyLayer, type Layer } from '../layer/model'
+import { openStore, StorageError, type BoardStore } from './db'
 
 function exampleBoard(): Board {
   const result = parseBoard(exampleText)
@@ -12,20 +12,13 @@ function exampleBoard(): Board {
   return result.board
 }
 
-function overlayFor(boardId: string): Overlay {
-  return {
-    format: 'anatomy-overlay',
-    schemaVersion: 1,
-    boardId,
-    positions: { a: { x: 1, y: 2 } },
-    notes: [],
-    manualLinks: [],
-  }
+function layerFor(boardId: string): Layer {
+  return { ...emptyLayer(boardId), positions: { a: { x: 1, y: 2 } } }
 }
 
 const opened: BoardStore[] = []
-async function open(ns: 'home' | 'work', factory: IDBFactory) {
-  const store = await openStore(ns, factory)
+async function open(factory: IDBFactory) {
+  const store = await openStore(factory)
   opened.push(store)
   return store
 }
@@ -36,39 +29,28 @@ afterEach(() => {
 })
 
 describe('board store', () => {
-  it('round-trips a board and its overlay', async () => {
-    const store = await open('home', new IDBFactory())
+  it('round-trips a board and its layer', async () => {
+    const store = await open(new IDBFactory())
     const board = exampleBoard()
     await store.saveBoard(board)
-    await store.saveOverlay(overlayFor(board.id))
+    await store.saveLayer(layerFor(board.id))
     const loaded = await store.loadBoard(board.id)
     expect(loaded?.board).toEqual(board)
-    expect(loaded?.overlay).toEqual(overlayFor(board.id))
+    expect(loaded?.layer).toEqual(layerFor(board.id))
     expect(await store.loadBoard('missing')).toBeUndefined()
   })
 
-  it('loads a board with no overlay', async () => {
-    const store = await open('home', new IDBFactory())
+  it('loads a board with no layer', async () => {
+    const store = await open(new IDBFactory())
     const board = exampleBoard()
     await store.saveBoard(board)
-    expect((await store.loadBoard(board.id))?.overlay).toBeUndefined()
-  })
-
-  it('keeps home and work apart', async () => {
-    const factory = new IDBFactory()
-    const home = await open('home', factory)
-    const work = await open('work', factory)
-    const board = exampleBoard()
-    await home.saveBoard(board)
-    expect(await work.listBoards()).toEqual([])
-    expect(await work.loadBoard(board.id)).toBeUndefined()
-    expect((await home.listBoards()).map((b) => b.id)).toEqual([board.id])
+    expect((await store.loadBoard(board.id))?.layer).toBeUndefined()
   })
 
   it('lists boards newest first', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     try {
-      const store = await open('home', new IDBFactory())
+      const store = await open(new IDBFactory())
       const base = exampleBoard()
       for (const [i, id] of ['one', 'two', 'three'].entries()) {
         vi.setSystemTime(new Date(2026, 0, 1, 0, 0, i))
@@ -82,29 +64,41 @@ describe('board store', () => {
     }
   })
 
-  it('deletes the board and its overlay together', async () => {
-    const store = await open('home', new IDBFactory())
+  it('deletes the board and its layer together', async () => {
+    const store = await open(new IDBFactory())
     const board = exampleBoard()
     await store.saveBoard(board)
-    await store.saveOverlay(overlayFor(board.id))
+    await store.saveLayer(layerFor(board.id))
     await store.deleteBoard(board.id)
     expect(await store.loadBoard(board.id)).toBeUndefined()
     expect(await store.listBoards()).toEqual([])
   })
 
-  it('remembers the last opened board', async () => {
+  it('remembers what was opened last, and the folder handle', async () => {
     const factory = new IDBFactory()
-    const store = await open('home', factory)
+    const store = await open(factory)
     expect(await store.getLastOpened()).toBeUndefined()
-    await store.setLastOpened('abc')
-    expect(await store.getLastOpened()).toBe('abc')
+    await store.setLastOpened({ mode: 'file', boardId: 'abc' })
+    expect(await store.getLastOpened()).toEqual({ mode: 'file', boardId: 'abc' })
+    await store.setFolder({ kind: 'directory', name: 'shop' })
     store.close()
-    const again = await open('home', factory)
-    expect(await again.getLastOpened()).toBe('abc')
+    const again = await open(factory)
+    expect(await again.getLastOpened()).toEqual({ mode: 'file', boardId: 'abc' })
+    await again.setLastOpened({ mode: 'folder' })
+    expect(await again.getLastOpened()).toEqual({ mode: 'folder' })
+    expect(await again.getFolder()).toEqual({ kind: 'directory', name: 'shop' })
+    await again.setFolder(undefined)
+    expect(await again.getFolder()).toBeUndefined()
+  })
+
+  it('uses one database named anatomy', async () => {
+    const factory = new IDBFactory()
+    await open(factory)
+    expect((await factory.databases()).map((d) => d.name)).toEqual(['anatomy'])
   })
 
   it('reports a quota error thrown by put', async () => {
-    const store = await open('home', new IDBFactory())
+    const store = await open(new IDBFactory())
     vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError')
     })
@@ -115,7 +109,7 @@ describe('board store', () => {
   })
 
   it('reports an aborted transaction as a failure', async () => {
-    const store = await open('home', new IDBFactory())
+    const store = await open(new IDBFactory())
     const realPut = IDBObjectStore.prototype.put
     vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args) {
       const request = realPut.apply(this, args)
@@ -139,13 +133,13 @@ describe('board store', () => {
         throw new DOMException('denied', 'SecurityError')
       },
     } as unknown as IDBFactory
-    await expect(openStore('home', throwing)).rejects.toMatchObject({ kind: 'unavailable' })
+    await expect(openStore(throwing)).rejects.toMatchObject({ kind: 'unavailable' })
   })
 
   it('reports a missing indexedDB', async () => {
     vi.stubGlobal('indexedDB', undefined)
     try {
-      await expect(openStore('home')).rejects.toMatchObject({ kind: 'unavailable' })
+      await expect(openStore()).rejects.toMatchObject({ kind: 'unavailable' })
     } finally {
       vi.unstubAllGlobals()
     }

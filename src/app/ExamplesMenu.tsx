@@ -4,11 +4,11 @@ import { ChevronDown } from 'lucide-react'
 import buttons from './buttons.module.css'
 import { EXAMPLES } from './examples'
 import styles from './ExamplesMenu.module.css'
-import { usePersistence } from './persistenceContext'
+import { useWorkspace } from './workspaceContext'
 
 /** The built-in example boards, as a list of buttons. */
 export function ExampleList({ onChosen }: { onChosen?: () => void }) {
-  const { openText } = usePersistence()
+  const { openText } = useWorkspace()
   return (
     <ul className={styles.plain}>
       {EXAMPLES.map((example) => (
@@ -35,7 +35,7 @@ export function ExampleList({ onChosen }: { onChosen?: () => void }) {
  * the arrow keys move between examples, Enter opens one, and Escape closes the menu and returns focus to the trigger.
  */
 export function ExamplesMenu({ label, primary = false }: { label: string; primary?: boolean }) {
-  const { openText } = usePersistence()
+  const { openText } = useWorkspace()
   return (
     <Menu.Root>
       <Menu.Trigger className={clsx(buttons.button, primary && buttons.primary)}>

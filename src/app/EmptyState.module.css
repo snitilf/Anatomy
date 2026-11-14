@@ -39,6 +39,12 @@
   text-wrap: balance;
 }
 
+.hint {
+  margin: calc(var(--space-3) * -1) 0 0;
+  max-width: 44ch;
+  color: var(--fg-2);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

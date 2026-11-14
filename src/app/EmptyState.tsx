@@ -1,9 +1,9 @@
+import clsx from 'clsx'
 import buttons from './buttons.module.css'
 import { ExamplesMenu } from './ExamplesMenu'
 import styles from './EmptyState.module.css'
-import { storageProblem, usePersistence } from './persistenceContext'
+import { storageProblem, useWorkspace } from './workspaceContext'
 import { SavedBoardList } from './SavedBoards'
-import { NAMESPACES } from '../persistence/store'
 
 /** Three linked cards, drawn once. It shows what a board looks like before one is open. */
 function Sketch() {
@@ -25,18 +25,52 @@ function Sketch() {
   )
 }
 
-export function EmptyState({ onOpen }: { onOpen: () => void }) {
-  const { saved, space, unavailable } = usePersistence()
+/** The first line and the main actions, which depend on whether a repository folder is open or remembered. */
+function Lead({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: () => void }) {
+  const { folder, canOpenFolder, openFolder, reopenFolder } = useWorkspace()
+  if (folder?.state === 'missing') {
+    return (
+      <>
+        <p className={styles.line}>{folder.name} has no .anatomy/board.json yet.</p>
+        <p className={styles.hint}>It opens here as soon as your agent writes it.</p>
+        <div className={styles.actions}>
+          <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={onHowTo}>
+            How to make a board
+          </button>
+          <ExamplesMenu label="Load an example" />
+        </div>
+      </>
+    )
+  }
+  return (
+    <>
+      <p className={styles.line}>Open a board to see how it fits together.</p>
+      <div className={styles.actions}>
+        {folder?.state === 'reopen' && (
+          <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={reopenFolder}>
+            Reopen {folder.name}
+          </button>
+        )}
+        {canOpenFolder && folder?.state !== 'reopen' && (
+          <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={openFolder}>
+            Open repository folder
+          </button>
+        )}
+        <ExamplesMenu label="Load an example" primary={!canOpenFolder} />
+        <button type="button" className={buttons.button} onClick={onOpen}>
+          Open board file
+        </button>
+      </div>
+    </>
+  )
+}
+
+export function EmptyState({ onOpen, onHowTo }: { onOpen: () => void; onHowTo: () => void }) {
+  const { saved, unavailable } = useWorkspace()
   return (
     <div className={styles.empty}>
       <Sketch />
-      <p className={styles.line}>Open a board to see how it fits together.</p>
-      <div className={styles.actions}>
-        <ExamplesMenu label="Load an example" primary />
-        <button type="button" className={buttons.button} onClick={onOpen}>
-          Open board
-        </button>
-      </div>
+      <Lead onOpen={onOpen} onHowTo={onHowTo} />
       {unavailable && (
         <p className={styles.problem} role="status">
           {storageProblem(unavailable)}, so nothing you open is saved. Export keeps your work.
@@ -45,7 +79,7 @@ export function EmptyState({ onOpen }: { onOpen: () => void }) {
       {saved.length > 0 && (
         <section className={styles.saved} aria-labelledby="saved-title">
           <h2 className={styles.savedTitle} id="saved-title">
-            Saved in this browser, {NAMESPACES[space]}
+            Saved in this browser
           </h2>
           <SavedBoardList />
         </section>

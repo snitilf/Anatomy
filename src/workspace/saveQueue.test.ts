@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSaveQueue, type SaveStatus } from './saveQueue'
-import { StorageError } from './store'
+import { StorageError } from './db'
 
 beforeEach(() => {
   vi.useFakeTimers()

@@ -1,7 +1,7 @@
 import clsx from 'clsx'
-import type { BoardSummary } from '../persistence/store'
+import type { BoardSummary } from '../workspace/db'
 import buttons from './buttons.module.css'
-import { usePersistence } from './persistenceContext'
+import { useWorkspace } from './workspaceContext'
 import styles from './SavedBoards.module.css'
 
 const DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
@@ -13,7 +13,7 @@ function savedOn(board: BoardSummary): string {
 
 /** Boards saved in this space, each with Open and Delete. */
 export function SavedBoardList({ onChosen }: { onChosen?: () => void }) {
-  const { saved, openSaved, askDelete } = usePersistence()
+  const { saved, openSaved, askDelete } = useWorkspace()
   return (
     <ul className={styles.list}>
       {saved.map((board) => (

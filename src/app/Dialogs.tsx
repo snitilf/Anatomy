@@ -2,11 +2,11 @@ import clsx from 'clsx'
 import buttons from './buttons.module.css'
 import { Modal } from './Modal'
 import styles from './Modal.module.css'
-import { usePersistence } from './persistenceContext'
+import { useWorkspace } from './workspaceContext'
 
 /** The two questions the app can ask before it changes saved work. */
 export function Dialogs() {
-  const { deleting, choice, askDelete, confirmDelete, resolveChoice } = usePersistence()
+  const { deleting, choice, askDelete, confirmDelete, resolveChoice } = useWorkspace()
   return (
     <>
       {deleting && (
