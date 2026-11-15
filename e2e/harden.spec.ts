@@ -4,7 +4,7 @@ import { open } from './helpers.ts'
 
 const WORST = 'e2e/fixtures/worst-text.board.json'
 
-/** Elements inside `root` whose box runs past the right edge of `root`. */
+/** Elements inside `root` whose visible box runs past the right edge of `root`, and whether `root` scrolls sideways. */
 const pastRight = (page: Page, rootSelector: string) =>
   page.evaluate((selector) => {
     const root = document.querySelector<HTMLElement>(selector)
@@ -12,9 +12,13 @@ const pastRight = (page: Page, rootSelector: string) =>
     const edge = root.getBoundingClientRect().right + 1
     const bad: string[] = []
     for (const el of root.querySelectorAll<HTMLElement>('*')) {
-      if (el.closest('[hidden]') || getComputedStyle(el).position === 'absolute') continue
-      const r = el.getBoundingClientRect()
-      if (r.width > 0 && r.right > edge) bad.push(`${el.tagName}.${el.className}`)
+      if (el.closest('[hidden]')) continue
+      let right = el.getBoundingClientRect().right
+      // Whatever an ancestor clips does not count.
+      for (let up = el.parentElement; up && up !== root; up = up.parentElement) {
+        if (getComputedStyle(up).overflowX !== 'visible') right = Math.min(right, up.getBoundingClientRect().right)
+      }
+      if (el.getBoundingClientRect().width > 0 && right > edge) bad.push(`${el.tagName}.${el.className}`)
     }
     return [root.scrollWidth > root.clientWidth ? 'root scrolls sideways' : '', ...bad].filter(Boolean)
   }, rootSelector)
@@ -27,6 +31,12 @@ for (const width of [1440, 390]) {
       await open(page, WORST)
       await page.locator('.react-flow__node-card[data-id="long-nospace"]').click({ force: true })
       await expect(page.getByTestId('inspector').getByRole('heading', { level: 2 })).toBeVisible()
+      expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
+    })
+
+    test('rows of the overview end in an ellipsis instead of running past the sidebar', async ({ page }) => {
+      await open(page, WORST)
+      await expect(page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first()).toBeAttached()
       expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
     })
 
