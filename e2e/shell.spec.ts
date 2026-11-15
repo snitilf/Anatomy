@@ -19,17 +19,54 @@ test('] hides the sidebar, the map takes the room and keeps its middle, and ] br
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, SIXTEEN)
   const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
+  // Stay above the fit-based minimum at either map width.
+  await page.getByRole('button', { name: 'Zoom in' }).click({ clickCount: 3, delay: 300 })
+  await page.waitForTimeout(400)
   const before = (await page.locator('.react-flow').boundingBox())!
+  const viewBefore = await viewport(page)
   await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } })
   await page.keyboard.press(']')
   await expect(sidebar).toBeHidden()
   await expect.poll(async () => (await page.locator('.react-flow').boundingBox())!.width).toBeGreaterThan(before.width + 300)
-  // The zoom stays: the view does not fit the board again.
-  const zoom = /scale\(([\d.]+)\)/.exec(await viewport(page))?.[1]
-  await page.waitForTimeout(400)
-  expect(Number(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1])).toBeCloseTo(Number(zoom), 3)
+  const parseView = (value: string) => {
+    const match = /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/.exec(value)!
+    return { x: Number(match[1]), y: Number(match[2]), zoom: Number(match[3]) }
+  }
+  const initial = parseView(viewBefore)
+  const checkView = async () => {
+    const box = (await page.locator('.react-flow').boundingBox())!
+    const view = parseView(await viewport(page))
+    expect(view.zoom).toBeCloseTo(initial.zoom, 3)
+    expect((box.width / 2 - view.x) / view.zoom).toBeCloseTo((before.width / 2 - initial.x) / initial.zoom, 0)
+    expect((box.height / 2 - view.y) / view.zoom).toBeCloseTo((before.height / 2 - initial.y) / initial.zoom, 0)
+  }
+  await expect.poll(async () => {
+    try { await checkView(); return true } catch { return false }
+  }).toBe(true)
   await page.keyboard.press(']')
   await expect(sidebar).toBeVisible()
+  await expect.poll(async () => {
+    try { await checkView(); return true } catch { return false }
+  }).toBe(true)
+})
+
+test('widening the map clamps zoom to its new fit minimum', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, SIXTEEN)
+  const zoom = async () => Number(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1])
+  const previous = await zoom()
+  await page.keyboard.press(']')
+  await expect(page.getByRole('complementary', { name: 'Sidebar' })).toBeHidden()
+  // Wait for the resize correction, then use Zoom out to discover the new minimum.
+  await page.waitForTimeout(500)
+  const afterResize = await zoom()
+  const out = page.getByRole('button', { name: 'Zoom out' })
+  for (let i = 0; i < 20 && await out.isEnabled(); i++) {
+    await out.click()
+    await page.waitForTimeout(250)
+  }
+  await expect(out).toBeDisabled()
+  expect(afterResize).toBeCloseTo(Math.max(previous, await zoom()), 3)
 })
 
 test('the walkthrough bar steps with the arrow keys and closes with Escape', async ({ page }) => {
