@@ -10,17 +10,18 @@ const zoomOf = async (page: Page) => {
   return match ? Number(match[1]) : 0
 }
 
-test('the map opens at a readable zoom, and Fit still shows the whole board', async ({ page }) => {
+test('a board with many parts opens fitted whole, and Fit keeps showing the whole board', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await open(page, FORTY)
-  // The whole board would need far less than a readable zoom, so the first view is the start of the flow.
-  expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.79)
+  // More than fifteen parts: the first view is the whole board, however small the text.
+  const opened = await zoomOf(page)
+  expect(opened).toBeLessThan(0.5)
   const first = await page.locator('.react-flow__node-card').first().boundingBox()
   expect(first?.x).toBeGreaterThanOrEqual(0)
   expect(first?.y).toBeGreaterThanOrEqual(0)
 
   await page.getByRole('button', { name: 'Fit board' }).click()
-  await expect.poll(() => zoomOf(page)).toBeLessThan(0.5)
+  await expect.poll(() => zoomOf(page)).toBeCloseTo(opened, 2)
 })
 
 test('a small board is framed larger than before, and cards hold a title, three summary lines, and the badge row', async ({ page }) => {

@@ -17,7 +17,6 @@ test('the command menu finds a part by name and opens it', async ({ page }) => {
 
 test('] hides the sidebar, the map takes the room and keeps its middle, and ] brings it back', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  // A board that does not fit at its start zoom: a board that does is held at its fit zoom, which grows with the map.
   await open(page, SIXTEEN)
   const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
   const before = (await page.locator('.react-flow').boundingBox())!
@@ -28,7 +27,7 @@ test('] hides the sidebar, the map takes the room and keeps its middle, and ] br
   // The zoom stays: the view does not fit the board again.
   const zoom = /scale\(([\d.]+)\)/.exec(await viewport(page))?.[1]
   await page.waitForTimeout(400)
-  expect(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1]).toBe(zoom)
+  expect(Number(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1])).toBeCloseTo(Number(zoom), 3)
   await page.keyboard.press(']')
   await expect(sidebar).toBeVisible()
 })

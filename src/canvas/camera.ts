@@ -9,6 +9,8 @@ export const FIT_MAX_ZOOM = 1
 /** Opening a board fits it when that leaves text readable. Below this, it shows the start of the flow at `START_ZOOM`. */
 export const READABLE_ZOOM = 0.6
 export const START_ZOOM = 0.8
+/** A board with more parts than this opens fitted whole, however small that makes the text. */
+export const OPEN_FIT_PARTS = 15
 /** Room around the content when it is fitted, in screen pixels. */
 const FIT_ROOM = 32
 /** How far past the content the map can be panned, in board pixels. */
@@ -137,6 +139,8 @@ export interface Frame {
   maxZoom?: number
   /** Whole-board framing only: when the board would need less than a readable zoom, show the start of the flow instead. */
   readable?: boolean
+  /** With `readable`: fit the whole box even when the text gets small, as a board with many parts does on opening. */
+  fitAll?: boolean
   /** The cards where the flow starts: the first column on the left. Shown when the whole board is not readable. */
   start?: Rect
 }
@@ -157,13 +161,13 @@ export function coveredTop(map: HTMLElement): number {
  * Content smaller than the map is centered and never shown larger than `maxZoom`.
  */
 export function frameViewport(limits: Limits, map: Size & { top: number }, options: Frame = {}): Viewport {
-  const { box = limits.bounds, padding = 0, maxZoom = FIT_MAX_ZOOM, readable = false, start } = options
+  const { box = limits.bounds, padding = 0, maxZoom = FIT_MAX_ZOOM, readable = false, fitAll = false, start } = options
   const room = Math.max(120, map.height - map.top - CORNER_ROOM)
   const area = { width: map.width, height: room }
   const inflated = { x: box.x - box.width * padding, y: box.y - box.height * padding, width: box.width * (1 + padding * 2), height: box.height * (1 + padding * 2) }
   let zoom = Math.min(maxZoom, fitZoomFor(inflated, area))
   zoom = Math.min(limits.maxZoom, Math.max(limits.minZoom, zoom))
-  if (readable && zoom < READABLE_ZOOM) {
+  if (readable && !fitAll && zoom < READABLE_ZOOM) {
     zoom = Math.max(limits.minZoom, START_ZOOM)
     // The left edge of the board, with the first column of cards in the middle of the height, or its top when taller.
     const first = start ?? box
