@@ -1,6 +1,7 @@
 /* Every view of the sidebar: the overview, a selection, and the review. */
 
 .view {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: var(--space-5);
   /* A word with no spaces wraps instead of widening the panel. */
@@ -8,6 +9,7 @@
 }
 
 .head {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: var(--space-1);
 }
@@ -84,6 +86,7 @@
 }
 
 .section {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: var(--space-2);
   min-width: 0;
@@ -107,6 +110,7 @@
 
 /* Lists of rows. Each row is one button. */
 .rows {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: 1px;
   margin: 0 calc(var(--space-2) * -1);

@@ -1,10 +1,12 @@
 .section {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: var(--space-1);
   justify-items: start;
 }
 
 .block {
+  grid-template-columns: minmax(0, 1fr);
   justify-self: stretch;
   display: grid;
   background: var(--raised);
@@ -19,6 +21,7 @@
 }
 
 .half {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: 2px;
   padding: var(--space-2) var(--space-1) var(--space-1);
@@ -38,6 +41,7 @@
 }
 
 .rows {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   margin: 0;
   padding: 0;
