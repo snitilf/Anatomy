@@ -216,3 +216,19 @@ test('phones only view the map: no tool bar', async ({ page }) => {
   await openFolder(page, 'src/examples/nordet.board.json')
   await expect(page.getByRole('toolbar', { name: 'Whiteboard tools' })).toBeHidden()
 })
+
+test.describe('coarse pointer', () => {
+  test.use({ hasTouch: true, viewport: { width: 1440, height: 900 } })
+
+  test('each toolbar button owns its visible edges', async ({ page }) => {
+    await openFolder(page, 'src/examples/nordet.board.json')
+    const buttons = page.getByRole('toolbar', { name: 'Whiteboard tools' }).getByRole('button')
+    expect(await buttons.count()).toBeGreaterThan(1)
+    for (const button of await buttons.all()) {
+      expect(await button.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return [r.left + 1, r.right - 1].every((x) => el.contains(document.elementFromPoint(x, r.top + r.height / 2)))
+      })).toBe(true)
+    }
+  })
+})
