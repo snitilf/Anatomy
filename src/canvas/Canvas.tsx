@@ -41,7 +41,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { buildAfterMove, fontsLoaded, refreshWhenIdle } from './fontRefresh'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, WheelZoom } from './CameraControls'
 import { CardNode } from './CardNode'
@@ -299,10 +299,20 @@ export function Canvas() {
     () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
     [board, solved, marks, proposals],
   )
+  // The opening view frames the parts. A mark drawn far from them does not pull it off the board.
+  const partsBounds = useMemo(
+    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
+    [board, solved, proposals],
+  )
   const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])
   const boundsRef = useRef(bounds)
+  const partsBoundsRef = useRef(partsBounds)
+  const partCount = board?.components.length ?? 0
+  const partCountRef = useRef(partCount)
   useLayoutEffect(() => {
     boundsRef.current = bounds
+    partsBoundsRef.current = partsBounds
+    partCountRef.current = partCount
   })
   // What arrow ends attach to, as drawn now. Filled in below, once the map is built.
   const sceneRef = useRef<Scene>({ rects: {}, lines: new Map() })
@@ -319,8 +329,11 @@ export function Canvas() {
     }
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
       const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
-      const start = options.readable ? flowStart(rects) : undefined
-      return move(frameViewport(current(), size(), start ? { ...options, start } : options), duration)
+      if (!options.readable) return move(frameViewport(current(), size(), options), duration)
+      const start = flowStart(rects)
+      const box = partsBoundsRef.current
+      const framed: Frame = { ...options, fitAll: partCountRef.current > OPEN_FIT_PARTS, ...(start ? { start } : {}), ...(box ? { box } : {}) }
+      return move(frameViewport(current(), size(), framed), duration)
     }
     // Where a glide is going. A second step during the glide goes on from there, not from halfway.
     const glide: { heading?: { viewport: Viewport; until: number } | undefined } = {}
