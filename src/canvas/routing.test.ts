@@ -275,6 +275,33 @@ describe('spacing', () => {
   })
 })
 
+describe('anchors on a crowded side', () => {
+  it('keeps every anchor on the card, moving the surplus to another side, and marks a side still too full', () => {
+    const a = at(0, 300, CARD_WIDTH, 100)
+    const targets = Array.from({ length: 10 }, (_, k) => at(600, k * 200 - 600))
+    const rects: Record<string, Rect> = { a }
+    targets.forEach((t, k) => (rects[`t${k}`] = t))
+    const plans = planEdges(
+      rects,
+      targets.map((_, k) => ({ id: `e${k}`, from: 'a', to: `t${k}` })),
+    )
+    for (const p of plans.values()) {
+      expect(p.a.y).toBeGreaterThanOrEqual(a.y)
+      expect(p.a.y).toBeLessThanOrEqual(a.y + a.height)
+      expect(p.a.x).toBeGreaterThanOrEqual(a.x)
+      expect(p.a.x).toBeLessThanOrEqual(a.x + a.width)
+    }
+    expect(new Set([...plans.values()].map((p) => p.out)).size).toBeGreaterThan(1)
+  })
+
+  it('keeps both ends of a nearly aligned connection', () => {
+    const plan = { out: 'right' as const, in: 'left' as const, a: { x: 0, y: 50 }, b: { x: 500, y: 50.6 } }
+    const route = routeConnection(plan, [])
+    expect(route.runs![0]![0]).toEqual(plan.a)
+    expect(route.runs![route.runs!.length - 1]![1]).toEqual(plan.b)
+  })
+})
+
 describe('group names', () => {
   it('route round the name of a group rather than through it', () => {
     const a = at(0, 100)
