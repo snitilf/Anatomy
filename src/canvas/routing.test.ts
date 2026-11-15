@@ -76,7 +76,6 @@ describe('routeConnection', () => {
     expect(route.d).not.toContain('C')
     expect(route.runs).toHaveLength(3)
     for (const [p, q] of route.runs!) expect(p.x === q.x || p.y === q.y).toBe(true)
-    // The middle run is down the middle of the gap.
     expect(route.runs![1]![0].x).toBe((CARD_WIDTH + 400) / 2)
   })
 
