@@ -128,3 +128,13 @@
     width: calc(100% - 16px);
   }
 }
+
+.button {
+  position: relative;
+}
+
+.button::after {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((28px - var(--hit)) / 2));
+}

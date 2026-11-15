@@ -145,3 +145,14 @@
     padding: 0;
   }
 }
+
+.crumb {
+  position: relative;
+}
+
+.crumb::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((28px - var(--hit)) / 2));
+  inset-inline: 0;
+}

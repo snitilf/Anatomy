@@ -551,3 +551,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.back {
+  position: relative;
+}
+
+.back::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((24px - var(--hit)) / 2));
+  inset-inline: 0;
+}
+
+.more {
+  position: relative;
+}
+
+.more::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((24px - var(--hit)) / 2));
+  inset-inline: 0;
+}

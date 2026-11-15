@@ -127,3 +127,40 @@ test('a board with many parts opens fitted: every card is inside the map', async
   })
   expect(outside).toBe(0)
 })
+
+/** Whether a point `gap` pixels outside the left edge of the button, at its middle height, still presses it. */
+const pressesButton = (page: Page, name: string, gap: number) =>
+  page.evaluate(
+    ([label, away]) => {
+      const button = document.querySelector<HTMLElement>(`button[aria-label="${label}"]`)!
+      const r = button.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left - (away as number), r.top + r.height / 2)
+      return hit === button || button.contains(hit)
+    },
+    [name, gap] as const,
+  )
+
+test('small controls answer the pointer in a larger area than they look', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'src/examples/nordet.board.json')
+  expect(await pressesButton(page, 'Settings', 1)).toBe(true)
+  expect(await pressesButton(page, 'Settings', 8)).toBe(false)
+})
+
+test.describe('on a touch screen', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('the hit area of a control is at least 44 pixels', async ({ page }) => {
+    await open(page, 'src/examples/nordet.board.json')
+    const size = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--hit').trim())
+    expect(size).toBe('44px')
+    const box = await page.evaluate(() => {
+      const button = document.querySelector<HTMLElement>('button[aria-label="Settings"]')!
+      const r = button.getBoundingClientRect()
+      const after = getComputedStyle(button, '::after')
+      return { width: r.width + Math.abs(parseFloat(after.left)) * 2, height: r.height + Math.abs(parseFloat(after.top)) * 2 }
+    })
+    expect(box.width).toBeGreaterThanOrEqual(44)
+    expect(box.height).toBeGreaterThanOrEqual(44)
+  })
+})

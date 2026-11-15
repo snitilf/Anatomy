@@ -103,3 +103,29 @@
     display: none;
   }
 }
+
+.button {
+  position: relative;
+}
+
+.button::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((26px - var(--hit)) / 2));
+  inset-inline: 0;
+}
+
+.button::after {
+  inset-inline: min(0px, calc((28px - var(--hit)) / 2));
+}
+
+.level {
+  position: relative;
+}
+
+.level::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((26px - var(--hit)) / 2));
+  inset-inline: 0;
+}

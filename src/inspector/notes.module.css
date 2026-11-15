@@ -335,3 +335,24 @@
 .route s {
   color: var(--fg-3);
 }
+
+.more {
+  position: relative;
+}
+
+.more::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((24px - var(--hit)) / 2));
+  inset-inline: 0;
+}
+
+.tool {
+  position: relative;
+}
+
+.tool::after {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((24px - var(--hit)) / 2));
+}
