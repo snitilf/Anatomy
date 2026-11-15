@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { ArrowRight, CircleCheck, CircleDashed, Unlink } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
-import { useAppDispatch, useAppStore } from '../app/store'
+import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import type { Selection } from '../app/state'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
@@ -101,6 +101,7 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
 /** An item that left the map, with the answer it left with, and the way back. */
 function ArchivedItem({ board, previous, layer, entry, deletable = false }: { board: Board; previous: Board | undefined; layer: Layer; entry: ArchiveEntry; deletable?: boolean }) {
   const dispatch = useAppDispatch()
+  const store = useAppStoreApi()
   const item = { type: entry.type, item: entry.item } as Item
   return (
     <li className={notes.item}>
@@ -117,7 +118,7 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
             className={clsx(buttons.button, buttons.quiet, buttons.small)}
             onClick={() => {
               dispatch({ type: 'archiveDropped', id: entry.item.id })
-              deletedToast('Deleted from the archive', dispatch)
+              deletedToast('Deleted from the archive', dispatch, store)
             }}
           >
             Delete
