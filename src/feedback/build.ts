@@ -126,7 +126,15 @@ function resolveOutline(scene: Scene, path: readonly Point[], closed: boolean): 
   for (const { ref, line: drawn } of scene.connections) {
     const middle = pointAlong(drawn, 0.5)
     if (closed && middle && insidePolygon(middle, path)) encloses.push(ref)
-    else if (line.some((p) => nearLine(drawn, p))) touches.push(ref)
+    else {
+      const xs = drawn.map((p) => p.x)
+      const ys = drawn.map((p) => p.y)
+      const left = Math.min(...xs) - REACH
+      const right = Math.max(...xs) + REACH
+      const top = Math.min(...ys) - REACH
+      const bottom = Math.max(...ys) + REACH
+      if (line.some((p) => p.x >= left && p.x <= right && p.y >= top && p.y <= bottom && nearLine(drawn, p))) touches.push(ref)
+    }
   }
   return { encloses, touches }
 }
