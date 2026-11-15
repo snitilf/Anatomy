@@ -1,5 +1,6 @@
 /* Bottom center of the map, over it. */
 .bar {
+  grid-template-columns: minmax(0, 1fr);
   position: absolute;
   z-index: 15;
   left: 50%;
