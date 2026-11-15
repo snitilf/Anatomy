@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Board } from '../board/schema'
 import { placeCards } from '../layout/cards'
-import type { Rect } from '../layout/geometry'
+import type { Point, Rect } from '../layout/geometry'
 import { addLink, addMark, addNote, addProposal, archiveItems, deleteNote, editNote, reconnect, recordSent } from '../layer/edits'
 import { emptyLayer, type Layer, type Mark } from '../layer/model'
 import { allBoards, nordetBoard } from '../layer/testBoards'
-import { pointAlong } from '../whiteboard/geometry'
-import { buildFeedback, mapSceneOf, unsentCount } from './build'
+import { nearestOnLine, pointAlong } from '../whiteboard/geometry'
+import { buildFeedback, describeMarkFor, mapSceneOf, unsentCount } from './build'
 
 const t0 = new Date('2026-05-01T10:00:00.000Z')
 const iso = t0.toISOString()
@@ -174,6 +174,62 @@ describe('buildFeedback', () => {
     expect(build(board, marked).skipped).toEqual([{ id: 'mark-cross1', reason: 'no-meaning' }])
     const item = buildFeedback(board, marked, { id: 'feedback-aaaaaa', now: t0, scene: { rects: scene.rects, lines } }).feedback.items[0]
     expect(item?.type === 'drawing' && item.touches.map((x) => x.id)).toEqual([rel.id])
+  })
+
+  it('matches the unfiltered connection predicate for outlines and arrow points', () => {
+    const board = nordetBoard()
+    const layer = emptyLayer(board.id)
+    const rel = board.relationships[0]!
+    const ref = { type: 'relationship' as const, id: rel.id, label: rel.label, from: rel.from, to: rel.to }
+    const straight = [{ x: 0, y: 0 }, { x: 100, y: 0 }]
+    const bent = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }]
+    const stroke = (points: Point[]): Extract<Mark, { kind: 'stroke' }> => ({ id: 'mark-test01', createdAt: iso, kind: 'stroke', points, note: 'test' })
+    const shape = (kind: 'rect' | 'ellipse', x: number, y: number): Extract<Mark, { kind: 'rect' | 'ellipse' }> =>
+      ({ id: 'mark-test01', createdAt: iso, kind, x, y, width: 200, height: 200, note: 'test' })
+    const cases = [
+      { name: 'below reach', mark: stroke([{ x: 50, y: 7.99 }]), line: straight, touched: true, enclosed: false },
+      { name: 'at reach', mark: stroke([{ x: 50, y: 8 }]), line: straight, touched: true, enclosed: false },
+      { name: 'above reach', mark: stroke([{ x: 50, y: 8.01 }]), line: straight, touched: false, enclosed: false },
+      { name: 'bent connection', mark: stroke([{ x: 108, y: 50 }]), line: bent, touched: true, enclosed: false },
+      { name: 'one-point connection', mark: stroke([{ x: 8, y: 0 }]), line: [{ x: 0, y: 0 }], touched: true, enclosed: false },
+      { name: 'empty stroke', mark: stroke([]), line: straight, touched: false, enclosed: false },
+      { name: 'rectangle encloses', mark: shape('rect', -50, -100), line: straight, touched: false, enclosed: true },
+      { name: 'ellipse encloses', mark: shape('ellipse', -50, -100), line: straight, touched: false, enclosed: true },
+      { name: 'far shape', mark: shape('rect', 1000, 1000), line: bent, touched: false, enclosed: false },
+    ]
+    for (const { name, mark, line, touched, enclosed } of cases) {
+      const path: Point[] = mark.kind === 'stroke' ? mark.points : mark.kind === 'rect'
+        ? [{ x: mark.x, y: mark.y }, { x: mark.x + mark.width, y: mark.y }, { x: mark.x + mark.width, y: mark.y + mark.height }, { x: mark.x, y: mark.y + mark.height }]
+        : Array.from({ length: 48 }, (_, i) => ({ x: mark.x + mark.width / 2 + Math.cos(i * Math.PI / 24) * mark.width / 2, y: mark.y + mark.height / 2 + Math.sin(i * Math.PI / 24) * mark.height / 2 }))
+      const closed = mark.kind !== 'stroke'
+      const corners = closed ? [...path, path[0]!] : path
+      const samples = corners.flatMap((p, i) => {
+        const q = corners[i + 1]
+        if (!q) return [p]
+        const steps = Math.floor(Math.hypot(q.x - p.x, q.y - p.y) / 6)
+        return [p, ...Array.from({ length: Math.max(0, steps - 1) }, (_, j) => ({ x: p.x + (q.x - p.x) * (j + 1) / steps, y: p.y + (q.y - p.y) * (j + 1) / steps }))]
+      })
+      const middle = pointAlong(line, 0.5)!
+      let inside = false
+      for (let i = 0, j = path.length - 1; i < path.length; j = i++) {
+        const a = path[i]!, b = path[j]!
+        if (a.y > middle.y !== b.y > middle.y && middle.x < (b.x - a.x) * (middle.y - a.y) / (b.y - a.y) + a.x) inside = !inside
+      }
+      const referenceEncloses = closed && inside ? [ref] : []
+      const referenceTouches = referenceEncloses.length === 0 && samples.some((p) => (nearestOnLine(line, p)?.distance ?? Infinity) <= 8) ? [ref] : []
+      expect(referenceTouches.length > 0, name).toBe(touched)
+      expect(referenceEncloses.length > 0, name).toBe(enclosed)
+      const scene = { rects: {}, lines: new Map([[rel.id, line]]) }
+      const item = describeMarkFor(board, layer, mark, scene)
+      expect(item && (item.type === 'drawing' || item.type === 'shape') && { touches: item.touches, encloses: item.encloses }, name).toEqual({ touches: referenceTouches, encloses: referenceEncloses })
+
+      const p = path[0] ?? { x: 1000, y: 1000 }
+      const nearest = nearestOnLine(line, p)
+      const pointed = nearest && nearest.distance <= 8 ? [{ ...ref, at: Math.round(nearest.t * 100) / 100 }] : []
+      const arrow: Mark = { id: 'mark-arrow1', createdAt: iso, kind: 'arrow', from: { type: 'point', ...p }, to: { type: 'point', x: 5000, y: 5000 }, note: 'test' }
+      const result = describeMarkFor(board, layer, arrow, scene)
+      expect(result?.type === 'arrow' ? [result.from, result.to].filter((end) => end.type === 'relationship') : undefined, name).toEqual(pointed)
+    }
   })
 
   it('sends what is new or changed, sends again what has no answer yet, and lists what was withdrawn', () => {
