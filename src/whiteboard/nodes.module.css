@@ -44,3 +44,10 @@
 :global(.react-flow__node.dragging) .text {
   cursor: grabbing;
 }
+
+/* Words that do not fit fade out at the bottom edge, so the box does not look like it ends mid-line. */
+.sticky[data-clipped],
+.text[data-clipped] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
+}

@@ -57,3 +57,19 @@ for (const width of [1440, 390]) {
     })
   })
 }
+
+test('a sticky with more words than fit fades at the bottom, and a short one does not', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'src/examples/example.board.json')
+  const map = (await page.locator('.react-flow').boundingBox())!
+  const make = async (text: string, dy: number) => {
+    await page.keyboard.press('s')
+    await page.mouse.click(map.x + map.width - 200, map.y + dy)
+    await page.keyboard.insertText(text)
+    await page.keyboard.press('Escape')
+  }
+  await make('word '.repeat(200), 120)
+  await make('Short', 520)
+  await expect(page.locator('[data-clipped]')).toHaveCount(1)
+  await expect(page.locator('[data-clipped]')).toHaveText(/^word word/)
+})
