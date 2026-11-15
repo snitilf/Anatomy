@@ -38,7 +38,7 @@ import { ProposalNode, StickyNode, TextNode } from '../whiteboard/nodes'
 import { STICKY_MAX, STICKY_MIN, STICKY_SIZE } from '../whiteboard/sizes'
 import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
-import { fontsLoaded, refreshWhenIdle } from './fontRefresh'
+import { buildAfterMove, fontsLoaded, refreshWhenIdle } from './fontRefresh'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
@@ -96,9 +96,6 @@ interface UserLines {
   proposals: readonly Proposal[] | undefined
   reconnects: readonly Reconnect[] | undefined
 }
-
-/** A build made with the previous geometry still owes the refresh after fonts loaded: the mark moves to the new view. */
-const keepStale = (old: View, next: View): View => (old.fontStale ? { ...next, fontStale: true } : next)
 
 /** A build with no previous geometry, from the cards where they are now: nothing in motion or unsaved moves. */
 const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects)
@@ -219,7 +216,7 @@ export function Canvas() {
     shown =
       sameRects(rects, view.rects) && reconnects === view.reconnects
         ? { ...view, base: stored, proposals }
-        : keepStale(view, fullView(view.board, stored, user, rects, view.geometry))
+        : buildAfterMove(view, (reuse) => fullView(view.board, stored, user, rects, reuse ? view.geometry : undefined))
     setView(shown)
   }
   // Text measured before its font faces loaded was sized with the fallback. When they are in, the map is built again, once.
@@ -434,7 +431,7 @@ export function Canvas() {
       const current = viewRef.current
       if (!current) return
       saveKeyMoves(current)
-      setView((v) => (v && v.settle !== undefined && v.held === undefined ? keepStale(v, fullView(v.board, v.base, v, v.rects, v.geometry)) : v))
+      setView((v) => (v && v.settle !== undefined && v.held === undefined ? buildAfterMove(v, (reuse) => fullView(v.board, v.base, v, v.rects, reuse ? v.geometry : undefined)) : v))
     }
     return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
   }, [settle, shown, saveKeyMoves])
