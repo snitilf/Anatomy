@@ -39,7 +39,45 @@ export function charWidth(char: string, style: TextStyle): number {
   return em * 0.6
 }
 
+const FONTS: Record<TextStyle, string> = { label: '400 11px "Inter Variable"', title: '500 12px "Inter Variable"' }
+
+let context: { font: string; measureText(text: string): { width: number } } | null | undefined
+const cache = new Map<string, number>()
+
+/** The canvas of the browser, where there is one. Unit tests run without. */
+function canvas(): typeof context {
+  if (context === undefined) {
+    try {
+      context = typeof OffscreenCanvas === 'undefined' ? null : new OffscreenCanvas(1, 1).getContext('2d')
+    } catch {
+      context = null
+    }
+  }
+  return context
+}
+
+/** The width the browser gives the whole string in the loaded interface font, or `undefined` while it cannot say. */
+function measured(text: string, style: TextStyle): number | undefined {
+  const ctx = canvas()
+  if (!ctx || typeof document === 'undefined' || !document.fonts?.check(FONTS[style])) return undefined
+  const key = `${style}\u0000${text}`
+  let width = cache.get(key)
+  if (width === undefined) {
+    ctx.font = FONTS[style]
+    width = ctx.measureText(text).width
+    if (cache.size > 5000) cache.clear()
+    cache.set(key, width)
+  }
+  return width
+}
+
+/**
+ * The width of a string. In the browser it is measured whole in the loaded font, so wide letters and other scripts are
+ * right too. Without a canvas, or before the font has loaded, the table and the average widths stand in.
+ */
 export function textWidth(text: string, style: TextStyle): number {
+  const real = measured(text, style)
+  if (real !== undefined) return real * SLACK
   let total = 0
   for (const c of text) total += charWidth(c, style)
   return total * SLACK
