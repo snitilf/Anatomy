@@ -21,9 +21,17 @@ test('] hides the sidebar, the map takes the room and keeps its middle, and ] br
   const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
   // Stay above the fit-based minimum at either map width.
   await page.getByRole('button', { name: 'Zoom in' }).click({ clickCount: 3, delay: 300 })
-  await page.waitForTimeout(400)
+  // A view that reads the same twice in a row has finished gliding.
+  let viewBefore = ''
+  await expect
+    .poll(async () => {
+      const now = await viewport(page)
+      const same = now === viewBefore
+      viewBefore = now
+      return same
+    }, { intervals: [100] })
+    .toBe(true)
   const before = (await page.locator('.react-flow').boundingBox())!
-  const viewBefore = await viewport(page)
   await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } })
   await page.keyboard.press(']')
   await expect(sidebar).toBeHidden()
@@ -51,22 +59,35 @@ test('] hides the sidebar, the map takes the room and keeps its middle, and ] br
 })
 
 test('widening the map clamps zoom to its new fit minimum', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, SIXTEEN)
+  // Nordet is wider than the map beside the sidebar, so its fit is set by width and rises when the sidebar hides.
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await open(page, NORDET)
   const zoom = async () => Number(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1])
-  const previous = await zoom()
+  // A zoom that reads the same twice in a row has finished gliding.
+  const settled = async () => {
+    let last = Number.NaN
+    let value = Number.NaN
+    await expect
+      .poll(async () => {
+        value = await zoom()
+        const same = value === last
+        last = value
+        return same
+      }, { intervals: [100] })
+      .toBe(true)
+    return value
+  }
+  const previous = await settled()
+  const before = (await page.locator('.react-flow').boundingBox())!
   await page.keyboard.press(']')
   await expect(page.getByRole('complementary', { name: 'Sidebar' })).toBeHidden()
-  // Wait for the resize correction, then use Zoom out to discover the new minimum.
-  await page.waitForTimeout(500)
-  const afterResize = await zoom()
-  const out = page.getByRole('button', { name: 'Zoom out' })
-  for (let i = 0; i < 20 && await out.isEnabled(); i++) {
-    await out.click()
-    await page.waitForTimeout(250)
-  }
-  await expect(out).toBeDisabled()
-  expect(afterResize).toBeCloseTo(Math.max(previous, await zoom()), 3)
+  await expect.poll(async () => (await page.locator('.react-flow').boundingBox())!.width).toBeGreaterThan(before.width + 300)
+  const afterResize = await settled()
+  // Fit measures the minimum for the wider map on its own.
+  await page.keyboard.press('Shift+Digit1')
+  const fit = await settled()
+  expect(fit).toBeGreaterThan(previous + 0.01)
+  expect(afterResize).toBeCloseTo(fit, 3)
 })
 
 test('the walkthrough bar steps with the arrow keys and closes with Escape', async ({ page }) => {
