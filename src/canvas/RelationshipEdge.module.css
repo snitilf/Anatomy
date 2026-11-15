@@ -90,6 +90,16 @@
   font-weight: var(--weight-medium);
 }
 
+/* A long label never grows past two lines on the map. The sidebar shows it whole. */
+.pill[data-selected] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 220px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
 /* A label with no free place beside its line waits until the line is hovered or selected, then shows whole. */
 .pill[data-hidden] {
   width: max-content;
