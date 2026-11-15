@@ -174,3 +174,28 @@ test('every form field has a name or an id', async ({ page }) => {
   const unnamed = await page.evaluate(() => [...document.querySelectorAll('input, textarea, select')].filter((el) => !el.getAttribute('name') && !el.id).map((el) => el.outerHTML.slice(0, 80)))
   expect(unnamed).toEqual([])
 })
+
+test('the Send to agent tooltip does not come back when the popover closes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'src/examples/example.board.json')
+  const trigger = page.getByRole('button', { name: /^Send to agent/ })
+  await trigger.click()
+  await expect(page.getByRole('dialog', { name: 'Send to agent' })).toBeVisible()
+  await page.mouse.click(600, 500)
+  await expect(page.getByRole('dialog', { name: 'Send to agent' })).toBeHidden()
+  await page.waitForTimeout(700)
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+  // Escape returns focus to the button too.
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(trigger).toBeFocused()
+  await page.waitForTimeout(700)
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+  // Opened and closed from the keyboard.
+  await page.keyboard.press('ControlOrMeta+Enter')
+  await expect(page.getByRole('dialog', { name: 'Send to agent' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Send to agent' })).toBeHidden()
+  await page.waitForTimeout(700)
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+})

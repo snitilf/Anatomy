@@ -244,7 +244,7 @@ export function SendMenu() {
   const label = count > 0 ? `${view.label}, ${count} new` : view.label
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Tip label={view.label} keys={view.shortcut}>
+      <Tip label={view.label} keys={view.shortcut} holdWhile={open}>
         <Popover.Trigger
           render={
             <button
