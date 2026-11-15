@@ -337,3 +337,21 @@ describe('the user layer on the map', () => {
     expect(nodes.find((n) => n.id === 'mark:mark-abcdef')).toMatchObject({ type: 'mark-sticky', position: { x: 50, y: 60 }, selected: true })
   })
 })
+
+describe('a kept line after another card moves', () => {
+  it('meets its cards where a fresh build would put it, so a shared side is shared the same way', () => {
+    const board = forty()
+    const positions = placeCards(board, { positions: {}, sizes: {} })
+    const before = computeGeometry(board, positions)
+    const degree = (id: string) => board.relationships.filter((r) => r.from === id || r.to === id).length
+    const id = [...board.components].sort((a, b) => degree(b.id) - degree(a.id))[0]!.id
+    const next = { ...positions, [id]: { ...positions[id]!, y: positions[id]!.y - 500 } }
+    const fresh = computeGeometry(board, next)
+    const kept = computeGeometry(board, next, [], before)
+    for (const [edgeId, shape] of fresh.edges) {
+      const other = kept.edges.get(edgeId)!
+      expect(other.points[0], edgeId).toEqual(shape.points[0])
+      expect(other.points[other.points.length - 1], edgeId).toEqual(shape.points[shape.points.length - 1])
+    }
+  })
+})
