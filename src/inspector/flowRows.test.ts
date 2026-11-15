@@ -26,6 +26,13 @@ describe('the flow block', () => {
     expect(whats).toContain('something only listed')
   })
 
+  it('drops an input already named by a user link', () => {
+    const board = nordetBoard()
+    board.components.find((c) => c.id === 'approval')!.inputs = ['  CUSTOM FLOW  ']
+    const layer = { ...emptyLayer(board.id), links: [{ id: 'link-aaaaaa', from: 'preview', to: 'approval', label: 'custom flow', createdAt: '2026-11-13T00:00:00.000Z' }] }
+    expect(flowRows(board, layer, 'approval').in.filter((row) => row.what.trim().toLowerCase() === 'custom flow')).toMatchObject([{ select: { type: 'link', id: 'link-aaaaaa' } }])
+  })
+
   it('shows the user links as theirs, and a moved end with the part it left', () => {
     const board = nordetBoard()
     const out = board.relationships.find((r) => r.from === 'approval')!
