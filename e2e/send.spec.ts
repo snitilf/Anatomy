@@ -185,4 +185,13 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   await sendButton(page).click()
   await expect(popover.getByText('Nothing new to send.')).toBeVisible()
   await expect(popover.getByText(PROMPT)).toBeVisible()
+
+  // Send again writes the file once more with every item that has no answer.
+  const before = await feedback(page)
+  await expect(popover.getByText(/items? has no answer yet|items have no answer yet/)).toBeVisible()
+  await popover.getByRole('button', { name: 'Send again' }).click()
+  await expect(popover.getByText(/^Sent \d+ items?$/)).toBeVisible()
+  const again = await feedback(page)
+  expect(again.id).not.toBe(before.id)
+  expect(again.items.length).toBeGreaterThan(0)
 })

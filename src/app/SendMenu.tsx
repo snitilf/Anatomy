@@ -215,6 +215,14 @@ export function SendMenu() {
         <p className={styles.nothing}>Nothing new to send.</p>
         {lastSent && <p className={styles.line}>Last sent {WHEN.format(new Date(lastSent))}.</p>}
         {lastSent && <PromptBox prompt={prompt} />}
+        {again > 0 && (
+          <div className={styles.foot}>
+            <p className={styles.line}>{again === 1 ? '1 item has no answer yet.' : `${again} items have no answer yet.`}</p>
+            <button type="button" className={clsx(buttons.button, buttons.small)} disabled={busy} onClick={() => send()}>
+              {inFolder ? 'Send again' : 'Download again'}
+            </button>
+          </div>
+        )}
         {skippedLine}
       </>
     )
