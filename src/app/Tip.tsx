@@ -1,5 +1,5 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import styles from './Tip.module.css'
 
 /**
@@ -23,6 +23,13 @@ export function Tip({
   children: ReactElement
 }) {
   const [open, setOpen] = useState(false)
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Tab') consumeReturnFocus?.()
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [consumeReturnFocus])
   if (holdWhile && open) setOpen(false)
   return (
     <Tooltip.Root
