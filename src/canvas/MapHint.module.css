@@ -8,6 +8,8 @@
   align-items: center;
   gap: var(--space-1);
   box-sizing: border-box;
+  /* As wide as the words, up to the room between the line key and the zoom buttons. */
+  width: max-content;
   max-width: calc(100% - 300px);
   min-height: 32px;
   padding: 0 4px 0 12px;
