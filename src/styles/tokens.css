@@ -3,6 +3,11 @@
  * `data-theme` on <html> is always `light` or `dark`; an inline script in index.html sets it before the first paint.
  */
 
+/* The smallest hit area of a control. The control keeps its look; the area around it answers the pointer too. */
+:root {
+  --hit: 32px;
+}
+
 /* Every neutral shares the accent's hue (OKLCH 278) at low chroma: shell, canvas, cards, in that order in both themes. */
 :root,
 :root[data-theme='light'] {
@@ -117,4 +122,10 @@
   --ring: 0 0 0 2px var(--focus);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (pointer: coarse) {
+  :root {
+    --hit: 44px;
+  }
 }
