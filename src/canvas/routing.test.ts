@@ -301,6 +301,19 @@ describe('anchors on a crowded side', () => {
     expect(new Set([...plans.values()].map((p) => p.out)).size).toBeGreaterThan(1)
   })
 
+  it('draws only right angles when the ends differ by less than half a pixel', () => {
+    for (const dy of [0.1, 0.4, 0.49, 0.5, 0.9]) {
+      const plan = { out: 'right' as const, in: 'left' as const, a: { x: 0, y: 50 }, b: { x: 500, y: 50 + dy } }
+      for (const route of [routeConnection(plan, []), quickRoute(plan)]) {
+        for (const [p, q] of route.runs!) expect(p.x === q.x || p.y === q.y, `${dy}: ${JSON.stringify([p, q])}`).toBe(true)
+        expect(route.runs![0]![0]).toEqual(plan.a)
+        expect(route.runs![route.runs!.length - 1]![1]).toEqual(plan.b)
+      }
+    }
+    const up = { out: 'bottom' as const, in: 'top' as const, a: { x: 50, y: 0 }, b: { x: 50.4, y: 500 } }
+    for (const [p, q] of routeConnection(up, []).runs!) expect(p.x === q.x || p.y === q.y).toBe(true)
+  })
+
   it('keeps both ends of a nearly aligned connection', () => {
     const plan = { out: 'right' as const, in: 'left' as const, a: { x: 0, y: 50 }, b: { x: 500, y: 50.6 } }
     const route = routeConnection(plan, [])

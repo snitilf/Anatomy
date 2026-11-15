@@ -623,7 +623,7 @@ function corners(points: readonly Point[]): Point[] {
   for (const p of points) {
     const a = out[out.length - 2]
     const b = out[out.length - 1]
-    if (b && Math.abs(b.x - p.x) < 0.5 && Math.abs(b.y - p.y) < 0.5) continue
+    if (b && b.x === p.x && b.y === p.y) continue
     if (a && b && ((a.x === b.x && b.x === p.x) || (a.y === b.y && b.y === p.y))) out[out.length - 1] = p
     else out.push(p)
   }
