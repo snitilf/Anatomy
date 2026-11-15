@@ -86,3 +86,14 @@
   position: absolute;
   inset: min(0px, calc((32px - var(--hit)) / 2));
 }
+
+@media (pointer: coarse) {
+  .button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .button::after {
+    inset: 0;
+  }
+}
