@@ -27,7 +27,7 @@ const SLOW_FRAMES_ALLOWED = 1
 for (const board of BOARDS) {
   test(`dragging a card stays smooth and lands under the pointer: ${board.name}`, async ({ page }) => {
     await open(page, board.file)
-    const first = await grabbable(page)
+    const first = await grabbable(page, { dx: 90, dy: 60 })
     const before = await cardTransform(page, first.id)
 
     await startFrameLog(page)
@@ -64,7 +64,7 @@ for (const board of BOARDS) {
 test('dragging an unselected card on a narrow screen does not move the view', async ({ page }) => {
   await page.setViewportSize({ width: 500, height: 800 })
   await open(page, BOARDS[0]!.file)
-  const spot = await grabbable(page)
+  const spot = await grabbable(page, { dx: 40, dy: 30 })
   const view = await viewport(page)
   await drag(page, spot, 40, 30)
   await page.waitForTimeout(300)
