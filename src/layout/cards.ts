@@ -83,10 +83,11 @@ export function contentSize(c: { label: string; summary: string; lesson?: string
 }
 
 /** How many summary lines fit on a card of this size. The card clamps its summary to this. */
-export function summaryLinesFor(c: { label: string; lesson?: string | undefined }, size: Size): number {
+export function summaryLinesFor(c: { label: string; lesson?: string | undefined }, size: Size, notes = 0): number {
   const inner = size.width - CARD_TEXT.padX * 2
   const title = Math.min(CARD_TEXT.titleLines, lineCount(c.label, inner, CARD_TEXT.titleChar))
-  const foot = c.lesson !== undefined ? CARD_TEXT.gap + CARD_TEXT.foot : 0
+  // The footer row holds the lesson mark and the count of the user's notes. The summary never runs into it.
+  const foot = c.lesson !== undefined || notes > 0 ? CARD_TEXT.gap + CARD_TEXT.foot : 0
   const room = size.height - CARD_TEXT.padY * 2 - title * CARD_TEXT.titleLine - CARD_TEXT.gap - foot
   return Math.max(1, Math.floor(room / CARD_TEXT.summaryLine))
 }

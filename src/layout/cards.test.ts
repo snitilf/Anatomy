@@ -52,6 +52,11 @@ describe('card sizes', () => {
     expect(summaryLinesFor(card, { width: 240, height: 320 })).toBeGreaterThan(summaryLinesFor(card, { width: 240, height: 112 }))
   })
 
+  it('keeps a line for the footer row when the part has notes, so the summary never runs into the note count', () => {
+    const size = { width: 240, height: 112 }
+    expect(summaryLinesFor({ label: 'Rule check' }, size, 2)).toBeLessThan(summaryLinesFor({ label: 'Rule check' }, size))
+  })
+
   it('clamps a size to the limits and snaps it to the grid', () => {
     expect(clampSize({ width: 100, height: 50 })).toEqual(CARD_MIN)
     expect(clampSize({ width: 900, height: 900 })).toEqual(CARD_MAX)
