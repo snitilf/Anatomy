@@ -4,7 +4,7 @@ import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
 import { CARD_SIZE, placeCards } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
-import { exampleBoard } from '../layer/testBoards'
+import { anatomyBoard, exampleBoard } from '../layer/testBoards'
 import { assembleGraph, buildGraph, computeGeometry, GraphCache, moveCard } from './buildGraph'
 import { RunIndex } from './labelPlacement'
 
@@ -363,5 +363,30 @@ describe('a kept line after another card moves', () => {
       expect(other.points[other.points.length - 1], edgeId).toEqual(shape.points[shape.points.length - 1])
       expect(other.crowded, edgeId).toBe(shape.crowded)
     }
+  })
+})
+
+describe('a hidden label after room frees up', () => {
+  it('is placed again by the next build, when its line stays', () => {
+    const board = exampleBoard()
+    const positions = placeCards(board, { positions: {}, sizes: {} })
+    const before = computeGeometry(board, positions)
+    const shown = [...before.edges.values()].find((e) => e.labelWidth > 0 && !e.labelHidden)!
+    // The same build, but this label had been held back: its line is kept, and the room it needs is free.
+    const held = new Map(before.edges)
+    held.set(shown.id, { ...shown, labelHidden: true, labelWidth: 0, labelLines: 1 })
+    const next = computeGeometry(board, positions, [], { ...before, edges: held })
+    expect(next.edges.get(shown.id)!.path).toBe(shown.path)
+    expect(next.edges.get(shown.id)!.labelHidden).toBeUndefined()
+    expect(next.edges.get(shown.id)!.labelWidth).toBeGreaterThan(0)
+  })
+
+  it('stays held back, as the same object, when there is still no room', () => {
+    const board = anatomyBoard()
+    const positions = placeCards(board, { positions: {}, sizes: {} })
+    const before = computeGeometry(board, positions)
+    const next = computeGeometry(board, positions, [], before)
+    expect(next.edges.get('agent-writes-file')).toBe(before.edges.get('agent-writes-file'))
+    expect(next.edges.get('agent-writes-file')!.labelHidden).toBe(true)
   })
 })
