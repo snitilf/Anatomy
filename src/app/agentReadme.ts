@@ -139,7 +139,16 @@ ${schemaText.trimEnd()}
 `
 }
 
-/** True when an existing README must stay as it is: the user wrote it, or it is already current. */
+/** The README without its first line, as the Copy prompt button wrote it before the line existed. */
+function unmarked(): string {
+  return agentReadme().slice(README_MARK.length).replace(/^\n+/, '')
+}
+
+/**
+ * True when an existing README must stay as it is: the user wrote it, or it is already current.
+ * A README that is exactly Anatomy's text without the first line was written by Anatomy, so it gets the line and is kept current from then on.
+ */
 export function keepReadme(existing: string): boolean {
-  return !existing.startsWith(README_MARK) || existing === agentReadme()
+  if (existing === agentReadme()) return true
+  return !existing.startsWith(README_MARK) && existing !== unmarked()
 }
