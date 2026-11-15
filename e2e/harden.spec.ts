@@ -209,3 +209,18 @@ test('the Send to agent tooltip does not come back when the popover closes', asy
   await page.waitForTimeout(700)
   await expect(page.getByRole('tooltip')).toHaveCount(0)
 })
+
+test('a whiteboard tool shows its name and key on hover and on keyboard focus', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'src/examples/nordet.board.json')
+  const pen = page.getByRole('button', { name: 'Pen', exact: true })
+  await pen.hover()
+  const tip = page.getByRole('tooltip')
+  await expect(tip).toContainText('Pen')
+  await expect(tip.locator('kbd')).toHaveText('P')
+  await page.mouse.move(700, 300)
+  await expect(tip).toHaveCount(0)
+  await page.keyboard.press('Shift')
+  await page.getByRole('button', { name: 'Hand', exact: true }).focus()
+  await expect(page.getByRole('tooltip').filter({ hasText: 'Hand' })).toBeVisible()
+})

@@ -57,7 +57,7 @@ export function MapHint() {
   if (!open || !roomy) return null
   return (
     <div className={styles.hint} role="note">
-      <span>Drag a card to move it. Drag its edge dot to link. Scroll to zoom.</span>
+      <span>Drag a card to move it, its edge dot to link. Scroll to zoom. The tools below draw, write, and propose parts.</span>
       <button
         type="button"
         className={styles.close}
