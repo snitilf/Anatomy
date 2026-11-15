@@ -340,18 +340,28 @@ describe('the user layer on the map', () => {
 
 describe('a kept line after another card moves', () => {
   it('meets its cards where a fresh build would put it, so a shared side is shared the same way', () => {
-    const board = forty()
-    const positions = placeCards(board, { positions: {}, sizes: {} })
+    const base = forty()
+    const [a, b, c, d] = base.components.slice(0, 4).map((x) => ({ ...x, group: undefined }))
+    const rel = base.relationships[0]!
+    const board: Board = {
+      ...base,
+      groups: [],
+      components: [a!, b!, c!, d!],
+      relationships: [b!, c!, d!].map((t, k) => ({ ...rel, id: `r${k}`, from: a!.id, to: t.id, label: 'x' })),
+    }
+    const size = { width: 240, height: 112 }
+    const at = (x: number, y: number): Rect => ({ x, y, ...size })
+    const positions: Record<string, Rect> = { [a!.id]: at(0, 300), [b!.id]: at(600, 0), [c!.id]: at(600, 300), [d!.id]: at(600, 600) }
     const before = computeGeometry(board, positions)
-    const degree = (id: string) => board.relationships.filter((r) => r.from === id || r.to === id).length
-    const id = [...board.components].sort((a, b) => degree(b.id) - degree(a.id))[0]!.id
-    const next = { ...positions, [id]: { ...positions[id]!, y: positions[id]!.y - 500 } }
+    // D moves above B: A's order of anchors on its right side changes.
+    const next = { ...positions, [d!.id]: at(600, -300) }
     const fresh = computeGeometry(board, next)
     const kept = computeGeometry(board, next, [], before)
     for (const [edgeId, shape] of fresh.edges) {
       const other = kept.edges.get(edgeId)!
       expect(other.points[0], edgeId).toEqual(shape.points[0])
       expect(other.points[other.points.length - 1], edgeId).toEqual(shape.points[shape.points.length - 1])
+      expect(other.crowded, edgeId).toBe(shape.crowded)
     }
   })
 })
