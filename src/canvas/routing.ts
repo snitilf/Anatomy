@@ -827,7 +827,3 @@ export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn
   return plan.crowded && !route.crowded ? { ...route, crowded: true } : route
 }
 
-/** The cheap line drawn while a card moves: an elbow with no search. */
-export function quickRoute(plan: Plan): Route {
-  return rounded(elbow(plan))
-}
