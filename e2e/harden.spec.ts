@@ -38,6 +38,10 @@ for (const width of [1440, 390]) {
       await expect(from).toBeVisible()
       await expect(from).toHaveAttribute('title', /^From: Authentication_/)
       expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
+      // On the map the selected label stays within two lines and a capped width.
+      const pill = (await page.locator('[data-label][data-selected]').boundingBox())!
+      expect(pill.width).toBeLessThanOrEqual(221 * 1.0)
+      expect(pill.height).toBeLessThanOrEqual(2 * 16 + 6 + 4)
     })
 
     test('the walkthrough bar keeps its buttons in view with a long caption', async ({ page }) => {
