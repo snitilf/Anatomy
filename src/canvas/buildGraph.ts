@@ -347,13 +347,22 @@ export function computeGeometry(
   }
   // A label stays where it was while no moved card's text, no group name, no label placed before it, and no line is under it.
   const later: number[] = []
+  // A label held back is tried again first, before the labels that stay take their places: room may have freed up.
   routes.forEach((r, i) => {
     const old = r.stays
-    if (old && r.text === '') {
+    if (!old || !old.labelHidden || r.text === '') return
+    const label = placeLabel(r.route.runs ?? [], r.text, { ...context, own: i })
+    if (label.hidden) {
       edges.set(r.id, old)
       return
     }
-    if (old && old.labelHidden) {
+    taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
+    edges.set(r.id, shapeOf(r, label))
+  })
+  routes.forEach((r, i) => {
+    if (edges.has(r.id)) return
+    const old = r.stays
+    if (old && r.text === '') {
       edges.set(r.id, old)
       return
     }
