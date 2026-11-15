@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { CircleCheck, CircleHelp, CircleX, History, MessageSquareReply, Pencil, StickyNote, Trash2, Unlink } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
@@ -131,6 +131,29 @@ function StatusLine({ note, status, board, onEdit }: { note: Note; status: Exclu
   )
 }
 
+/** A note's words, held to six lines with a button that shows the rest. */
+function NoteText({ text }: { text: string }) {
+  const el = useRef<HTMLParagraphElement>(null)
+  const [long, setLong] = useState(false)
+  const [open, setOpen] = useState(false)
+  useLayoutEffect(() => {
+    const p = el.current
+    if (p && !open) setLong(p.scrollHeight > p.clientHeight + 1)
+  }, [text, open])
+  return (
+    <>
+      <p ref={el} className={styles.text} data-clamped={!open || undefined}>
+        {text}
+      </p>
+      {long && (
+        <button type="button" className={styles.more} aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </>
+  )
+}
+
 /** One note or question: a block in the user's color, with its state and the agent's answer under it. */
 export function NoteBlock({ note, board, showTarget = false }: { note: Note; board: Board; showTarget?: boolean }) {
   const dispatch = useAppDispatch()
@@ -185,7 +208,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
               </div>
             </div>
           ) : (
-            <p className={styles.text}>{note.text}</p>
+            <NoteText text={note.text} />
           )}
           <div className={styles.meta}>
             {showTarget && note.target.type !== 'board' && (
