@@ -19,6 +19,8 @@ export interface Plan {
   in: Side
   a: Point
   b: Point
+  /** The side of a card is too full for a track between each anchor: the line is drawn, and marked crowded. */
+  crowded?: true
 }
 
 export const NORMAL: Record<Side, Point> = {
@@ -39,6 +41,8 @@ export function pickSides(from: Rect, to: Rect): { out: Side; in: Side } {
 const SPREAD = 24
 /** Connections that share a side of a card never meet it closer than this. */
 const MIN_SPREAD = 16
+/** Anchors keep this far from the corners of a card. */
+const EDGE_MARGIN = 8
 
 function sideMiddle(r: Rect, side: Side): Point {
   if (side === 'left') return { x: r.x, y: r.y + r.height / 2 }
@@ -59,44 +63,81 @@ export interface EdgeEnds {
  * the other end is, so two connections between the same pair run side by side.
  */
 export function planEdges(rects: Readonly<Record<string, Rect>>, edges: readonly EdgeEnds[]): Map<string, Plan> {
-  type Use = { edge: string; end: 'a' | 'b'; across: number }
-  const uses = new Map<string, Use[]>()
+  type Use = { edge: string; end: 'a' | 'b'; card: string; side: Side; across: number; other: Rect }
   const plans = new Map<string, Plan>()
-  const add = (card: string, side: Side, use: Use) => {
-    const key = `${card}|${side}`
-    const list = uses.get(key)
-    if (list) list.push(use)
-    else uses.set(key, [use])
-  }
-
+  const vertical = (s: Side) => s === 'left' || s === 'right'
+  const all: Use[] = []
   for (const e of edges) {
     const from = rects[e.from]
     const to = rects[e.to]
     if (!from || !to) continue
     const sides = pickSides(from, to)
     plans.set(e.id, { out: sides.out, in: sides.in, a: sideMiddle(from, sides.out), b: sideMiddle(to, sides.in) })
-    const vertical = (s: Side) => s === 'left' || s === 'right'
     const fromC = center(from)
     const toC = center(to)
-    add(e.from, sides.out, { edge: e.id, end: 'a', across: vertical(sides.out) ? toC.y : toC.x })
-    add(e.to, sides.in, { edge: e.id, end: 'b', across: vertical(sides.in) ? fromC.y : fromC.x })
+    all.push({ edge: e.id, end: 'a', card: e.from, side: sides.out, across: vertical(sides.out) ? toC.y : toC.x, other: to })
+    all.push({ edge: e.id, end: 'b', card: e.to, side: sides.in, across: vertical(sides.in) ? fromC.y : fromC.x, other: from })
+  }
+
+  const uses = new Map<string, Use[]>()
+  const file = (u: Use) => {
+    const key = `${u.card}|${u.side}`
+    const list = uses.get(key)
+    if (list) list.push(u)
+    else uses.set(key, [u])
+  }
+  all.forEach(file)
+
+  // How many anchors a side holds, a track apart and clear of the corners.
+  const capacity = (card: Rect, side: Side) => Math.floor(((vertical(side) ? card.height : card.width) - 2 * EDGE_MARGIN) / MIN_SPREAD) + 1
+  // A side with more connections than room sends the surplus, the ones furthest out, to the side that faces their other end.
+  for (const [key, list] of [...uses]) {
+    const card = rects[key.slice(0, key.lastIndexOf('|'))]
+    if (!card) continue
+    const side = list[0]!.side
+    const cap = capacity(card, side)
+    if (list.length <= cap) continue
+    const mid = center(card)
+    list.sort((p, q) => p.across - q.across || (p.edge < q.edge ? -1 : 1))
+    const middle = vertical(side) ? mid.y : mid.x
+    const move = [...list].sort((p, q) => Math.abs(q.across - middle) - Math.abs(p.across - middle) || (p.edge < q.edge ? -1 : 1)).slice(0, list.length - cap)
+    for (const u of move) {
+      const o = center(u.other)
+      const alt: Side = vertical(side) ? (o.y >= mid.y ? 'bottom' : 'top') : o.x >= mid.x ? 'right' : 'left'
+      const target = uses.get(`${u.card}|${alt}`)?.length ?? 0
+      if (target >= capacity(card, alt)) continue
+      list.splice(list.indexOf(u), 1)
+      u.side = alt
+      u.across = vertical(alt) ? o.y : o.x
+      file(u)
+      const plan = plans.get(u.edge)!
+      if (u.end === 'a') {
+        plan.out = alt
+        plan.a = sideMiddle(card, alt)
+      } else {
+        plan.in = alt
+        plan.b = sideMiddle(card, alt)
+      }
+    }
   }
 
   for (const [key, list] of uses) {
-    if (list.length < 2) continue
-    const cut = key.lastIndexOf('|')
-    const side = key.slice(cut + 1) as Side
-    const card = rects[key.slice(0, cut)]
+    const card = rects[key.slice(0, key.lastIndexOf('|'))]
     if (!card) continue
-    const along = side === 'left' || side === 'right' ? 'y' : 'x'
-    const room = (side === 'left' || side === 'right' ? card.height : card.width) - 24
-    const gap = Math.max(MIN_SPREAD, Math.min(SPREAD, room / (list.length - 1)))
+    const side = list[0]?.side
+    if (!side) continue
+    const along = vertical(side) ? 'y' : 'x'
+    const room = (vertical(side) ? card.height : card.width) - 2 * EDGE_MARGIN
+    const n = list.length
+    // The anchors stay on the card. A side too full for a track between each is squeezed, and its lines are marked.
+    const gap = n > 1 ? Math.min(SPREAD, room / (n - 1)) : 0
     list.sort((p, q) => p.across - q.across || (p.edge < q.edge ? -1 : 1))
     list.forEach((use, i) => {
       const plan = plans.get(use.edge)
       if (!plan) return
+      if (n > 1 && gap < MIN_SPREAD) plan.crowded = true
       const point = use.end === 'a' ? plan.a : plan.b
-      point[along] = Math.round(point[along] + (i - (list.length - 1) / 2) * gap)
+      point[along] = Math.round(point[along] + (i - (n - 1) / 2) * gap)
     })
   }
   return plans
@@ -663,7 +704,7 @@ export function elbow(plan: Plan, offset = 0): Point[] {
   const na = NORMAL[plan.out]
   const nb = NORMAL[plan.in]
   if (horizontal(plan.out) && horizontal(plan.in)) {
-    if (plan.out !== plan.in && Math.abs(a.y - b.y) < 1) return [a, { x: b.x, y: a.y }]
+    if (plan.out !== plan.in && a.y === b.y) return [a, b]
     // Facing sides meet in the middle of the gap. Sides that face the same way go round past the further one.
     const x =
       plan.out !== plan.in
@@ -674,7 +715,7 @@ export function elbow(plan: Plan, offset = 0): Point[] {
     return [a, { x, y: a.y }, { x, y: b.y }, b]
   }
   if (!horizontal(plan.out) && !horizontal(plan.in)) {
-    if (plan.out !== plan.in && Math.abs(a.x - b.x) < 1) return [a, { x: a.x, y: b.y }]
+    if (plan.out !== plan.in && a.x === b.x) return [a, b]
     const y =
       plan.out !== plan.in
         ? onTrack((a.y + b.y) / 2) + offset
@@ -731,7 +772,7 @@ function direction(n: Point): number {
  * line is drawn with the closest spacing it can have and marked `crowded`. Pass the `Obstacles` of the cards when
  * drawing many connections in one go, so the cards are indexed once, and the lines drawn so far in `drawn`.
  */
-export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Route {
+function routeOne(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Route {
   const grid = obstacles ?? new Obstacles(cards)
   const n1 = NORMAL[plan.out]
   const n2 = NORMAL[plan.in]
@@ -779,6 +820,11 @@ export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn
   if (crowded) return { ...rounded(crowded), crowded: true }
   // Nothing gets through, such as between cards that touch. A plain elbow keeps the look of every other line.
   return { ...rounded(elbow(plan)), crowded: true }
+}
+
+export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Route {
+  const route = routeOne(plan, cards, drawn, obstacles, ownGroups)
+  return plan.crowded && !route.crowded ? { ...route, crowded: true } : route
 }
 
 /** The cheap line drawn while a card moves: an elbow with no search. */
