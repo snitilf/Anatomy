@@ -91,8 +91,18 @@ export function ConnectionView({ board, relationship: r }: { board: Board; relat
       <Cited source={r.source} />
       <Section title="Move end">
         <div className={styles.actions}>
-          <Picker label="From" trigger={<>From: {name(ends.from) ?? ends.from}</>} items={partItems(board, proposals, ends.to)} onPick={(part) => move('from', part)} />
-          <Picker label="To" trigger={<>To: {name(ends.to) ?? ends.to}</>} items={partItems(board, proposals, ends.from)} onPick={(part) => move('to', part)} />
+          <Picker
+            label="From"
+            title={`From: ${name(ends.from) ?? ends.from}`}
+            className={clsx(buttons.button, buttons.small, styles.moveEnd)}
+            trigger={<span className={styles.clip}>From: {name(ends.from) ?? ends.from}</span>}
+            items={partItems(board, proposals, ends.to)} onPick={(part) => move('from', part)} />
+          <Picker
+            label="To"
+            title={`To: ${name(ends.to) ?? ends.to}`}
+            className={clsx(buttons.button, buttons.small, styles.moveEnd)}
+            trigger={<span className={styles.clip}>To: {name(ends.to) ?? ends.to}</span>}
+            items={partItems(board, proposals, ends.from)} onPick={(part) => move('to', part)} />
         </div>
       </Section>
       <NotesSection target={{ type: 'relationship', id: r.id }} />

@@ -537,3 +537,17 @@
     font-size: 16px;
   }
 }
+
+/* A button whose text may be longer than the panel: one line, cut with an ellipsis. */
+.moveEnd {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.clip {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
