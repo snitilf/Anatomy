@@ -99,7 +99,7 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
 }
 
 /** An item that left the map, with the answer it left with, and the way back. */
-function ArchivedItem({ board, previous, layer, entry }: { board: Board; previous: Board | undefined; layer: Layer; entry: ArchiveEntry }) {
+function ArchivedItem({ board, previous, layer, entry, deletable = false }: { board: Board; previous: Board | undefined; layer: Layer; entry: ArchiveEntry; deletable?: boolean }) {
   const dispatch = useAppDispatch()
   const item = { type: entry.type, item: entry.item } as Item
   return (
@@ -111,6 +111,18 @@ function ArchivedItem({ board, previous, layer, entry }: { board: Board; previou
         <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
           Restore
         </button>
+        {deletable && (
+          <button
+            type="button"
+            className={clsx(buttons.button, buttons.quiet, buttons.small)}
+            onClick={() => {
+              dispatch({ type: 'archiveDropped', id: entry.item.id })
+              deletedToast('Deleted from the archive', dispatch)
+            }}
+          >
+            Delete
+          </button>
+        )}
       </div>
     </li>
   )
@@ -147,7 +159,7 @@ function Archive({ board, previous, layer }: { board: Board; previous: Board | u
     <Disclosure title="Archive" count={older.length}>
       <ul className={notes.list}>
         {older.map((entry) => (
-          <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />
+          <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} deletable />
         ))}
       </ul>
     </Disclosure>
