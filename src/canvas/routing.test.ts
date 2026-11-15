@@ -149,6 +149,13 @@ describe('labels', () => {
     expect(wrap('Pneumonoultramicroscopicsilicovolcanoconiosis-and-more-letters-than-any-pill-holds')).toBeUndefined()
   })
 
+  it('keeps a single word wider than the usual pill on one line, up to the widest pill', () => {
+    const size = wrap('WWWWWWWWWWWWWWW')!
+    expect(size.lines).toBe(1)
+    expect(size.width).toBeGreaterThan(150)
+    expect(size.width).toBeLessThanOrEqual(220)
+  })
+
   it('never needs a third line: text that does not fit in two lines has no wrap', () => {
     const long = Array.from({ length: 30 }, (_, k) => `word${k}`).join(' ')
     expect(wrap(long)).toBeUndefined()
