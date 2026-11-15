@@ -12,7 +12,7 @@ export function Dialogs() {
       {deleting && (
         <Modal title={`Delete ${deleting.title}?`} onCancel={() => askDelete(undefined)}>
           <p className={styles.text}>
-            Removes the board and your notes from this browser. Exported files are not affected.
+            Removes the board and your notes from this browser.
           </p>
           <div className={styles.actions}>
             <button type="button" className={buttons.button} onClick={() => askDelete(undefined)}>
@@ -34,10 +34,10 @@ export function Dialogs() {
               Cancel
             </button>
             <button type="button" className={buttons.button} onClick={() => resolveChoice('browser')}>
-              Keep the notes in this browser
+              Use browser notes and layout
             </button>
             <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={() => resolveChoice('file')}>
-              Use the file's notes
+              Use file notes and layout
             </button>
           </div>
         </Modal>
