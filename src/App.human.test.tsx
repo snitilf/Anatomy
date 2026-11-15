@@ -346,7 +346,7 @@ describe('export and open', () => {
 
     await openFile(first.container, text, 'export.json')
     const dialog = await screen.findByRole('dialog', { name: /Notes and layout for/ })
-    fireEvent.click(within(dialog).getByRole('button', { name: "Use the file's notes" }))
+    fireEvent.click(within(dialog).getByRole('button', { name: "Use file notes and layout" }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(panel().getByText('In the file')).toBeInTheDocument()
     expect(panel().queryByText('Only in the browser')).not.toBeInTheDocument()
@@ -355,7 +355,7 @@ describe('export and open', () => {
     await saved()
     await openFile(first.container, text, 'export.json')
     const again = await screen.findByRole('dialog', { name: /Notes and layout for/ })
-    fireEvent.click(within(again).getByRole('button', { name: 'Keep the notes in this browser' }))
+    fireEvent.click(within(again).getByRole('button', { name: 'Use browser notes and layout' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(panel().getByText('Newer')).toBeInTheDocument()
   })
