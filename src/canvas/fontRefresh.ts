@@ -22,3 +22,11 @@ export function fontsLoaded<V extends Refreshable>(view: V, rebuild: (view: V) =
 export function refreshWhenIdle<V extends Refreshable>(view: V, rebuild: (view: V) => V): V {
   return view.fontStale && !busy(view) ? rebuild(view) : view
 }
+
+/**
+ * The full build after a drop or a settled move. It normally reuses the lines that nothing touched. With a font refresh
+ * owed it does not: it is the one build that refreshes, and the new view carries no mark, so nothing builds again.
+ */
+export function buildAfterMove<V extends Refreshable>(old: V, build: (reuse: boolean) => V): V {
+  return build(!old.fontStale)
+}
