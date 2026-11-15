@@ -39,12 +39,10 @@
   line-height: 16px;
   text-align: center;
   text-wrap: balance;
-  overflow-wrap: anywhere;
-  /* A long label stops after three lines. The whole text shows once the connection is selected. */
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* A word is never broken. The pill is sized to its text, at spaces only, so nothing is cut either. */
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
   pointer-events: all;
   cursor: pointer;
   transition:
@@ -88,10 +86,23 @@
 
 .pill[data-selected] {
   z-index: 1;
-  -webkit-line-clamp: unset;
-  overflow: visible;
   color: var(--accent-text);
   font-weight: var(--weight-medium);
+}
+
+/* A label with no free place beside its line waits until the line is hovered or selected, then shows whole. */
+.pill[data-hidden] {
+  width: max-content;
+  max-width: 260px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pill[data-hidden][data-hover],
+.pill[data-hidden][data-selected] {
+  z-index: 2;
+  opacity: 1;
+  pointer-events: all;
 }
 
 /* A faded label keeps its cutout. Only the words step back, so the line never shows through them. */

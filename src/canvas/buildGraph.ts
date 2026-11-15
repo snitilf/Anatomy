@@ -3,9 +3,10 @@ import type { Board, BoardRelationship, SourceKind } from '../board/schema'
 import { KIND_WORDS } from '../app/labels'
 import type { Selection } from '../app/state'
 import { groupAreas, GROUP_PADDING, summaryLinesFor } from '../layout/cards'
-import { inflate, overlaps, type Point, type Rect } from '../layout/geometry'
+import { overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
-import { pillHeight, placeLabel, PointIndex, textArea } from './labelPlacement'
+import { groupBand } from './bands'
+import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { KIND_STYLE, TONE_COLOR } from './kinds'
 
@@ -61,6 +62,8 @@ export interface ManualEdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
+  /** No free place for the label: it shows in full when the line is hovered or selected. */
+  labelHidden: boolean
   /** The line is hidden while a card moves. */
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
@@ -85,6 +88,8 @@ export interface EdgeData extends Record<string, unknown> {
   labelY: number
   labelWidth: number
   labelLines: number
+  /** No free place for the label: it shows in full when the line is hovered or selected. */
+  labelHidden: boolean
   /** The line is hidden while a card moves. */
   moving: boolean
   /** How many group areas lie under the label, so its cutout can match their tint. */
@@ -154,6 +159,10 @@ export interface EdgeShape {
   /** The sampled points of the drawn line, kept so a later build can check that the line still keeps clear of the cards. */
   points: readonly Point[]
   runs?: readonly (readonly [Point, Point])[]
+  /** The label has no free place on the line: it shows when the line is hovered or selected. */
+  labelHidden?: true
+  /** No path kept the wanted spacing to the other lines: some run lies closer to another than `TRACK`. */
+  crowded?: true
   /** Hidden while a card moves: the shape is stale until the full build. Never kept by a later build. */
   cheap?: true
 }
@@ -167,6 +176,9 @@ export interface Geometry {
   /** Where the cards were when the lines were last fully solved. A card that has since moved or changed size is the one that changes the picture. */
   solved: Readonly<Record<string, Rect>>
 }
+
+/** How many times lines that found no room are routed again first. */
+const RIP_UP_PASSES = 2
 
 /** A pill box, as it is drawn. */
 function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>): Rect {
@@ -213,7 +225,8 @@ export function computeGeometry(
   const texts = new Map<string, string>()
   for (const r of board.relationships) {
     ends.push(r)
-    const text = r.kind === 'unknown' ? `? ${r.label}` : r.label
+    // The question mark icon on an unknown connection is wider than the character, so the width is measured with two.
+    const text = r.kind === 'unknown' ? `?? ${r.label}` : r.label
     const edit = editOf.get(r.id)
     const from = edit?.from ?? r.from
     const to = edit?.to ?? r.to
@@ -245,13 +258,15 @@ export function computeGeometry(
     const shape = previous?.edges.get(end.id)
     if (!shape || shape.cheap || shape.from !== end.from || shape.to !== end.to) return undefined
     if (movedIds.has(end.from) || movedIds.has(end.to)) return undefined
-    return lineHitsCards(shape.points, movedBoxes) ? undefined : shape
+    if (lineHitsCards(shape.points, movedBoxes)) return undefined
+    // A group that grew or moved may now have its name under the line.
+    return shape.runs?.some(([p, q]) => obstacles.blocksBand(p, q)) ? undefined : shape
   }
 
   // Draw every line first, so each label can keep off all of them. Lines that stay come first, so the rest route
   // around them. The rest go shortest first, then by ID, so a line keeps its track from one build to the next.
-  const runs = new Drawn()
-  const slots: ({ id: string; from: string; to: string; text: string; route: Route; stays: EdgeShape | undefined } | undefined)[] = ends.map(() => undefined)
+  type Slot = { id: string; from: string; to: string; text: string; route: Route; stays: EdgeShape | undefined }
+  const stayed: (Slot | undefined)[] = ends.map(() => undefined)
   const fresh: number[] = []
   ends.forEach((end, i) => {
     const stays = kept(end)
@@ -259,9 +274,8 @@ export function computeGeometry(
       fresh.push(i)
       return
     }
-    const route: Route = { d: stays.path, points: stays.points as Point[], ...(stays.runs ? { runs: stays.runs as [Point, Point][] } : {}) }
-    slots[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays }
-    if (route.runs) runs.add(route.runs)
+    const route: Route = { d: stays.path, points: stays.points as Point[], ...(stays.runs ? { runs: stays.runs as [Point, Point][] } : {}), ...(stays.crowded ? { crowded: true as const } : {}) }
+    stayed[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays }
   })
   const reach = (i: number) => {
     const plan = plans.get((ends[i] as EdgeEnds).id)
@@ -269,22 +283,40 @@ export function computeGeometry(
   }
   const lengths = new Map(fresh.map((i) => [i, reach(i)]))
   fresh.sort((i, j) => (lengths.get(i) as number) - (lengths.get(j) as number) || ((ends[i] as EdgeEnds).id < (ends[j] as EdgeEnds).id ? -1 : 1))
-  for (const i of fresh) {
-    const end = ends[i] as EdgeEnds
-    const plan = plans.get(end.id)
-    if (!plan || !boxOf.has(end.from) || !boxOf.has(end.to)) continue
-    const route = routeConnection(plan, boxes, runs, obstacles, ownGroups(end))
-    slots[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays: undefined }
-    if (route.runs) runs.add(route.runs)
+  /** Routes the lines that are not kept, in this order, around the ones that stay and the ones drawn before. */
+  const routeAll = (order: readonly number[]) => {
+    const drawn = new Drawn()
+    const placed = [...stayed]
+    for (const r of stayed) if (r?.route.runs) drawn.add(r.route.runs)
+    for (const i of order) {
+      const end = ends[i] as EdgeEnds
+      const plan = plans.get(end.id)
+      if (!plan || !boxOf.has(end.from) || !boxOf.has(end.to)) continue
+      const route = routeConnection(plan, boxes, drawn, obstacles, ownGroups(end))
+      placed[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays: undefined }
+      if (route.runs) drawn.add(route.runs)
+    }
+    return placed
+  }
+  let slots = routeAll(fresh)
+  // A line that found no room is routed again before the rest, which then work round it. This repeats while it helps.
+  for (let pass = 0; pass < RIP_UP_PASSES; pass++) {
+    const crowded = fresh.filter((i) => slots[i]?.route.crowded)
+    if (crowded.length === 0) break
+    const first = new Set(crowded)
+    const again = routeAll([...crowded, ...fresh.filter((i) => !first.has(i))])
+    if (again.filter((r, i) => r?.route.crowded && fresh.includes(i)).length >= crowded.length) break
+    slots = again
   }
   const routes = slots.filter((r) => r !== undefined)
 
-  const lines = new PointIndex()
-  routes.forEach((r, i) => lines.add(i, r.route.points))
+  const lines = new RunIndex()
+  routes.forEach((r, i) => lines.add(i, r.route.runs ?? []))
   const movedAreas = movedBoxes.map(textArea)
   const taken: Rect[] = []
   const edges = new Map<string, EdgeShape>()
-  const shapeOf = (r: (typeof routes)[number], label: { x: number; y: number; width: number; lines: number }): EdgeShape => ({
+  const context: LabelContext = { cards: boxes, bands: groups.map(groupBand), taken, lines, own: -1 }
+  const shapeOf = (r: (typeof routes)[number], label: { x: number; y: number; width: number; lines: number; hidden?: true }): EdgeShape => ({
     id: r.id,
     from: r.from,
     to: r.to,
@@ -293,8 +325,10 @@ export function computeGeometry(
     labelY: label.y,
     labelWidth: label.width,
     labelLines: label.lines,
+    ...(label.hidden ? { labelHidden: true as const } : {}),
     points: r.route.points,
     ...(r.route.runs ? { runs: r.route.runs } : {}),
+    ...(r.route.crowded ? { crowded: true as const } : {}),
   })
   const place = (r: (typeof routes)[number], i: number) => {
     if (r.text === '') {
@@ -302,11 +336,11 @@ export function computeGeometry(
       edges.set(r.id, shapeOf(r, { ...middle, width: 0, lines: 0 }))
       return
     }
-    const label = placeLabel(r.route.points, r.text, boxes, taken, lines, i)
-    taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
+    const label = placeLabel(r.route.runs ?? [], r.text, { ...context, own: i })
+    if (!label.hidden) taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
     edges.set(r.id, shapeOf(r, label))
   }
-  // A label stays where it was while no moved card's text and no label placed before it is under it.
+  // A label stays where it was while no moved card's text, no group name, no label placed before it, and no line is under it.
   const later: number[] = []
   routes.forEach((r, i) => {
     const old = r.stays
@@ -314,9 +348,13 @@ export function computeGeometry(
       edges.set(r.id, old)
       return
     }
+    if (old && old.labelHidden) {
+      edges.set(r.id, old)
+      return
+    }
     if (old && old.labelWidth > 0) {
       const box = pillBox(old)
-      const clear = !movedAreas.some((a) => overlaps(box, a)) && !taken.some((t) => overlaps(box, inflate(t, 3)))
+      const clear = !movedAreas.some((a) => overlaps(box, a)) && labelFits(box, { ...context, own: i }, undefined)
       if (clear) {
         taken.push(box)
         edges.set(r.id, old)
@@ -560,6 +598,7 @@ export function assembleGraph(
           labelY: shape.labelY,
           labelWidth: shape.labelWidth,
           labelLines: shape.labelLines,
+          labelHidden: shape.labelHidden === true,
           moving: shape.cheap === true,
           depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
           edited: moved !== undefined,
@@ -599,6 +638,7 @@ export function assembleGraph(
           labelY: shape.labelY,
           labelWidth: shape.labelWidth,
           labelLines: shape.labelLines,
+          labelHidden: shape.labelHidden === true,
           moving: shape.cheap === true,
           depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
         },
