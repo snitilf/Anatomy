@@ -138,7 +138,12 @@ function NoteText({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
   useLayoutEffect(() => {
     const p = el.current
-    if (p && !open) setLong(p.scrollHeight > p.clientHeight + 1)
+    if (!p || open) return
+    const measure = () => setLong(p.scrollHeight > p.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(p)
+    return () => observer.disconnect()
   }, [text, open])
   return (
     <>
