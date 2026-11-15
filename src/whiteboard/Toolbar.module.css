@@ -76,3 +76,13 @@
     display: none;
   }
 }
+
+.button {
+  position: relative;
+}
+
+.button::after {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((32px - var(--hit)) / 2));
+}

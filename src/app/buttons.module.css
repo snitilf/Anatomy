@@ -1,4 +1,5 @@
 .button {
+  position: relative;
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -55,6 +56,19 @@
   border-color: transparent;
   background: var(--hover);
   color: var(--fg);
+}
+
+.button::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((28px - var(--hit)) / 2));
+  inset-inline: 0;
+}
+
+@media (pointer: coarse) {
+  .button::after {
+    inset-block: min(0px, calc((36px - var(--hit)) / 2));
+  }
 }
 
 /* A square button that holds one icon. Its name lives in aria-label. */
@@ -116,4 +130,18 @@
   padding: 0 var(--space-2);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
+}
+
+.small::after {
+  inset-block: min(0px, calc((24px - var(--hit)) / 2));
+}
+
+.icon::after {
+  inset-inline: min(0px, calc((28px - var(--hit)) / 2));
+}
+
+@media (pointer: coarse) {
+  .icon::after {
+    inset-inline: min(0px, calc((36px - var(--hit)) / 2));
+  }
 }
