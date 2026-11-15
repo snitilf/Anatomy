@@ -56,7 +56,7 @@ function MenuBody({ onClose }: { onClose: () => void }) {
   }
   return (
     <>
-      <Cmdk.Input className={styles.input} value={search} onValueChange={setSearch} placeholder="Type a command or search parts" />
+      <Cmdk.Input className={styles.input} name="command-search" value={search} onValueChange={setSearch} placeholder="Type a command or search parts" />
       <Cmdk.List className={styles.list}>
         <Cmdk.Empty className={styles.empty}>Nothing matches "{search.trim()}".</Cmdk.Empty>
         {GROUP_ORDER.map((group) => {

@@ -164,3 +164,13 @@ test.describe('on a touch screen', () => {
     expect(box.height).toBeGreaterThanOrEqual(44)
   })
 })
+
+test('every form field has a name or an id', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'src/examples/nordet.board.json')
+  await page.locator('.react-flow__node-card').first().click({ force: true })
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(page.getByRole('dialog', { name: 'Command menu' })).toBeVisible()
+  const unnamed = await page.evaluate(() => [...document.querySelectorAll('input, textarea, select')].filter((el) => !el.getAttribute('name') && !el.id).map((el) => el.outerHTML.slice(0, 80)))
+  expect(unnamed).toEqual([])
+})

@@ -216,7 +216,7 @@ function ShellBody() {
             <EmptyState />
           )}
         </main>
-        <input ref={input} type="file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
+        <input ref={input} type="file" name="board-file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
         <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
         <Dialogs />
         <HowToDialog open={howTo} onClose={closeHowTo} />

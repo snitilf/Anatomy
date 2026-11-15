@@ -49,7 +49,7 @@ export function Picker({
         <Popover.Positioner className={styles.positioner} side="bottom" align="start" sideOffset={4} collisionPadding={8}>
           <Popover.Popup className={styles.popup} aria-label={label} data-dismissible>
             <Cmdk label={label} loop className={styles.root}>
-              <Cmdk.Input className={styles.input} placeholder={placeholder} autoFocus />
+              <Cmdk.Input className={styles.input} name="picker-search" placeholder={placeholder} autoFocus />
               <Cmdk.List className={styles.list}>
                 <Cmdk.Empty className={styles.empty}>No match.</Cmdk.Empty>
                 {groups.map((group) => (
