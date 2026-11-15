@@ -224,3 +224,15 @@ test('a whiteboard tool shows its name and key on hover and on keyboard focus', 
   await page.getByRole('button', { name: 'Hand', exact: true }).focus()
   await expect(page.getByRole('tooltip').filter({ hasText: 'Hand' })).toBeVisible()
 })
+
+test('a collapsed note remeasures when its available width shrinks', async ({ page }) => {
+  await open(page, 'src/examples/nordet.board.json')
+  await page.locator('.react-flow__node-card').first().click({ force: true })
+  const panel = page.getByTestId('inspector')
+  await panel.getByRole('textbox', { name: /note/i }).fill('A short sentence with enough words to wrap. '.repeat(4))
+  await panel.getByRole('button', { name: 'Add', exact: true }).click()
+  const text = panel.locator('p[data-clamped]')
+  await expect(panel.getByRole('button', { name: 'Show more' })).toHaveCount(0)
+  await text.evaluate((el) => { el.style.width = '100px' })
+  await expect(panel.getByRole('button', { name: 'Show more' })).toBeVisible()
+})
