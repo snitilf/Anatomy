@@ -3,7 +3,7 @@ import { CircleCheck, CircleHelp, CircleX, History, MessageSquareReply, Pencil, 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
-import { useAppDispatch, useAppStore } from '../app/store'
+import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { Tip } from '../app/Tip'
 import { useUi } from '../app/ui'
 import type { Board } from '../board/schema'
@@ -79,6 +79,7 @@ function decode(value: string): Target {
 /** Where the note stands against the open revision: a neutral history line, or a danger line when its target left. */
 function StatusLine({ note, status, board, onEdit }: { note: Note; status: Exclude<NoteStatus, 'current'>; board: Board; onEdit: () => void }) {
   const dispatch = useAppDispatch()
+  const store = useAppStoreApi()
   const previous = useAppStore((s) => s.previousBoard)
   const was = previous ?? board
   if (status === 'possibly-outdated') {
@@ -121,7 +122,7 @@ function StatusLine({ note, status, board, onEdit }: { note: Note; status: Exclu
           className={clsx(buttons.button, buttons.quiet, buttons.small)}
           onClick={() => {
             dispatch({ type: 'noteDeleted', id: note.id })
-            deletedToast(note.kind === 'note' ? 'Note deleted' : 'Question deleted', dispatch)
+            deletedToast(note.kind === 'note' ? 'Note deleted' : 'Question deleted', dispatch, store)
           }}
         >
           Delete
@@ -162,6 +163,7 @@ function NoteText({ text }: { text: string }) {
 /** One note or question: a block in the user's color, with its state and the agent's answer under it. */
 export function NoteBlock({ note, board, showTarget = false }: { note: Note; board: Board; showTarget?: boolean }) {
   const dispatch = useAppDispatch()
+  const store = useAppStoreApi()
   const sent = useAppStore((s) => (s.layer ? wasSent(s.layer, note) : false))
   const { choose } = usePanel()
   const [editing, setEditing] = useState(false)
@@ -254,7 +256,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
                     aria-label={`Delete ${kind.toLowerCase()}`}
                     onClick={() => {
                       dispatch({ type: 'noteDeleted', id: note.id })
-                      deletedToast(`${kind} deleted`, dispatch)
+                      deletedToast(`${kind} deleted`, dispatch, store)
                     }}
                   >
                     <Trash2 size={14} strokeWidth={1.5} aria-hidden="true" />
