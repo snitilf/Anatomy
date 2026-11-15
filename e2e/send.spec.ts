@@ -172,7 +172,14 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   await declined.getByRole('button', { name: 'Dismiss' }).click()
   await expect(page.locator('[data-mark]')).toHaveCount(0)
   await review.locator('summary', { hasText: 'Archive' }).click()
-  await review.getByRole('listitem').filter({ hasText: 'They are separate on purpose.' }).getByRole('button', { name: 'Restore' }).click()
+  const archived = review.getByRole('listitem').filter({ hasText: 'They are separate on purpose.' })
+  // Delete removes it for good, and the toast's Undo brings it back.
+  await archived.getByRole('button', { name: 'Delete' }).click()
+  await expect(archived).toHaveCount(0)
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await review.locator('summary', { hasText: 'Archive' }).click()
+  await expect(archived).toHaveCount(1)
+  await archived.getByRole('button', { name: 'Restore' }).click()
   await expect(page.locator('[data-mark]')).toHaveCount(1)
 
   // Undo takes the restore back, and redo brings it again.
