@@ -1,11 +1,27 @@
 import { Handle, NodeResizeControl, Position, type Node, type NodeProps } from '@xyflow/react'
 import { StickyNote } from 'lucide-react'
-import { memo } from 'react'
+import { memo, useLayoutEffect, useRef, useState } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type MarkNodeData, type ProposalData, type Side } from '../canvas/buildGraph'
 import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
+
+/** Whether the words run past the box they sit in, so the box can fade them out instead of cutting a line in half. */
+function useClipped(text: string) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [clipped, setClipped] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => setClipped(el.scrollHeight > el.clientHeight + 1)
+    measure()
+    const watch = new ResizeObserver(measure)
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [text])
+  return [ref, clipped || undefined] as const
+}
 
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
 
@@ -52,9 +68,10 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
 
 /** A sticky note: a square of the user's tint with their words on it. */
 export const StickyNode = memo(function StickyNode({ data, selected }: NodeProps<Node<MarkNodeData>>) {
+  const [ref, clipped] = useClipped(data.mark.text)
   return (
     <>
-      <div className={styles.sticky} data-selected={selected || undefined} data-empty={data.mark.text === '' || undefined}>
+      <div ref={ref} className={styles.sticky} data-clipped={clipped} data-selected={selected || undefined} data-empty={data.mark.text === '' || undefined}>
         {data.mark.text}
       </div>
       <Grip min={STICKY_MIN} max={STICKY_MAX} />
@@ -64,8 +81,9 @@ export const StickyNode = memo(function StickyNode({ data, selected }: NodeProps
 
 /** Words written straight on the map, in the user's color. */
 export const TextNode = memo(function TextNode({ data, selected }: NodeProps<Node<MarkNodeData>>) {
+  const [ref, clipped] = useClipped(data.mark.text)
   return (
-    <div className={styles.text} data-selected={selected || undefined}>
+    <div ref={ref} className={styles.text} data-clipped={clipped} data-selected={selected || undefined}>
       {data.mark.text}
     </div>
   )
