@@ -3,7 +3,7 @@ import { allBoards } from '../layer/testBoards'
 import { CARD_SIZE, placeCards } from '../layout/cards'
 import { computeGeometry } from './buildGraph'
 import { pillHeight, placeLabel, RunIndex, wrap, type LabelContext } from './labelPlacement'
-import { Drawn, elbow, hitsAnyCard, lineHitsCards, Obstacles, pickSides, planEdges, quickRoute, rounded, routeConnection, TRACK, type Rect } from './routing'
+import { Drawn, hitsAnyCard, lineHitsCards, Obstacles, pickSides, planEdges, rounded, routeConnection, TRACK, type Rect } from './routing'
 import { groupTitle } from './bands'
 import { minParallel } from '../test/lineMetrics'
 import type { EdgeShape } from './buildGraph'
@@ -100,14 +100,6 @@ describe('routeConnection', () => {
     const second = routeConnection(plan!, [a, b], drawn)
     expect(second.runs![1]![0].x).not.toBe(first.runs![1]![0].x)
     expect(Math.abs(second.runs![1]![0].x - first.runs![1]![0].x)).toBeGreaterThanOrEqual(TRACK)
-  })
-
-  it('leaves the cheap elbow of a moving card free of any search', () => {
-    const a = at(0, 0)
-    const b = at(400, 200)
-    const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
-    expect(quickRoute(plan!).runs).toHaveLength(3)
-    expect(elbow(plan!)).toHaveLength(4)
   })
 
   it('never crosses a card on any board when a path exists, and draws only right angles', () => {
@@ -304,7 +296,7 @@ describe('anchors on a crowded side', () => {
   it('draws only right angles when the ends differ by less than half a pixel', () => {
     for (const dy of [0.1, 0.4, 0.49, 0.5, 0.9]) {
       const plan = { out: 'right' as const, in: 'left' as const, a: { x: 0, y: 50 }, b: { x: 500, y: 50 + dy } }
-      for (const route of [routeConnection(plan, []), quickRoute(plan)]) {
+      for (const route of [routeConnection(plan, [])]) {
         for (const [p, q] of route.runs!) expect(p.x === q.x || p.y === q.y, `${dy}: ${JSON.stringify([p, q])}`).toBe(true)
         expect(route.runs![0]![0]).toEqual(plan.a)
         expect(route.runs![route.runs!.length - 1]![1]).toEqual(plan.b)
