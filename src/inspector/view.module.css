@@ -142,17 +142,22 @@
 
 .rowMain {
   display: grid;
+  /* A track that can shrink, so a long route ends in an ellipsis. */
+  grid-template-columns: minmax(0, 1fr);
   flex: 1;
   min-width: 0;
 }
 
 .rowTitle {
+  /* Screen-reader-only words inside it are clipped with it, not left past the edge. */
+  position: relative;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .rowMeta {
+  position: relative;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
