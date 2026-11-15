@@ -561,7 +561,6 @@ export function Canvas() {
             guides.current?.show(lined.vertical, lined.horizontal)
             setView((v) => (v ? changed(v, id, { ...rect, x: Math.round(lined.x), y: Math.round(lined.y) }, 0) : v))
           } else {
-            // Arrow keys move a card without a drag.
             keyMoves.current.add(id)
             setView((v) => {
               const rect = v?.rects[id]

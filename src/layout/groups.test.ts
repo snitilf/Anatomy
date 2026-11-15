@@ -132,7 +132,6 @@ describe('settleMoves keeps other groups rigid', () => {
   it('moves every displaced member of a hit group by the same amount', () => {
     const b = board({ h: ['b', 'c'] }, ['a'])
     const rects = { a: card(600, 0), b: card(600, 0), c: card(600, 200) }
-    // a is dropped onto b.
     const moves = settleMoves(b, rects, ['a'])
     expect(moves.a).toBeUndefined()
     const db = { x: moves.b!.x - rects.b.x, y: moves.b!.y - rects.b.y }
