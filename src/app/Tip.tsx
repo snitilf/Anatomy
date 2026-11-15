@@ -42,7 +42,7 @@ export function Tip({
       <Tooltip.Trigger render={children} />
       <Tooltip.Portal>
         <Tooltip.Positioner className={styles.positioner} side={side} sideOffset={6} collisionPadding={8}>
-          <Tooltip.Popup className={styles.tip}>
+          <Tooltip.Popup className={styles.tip} role="tooltip">
             {label}
             {keys && <kbd className={styles.keys}>{keys}</kbd>}
           </Tooltip.Popup>
