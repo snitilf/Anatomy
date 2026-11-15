@@ -6,7 +6,7 @@ import { CARD_SIZE, placeCards } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
 import { exampleBoard } from '../layer/testBoards'
 import { assembleGraph, buildGraph, computeGeometry, GraphCache, moveCard } from './buildGraph'
-import { PointIndex } from './labelPlacement'
+import { RunIndex } from './labelPlacement'
 
 const forty = (): Board => {
   const r = parseBoard(fortyText)
@@ -154,26 +154,31 @@ describe('arrowheads', () => {
   })
 })
 
-describe('PointIndex', () => {
-  it('counts the points in a box the same way a plain scan does', () => {
-    const index = new PointIndex()
-    const lines: Point[][] = []
+describe('RunIndex', () => {
+  it('finds the runs through a box the same way a plain scan does', () => {
+    const index = new RunIndex()
+    const lines: [Point, Point][][] = []
     let seed = 7
     const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
     for (let owner = 0; owner < 6; owner++) {
-      const points = Array.from({ length: 80 }, () => ({ x: random() * 1500 - 300, y: random() * 900 - 200 }))
-      lines.push(points)
-      index.add(owner, points)
-    }
-    for (let i = 0; i < 60; i++) {
-      const box = { x: random() * 1200 - 200, y: random() * 700 - 100, width: 40 + random() * 200, height: 20 + random() * 120 }
-      const skip = i % 7 === 6 ? -1 : i % 6
-      let expected = 0
-      lines.forEach((points, owner) => {
-        if (owner === skip) return
-        for (const p of points) if (p.x > box.x && p.x < box.x + box.width && p.y > box.y && p.y < box.y + box.height) expected++
+      const runs: [Point, Point][] = Array.from({ length: 30 }, () => {
+        const a = { x: Math.round(random() * 1500 - 300), y: Math.round(random() * 900 - 200) }
+        return random() < 0.5 ? [a, { x: a.x + Math.round(random() * 300 - 150) + 1, y: a.y }] : [a, { x: a.x, y: a.y + Math.round(random() * 300 - 150) + 1 }]
       })
-      expect(index.countInside(box, skip)).toBe(expected)
+      lines.push(runs)
+      index.add(owner, runs)
+    }
+    for (let i = 0; i < 80; i++) {
+      const box = { x: random() * 1200 - 200, y: random() * 700 - 100, width: 20 + random() * 200, height: 20 + random() * 120 }
+      const skip = i % 7 === 6 ? -1 : i % 6
+      let expected = false
+      lines.forEach((runs, owner) => {
+        if (owner === skip) return
+        for (const [p, q] of runs) {
+          if (Math.max(p.x, q.x) > box.x && Math.min(p.x, q.x) < box.x + box.width && Math.max(p.y, q.y) > box.y && Math.min(p.y, q.y) < box.y + box.height) expected = true
+        }
+      })
+      expect(index.hits(box, skip)).toBe(expected)
     }
   })
 })

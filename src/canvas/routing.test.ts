@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { allBoards } from '../layer/testBoards'
 import { CARD_SIZE, placeCards } from '../layout/cards'
 import { computeGeometry } from './buildGraph'
-import { pillHeight, placeLabel, wrap } from './labelPlacement'
-import { Drawn, elbow, hitsAnyCard, lineHitsCards, pickSides, planEdges, quickRoute, routeConnection, TRACK, type Rect } from './routing'
+import { pillHeight, placeLabel, RunIndex, wrap, type LabelContext } from './labelPlacement'
+import { Drawn, elbow, hitsAnyCard, lineHitsCards, Obstacles, pickSides, planEdges, quickRoute, rounded, routeConnection, TRACK, type Rect } from './routing'
+import { groupTitle } from './bands'
+import { minParallel } from '../test/lineMetrics'
+import type { EdgeShape } from './buildGraph'
 
 const CARD_WIDTH = CARD_SIZE.width
 const CARD_HEIGHT = CARD_SIZE.height
 const at = (x: number, y: number, width = CARD_WIDTH, height = CARD_HEIGHT): Rect => ({ x, y, width, height })
+const context = (cards: Rect[], lines: RunIndex = new RunIndex(), taken: Rect[] = [], own = -1): LabelContext => ({ cards, bands: [], taken, lines, own })
 
 describe('pickSides', () => {
   it('uses right and left for cards side by side', () => {
@@ -136,22 +140,51 @@ describe('routeConnection', () => {
 })
 
 describe('labels', () => {
-  it('wraps a long label onto two lines in a wide pill', () => {
-    expect(wrap('exact payee and message', 150).lines).toBe(2)
-    expect(wrap('writes', 150).lines).toBe(1)
+  it('wraps a long label onto two lines, and a short one stays on one', () => {
+    expect(wrap('exact payee and message')?.lines).toBe(2)
+    expect(wrap('writes')?.lines).toBe(1)
+  })
+
+  it('never breaks a word: a label with a word too long for the widest pill has no wrap', () => {
+    expect(wrap('Pneumonoultramicroscopicsilicovolcanoconiosis-and-more-letters-than-any-pill-holds')).toBeUndefined()
+  })
+
+  it('never needs a third line: text that does not fit in two lines has no wrap', () => {
+    const long = Array.from({ length: 30 }, (_, k) => `word${k}`).join(' ')
+    expect(wrap(long)).toBeUndefined()
+  })
+
+  it('keeps every line of a wrapped label whole, split at a space', () => {
+    const size = wrap('exact payee and message')!
+    expect(size.width).toBeLessThanOrEqual(220)
+    expect(size.lines).toBe(2)
   })
 
   it('keeps a label off the text of the cards when the line has room elsewhere', () => {
     const a = at(0, 0)
-    const b = at(0, 180)
+    const b = at(0, 280)
     const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
     const route = routeConnection(plan!, [a, b])
-    const spot = placeLabel(route.points, 'exact payee and message', [a, b], [])
-    expect(spot.lines).toBe(2)
-    const top = spot.y - (spot.lines * 16 + 6) / 2
-    const bottom = spot.y + (spot.lines * 16 + 6) / 2
-    expect(top).toBeGreaterThan(a.y + CARD_HEIGHT - 34 + 8 - 1)
-    expect(bottom).toBeLessThan(b.y + 8 + 1)
+    const lines = new RunIndex()
+    lines.add(0, route.runs!)
+    const spot = placeLabel(route.runs!, 'exact payee and message', context([a, b], lines, [], 0))
+    expect(spot.hidden).toBeUndefined()
+    const top = spot.y - pillHeight(spot.lines) / 2
+    const bottom = spot.y + pillHeight(spot.lines) / 2
+    expect(top).toBeGreaterThan(a.y + CARD_HEIGHT + 4)
+    expect(bottom).toBeLessThan(b.y - 4)
+  })
+
+  it('holds a label back, rather than cut or misplace it, when no run has room', () => {
+    const a = at(0, 0)
+    const b = at(CARD_WIDTH + 40, 0)
+    const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
+    const route = routeConnection(plan!, [a, b])
+    const lines = new RunIndex()
+    lines.add(0, route.runs!)
+    const spot = placeLabel(route.runs!, 'exact payee and message', context([a, b], lines, [], 0))
+    expect(spot.hidden).toBe(true)
+    expect(spot.width).toBe(0)
   })
 })
 
@@ -171,25 +204,106 @@ describe('connections between the same two cards', () => {
     return route
   })
 
-  it('run on their own tracks and never along each other', () => {
+  it('run on their own tracks and never closer than a track along each other', () => {
     for (let i = 0; i < routes.length; i++) {
       const others = new Drawn()
       routes.forEach((r, j) => j !== i && others.add(r.runs!))
-      for (const [p, q] of routes[i]!.runs!) expect(others.shared(p, q)).toBe(0)
+      for (const [p, q] of routes[i]!.runs!) {
+        expect(others.shared(p, q)).toBe(0)
+        expect(others.tight(p, q)).toBe(false)
+      }
+      expect(routes[i]!.crowded).toBeUndefined()
     }
   })
 
-  it('get labels that never overlap each other', () => {
+  it('get labels that never overlap each other, nor any line', () => {
     const taken: Rect[] = []
-    const lines = routes.flatMap((r) => r.points)
-    for (const route of routes) {
-      const spot = placeLabel(route.points, 'was this already sent?', [a, b], taken, lines)
+    const lines = new RunIndex()
+    routes.forEach((r, i) => lines.add(i, r.runs!))
+    routes.forEach((route, i) => {
+      const spot = placeLabel(route.runs!, 'was this already sent?', context([a, b], lines, taken, i))
+      if (spot.hidden) return
       const box = { x: spot.x - spot.width / 2, y: spot.y - pillHeight(spot.lines) / 2, width: spot.width, height: pillHeight(spot.lines) }
       for (const t of taken) {
         const apart = box.x >= t.x + t.width || t.x >= box.x + box.width || box.y >= t.y + t.height || t.y >= box.y + box.height
         expect(apart).toBe(true)
       }
       taken.push(box)
+    })
+  })
+})
+
+describe('spacing', () => {
+  it('tells a run alongside another from one that crosses or only touches it', () => {
+    const drawn = new Drawn()
+    drawn.add([[{ x: 0, y: 100 }, { x: 200, y: 100 }]])
+    expect(drawn.tight({ x: 50, y: 110 }, { x: 150, y: 110 })).toBe(true)
+    expect(drawn.tight({ x: 50, y: 100 }, { x: 150, y: 100 })).toBe(true)
+    expect(drawn.tight({ x: 50, y: 100 + TRACK }, { x: 150, y: 100 + TRACK })).toBe(false)
+    expect(drawn.tight({ x: 200, y: 105 }, { x: 300, y: 105 })).toBe(false)
+    expect(drawn.tight({ x: 100, y: 0 }, { x: 100, y: 300 })).toBe(false)
+  })
+
+  it('keeps every pair of runs a track apart, or marks the line it could not place', () => {
+    const a = at(0, 0, CARD_WIDTH, 400)
+    const b = at(CARD_WIDTH + 80, 0, CARD_WIDTH, 400)
+    const ends = Array.from({ length: 9 }, (_, k) => ({ id: `e${k}`, from: 'a', to: 'b' }))
+    const plans = planEdges({ a, b }, ends)
+    const drawn = new Drawn()
+    const obstacles = new Obstacles([a, b])
+    const shapes = ends.map((e) => {
+      const route = routeConnection(plans.get(e.id)!, [a, b], drawn, obstacles)
+      drawn.add(route.runs!)
+      return { id: e.id, runs: route.runs!, ...(route.crowded ? { crowded: true as const } : {}) } as unknown as EdgeShape
+    })
+    const placed = shapes.filter((s) => !s.crowded)
+    expect(placed.length).toBeGreaterThanOrEqual(5)
+    expect(minParallel(placed).distance).toBeGreaterThanOrEqual(TRACK)
+  })
+
+  it('keeps the ends of connections that share a side a track apart', () => {
+    const a = at(0, 0)
+    const targets = Array.from({ length: 5 }, (_, k) => at(500, k * 200))
+    const rects: Record<string, Rect> = { a }
+    targets.forEach((t, k) => (rects[`t${k}`] = t))
+    const plans = planEdges(
+      rects,
+      targets.map((_, k) => ({ id: `e${k}`, from: 'a', to: `t${k}` })),
+    )
+    const ys = [...plans.values()].map((p) => p.a.y).sort((p, q) => p - q)
+    for (let k = 1; k < ys.length; k++) expect(ys[k]! - ys[k - 1]!).toBeGreaterThanOrEqual(TRACK)
+  })
+})
+
+describe('group names', () => {
+  it('route round the name of a group rather than through it', () => {
+    const a = at(0, 100)
+    const b = at(900, 100)
+    const area = { x: 380, y: 0, width: 300, height: 330, label: 'A rather long group name' }
+    const inside = at(area.x + 24, area.y + 46, 252, 112)
+    const [plan] = [...planEdges({ a, b }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
+    const obstacles = new Obstacles([a, b, inside], [area])
+    const route = routeConnection(plan!, [a, b, inside], new Drawn(), obstacles)
+    const title = groupTitle(area)
+    for (const [p, q] of route.runs!) {
+      const hit = Math.max(p.x, q.x) > title.x && Math.min(p.x, q.x) < title.x + title.width && Math.max(p.y, q.y) > title.y && Math.min(p.y, q.y) < title.y + title.height
+      expect(hit).toBe(false)
     }
+    expect(obstacles.blocksBand({ x: title.x - 10, y: title.y + 8 }, { x: title.x + 50, y: title.y + 8 })).toBe(true)
+  })
+})
+
+describe('right angles', () => {
+  it('squares up two points that miss by a pixel without moving the two ends', () => {
+    const route = rounded([
+      { x: 0, y: 0 },
+      { x: 40, y: 0 },
+      { x: 41, y: 60 },
+      { x: 100, y: 60 },
+    ])
+    for (const [p, q] of route.runs!) expect(p.x === q.x || p.y === q.y).toBe(true)
+    expect(route.runs![0]![0]).toEqual({ x: 0, y: 0 })
+    const last = route.runs![route.runs!.length - 1]!
+    expect(last[1]).toEqual({ x: 100, y: 60 })
   })
 })

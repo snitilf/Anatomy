@@ -1,21 +1,33 @@
 import { inflate, type Point, type Rect } from '../layout/geometry'
+import { charWidth, textWidth } from './textMeasure'
 
 export interface LabelSpot {
   x: number
   y: number
-  /** Width of the pill. The text wraps inside it. */
+  /** Width of the pill. The text wraps inside it, at spaces only. */
   width: number
   lines: number
+  /**
+   * The label has no free place beside its line: it is held back and shows in full when the line is hovered or selected.
+   * Its x and y are the middle of the longest run, and its width is zero, so the pill takes the width of its text.
+   */
+  hidden?: true
 }
 
-const CHAR_WIDTH = 6.4
+/** The pill pads its text by this much on each side: its own padding and the cutout's. */
 const PAD_X = 10
 const LINE_HEIGHT = 16
 const PAD_Y = 3
-/** Widest first. A label tries the wide pill and falls back to narrower, taller ones. */
-const TIERS = [150, 116, 88]
-/** A label that needs three lines in the usual pill is tried in a wider one first. */
-const WIDE = 200
+/** A label is one line when its text takes at most this much, else two. */
+const SINGLE = 150
+/** The widest a pill gets. A label that needs more is held back until hover or selection rather than cut. */
+export const MAX_WIDTH = 220
+/** A label shows at most this many lines. */
+export const MAX_LINES = 2
+/** A label sits on its line, or beside it with its nearest edge this far from the line. */
+export const LABEL_GAP = 6
+/** The longest a label may be from its own line, edge to line. */
+export const LABEL_REACH = 8
 
 export function pillHeight(lines: number): number {
   return lines * LINE_HEIGHT + PAD_Y * 2
@@ -26,196 +38,188 @@ export function textArea(card: Rect): Rect {
   return { x: card.x - 4, y: card.y - 4, width: card.width + 8, height: card.height + 8 }
 }
 
-function overlap(a: Rect, b: Rect): number {
-  const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
-  const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
-  return w > 0 && h > 0 ? w * h : 0
-}
-
-/** Rough width of one character at 12px: wide scripts and emoji take about twice a Latin letter. */
-function charWidth(char: string): number {
-  const code = char.codePointAt(0) ?? 0
-  return code >= 0x2e80 || code >= 0x1f000 ? CHAR_WIDTH * 1.9 : CHAR_WIDTH
-}
-
-/** A pill shows at most this many lines. The rest is cut with an ellipsis until the connection is selected. */
-export const MAX_LINES = 3
-
-/** Estimates how the text wraps in a pill of the given outer width. Long words break anywhere. */
-export function wrap(text: string, outer: number): { lines: number; width: number } {
-  const room = outer - PAD_X * 2
-  let lines = 1
-  let line = 0
-  let widest = 0
-  const put = (w: number) => {
-    if (line === 0) line = w
-    else if (line + CHAR_WIDTH + w <= room) line += CHAR_WIDTH + w
-    else {
-      widest = Math.max(widest, line)
-      lines++
-      line = w
-    }
+/**
+ * How a label wraps. Text breaks at spaces only, never inside a word, in at most two lines. The pill is as narrow as
+ * the text allows, so two lines come out about even. `undefined` when it does not fit in the widest pill: a word is too
+ * long, or the text needs a third line.
+ */
+export function wrap(text: string): { lines: number; width: number } | undefined {
+  const words = text.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return { lines: 1, width: PAD_X * 2 + 2 }
+  const whole = textWidth(words.join(' '), 'label')
+  const space = charWidth(' ', 'label')
+  if (whole <= SINGLE) return { lines: 1, width: Math.ceil(whole) + PAD_X * 2 + 2 }
+  let best = Infinity
+  let acc = 0
+  const widths = words.map((w) => textWidth(w, 'label'))
+  for (let k = 1; k < words.length; k++) {
+    acc += (widths[k - 1] as number) + (k > 1 ? space : 0)
+    const rest = widths.slice(k).reduce((sum, w) => sum + w, 0) + space * (words.length - k - 1)
+    best = Math.min(best, Math.max(acc, rest))
   }
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    const chars = [...word]
-    const w = chars.reduce((sum, c) => sum + charWidth(c), 0)
-    if (w <= room) {
-      put(w)
-      continue
-    }
-    // Too long for any line: it fills lines of its own, one slice at a time.
-    let slice = 0
-    for (const c of chars) {
-      const cw = charWidth(c)
-      if (slice + cw > room) {
-        put(slice)
-        line = room
-        slice = 0
-      }
-      slice += cw
-    }
-    put(slice)
-  }
-  widest = Math.max(widest, line)
-  return { lines: Math.min(lines, MAX_LINES), width: Math.min(outer, Math.ceil(widest) + PAD_X * 2 + 2) }
+  const width = Math.ceil(best) + PAD_X * 2 + 2
+  return width <= MAX_WIDTH ? { lines: 2, width } : undefined
 }
+
+type Run = readonly [Point, Point]
 
 const CELL = 64
 const cellKey = (cx: number, cy: number) => (cx + 32768) * 65536 + (cy + 32768)
 
-/**
- * The sampled points of every drawn line, bucketed once per build.
- * A label asks for the points inside its box and only the buckets under that box are read.
- */
-export class PointIndex {
-  private readonly cells = new Map<number, number[]>()
-
-  /** Adds the points of one line. `owner` lets a label skip its own line. */
-  add(owner: number, points: readonly Point[]): void {
-    for (const p of points) {
-      const key = cellKey(Math.floor(p.x / CELL), Math.floor(p.y / CELL))
-      const cell = this.cells.get(key)
-      if (cell) cell.push(p.x, p.y, owner)
-      else this.cells.set(key, [p.x, p.y, owner])
-    }
-  }
-
-  /** How many points of lines other than `skip` lie strictly inside the box. */
-  countInside(box: Rect, skip: number): number {
-    const right = box.x + box.width
-    const bottom = box.y + box.height
-    let count = 0
-    for (let cx = Math.floor(box.x / CELL); cx <= Math.floor(right / CELL); cx++) {
-      for (let cy = Math.floor(box.y / CELL); cy <= Math.floor(bottom / CELL); cy++) {
-        const cell = this.cells.get(cellKey(cx, cy))
-        if (!cell) continue
-        for (let i = 0; i < cell.length; i += 3) {
-          const x = cell[i] as number
-          const y = cell[i + 1] as number
-          if (x > box.x && x < right && y > box.y && y < bottom && cell[i + 2] !== skip) count++
-        }
-      }
-    }
-    return count
-  }
-}
-
-/** A label never reaches further than this from the line it sits on. */
-const REACH = 260
-
-function near(r: Rect, around: Rect): boolean {
-  return r.x < around.x + around.width && r.x + r.width > around.x && r.y < around.y + around.height && r.y + r.height > around.y
+/** True when the straight run passes through the inside of the box. */
+function runHits(run: Run, box: Rect): boolean {
+  const [a, b] = run
+  return Math.max(a.x, b.x) > box.x && Math.min(a.x, b.x) < box.x + box.width && Math.max(a.y, b.y) > box.y && Math.min(a.y, b.y) < box.y + box.height
 }
 
 /**
- * Picks where a connection's label goes. It slides along the line, away from the middle,
- * until the pill covers no card text, no other pill, and no other line. A wide pill with
- * two lines is preferred. In a narrow gap it falls back to a narrower pill with more lines,
- * and beside the line when the line is too short to carry the pill without hiding its arrow.
- *
- * `otherLines` is the points of the other lines. Pass a `PointIndex` built once per build and
- * the label's own line number in `own`, or a plain list of points.
+ * The straight runs of every drawn line, bucketed once per build. A label asks which runs pass through its box, and
+ * only the buckets under that box are read.
  */
-export function placeLabel(
-  route: readonly Point[],
-  text: string,
-  cards: readonly Rect[],
-  taken: readonly Rect[],
-  otherLines: readonly Point[] | PointIndex = [],
-  own = -1,
-): LabelSpot {
-  const last = route.length - 1
-  const end = route[last] ?? { x: 0, y: 0 }
-  const middle = route[Math.round(last / 2)] ?? { x: 0, y: 0 }
-  let best: LabelSpot = { ...middle, width: TIERS[0] as number, lines: 1 }
-  let bestCost = Infinity
+export class RunIndex {
+  private readonly cells = new Map<number, { run: Run; owner: number }[]>()
 
-  // Only cards, pills, and lines near this line can change the cost.
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const p of route) {
-    minX = Math.min(minX, p.x)
-    minY = Math.min(minY, p.y)
-    maxX = Math.max(maxX, p.x)
-    maxY = Math.max(maxY, p.y)
-  }
-  const around: Rect = { x: minX - REACH, y: minY - REACH, width: maxX - minX + REACH * 2, height: maxY - minY + REACH * 2 }
-  const areas = cards.map(textArea).filter((a) => near(a, around))
-  const pills = taken.filter((t) => near(t, around)).map((t) => inflate(t, 3))
-  const raw = taken.filter((t) => near(t, around))
-  let lines: PointIndex
-  if (otherLines instanceof PointIndex) lines = otherLines
-  else {
-    lines = new PointIndex()
-    // Owner -2 is never skipped, so every point of a plain list counts.
-    lines.add(-2, otherLines)
-  }
-
-  const tiers = wrap(text, TIERS[0] as number).lines >= MAX_LINES ? [WIDE, ...TIERS] : TIERS
-  for (const tier of tiers) {
-    const size = wrap(text, tier)
-    const height = pillHeight(size.lines)
-    const tall = size.lines > 2 ? 40 : 0
-    for (let k = 0; k <= 34; k++) {
-      // 0.5, 0.52, 0.48, 0.54, ... but never right at the arrowheads.
-      const along = Math.ceil(k / 2) * 0.02 * (k % 2 === 1 ? 1 : -1)
-      const fraction = 0.5 + along
-      if (fraction < 0.12 || fraction > 0.88) continue
-      const at = Math.round(last * fraction)
-      const p = route[at]
-      const before = route[Math.max(0, at - 2)]
-      const after = route[Math.min(last, at + 2)]
-      if (!p || !before || !after) continue
-      const tangent = Math.hypot(after.x - before.x, after.y - before.y) || 1
-      const normal = { x: -(after.y - before.y) / tangent, y: (after.x - before.x) / tangent }
-      const reach = Math.abs(normal.x) * (size.width / 2 + 8) + Math.abs(normal.y) * (height / 2 + 8)
-      for (const side of [0, 1, -1]) {
-        // Costs only grow as terms are added, so a candidate stops as soon as it cannot beat the best.
-        const fixed = (side === 0 ? 0 : 24) + tall + (size.lines - 1) * 10 + Math.abs(along) * 120
-        if (fixed >= bestCost) continue
-        const c = { x: p.x + normal.x * reach * side, y: p.y + normal.y * reach * side }
-        const box = { x: c.x - size.width / 2, y: c.y - height / 2, width: size.width, height }
-        let cost = 0
-        for (const a of areas) cost += overlap(box, a)
-        if (cost + fixed >= bestCost) continue
-        // Two pills must never touch. Sliding along the line is cheap, sharing space is not.
-        for (let i = 0; i < pills.length; i++) {
-          if (overlap(box, pills[i] as Rect) > 0) cost += 5000 + overlap(box, raw[i] as Rect)
-        }
-        if (cost + fixed >= bestCost) continue
-        cost += lines.countInside(box, own) * 10
-        const arrow = { x: end.x - 14, y: end.y - 14, width: 28, height: 28 }
-        if (overlap(box, arrow) > 0) cost += 300
-        cost += fixed
-        if (cost < bestCost) {
-          bestCost = cost
-          best = { x: c.x, y: c.y, width: size.width, lines: size.lines }
-          if (cost === 0) return best
+  /** Adds the runs of one line. `owner` lets a label tell its own line from the others. */
+  add(owner: number, runs: readonly Run[]): void {
+    for (const run of runs) {
+      const [a, b] = run
+      const entry = { run, owner }
+      for (let cx = Math.floor(Math.min(a.x, b.x) / CELL); cx <= Math.floor(Math.max(a.x, b.x) / CELL); cx++) {
+        for (let cy = Math.floor(Math.min(a.y, b.y) / CELL); cy <= Math.floor(Math.max(a.y, b.y) / CELL); cy++) {
+          const key = cellKey(cx, cy)
+          const cell = this.cells.get(key)
+          if (cell) cell.push(entry)
+          else this.cells.set(key, [entry])
         }
       }
     }
   }
-  return best
+
+  /** True when a run of any line but `skip` passes through the box. A run of `skip` listed in `allow` is not counted. */
+  hits(box: Rect, skip: number, allow?: Run): boolean {
+    for (let cx = Math.floor(box.x / CELL); cx <= Math.floor((box.x + box.width) / CELL); cx++) {
+      for (let cy = Math.floor(box.y / CELL); cy <= Math.floor((box.y + box.height) / CELL); cy++) {
+        for (const { run, owner } of this.cells.get(cellKey(cx, cy)) ?? []) {
+          if (owner === skip && (allow === undefined || run === allow)) continue
+          if (runHits(run, box)) return true
+        }
+      }
+    }
+    return false
+  }
+}
+
+/** What a label must keep off, besides the lines. */
+export interface LabelContext {
+  cards: readonly Rect[]
+  /** The name band of every group. */
+  bands: readonly Rect[]
+  /** The pills placed so far. */
+  taken: readonly Rect[]
+  lines: RunIndex
+  /** The number the line was added to `lines` under. */
+  own: number
+}
+
+const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+
+/**
+ * True when a pill box keeps clear of every card, every group name band, every other pill, and every line but its own
+ * host run. `host` is the run it sits on or beside, `undefined` to count every run of its own line too.
+ */
+export function labelFits(box: Rect, ctx: LabelContext, host?: Run): boolean {
+  return blocker(box, ctx, host) === undefined
+}
+
+/** What keeps a pill box from its place, or `undefined` when it is free. */
+export function blocker(box: Rect, ctx: LabelContext, host?: Run): 'card' | 'band' | 'label' | 'line' | undefined {
+  for (const c of ctx.cards) if (overlaps(box, textArea(c))) return 'card'
+  for (const b of ctx.bands) if (overlaps(box, b)) return 'band'
+  for (const t of ctx.taken) if (overlaps(box, inflate(t, 3))) return 'label'
+  return ctx.lines.hits(inflate(box, 2), ctx.own, host) ? 'line' : undefined
+}
+
+const ARROW = 14
+/** A run's ends keep this much clear for a corner, an arrowhead, or the card. */
+const END_CLEAR = 14
+/** A label beside a run has at least this much of its middle over the run. */
+const OVERLAP = 12
+
+/** How far a pill beside a run reaches past its ends. */
+function overhang(t: number, len: number, along: number): number {
+  return Math.max(0, along / 2 - t, t + along / 2 - len)
+}
+
+/**
+ * Picks where a connection's label goes. It sits on a straight run of its own line, with the line cut around it, or
+ * beside a run with its nearest edge a few pixels off. Never across a card, a group name, another label, or another
+ * line, so no label can sit between two lines. When nothing is free the label is held back until the line is hovered.
+ */
+export function placeLabel(runs: readonly Run[], text: string, ctx: LabelContext): LabelSpot {
+  const size = wrap(text)
+  const longest = [...runs].sort((p, q) => length(q) - length(p))[0]
+  const fallback = (): LabelSpot => {
+    const mid = longest ? { x: (longest[0].x + longest[1].x) / 2, y: (longest[0].y + longest[1].y) / 2 } : { x: 0, y: 0 }
+    return { ...mid, width: 0, lines: 1, hidden: true }
+  }
+  if (!size || runs.length === 0) return fallback()
+  const height = pillHeight(size.lines)
+  const last = runs[runs.length - 1] as Run
+  const end = last[1]
+  const arrow: Rect = { x: end.x - ARROW, y: end.y - ARROW, width: ARROW * 2, height: ARROW * 2 }
+
+  // Distance along the line to the middle of it: labels prefer the middle.
+  const total = runs.reduce((sum, r) => sum + length(r), 0)
+  let walked = 0
+  let best: { spot: LabelSpot; cost: number } | undefined
+  runs.forEach((run, k) => {
+    const [a, b] = run
+    const len = length(run)
+    const before = walked
+    walked += len
+    const level = a.y === b.y
+    if (!level && a.x !== b.x) return
+    const dir = level ? Math.sign(b.x - a.x) : Math.sign(b.y - a.y)
+    const along = level ? size.width : height
+    const across = level ? height : size.width
+    // The pill lies on the run, with the line visible for a few pixels on each side, or beside it. Beside, it may reach
+    // past an end of the run, as long as its middle is over the run and nothing is in the way.
+    for (const side of [0, 1, -1]) {
+      const margin = side === 0 ? along / 2 + 10 + END_CLEAR : OVERLAP
+      const lo = side === 0 ? margin : margin
+      const hi = side === 0 ? len - margin - ARROW * (k === runs.length - 1 ? 1 : 0) : len - margin
+      if (hi < lo) continue
+      const steps = Math.min(48, Math.floor((hi - lo) / 4))
+      const centre = Math.min(hi, Math.max(lo, len / 2))
+      for (let s = 0; s <= steps * 2; s++) {
+        // Outward from the middle of the run.
+        const t = centre + Math.ceil(s / 2) * 4 * (s % 2 === 1 ? 1 : -1)
+        if (t < lo || t > hi) continue
+        const px = a.x + (level ? dir * t : 0)
+        const py = a.y + (level ? 0 : dir * t)
+        const shift = side === 0 ? 0 : side * (across / 2 + LABEL_GAP)
+        const cx = px + (level ? 0 : shift)
+        const cy = py + (level ? shift : 0)
+        const box: Rect = { x: cx - size.width / 2, y: cy - height / 2, width: size.width, height }
+        if (overlaps(box, arrow)) continue
+        // Beside the run, the box and the run bound a strip that no other line may cross either.
+        if (!labelFits(side === 0 ? box : reaching(box, px, py), ctx, run)) continue
+        const mid = before + t
+        const cost = (side === 0 ? 0 : 40) + (level ? 0 : 12) + Math.abs(mid - total / 2) / 12 + (k === runs.length - 1 ? 6 : 0) + (side === 0 ? 0 : overhang(t, len, along) / 4)
+        if (!best || cost < best.cost) best = { spot: { x: cx, y: cy, width: size.width, lines: size.lines }, cost }
+      }
+    }
+  })
+  return best ? best.spot : fallback()
+}
+
+/** The box and the point on its line that it sits beside: everything between them counts as under the label. */
+function reaching(box: Rect, x: number, y: number): Rect {
+  const x0 = Math.min(box.x, x)
+  const y0 = Math.min(box.y, y)
+  return { x: x0, y: y0, width: Math.max(box.x + box.width, x) - x0, height: Math.max(box.y + box.height, y) - y0 }
+}
+
+function length(run: Run): number {
+  return Math.abs(run[1].x - run[0].x) + Math.abs(run[1].y - run[0].y)
 }
