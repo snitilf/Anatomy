@@ -258,6 +258,11 @@ export function computeGeometry(
     const shape = previous?.edges.get(end.id)
     if (!shape || shape.cheap || shape.from !== end.from || shape.to !== end.to) return undefined
     if (movedIds.has(end.from) || movedIds.has(end.to)) return undefined
+    // Another card's move can change where this line meets its cards, when they share a side with it.
+    const plan = plans.get(end.id)
+    const first = shape.points[0]
+    const last = shape.points[shape.points.length - 1]
+    if (!plan || !first || !last || first.x !== plan.a.x || first.y !== plan.a.y || last.x !== plan.b.x || last.y !== plan.b.y) return undefined
     if (lineHitsCards(shape.points, movedBoxes)) return undefined
     // A group that grew or moved may now have its name under the line.
     return shape.runs?.some(([p, q]) => obstacles.blocksBand(p, q)) ? undefined : shape
