@@ -38,6 +38,7 @@ import { ProposalNode, StickyNode, TextNode } from '../whiteboard/nodes'
 import { STICKY_MAX, STICKY_MIN, STICKY_SIZE } from '../whiteboard/sizes'
 import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
+import { fontsLoaded, refreshWhenIdle } from './fontRefresh'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
@@ -77,6 +78,8 @@ interface View {
   held?: string
   /** Set while the lines of a moved card are hidden: milliseconds to wait before the full build. */
   settle?: number
+  /** Fonts loaded while the view was busy: it is built again once it is idle. */
+  fontStale?: true
 }
 
 const NO_PLACEMENT: CardPlacement = { positions: {}, sizes: {} }
@@ -93,6 +96,12 @@ interface UserLines {
   proposals: readonly Proposal[] | undefined
   reconnects: readonly Reconnect[] | undefined
 }
+
+/** A build made with the previous geometry still owes the refresh after fonts loaded: the mark moves to the new view. */
+const keepStale = (old: View, next: View): View => (old.fontStale ? { ...next, fontStale: true } : next)
+
+/** A build with no previous geometry, from the cards where they are now: nothing in motion or unsaved moves. */
+const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects)
 
 /** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
 function fullView(board: Board, base: CardPlacement | undefined, user: UserLines, rects = placeAll(board, base, user.proposals), previous?: Geometry): View {
@@ -210,15 +219,18 @@ export function Canvas() {
     shown =
       sameRects(rects, view.rects) && reconnects === view.reconnects
         ? { ...view, base: stored, proposals }
-        : fullView(view.board, stored, user, rects, view.geometry)
+        : keepStale(view, fullView(view.board, stored, user, rects, view.geometry))
     setView(shown)
   }
   // Text measured before its font faces loaded was sized with the fallback. When they are in, the map is built again, once.
   useEffect(
     () =>
-      onTextMeasured(() => setView((v) => (v && v.held === undefined ? fullView(v.board, v.base, v) : v))),
+      onTextMeasured(() => setView((v) => (v ? fontsLoaded(v, rebuildFromRects) : v))),
     [],
   )
+  useEffect(() => {
+    if (shown?.fontStale) return afterPaint(() => setView((v) => (v ? refreshWhenIdle(v, rebuildFromRects) : v)))
+  }, [shown])
   const viewRef = useRef(shown)
   const hold = useRef<Hold | undefined>(undefined)
   const keyMoves = useRef(new Set<string>())
@@ -422,7 +434,7 @@ export function Canvas() {
       const current = viewRef.current
       if (!current) return
       saveKeyMoves(current)
-      setView((v) => (v && v.settle !== undefined && v.held === undefined ? fullView(v.board, v.base, v, v.rects, v.geometry) : v))
+      setView((v) => (v && v.settle !== undefined && v.held === undefined ? keepStale(v, fullView(v.board, v.base, v, v.rects, v.geometry)) : v))
     }
     return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
   }, [settle, shown, saveKeyMoves])
