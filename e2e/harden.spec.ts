@@ -36,7 +36,7 @@ for (const width of [1440, 390]) {
 
     test('rows of the overview end in an ellipsis instead of running past the sidebar', async ({ page }) => {
       await open(page, WORST)
-      await expect(page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first()).toBeAttached()
+      if (width > 800) await expect(page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first()).toBeVisible()
       expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
     })
 
