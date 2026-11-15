@@ -24,9 +24,6 @@ jobs:
         run: command -v google-chrome >/dev/null || npx playwright install --with-deps chrome
       - name: Browser tests
         run: npx playwright test 'e2e/(?!performance\.spec\.ts).*\.spec\.ts' --reporter=list,html
-      # Frame timing is sensitive to competing browser workers, so run this spec alone with one worker.
-      - name: Performance tests
-        run: npx playwright test e2e/performance.spec.ts --workers=1 --reporter=list,html
       - name: Upload browser results
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

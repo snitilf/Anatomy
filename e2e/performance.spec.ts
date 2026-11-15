@@ -40,7 +40,7 @@ for (const board of BOARDS) {
     const p95 = percentile(frames, 0.95)
     const max = Math.max(...frames)
     const slow = frames.filter((f) => f > SLOW_MS).length
-    console.log(`[drag] ${board.name}: frames=${frames.length} p50=${p50.toFixed(1)}ms p95=${p95.toFixed(1)}ms max=${max.toFixed(1)}ms slow=${slow}`)
+    console.log(`[drag] ${board.name}: frames=${frames.length} p50=${p50.toFixed(1)}ms p95=${p95}ms max=${max}ms slow=${slow}`)
     expect(p95, `p95 frame on ${board.name}`).toBeLessThanOrEqual(P95_MS)
     expect(slow, `frames over ${SLOW_MS} ms on ${board.name} (max ${max.toFixed(1)} ms)`).toBeLessThanOrEqual(SLOW_FRAMES_ALLOWED)
     expect(max, `worst frame on ${board.name}`).toBeLessThanOrEqual(MAX_MS * 3)
@@ -83,7 +83,7 @@ async function budget(page: import('@playwright/test').Page, name: string, gestu
   const p95 = percentile(frames, 0.95)
   const max = Math.max(...frames)
   const slow = frames.filter((f) => f > SLOW_MS).length
-  console.log(`[${name}] frames=${frames.length} p50=${percentile(frames, 0.5).toFixed(1)}ms p95=${p95.toFixed(1)}ms max=${max.toFixed(1)}ms slow=${slow}`)
+  console.log(`[${name}] frames=${frames.length} p50=${percentile(frames, 0.5).toFixed(1)}ms p95=${p95}ms max=${max}ms slow=${slow}`)
   expect(p95, `p95 frame: ${name}`).toBeLessThanOrEqual(P95_MS)
   expect(slow, `frames over ${SLOW_MS} ms: ${name} (max ${max.toFixed(1)} ms)`).toBeLessThanOrEqual(SLOW_FRAMES_ALLOWED)
   return frames
