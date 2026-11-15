@@ -103,3 +103,14 @@ test('with many problems the error panel keeps its count and Dismiss in view whi
   await panel.getByRole('button', { name: 'Dismiss' }).click()
   await expect(panel).toBeHidden()
 })
+
+test('a card is named by its label and group, its summary is the description, and a connection is read once', async ({ page }) => {
+  await open(page, 'src/examples/nordet.board.json')
+  const card = page.locator('.react-flow__node-card').first()
+  const name = (await card.getAttribute('aria-label'))!
+  expect(name.length).toBeLessThan(120)
+  expect(name).toMatch(/, in /)
+  expect((await card.getAttribute('aria-description'))!.length).toBeGreaterThan(20)
+  await expect(page.locator('.react-flow h3')).toHaveCount(0)
+  await expect(page.locator('[data-label]').first()).toHaveAttribute('aria-hidden', 'true')
+})

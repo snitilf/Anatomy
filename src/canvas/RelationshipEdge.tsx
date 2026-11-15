@@ -61,6 +61,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-edited={data.edited || undefined}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, ...(data.labelHidden ? {} : { '--label-width': `${data.labelWidth}px` }) } as CSSProperties}
           title={text}
+          aria-hidden="true"
           onClick={() => dispatch({ type: 'select', selection: { type: 'relationship', id: data.relationshipId } })}
         >
           <span className={styles.cutout}>

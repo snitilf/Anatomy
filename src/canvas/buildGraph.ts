@@ -496,6 +496,7 @@ export function assembleGraph(
     } satisfies Node<GroupData>),
   )
 
+  const groupLabel = new Map(board.groups.map((g) => [g.id, g.label]))
   const cards = board.components.map((c) => {
     const rect = rects[c.id] ?? { x: 0, y: 0, width: 0, height: 0 }
     return stable(cache.nodes, {
@@ -522,7 +523,9 @@ export function assembleGraph(
       ...(c.id === held ? { className: 'held' } : pushed?.has(c.id) ? { className: 'pushed' } : {}),
       connectable: true,
       deletable: false,
-      ariaLabel: `${c.label}. ${c.summary}`,
+      // The name is the part and its group. The summary is the description, so a screen reader does not read it as the name.
+      ariaLabel: groupLabel.get(c.group ?? '') ? `${c.label}, in ${groupLabel.get(c.group ?? '')}` : c.label,
+      domAttributes: { 'aria-description': c.summary } as NonNullable<Node['domAttributes']>,
     } satisfies Node<CardData>)
   })
 
