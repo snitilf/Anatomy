@@ -232,3 +232,18 @@ test.describe('coarse pointer', () => {
     }
   })
 })
+
+test('a proposal uses its label as name and summary as description', async ({ page }) => {
+  const board = await readFile('src/examples/nordet.board.json', 'utf8')
+  const boardId = (JSON.parse(board) as { id: string }).id
+  const layer = { format: 'anatomy-layer', schemaVersion: 2, boardId, positions: {}, sizes: {}, notes: [], links: [], marks: [], proposals: [{ id: 'part-aaaaaa', label: 'Rate limiter', summary: 'Limits incoming requests', x: 0, y: 0, width: 240, height: 140, createdAt: '2026-11-13T00:00:00.000Z' }], reconnects: [], archive: [] }
+  await page.addInitScript(([key, text, layerText]) => {
+    localStorage.setItem(key, JSON.stringify({ name: 'repo', files: { 'board.json': { text, lastModified: 1 }, 'layer.json': { text: layerText, lastModified: 1 } }, remembered: false }))
+  }, [KEY, board, JSON.stringify(layer)] as const)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open folder' }).click()
+  const proposal = page.locator('.react-flow__node-proposal')
+  await expect(proposal).toHaveAttribute('aria-label', 'Rate limiter')
+  await expect(proposal).toHaveAttribute('aria-description', 'Limits incoming requests')
+  await expect(proposal.locator('h3')).toHaveCount(0)
+})
