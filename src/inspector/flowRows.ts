@@ -29,6 +29,8 @@ export function endsOf(layer: Pick<Layer, 'reconnects'> | undefined, r: { id: st
   return { from: edit?.from ?? r.from, to: edit?.to ?? r.to, edit }
 }
 
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
 /** The rows of the flow block for one part: connections first, then the board's inputs or outputs, then the user's links. */
 export function flowRows(board: Board, layer: Pick<Layer, 'reconnects' | 'links'> | undefined, partId: string): Record<Side, FlowRow[]> {
   const rows: Record<Side, FlowRow[]> = { in: [], out: [] }
@@ -56,8 +58,10 @@ export function flowRows(board: Board, layer: Pick<Layer, 'reconnects' | 'links'
     }
   }
   const component = board.components.find((c) => c.id === partId)
-  component?.inputs.forEach((text, i) => rows.in.push({ key: `input-${i}`, what: text }))
-  component?.outputs.forEach((text, i) => rows.out.push({ key: `output-${i}`, what: text }))
+  // A plain input or output that a connection already names is the same thing said twice, so only the connection shows.
+  const covered = (side: Side, text: string) => rows[side].some((row) => row.select && same(row.what, text))
+  component?.inputs.forEach((text, i) => covered('in', text) || rows.in.push({ key: `input-${i}`, what: text }))
+  component?.outputs.forEach((text, i) => covered('out', text) || rows.out.push({ key: `output-${i}`, what: text }))
   for (const link of layer?.links ?? []) {
     const row = { what: link.label, select: { type: 'link' as const, id: link.id }, edge: `${MANUAL_PREFIX}${link.id}`, yours: 'link' as const, unlabeled: link.label === '' }
     if (link.from === partId) rows.out.push({ key: `l-${link.id}-out`, ...row, part: link.to })
