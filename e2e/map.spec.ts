@@ -239,9 +239,20 @@ test.describe('moving and resizing cards', () => {
     await expect.poll(async () => (await view()).zoom).toBeLessThan(zoomed.zoom)
     // Dragging empty space pans, and scrolling does not.
     const before = await view()
-    await page.mouse.move(pane.x + 6, pane.y + pane.height - 6)
+    // Empty map: a spot with the pane itself under it, so no card, label, or control takes the press.
+    const empty = await page.evaluate(() => {
+      const box = document.querySelector('.react-flow__pane')!.getBoundingClientRect()
+      for (let y = box.bottom - 12; y > box.top + 40; y -= 8) {
+        for (let x = box.left + 12; x < box.right - 90; x += 8) {
+          if (document.elementFromPoint(x, y)?.classList.contains('react-flow__pane')) return { x, y }
+        }
+      }
+      return undefined
+    })
+    expect(empty).toBeDefined()
+    await page.mouse.move(empty!.x, empty!.y)
     await page.mouse.down()
-    await page.mouse.move(pane.x + 46, pane.y + pane.height - 40, { steps: 6 })
+    await page.mouse.move(empty!.x + 40, empty!.y - 34, { steps: 6 })
     await page.mouse.up()
     const panned = await view()
     expect(panned.zoom).toBeCloseTo(before.zoom, 4)
@@ -258,6 +269,10 @@ test.describe('moving and resizing cards', () => {
     const target = boxes.find((b) => b.id !== spot.id && Math.abs(b.left - self.left) > 300)!
     const dy = target.top + 3 - self.top
     await slowDrag(page, spot, { x: spot.x + 40, y: spot.y + dy })
+    // The card trails the pointer by the distance a drag needs to start, so the pointer goes on by what is left to the neighbor's top.
+    const trailing = (await cardBoxes(page)).find((b) => b.id === spot.id)!
+    await page.mouse.move(spot.x + 40, spot.y + dy + (target.top + 3 - trailing.top), { steps: 4 })
+    await nextFrame(page)
     const shown = await page.evaluate(() => [...document.querySelectorAll<SVGLineElement>('.react-flow__viewport-portal line')].filter((l) => l.style.visibility === 'visible').length)
     expect(shown).toBeGreaterThan(0)
     // The card snapped: its top is on the neighbor's top.

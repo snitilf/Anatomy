@@ -3,6 +3,7 @@ import { open, viewport } from './helpers.ts'
 
 const EXAMPLE = 'src/examples/example.board.json'
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
+const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
 
 test('the command menu finds a part by name and opens it', async ({ page }) => {
   await open(page, SHORTENER)
@@ -16,7 +17,8 @@ test('the command menu finds a part by name and opens it', async ({ page }) => {
 
 test('] hides the sidebar, the map takes the room and keeps its middle, and ] brings it back', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, EXAMPLE)
+  // A board that does not fit at its start zoom: a board that does is held at its fit zoom, which grows with the map.
+  await open(page, SIXTEEN)
   const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
   const before = (await page.locator('.react-flow').boundingBox())!
   await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } })

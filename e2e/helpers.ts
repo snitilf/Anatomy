@@ -17,20 +17,34 @@ export async function open(page: Page, file: string) {
   await page.waitForTimeout(400)
 }
 
-/** A card whose middle is not covered by a label or another card, so a press there grabs it. */
-export async function grabbable(page: Page): Promise<Spot> {
-  const spot = await page.evaluate(() => {
+/**
+ * A card whose middle is not covered by a label or another card, so a press there grabs it.
+ * With `move`, also a card that has clear room at the place it is about to be dragged to, so the drop is not pushed aside.
+ */
+export async function grabbable(page: Page, move?: { dx: number; dy: number }): Promise<Spot> {
+  const spot = await page.evaluate((move) => {
     const map = document.querySelector('.react-flow')?.getBoundingClientRect()
-    for (const node of document.querySelectorAll<HTMLElement>('.react-flow__node-card')) {
+    const all = [...document.querySelectorAll<HTMLElement>('.react-flow__node-card')]
+    for (const node of all) {
       const r = node.getBoundingClientRect()
       const x = r.left + r.width / 2
       const y = r.top + r.height / 2
       if (!map || x < map.left + 20 || x > map.right - 120 || y < map.top + 20 || y > map.bottom - 120) continue
+      if (move) {
+        const room = 14
+        const to = { left: r.left + move.dx - room, right: r.right + move.dx + room, top: r.top + move.dy - room, bottom: r.bottom + move.dy + room }
+        const crowded = all.some((other) => {
+          if (other === node) return false
+          const o = other.getBoundingClientRect()
+          return o.left < to.right && o.right > to.left && o.top < to.bottom && o.bottom > to.top
+        })
+        if (crowded || x + move.dx > map.right - 120 || y + move.dy > map.bottom - 120) continue
+      }
       const hit = document.elementFromPoint(x, y)
       if (hit && node.contains(hit)) return { id: node.dataset.id ?? '', x, y }
     }
     return undefined
-  })
+  }, move)
   if (!spot) throw new Error('no card can be grabbed on this board')
   return spot
 }
