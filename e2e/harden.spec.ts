@@ -30,6 +30,16 @@ for (const width of [1440, 390]) {
       expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
     })
 
+    test('a connection between long-named parts keeps its Move end buttons inside the sidebar, with the full name on hover', async ({ page }) => {
+      await open(page, WORST)
+      await page.locator('.react-flow__node-card[data-id="long-nospace"]').click({ force: true })
+      await page.getByTestId('inspector').getByRole('region', { name: 'Flow' }).getByRole('button', { name: /^approvedActionVersio/ }).first().click()
+      const from = page.getByTestId('inspector').getByRole('button', { name: 'From', exact: true })
+      await expect(from).toBeVisible()
+      await expect(from).toHaveAttribute('title', /^From: Authentication_/)
+      expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
+    })
+
     test('the walkthrough bar keeps its buttons in view with a long caption', async ({ page }) => {
       await open(page, WORST)
       await page.keyboard.press('ControlOrMeta+k')

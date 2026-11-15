@@ -20,6 +20,7 @@ export function Picker({
   open: controlled,
   onOpenChange,
   className,
+  title,
 }: {
   label: string
   trigger: ReactNode
@@ -29,6 +30,8 @@ export function Picker({
   open?: boolean
   onOpenChange?: (open: boolean) => void
   className?: string
+  /** The full text of a trigger that may be cut short. */
+  title?: string
 }) {
   const [own, setOwn] = useState(false)
   const open = controlled ?? own
@@ -39,7 +42,7 @@ export function Picker({
   const groups = [...new Set(items.map((i) => i.group ?? ''))]
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger className={className ?? clsx(buttons.button, buttons.small)} aria-label={label}>
+      <Popover.Trigger className={className ?? clsx(buttons.button, buttons.small)} aria-label={label} title={title}>
         {trigger}
       </Popover.Trigger>
       <Popover.Portal>
