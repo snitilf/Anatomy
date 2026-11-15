@@ -114,3 +114,16 @@ test('a card is named by its label and group, its summary is the description, an
   await expect(page.locator('.react-flow h3')).toHaveCount(0)
   await expect(page.locator('[data-label]').first()).toHaveAttribute('aria-hidden', 'true')
 })
+
+test('a board with many parts opens fitted: every card is inside the map', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'e2e/fixtures/forty-parts.board.json')
+  const outside = await page.evaluate(() => {
+    const map = document.querySelector('.react-flow')!.getBoundingClientRect()
+    return [...document.querySelectorAll('.react-flow__node-card')].filter((n) => {
+      const r = n.getBoundingClientRect()
+      return r.left < map.left - 1 || r.right > map.right + 1 || r.top < map.top - 1 || r.bottom > map.bottom + 1
+    }).length
+  })
+  expect(outside).toBe(0)
+})
