@@ -1,0 +1,425 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "id": "worst-text",
+  "revision": 1,
+  "title": "Platform migration of the customer identity and billing stack Platform migration of the customer identity and billing st",
+  "goal": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The serv",
+  "scope": {
+    "includes": [
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+    ],
+    "excludes": [
+      "x",
+      "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+    ]
+  },
+  "groups": [
+    {
+      "id": "solo",
+      "label": "Solo"
+    },
+    {
+      "id": "long-group",
+      "label": "GroupLabelWithoutAnySpacesAtAllJustVeryLongGroupLabelWithout",
+      "description": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th"
+    },
+    {
+      "id": "jp",
+      "label": "認証と課金"
+    }
+  ],
+  "components": [
+    {
+      "summary": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "long-nospace",
+      "label": "Authentication_and_Authorization_Gateway_Service_Orchestrat",
+      "group": "long-group",
+      "explanation": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The",
+      "inputs": [
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+        "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+      ],
+      "outputs": [
+        "x"
+      ]
+    },
+    {
+      "summary": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "long-words",
+      "label": "Authentication and authorization gateway service orchest",
+      "group": "long-group"
+    },
+    {
+      "summary": "a",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "a",
+      "label": "A",
+      "group": "solo"
+    },
+    {
+      "summary": "b",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "b",
+      "label": "B"
+    },
+    {
+      "summary": "利用者の認証情報を検証し、承認されたリクエストだけを下流のサービスに渡します。長い説明文でも折り返されるか確認します。",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "jp-1",
+      "label": "認証ゲートウェイ",
+      "group": "jp",
+      "explanation": "これは**日本語**の説明です。\n\n- 一つ目\n- 二つ目"
+    },
+    {
+      "summary": "請求書の作成、支払いの確認、返金の処理を担当します。",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "jp-2",
+      "label": "課金処理エンジン（再試行とべき等性の管理を含む長い名前）",
+      "group": "jp"
+    },
+    {
+      "summary": "تتحقق هذه الخدمة من بيانات اعتماد المستخدم وتمرر الطلبات المعتمدة فقط إلى الخدمات الأخرى في النظام.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "ar-1",
+      "label": "بوابة المصادقة",
+      "explanation": "هذا **شرح** باللغة العربية.\n\n- الأول\n- الثاني",
+      "inputs": [
+        "طلب المستخدم"
+      ],
+      "outputs": [
+        "رمز الوصول"
+      ]
+    },
+    {
+      "summary": "يعالج الفواتير والمدفوعات. Mixed with English text and numbers 1234.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "ar-2",
+      "label": "محرك الفوترة وإعادة المحاولة وإدارة التكرار الآمن للعمليات",
+      "group": "jp"
+    },
+    {
+      "summary": "👩🏽‍💻👨‍👩‍👧‍👦🇨🇦 family and flag emoji, and a ZWJ sequence 🏳️‍🌈 in a summary.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "emoji-1",
+      "label": "🚀 Launch 🎉"
+    },
+    {
+      "summary": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "emoji-2",
+      "label": "🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥"
+    },
+    {
+      "summary": "Only the required fields.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "minimal",
+      "label": "Minimal"
+    },
+    {
+      "summary": "<img src=x onerror=alert(1)> **not bold** [link](javascript:alert(1)) &amp;",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "markup",
+      "label": "<b>Bold</b> & <script>",
+      "explanation": "# Heading\n\n<b>html</b> [x](https://example.com) **bold** *it* `code`\n\n| a | b |\n|--|--|\n| 1 | 2 |\n\n```\nblock\n```"
+    },
+    {
+      "summary": "Ếệẫặộ ถั้ง ภาษาไทยไม่มีช่องว่างระหว่างคำดังนั้นการตัดบรรทัดต้องใช้พจนานุกรม ผู้ใช้อาจเขียนยาวมากโดยไม่เว้นวรรคเลย",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "tall",
+      "label": "Tiếng Việt ệẫặ ฿ไทย"
+    },
+    {
+      "summary": "e",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "e1",
+      "label": "E"
+    },
+    {
+      "summary": "f",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "id": "e2",
+      "label": "F"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r1",
+      "from": "long-nospace",
+      "to": "long-words",
+      "kind": "calls",
+      "label": "approvedActionVersionWithoutSpacesapprovedActionVersionWitho",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "explanation": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The"
+    },
+    {
+      "id": "r2",
+      "from": "long-words",
+      "to": "a",
+      "kind": "sends-data-to",
+      "label": "Label with many words using the full sixty characters here",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r3",
+      "from": "a",
+      "to": "b",
+      "kind": "stores-in",
+      "label": "x",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r4",
+      "from": "jp-1",
+      "to": "jp-2",
+      "kind": "triggers",
+      "label": "承認済みアクションのバージョンと再試行回数を渡す",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r5",
+      "from": "ar-1",
+      "to": "ar-2",
+      "kind": "depends-on",
+      "label": "رمز الوصول المعتمد للعملية",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r6",
+      "from": "emoji-1",
+      "to": "emoji-2",
+      "kind": "unknown",
+      "label": "🔥 → 🔥",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r7",
+      "from": "minimal",
+      "to": "markup",
+      "kind": "reads-from",
+      "label": "reads",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p0",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p1",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p2",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p3",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p4",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p5",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p6",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p7",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p8",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          },
+          {
+            "label": "RefLabelNoSpacesRefLabelNoSpacesRefLabelNoSpacesRefLabelNoSp",
+            "path": "/very/long/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/path/segment/p9",
+            "note": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r8",
+      "from": "e1",
+      "to": "e2",
+      "kind": "calls",
+      "label": "e1 to e2",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r9",
+      "from": "e2",
+      "to": "e1",
+      "kind": "calls",
+      "label": "e2 back to e1",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "i1",
+      "kind": "question",
+      "text": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The serv"
+    },
+    {
+      "id": "i2",
+      "kind": "assumption",
+      "text": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenphttps://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+      "about": "long-nospace"
+    },
+    {
+      "id": "i3",
+      "kind": "unknown",
+      "text": "x",
+      "about": "r1"
+    },
+    {
+      "id": "i4",
+      "kind": "question",
+      "text": "これは日本語の質問ですか？",
+      "about": "jp-1"
+    },
+    {
+      "id": "i5",
+      "kind": "question",
+      "text": "هل هذا سؤال؟ نعم 🙂",
+      "about": "ar-1"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s1",
+      "title": "Scenario title with a really long name Scenario title with a really long name Scenario title with a really long name Sce",
+      "summary": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, th",
+      "steps": [
+        {
+          "caption": "The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The service validates every request against the policy, then forwards it. The serv",
+          "highlight": [
+            "long-nospace",
+            "r1",
+            "long-words"
+          ]
+        },
+        {
+          "caption": "x",
+          "highlight": []
+        },
+        {
+          "caption": "日本語のステップ。",
+          "highlight": [
+            "jp-1",
+            "r4",
+            "jp-2"
+          ]
+        },
+        {
+          "caption": "https://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenphttps://example.com/verylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenpathsegmentverylongunbrokenp",
+          "highlight": [
+            "a"
+          ]
+        }
+      ]
+    }
+  ]
+}
