@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { memo, type CSSProperties } from 'react'
+import { memo, useState, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
 import type { ManualEdgeData } from './buildGraph'
@@ -10,12 +10,13 @@ import styles from './RelationshipEdge.module.css'
 export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualEdgeData>>) {
   const { id, data, selected, markerEnd, interactionWidth, source, target } = props
   const dispatch = useAppDispatch()
+  const [hover, setHover] = useState(false)
   if (!data) return null
   const ends = `${source} ${target}`
   const emphasized = selected || data.active
   return (
     <>
-      <g className={styles.line} data-faded={data.faded || undefined} data-ends={ends} data-edge={id}>
+      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-faded={data.faded || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}
@@ -39,8 +40,10 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           data-active={data.active || undefined}
           data-faded={data.faded || undefined}
           data-moving={data.moving || undefined}
+          data-hidden={data.labelHidden || undefined}
+          data-hover={hover || undefined}
           data-depth={data.depth || undefined}
-          style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
+          style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, ...(data.labelHidden ? {} : { '--label-width': `${data.labelWidth}px` }) } as CSSProperties}
           title={data.hasLabel ? data.text : undefined}
           onClick={() => dispatch({ type: 'select', selection: { type: 'link', id: data.linkId } })}
         >

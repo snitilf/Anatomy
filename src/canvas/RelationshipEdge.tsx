@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { CircleHelp } from 'lucide-react'
-import { memo, type CSSProperties } from 'react'
+import { memo, useState, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
@@ -10,6 +10,7 @@ import styles from './RelationshipEdge.module.css'
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
   const { id, data, selected, markerEnd, interactionWidth, source, target } = props
   const dispatch = useAppDispatch()
+  const [hover, setHover] = useState(false)
   if (!data) return null
   const unknown = data.kind === 'unknown'
   const text = unknown ? `Meaning unknown: ${data.label}` : data.label
@@ -27,7 +28,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           aria-hidden="true"
         />
       )}
-      <g className={styles.line} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends} data-edge={id}>
+      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}
@@ -53,10 +54,12 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-dimmed={data.dimmed || undefined}
           data-faded={data.faded || undefined}
           data-moving={data.moving || undefined}
+          data-hidden={data.labelHidden || undefined}
+          data-hover={hover || undefined}
           data-depth={data.depth || undefined}
           data-kind={data.kind}
           data-edited={data.edited || undefined}
-          style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, '--label-width': `${data.labelWidth}px` } as CSSProperties}
+          style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, ...(data.labelHidden ? {} : { '--label-width': `${data.labelWidth}px` }) } as CSSProperties}
           title={text}
           onClick={() => dispatch({ type: 'select', selection: { type: 'relationship', id: data.relationshipId } })}
         >
