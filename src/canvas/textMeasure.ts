@@ -56,10 +56,45 @@ function canvas(): typeof context {
   return context
 }
 
+const listeners = new Set<() => void>()
+const loading = new Set<string>()
+let notifying = false
+
+/** Calls `listener` after the font has loaded for text that was measured with the fallback, so the map can be built again. */
+export function onTextMeasured(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => void listeners.delete(listener)
+}
+
+/** Asks for the font faces the text needs. Once they are in, every listener is told once, however many strings waited. */
+function load(text: string, style: TextStyle): void {
+  const key = `${style}\u0000${text}`
+  if (loading.has(key)) return
+  loading.add(key)
+  void document.fonts.load(FONTS[style], text).then(
+    () => {
+      loading.delete(key)
+      if (notifying) return
+      notifying = true
+      queueMicrotask(() => {
+        notifying = false
+        for (const l of listeners) l()
+      })
+    },
+    () => void loading.delete(key),
+  )
+}
+
 /** The width the browser gives the whole string in the loaded interface font, or `undefined` while it cannot say. */
 function measured(text: string, style: TextStyle): number | undefined {
   const ctx = canvas()
-  if (!ctx || typeof document === 'undefined' || !document.fonts?.check(FONTS[style])) return undefined
+  if (!ctx || typeof document === 'undefined' || !document.fonts) return undefined
+  // Ready for this text, not just for the font: a face for another script may not have come in yet. A width taken
+  // before that is wrong, so it is not kept.
+  if (!document.fonts.check(FONTS[style], text)) {
+    load(text, style)
+    return undefined
+  }
   const key = `${style}\u0000${text}`
   let width = cache.get(key)
   if (width === undefined) {

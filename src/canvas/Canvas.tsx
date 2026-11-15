@@ -38,6 +38,7 @@ import { ProposalNode, StickyNode, TextNode } from '../whiteboard/nodes'
 import { STICKY_MAX, STICKY_MIN, STICKY_SIZE } from '../whiteboard/sizes'
 import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
+import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
@@ -212,6 +213,12 @@ export function Canvas() {
         : fullView(view.board, stored, user, rects, view.geometry)
     setView(shown)
   }
+  // Text measured before its font faces loaded was sized with the fallback. When they are in, the map is built again, once.
+  useEffect(
+    () =>
+      onTextMeasured(() => setView((v) => (v && v.held === undefined ? fullView(v.board, v.base, v) : v))),
+    [],
+  )
   const viewRef = useRef(shown)
   const hold = useRef<Hold | undefined>(undefined)
   const keyMoves = useRef(new Set<string>())
