@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { charWidth, textWidth } from './textMeasure'
 
 describe('textWidth', () => {
@@ -18,5 +18,23 @@ describe('textWidth', () => {
   it('counts wide scripts and emoji as a full em', () => {
     expect(charWidth('日', 'label')).toBe(11)
     expect(charWidth('😀', 'title')).toBe(12)
+  })
+
+  it('measures the whole string with the canvas when the browser has one and the font is loaded', () => {
+    const calls: string[] = []
+    class Fake {
+      getContext() {
+        return { font: '', measureText: (t: string) => (calls.push(t), { width: t.length * 10 }) }
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', Fake)
+    Object.defineProperty(document, 'fonts', { value: { check: () => true }, configurable: true })
+    vi.resetModules()
+    return import('./textMeasure').then((m) => {
+      expect(m.textWidth('WWéé', 'label')).toBeCloseTo(40 * 1.03)
+      expect(m.textWidth('WWéé', 'label')).toBeCloseTo(40 * 1.03)
+      expect(calls).toEqual(['WWéé'])
+      vi.unstubAllGlobals()
+    })
   })
 })
