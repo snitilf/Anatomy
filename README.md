@@ -35,7 +35,8 @@ The dev and preview servers listen on the loopback interface only.
 
 ## Continuous integration and releases
 
-Each pull request runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests including performance tests.
+Each pull request runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests.
+The frame-time gate is enforced locally before merge with `npx playwright test e2e/performance.spec.ts --workers=1` and reported without enforcement on hosted CI because runner resources can distort frame timing.
 To cut a release, run `npm version <patch|minor>` and then `git push --follow-tags`.
 A tag starting with `v` triggers the release workflow, which attaches a zip containing the app and local run instructions to the GitHub Release.
 
