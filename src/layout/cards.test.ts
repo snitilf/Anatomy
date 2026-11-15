@@ -150,7 +150,6 @@ describe('placeCards', () => {
   it('places cards without a position clear of the cards the board placed, on every board', () => {
     for (const b of allBoards()) {
       const partial = clone(b)
-      // Half the cards keep a board position, so both kinds meet.
       partial.components = partial.components.map((c, i) => (i % 2 === 0 ? { ...c, position: { x: (i % 4) * 300, y: Math.floor(i / 4) * 200 } } : (({ position: _p, ...rest }) => rest)(c)))
       const r = placeCards(partial, none)
       expect(overlapping(Object.values(r))).toBe(0)
@@ -173,7 +172,6 @@ describe('placeCards', () => {
     for (const b of allBoards().map(withoutPositions)) {
       const [first, second] = b.components
       const before = placeCards(b, none)
-      // The first card is dropped right on top of the second one, and grown.
       const r = placeCards(b, { positions: { [first!.id]: { x: before[second!.id]!.x + 20, y: before[second!.id]!.y + 10 } }, sizes: { [first!.id]: { width: 320, height: 200 } } })
       for (const c of b.components) if (c.id !== first!.id) expect(overlaps(r[c.id]!, r[first!.id]!), c.id).toBe(false)
     }
