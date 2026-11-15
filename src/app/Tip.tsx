@@ -26,9 +26,10 @@ export function Tip({
   const [open, setOpen] = useState(false)
   const quietUntil = useRef(0)
   const held = useRef(holdWhile)
+  // While the popup is open the tooltip is shut.
+  if (holdWhile && open) setOpen(false)
   useLayoutEffect(() => {
     if (held.current && !holdWhile) quietUntil.current = performance.now() + FOCUS_RETURN_MS
-    if (holdWhile) setOpen(false)
     held.current = holdWhile
   }, [holdWhile])
   return (
