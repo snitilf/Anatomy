@@ -84,6 +84,7 @@ export function Editor({
             <input
               ref={first}
               className={styles.label}
+              name="part-name"
               aria-label="Name"
               placeholder="Name"
               value={label}
@@ -96,12 +97,13 @@ export function Editor({
                 }
               }}
             />
-            <textarea className={styles.summary} aria-label="Summary" placeholder="Summary" value={summary} maxLength={LAYER_LIMITS.partSummary} onChange={(e) => setSummary(e.target.value)} />
+            <textarea className={styles.summary} name="part-summary" aria-label="Summary" placeholder="Summary" value={summary} maxLength={LAYER_LIMITS.partSummary} onChange={(e) => setSummary(e.target.value)} />
           </div>
         ) : (
           <textarea
             ref={first}
             className={editing.kind === 'text' ? styles.text : styles.sticky}
+            name="mark-text"
             aria-label={editing.kind === 'text' ? 'Text' : 'Sticky note'}
             placeholder={editing.kind === 'text' ? 'Text' : undefined}
             value={text}

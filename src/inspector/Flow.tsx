@@ -99,6 +99,7 @@ function AddLink({ partId, board }: { partId: string; board: Board }) {
         </span>
         <input
           className={styles.input}
+          name="link-label"
           aria-label="Label"
           placeholder="Label"
           value={label}

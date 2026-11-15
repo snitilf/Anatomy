@@ -182,6 +182,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
             <div className={styles.editor}>
               <textarea
                 className={styles.textarea}
+                name="note-edit"
                 aria-label={`Edit ${kind.toLowerCase()}`}
                 value={draft}
                 maxLength={LAYER_LIMITS.noteText}
@@ -309,6 +310,7 @@ export function Composer({ target }: { target: Target }) {
       <textarea
         ref={field}
         className={styles.textarea}
+        name="note-text"
         aria-label={kind === 'note' ? 'Add a note' : 'Add a question'}
         placeholder={kind === 'note' ? 'Add a note' : 'Add a question'}
         value={text}
