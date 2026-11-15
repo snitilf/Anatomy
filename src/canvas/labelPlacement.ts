@@ -58,7 +58,10 @@ export function wrap(text: string): { lines: number; width: number } | undefined
     best = Math.min(best, Math.max(acc, rest))
   }
   const width = Math.ceil(best) + PAD_X * 2 + 2
-  return width <= MAX_WIDTH ? { lines: 2, width } : undefined
+  if (width <= MAX_WIDTH) return { lines: 2, width }
+  // A single word, or words no two lines hold, can still be one line when the widest pill takes it.
+  const one = Math.ceil(whole) + PAD_X * 2 + 2
+  return one <= MAX_WIDTH ? { lines: 1, width: one } : undefined
 }
 
 type Run = readonly [Point, Point]
