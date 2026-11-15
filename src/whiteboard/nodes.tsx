@@ -46,7 +46,7 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
         <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
       ))}
       <div className={cards.card} data-yours="" data-selected={selected || undefined}>
-        <h3 className={cards.label}>{data.label}</h3>
+        <div className={cards.label}>{data.label}</div>
         {data.summary && (
           <p className={cards.summary} style={{ WebkitLineClamp: data.summaryLines }}>
             {data.summary}

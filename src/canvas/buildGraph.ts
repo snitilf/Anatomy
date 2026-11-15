@@ -546,7 +546,8 @@ export function assembleGraph(
         ...(p.id === user.editing ? { className: 'editing' } : p.id === held ? { className: 'held' } : pushed?.has(p.id) ? { className: 'pushed' } : {}),
         connectable: true,
         deletable: false,
-        ariaLabel: `New part: ${p.label}${p.summary ? `. ${p.summary}` : ''}`,
+        ariaLabel: p.label,
+        domAttributes: { 'aria-description': p.summary } as NonNullable<Node['domAttributes']>,
       } satisfies Node<ProposalData>),
     ]
   })
