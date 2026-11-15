@@ -1,4 +1,5 @@
 import anatomyRaw from '../examples/anatomy.board.json?raw'
+import shortenerRaw from '../examples/external/url-shortener.board.json?raw'
 import nordetRaw from '../examples/nordet.board.json?raw'
 
 export interface Example {
@@ -23,6 +24,13 @@ export const EXAMPLES: readonly Example[] = [
     description: 'How this app turns a board file into a map.',
     fileName: 'anatomy.board.json',
     raw: anatomyRaw,
+  },
+  {
+    id: 'url-shortener',
+    title: 'URL shortener',
+    description: 'How a short link is created and how a visitor opens it.',
+    fileName: 'url-shortener.board.json',
+    raw: shortenerRaw,
   },
 ]
 
