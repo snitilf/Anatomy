@@ -17,6 +17,9 @@ export function Notices() {
             <h2 className={styles.title} id="open-error-title">
               <span className={styles.file}>{openErrors.fileName}</span> was not opened
             </h2>
+            <span className={styles.count}>
+              {openErrors.errors.length} {openErrors.errors.length === 1 ? 'problem' : 'problems'}
+            </span>
             <button type="button" className={clsx(buttons.button, buttons.quiet)} onClick={() => dispatch({ type: 'dismissErrors' })}>
               Dismiss
             </button>

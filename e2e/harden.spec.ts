@@ -88,3 +88,18 @@ test('a long note is held to six lines until Show more', async ({ page }) => {
   await expect(panel.locator('p[data-clamped]')).toHaveCount(0)
   await expect(panel.getByRole('button', { name: 'Show less' })).toBeVisible()
 })
+
+test('with many problems the error panel keeps its count and Dismiss in view while the list scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByLabel('Board file').setInputFiles('e2e/fixtures/many-errors.board.json')
+  const panel = page.getByRole('alert')
+  await expect(panel.getByText(/^\d+ problems$/)).toBeVisible()
+  await panel.evaluate((el) => (el.scrollTop = el.scrollHeight))
+  await expect(panel.getByRole('button', { name: 'Dismiss' })).toBeInViewport()
+  const head = (await panel.getByRole('heading').boundingBox())!
+  const box = (await panel.boundingBox())!
+  expect(head.y).toBeGreaterThanOrEqual(box.y)
+  await panel.getByRole('button', { name: 'Dismiss' }).click()
+  await expect(panel).toBeHidden()
+})
