@@ -15,6 +15,17 @@ describe('the flow block', () => {
     expect(rows.in.at(-1)).not.toHaveProperty('select')
   })
 
+  it('drops a plain input or output that a connection on the same side already names', () => {
+    const board = exampleBoard()
+    const incoming = board.relationships.find((r) => r.to === 'approval')!
+    const approval = board.components.find((c) => c.id === 'approval')!
+    approval.inputs = [` ${incoming.label.toUpperCase()} `, 'something only listed']
+    const rows = flowRows(board, emptyLayer(board.id), 'approval')
+    const whats = rows.in.map((r) => r.what)
+    expect(whats.filter((w) => w.trim().toLowerCase() === incoming.label.toLowerCase())).toHaveLength(1)
+    expect(whats).toContain('something only listed')
+  })
+
   it('shows the user links as theirs, and a moved end with the part it left', () => {
     const board = exampleBoard()
     const out = board.relationships.find((r) => r.from === 'approval')!
