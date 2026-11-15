@@ -59,7 +59,7 @@ export function flowRows(board: Board, layer: Pick<Layer, 'reconnects' | 'links'
   }
   const component = board.components.find((c) => c.id === partId)
   // A plain input or output that a connection already names is the same thing said twice, so only the connection shows.
-  const covered = (side: Side, text: string) => rows[side].some((row) => row.select && same(row.what, text))
+  const covered = (side: Side, text: string) => rows[side].some((row) => row.select && same(row.what, text)) || (layer?.links ?? []).some((link) => (side === 'in' ? link.to : link.from) === partId && same(link.label, text))
   component?.inputs.forEach((text, i) => covered('in', text) || rows.in.push({ key: `input-${i}`, what: text }))
   component?.outputs.forEach((text, i) => covered('out', text) || rows.out.push({ key: `output-${i}`, what: text }))
   for (const link of layer?.links ?? []) {
