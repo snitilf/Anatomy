@@ -37,4 +37,32 @@ describe('textWidth', () => {
       vi.unstubAllGlobals()
     })
   })
+
+  it('does not keep a width taken before the font faces for the text are loaded, and tells listeners once they are', async () => {
+    let ready = false
+    let resolve = () => {}
+    const load = vi.fn(() => new Promise<void>((r) => (resolve = () => ((ready = true), r()))))
+    class Fake {
+      getContext() {
+        return { font: '', measureText: (t: string) => ({ width: t.length * 10 }) }
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', Fake)
+    Object.defineProperty(document, 'fonts', { value: { check: () => ready, load }, configurable: true })
+    vi.resetModules()
+    const m = await import('./textMeasure')
+    const told = vi.fn()
+    m.onTextMeasured(told)
+    const text = '\u03bb'.repeat(20)
+    const fallback = m.textWidth(text, 'label')
+    m.textWidth(text, 'label')
+    m.textWidth('\u03bb'.repeat(21), 'label')
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(fallback).toBeCloseTo(20 * 11 * 0.6 * 1.03)
+    resolve()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(told).toHaveBeenCalledTimes(1)
+    expect(m.textWidth(text, 'label')).toBeCloseTo(200 * 1.03)
+    vi.unstubAllGlobals()
+  })
 })
