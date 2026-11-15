@@ -73,7 +73,7 @@ function Yours({ board, layer }: { board: Board; layer: Layer }) {
                 <Icon className={styles.yoursIcon} size={14} strokeWidth={1.5} aria-hidden="true" />
                 <span className={styles.rowMain}>
                   <span className={styles.rowTitle}>{row.text}</span>
-                  <span className={styles.rowMeta}>{row.where}</span>
+                  {row.where !== row.text && <span className={styles.rowMeta}>{row.where}</span>}
                 </span>
                 {row.sent && (
                   <Tip label="Sent">
