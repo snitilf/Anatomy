@@ -17,7 +17,7 @@ export interface Drop {
   part?: string | undefined
 }
 
-export const otherEnd = (end: 'from' | 'to'): 'from' | 'to' => (end === 'from' ? 'to' : 'from')
+const otherEnd = (end: 'from' | 'to'): 'from' | 'to' => (end === 'from' ? 'to' : 'from')
 
 /** The parts a connection joins now, with the user's moved ends applied. */
 export function connectionEnds(board: Board, layer: Layer, id: string): { from: string; to: string } | undefined {
