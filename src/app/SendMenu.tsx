@@ -87,6 +87,7 @@ export function SendMenu() {
   const { origin, folder, writeFolderFile } = useWorkspace()
   const [outcome, setOutcome] = useState<Outcome | undefined>()
   const [busy, setBusy] = useState(false)
+  const suppressReturnFocus = useRef(false)
   const sendRef = useRef<HTMLButtonElement>(null)
   const sentRef = useRef<HTMLParagraphElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -110,8 +111,15 @@ export function SendMenu() {
 
   if (!board || !layer || !view.visible) return null
 
+  function consumeReturnFocus() {
+    const suppressed = suppressReturnFocus.current
+    suppressReturnFocus.current = false
+    return suppressed
+  }
+
   function setOpen(next: boolean) {
     if (next) setOutcome(undefined)
+    else suppressReturnFocus.current = true
     uiApi.setSendOpen(next)
   }
 
@@ -252,7 +260,7 @@ export function SendMenu() {
   const label = count > 0 ? `${view.label}, ${count} new` : view.label
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Tip label={view.label} keys={view.shortcut} holdWhile={open}>
+      <Tip label={view.label} keys={view.shortcut} holdWhile={open} consumeReturnFocus={consumeReturnFocus}>
         <Popover.Trigger
           render={
             <button

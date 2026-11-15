@@ -210,6 +210,18 @@ test('the Send to agent tooltip does not come back when the popover closes', asy
   await expect(page.getByRole('tooltip')).toHaveCount(0)
 })
 
+test('the Send tooltip appears on deliberate keyboard refocus after closing', async ({ page }) => {
+  await open(page, 'src/examples/example.board.json')
+  const trigger = page.getByRole('button', { name: /^Send to agent/ })
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(trigger).toBeFocused()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(trigger).toBeFocused()
+  await expect(page.getByRole('tooltip').filter({ hasText: 'Send to agent' })).toBeVisible()
+})
+
 test('a whiteboard tool shows its name and key on hover and on keyboard focus', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, 'src/examples/example.board.json')
