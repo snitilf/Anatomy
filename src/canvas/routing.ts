@@ -231,7 +231,7 @@ const EDGE_TRACKS = 8
  * on the same track are always a whole track apart: a gap holds as many lines as it has tracks, and none can sit
  * between two.
  */
-export const onTrack = (v: number): number => Math.round(v / TRACK) * TRACK
+const onTrack = (v: number): number => Math.round(v / TRACK) * TRACK
 
 /** Lines worth running along: a track just off every card, and the tracks down the middle of each gap between cards. */
 function laneValues(edges: { lo: number; hi: number }[]): number[] {
@@ -688,7 +688,7 @@ export function rounded(points: readonly Point[]): Route {
 const horizontal = (s: Side) => s === 'left' || s === 'right'
 
 /** Where the straight run out of a card ends: at least `STUB` out, on a track, so the first turn lies on one. */
-export function stubEnd(at: Point, side: Side): Point {
+function stubEnd(at: Point, side: Side): Point {
   if (side === 'right') return { x: Math.ceil((at.x + STUB) / TRACK) * TRACK, y: at.y }
   if (side === 'left') return { x: Math.floor((at.x - STUB) / TRACK) * TRACK, y: at.y }
   if (side === 'bottom') return { x: at.x, y: Math.ceil((at.y + STUB) / TRACK) * TRACK }
@@ -699,7 +699,7 @@ export function stubEnd(at: Point, side: Side): Point {
  * The corners of a line with at most two bends, worked out without a search. Facing sides get a run out, a run across
  * on a track of the gap between them, and a run in. `offset` moves that middle run to another track.
  */
-export function elbow(plan: Plan, offset = 0): Point[] {
+function elbow(plan: Plan, offset = 0): Point[] {
   const { a, b } = plan
   const na = NORMAL[plan.out]
   const nb = NORMAL[plan.in]
