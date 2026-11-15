@@ -33,6 +33,12 @@ The app runs in the browser on your own machine and does not send board data to 
 
 The dev and preview servers listen on the loopback interface only.
 
+## Continuous integration and releases
+
+Each pull request runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests including performance tests.
+To cut a release, run `npm version <patch|minor>` and then `git push --follow-tags`.
+A tag starting with `v` triggers the release workflow, which attaches a zip containing the app and local run instructions to the GitHub Release.
+
 ## Stack
 
 All versions are exact.
