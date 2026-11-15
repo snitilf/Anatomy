@@ -133,7 +133,7 @@ function PartsAndConnections({ board }: { board: Board }) {
   return (
     <>
       {board.components.length > FILTER_FROM && (
-        <input className={styles.filter} type="search" placeholder="Filter" aria-label="Filter parts and connections" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input className={styles.filter} type="search" name="filter" placeholder="Filter" aria-label="Filter parts and connections" value={query} onChange={(e) => setQuery(e.target.value)} />
       )}
       {parts.length + lines.length === 0 && <p className={styles.empty}>No parts or connections match "{query.trim()}".</p>}
       {parts.length > 0 && (

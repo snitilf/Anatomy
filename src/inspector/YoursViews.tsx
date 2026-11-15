@@ -48,6 +48,7 @@ function SavedField({
   }
   const common = {
     'aria-label': label,
+    name: label.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     placeholder: placeholder ?? label,
     value: draft,
     maxLength: max,
