@@ -176,7 +176,7 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   // Delete removes it for good, and the toast's Undo brings it back.
   await archived.getByRole('button', { name: 'Delete' }).click()
   await expect(archived).toHaveCount(0)
-  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await page.locator('[data-sonner-toast]').getByRole('button', { name: 'Undo', exact: true }).click()
   await review.locator('summary', { hasText: 'Archive' }).click()
   await expect(archived).toHaveCount(1)
   await archived.getByRole('button', { name: 'Restore' }).click()
