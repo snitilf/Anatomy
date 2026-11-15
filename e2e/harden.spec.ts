@@ -73,3 +73,18 @@ test('a sticky with more words than fit fades at the bottom, and a short one doe
   await expect(page.locator('[data-clipped]')).toHaveCount(1)
   await expect(page.locator('[data-clipped]')).toHaveText(/^word word/)
 })
+
+test('a long note is held to six lines until Show more', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, 'src/examples/example.board.json')
+  await page.locator('.react-flow__node-card').first().click({ force: true })
+  const panel = page.getByTestId('inspector')
+  await panel.getByRole('textbox', { name: /note/i }).fill(Array.from({ length: 60 }, (_, i) => `Line ${i} of a very long note.`).join('\n'))
+  await panel.getByRole('button', { name: 'Add', exact: true }).click()
+  const text = panel.locator('p[data-clamped]')
+  await expect(text).toBeVisible()
+  expect((await text.boundingBox())!.height).toBeLessThan(6 * 22)
+  await panel.getByRole('button', { name: 'Show more' }).click()
+  await expect(panel.locator('p[data-clamped]')).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: 'Show less' })).toBeVisible()
+})
