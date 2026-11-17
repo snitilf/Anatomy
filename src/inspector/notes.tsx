@@ -293,8 +293,6 @@ export function Composer({ target }: { target: Target }) {
   const [kind, setKind] = useState<Note['kind']>('note')
   const [text, setText] = useState('')
   const [focused, setFocused] = useState(false)
-  /** A pointer is pressing in the form, so the submit is not from the keyboard. */
-  const pressed = useRef(false)
   const asked = useUi((u) => u.composer)
   const seen = useRef(asked)
   useEffect(() => {
@@ -328,14 +326,6 @@ export function Composer({ target }: { target: Target }) {
         data-active={active || undefined}
         onSubmit={(event) => {
           event.preventDefault()
-          submit(!pressed.current)
-        }}
-        onPointerDown={() => {
-          pressed.current = true
-        }}
-        onPointerUp={() => {
-          // The click that follows still sees the press. It is over by the next turn.
-          window.setTimeout(() => (pressed.current = false))
         }}
         onFocus={() => setFocused(true)}
         onBlur={(event) => {
@@ -384,7 +374,14 @@ export function Composer({ target }: { target: Target }) {
                 {text.length} of {LAYER_LIMITS.noteText}
               </span>
             )}
-            <button type="submit" className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)} disabled={empty} aria-keyshortcuts="Control+Enter Meta+Enter">
+            <button type="submit" className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)} disabled={empty}
+              aria-keyshortcuts="Control+Enter Meta+Enter"
+              // A click with no pointer, from Enter or Space on the button, keeps the field in use.
+              onClick={(event) => {
+                event.preventDefault()
+                submit(event.detail === 0)
+              }}
+            >
               Add
               <kbd className={styles.addHint} aria-hidden="true">
                 {formatKeys('Mod+Enter')}
