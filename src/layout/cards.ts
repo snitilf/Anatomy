@@ -112,6 +112,17 @@ export function groupAreas(board: Board, rects: Readonly<Record<string, Rect>>):
   return out
 }
 
+/** The last layered layout. It depends only on the board and the natural sizes, and a resize or a drop leaves both alone. */
+let lastLayout: { board: Board; key: string; auto: Record<string, Point> } | undefined
+
+function layered(board: Board, natural: ReadonlyMap<string, Size>, unplaced: ReadonlySet<string>): Record<string, Point> {
+  const key = board.components.map((c) => `${c.id}:${natural.get(c.id)?.width}x${natural.get(c.id)?.height}`).join('|')
+  if (lastLayout && lastLayout.board === board && lastLayout.key === key) return lastLayout.auto
+  const auto = autoLayout(board, (id) => natural.get(id) ?? { ...CARD_SIZE }, unplaced)
+  lastLayout = { board, key, auto }
+  return auto
+}
+
 /** Room between cards the board placed and the block of cards the layout adds next to them. */
 const BESIDE_GAP = 160
 
@@ -144,7 +155,7 @@ export function placeCards(board: Board, placement: CardPlacement): Record<strin
     // It uses the size each card has before the user resizes it, so a resize never moves the other cards around.
     const unplaced = new Set(board.components.filter((c) => !c.position).map((c) => c.id))
     const natural = new Map(board.components.map((c) => [c.id, contentSize(c)]))
-    auto = autoLayout(board, (id) => natural.get(id) ?? { ...CARD_SIZE }, unplaced)
+    auto = layered(board, natural, unplaced)
     if (boardPlaced.length > 0) {
       const right = Math.max(...boardPlaced.map((r) => r.x + r.width))
       const top = Math.min(...boardPlaced.map((r) => r.y))
