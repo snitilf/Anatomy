@@ -148,7 +148,11 @@ for (const board of [BOARDS[2]!, BOARDS[3]!, { name: 'sixty parts', file: 'e2e/f
     console.log(`[resize release] ${board.name}: frames=${frames.length} max=${max.toFixed(1)}ms`)
     expect(max, `longest frame after the release on ${board.name}`).toBeLessThan(RELEASE_MS)
     // The lines of the card come back once they are solved.
-    await expect(page.locator('.react-flow__edge').first()).toBeVisible()
+    // A line of the resized card itself is drawn again, not left hidden.
+    const parsed = JSON.parse(await readFile(board.file, 'utf8')) as { relationships: { id: string; from: string; to: string }[] }
+    const own = parsed.relationships.find((r) => r.from === spot.id || r.to === spot.id)
+    expect(own, `a relationship of ${spot.id}`).toBeDefined()
+    await expect(page.locator(`.react-flow__edge[data-id="${own!.id}"]`)).toBeVisible()
   })
 }
 
