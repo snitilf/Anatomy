@@ -362,4 +362,31 @@ test('the card under the pointer keeps its lines and the rest step back', async 
   // Each ink keeps its own share, between half and three quarters, so every kind stays traceable.
   expect(Math.max(...opacities.rest)).toBeLessThanOrEqual(0.72)
   expect(Math.min(...opacities.rest)).toBeGreaterThanOrEqual(0.5)
+
+  // Labels of the other lines step back by color only: they keep their cutout and stay at 3 to 1 or more.
+  const pills = await page.evaluate((id) => {
+    const parse = (value: string) => {
+      const n = (value.match(/[\d.e-]+/g) ?? []).map(Number)
+      const [r = 0, g = 0, b = 0, a = 1] = value.startsWith('color(') ? [...n.slice(0, 3).map((v) => v * 255), n[3] ?? 1] : n
+      return { r, g, b, a }
+    }
+    const lum = (c: { r: number; g: number; b: number }) => {
+      const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+      return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b)
+    }
+    return [...document.querySelectorAll<HTMLElement>('[data-label][data-ends]')]
+      .filter((el) => !(el.dataset.ends ?? '').split(' ').includes(id) && getComputedStyle(el).visibility !== 'hidden' && el.dataset.hidden === undefined)
+      .map((el) => {
+        const text = parse(getComputedStyle(el).color)
+        const cut = parse(getComputedStyle(el.querySelector('span') ?? el).backgroundColor)
+        const mixed = { r: text.r * text.a + cut.r * (1 - text.a), g: text.g * text.a + cut.g * (1 - text.a), b: text.b * text.a + cut.b * (1 - text.a) }
+        const [hi, lo] = [lum(mixed), lum(cut)].sort((a, b) => b - a) as [number, number]
+        return { opacity: Number(getComputedStyle(el).opacity), ratio: (hi + 0.05) / (lo + 0.05) }
+      })
+  }, spot.id)
+  expect(pills.length).toBeGreaterThan(0)
+  for (const pill of pills) {
+    expect(pill.opacity).toBe(1)
+    expect(pill.ratio).toBeGreaterThanOrEqual(3)
+  }
 })
