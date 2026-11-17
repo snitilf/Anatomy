@@ -94,6 +94,8 @@ export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0 || height === 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
+    // A drag with a pointer leaves no focus ring. The keyboard brings it back.
+    event.currentTarget.dataset.pointer = ''
     drag.current = { y: event.clientY, start: offsets(height)[stop], samples: [{ y: event.clientY, t: event.timeStamp }] }
   }
   const onPointerMove = (event: PointerEvent<HTMLElement>) => {
@@ -143,6 +145,8 @@ export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onKeyDown={(event) => delete event.currentTarget.dataset.pointer}
+      onBlur={(event) => delete event.currentTarget.dataset.pointer}
       onClick={(event) => {
         // A pointer press is handled on release. Enter and Space arrive as a click with no pointer.
         if (event.detail !== 0) return
