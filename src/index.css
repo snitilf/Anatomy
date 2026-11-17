@@ -6,6 +6,17 @@
   box-sizing: border-box;
 }
 
+/* How far up from the bottom a toast sits: over the tool bar, or over the sheet's header on a phone. A walkthrough raises it. */
+:root {
+  --toast-floor: 72px;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --toast-floor: 80px;
+  }
+}
+
 html,
 body,
 #root {
