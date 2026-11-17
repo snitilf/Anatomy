@@ -20,7 +20,7 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background: var(--yours-tint);
+  background: color-mix(in srgb, var(--yours-tint) 55%, transparent);
 }
 
 .icon {
@@ -243,7 +243,7 @@
   /* A row's own padding, its icon, and the gap to its words. */
   --indent: 30px;
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: 0 calc(var(--space-2) * -1);
   padding: 0;
   list-style: none;
@@ -375,7 +375,7 @@
   opacity: 0.75;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 760px) {
   .hint,
   .addHint {
     display: none;

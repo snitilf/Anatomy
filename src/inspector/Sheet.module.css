@@ -2,8 +2,11 @@
   position: absolute;
   z-index: 20;
   inset: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  /* Set by the sheet: how far it sits down. What is below the screen is padding. */
+  padding-bottom: var(--hidden, 0px);
   background: var(--panel);
   border-top: 1px solid var(--border);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -67,7 +70,7 @@
 
 /* The content scrolls only when the sheet is up. */
 .sheet[data-stop='0'] > :not(.header) {
-  visibility: hidden;
+  display: none;
 }
 
 /* Above the lowest stop the view's own heading names it, so the header is only the handle. */
