@@ -159,3 +159,23 @@ test('the composer stays in reach, C focuses it, and a closed group is remembere
   const stored = await page.evaluate(() => (JSON.parse(localStorage.getItem('anatomy:sidebar') ?? '{}') as { groups?: Record<string, boolean> }).groups)
   expect(stored).toEqual({ walkthroughs: false })
 })
+
+test('Add from the keyboard keeps focus in the field, even after a press that ended outside the form', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, NORDET)
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
+  const field = inspector.getByRole('textbox', { name: 'Add a note' })
+  await field.fill('Kept in the field')
+  const box = (await field.boundingBox())!
+  await page.mouse.move(box.x + 20, box.y + 10)
+  await page.mouse.down()
+  await page.mouse.move(300, 300, { steps: 4 })
+  await page.mouse.up()
+  await field.focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Tab')
+  await expect(inspector.getByRole('button', { name: 'Add', exact: true })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(inspector.getByRole('region', { name: 'Notes' }).getByText('Kept in the field')).toBeVisible()
+  await expect(field).toBeFocused()
+})
