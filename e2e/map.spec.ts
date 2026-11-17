@@ -72,9 +72,20 @@ test.describe('zoom bar', () => {
     await page.keyboard.press('ControlOrMeta+Equal')
     await page.keyboard.press('ControlOrMeta+Digit0')
     await expect.poll(() => zoomOf(page)).toBeCloseTo(1, 3)
-    // The board opens at the start of the flow when the whole of it would be too small to read, and Fit shows all of it.
+    // The board opens at the start of the flow (0.8) when the whole of it would be too small to read.
+    expect(start).toBeCloseTo(0.8, 2)
+    // Zoom out as far as it goes: that is where the whole board fits, and Fit goes there too.
+    for (let i = 0; i < 8; i++) {
+      await page.keyboard.press('ControlOrMeta+Minus')
+      await page.waitForTimeout(250)
+    }
+    const whole = await zoomOf(page)
+    expect(whole).toBeLessThan(start - 0.05)
+    expect(whole).toBeGreaterThan(0.5)
+    await page.keyboard.press('ControlOrMeta+Equal')
+    await page.waitForTimeout(250)
     await page.keyboard.press('Shift+Digit1')
-    await expect.poll(() => zoomOf(page)).toBeLessThanOrEqual(start + 0.005)
+    await expect.poll(() => zoomOf(page)).toBeCloseTo(whole, 3)
   })
 
   for (const file of [SHORTENER, FORTY]) {
@@ -348,5 +359,7 @@ test('the card under the pointer keeps its lines and the rest step back', async 
   }, spot.id)
   expect(opacities.own.length).toBeGreaterThan(0)
   expect(Math.min(...opacities.own)).toBe(1)
-  expect(Math.max(...opacities.rest)).toBeLessThan(0.7)
+  // Each ink keeps its own share, between half and three quarters, so every kind stays traceable.
+  expect(Math.max(...opacities.rest)).toBeLessThanOrEqual(0.72)
+  expect(Math.min(...opacities.rest)).toBeGreaterThanOrEqual(0.5)
 })
