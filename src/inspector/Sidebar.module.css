@@ -216,3 +216,8 @@
 .content {
   padding: var(--space-4) var(--space-4) var(--space-6);
 }
+
+/* While the composer is open it covers the foot of the list. The list gets room to scroll above it. */
+.scroll:has(+ div > form[data-active]) > .content {
+  padding-bottom: calc(var(--space-6) + 72px);
+}

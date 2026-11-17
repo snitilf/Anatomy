@@ -307,8 +307,17 @@
   box-shadow: var(--ring);
 }
 
+/* The slot keeps the room of the one-row composer. The composer grows upward over the list, so using it never moves what is under the pointer. */
+.composerSlot {
+  position: relative;
+  flex: none;
+  height: calc(37px + max(var(--space-3), env(safe-area-inset-bottom)));
+}
+
 /* The pinned composer: one 36px row at rest, three lines and a footer while it is in use. */
 .composer {
+  position: absolute;
+  inset: auto 0 0;
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
