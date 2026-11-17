@@ -58,12 +58,10 @@ export type Event =
 
 export const IDLE: Interaction = { work: { mode: 'idle' }, held: undefined, stale: false }
 
-export type Phase = 'idle' | 'holding' | 'settling' | 'solving'
-
 /** A card is in hand and not cancelled: the work underneath waits. */
 export const isHolding = (s: Interaction): boolean => s.held !== undefined && !s.held.cancelled
 
-export const phaseOf = (s: Interaction): Phase => (isHolding(s) ? 'holding' : s.work.mode)
+export const phaseOf = (s: Interaction): 'idle' | 'holding' | 'settling' | 'solving' => (isHolding(s) ? 'holding' : s.work.mode)
 
 /** Something is in motion or unsaved. */
 export const isBusy = (s: Interaction): boolean => isHolding(s) || s.work.mode !== 'idle'
@@ -94,9 +92,9 @@ export function next(s: Interaction, event: Event): Interaction {
     case 'release': {
       const { held } = s
       if (!held) return s
-      const dropped = !held.cancelled && held.kind === 'drag' && s.work.mode === 'settling' && s.work.moves.includes(held.id)
-      const work: Work = dropped && s.work.mode === 'settling' ? { ...s.work, moves: s.work.moves.filter((id) => id !== held.id) } : s.work
-      return { ...s, work, held: undefined }
+      const { work } = s
+      const forgotten = !held.cancelled && held.kind === 'drag' && work.mode === 'settling' && work.moves.includes(held.id)
+      return { ...s, work: forgotten ? { ...work, moves: work.moves.filter((id) => id !== held.id) } : work, held: undefined }
     }
     case 'settleDue':
       return s.work.mode === 'settling' && !isHolding(s) ? { ...s, work: { mode: 'solving' } } : s

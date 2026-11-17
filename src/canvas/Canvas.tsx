@@ -203,6 +203,8 @@ interface Hold {
   kind: 'drag' | 'resize'
   /** The map as it was when the card was picked up. Escape puts it back. */
   before: View
+  /** Set synchronously by Escape. The pointer may still be down, and its moves are ignored until the release. */
+  cancelled: boolean
   /** The edges and middles of the other cards in view, for the alignment guides. */
   targets: SnapTargets
   /** Snapping reach in board pixels at the zoom of the moment. */
@@ -499,6 +501,8 @@ export function Canvas() {
       const current = viewRef.current
       if (!current || current.interaction.work.mode !== 'settling' || isHolding(current.interaction)) return
       saveKeyMoves(current)
+      // The ref moves on at once, so a second timer or the unmount save never sees these moves again.
+      viewRef.current = { ...current, interaction: next(current.interaction, { type: 'settleDue' }) }
       setView((v) => (v ? { ...v, interaction: next(v.interaction, { type: 'settleDue' }) } : v))
     }
     return waiting === 0 ? afterPaint(due) : cancelTimer(window.setTimeout(due, waiting))
@@ -509,7 +513,11 @@ export function Canvas() {
     const current = viewRef.current
     if (!solving || !current) return
     return solveInSlices(current, reusesLines(current.interaction), (geometry) =>
-      setView((v) => (v && v.rects === current.rects && v.geometry === current.geometry ? { ...v, geometry, interaction: next(v.interaction, { type: 'solved' }) } : v)),
+      setView((v) => {
+        if (!v || v.rects !== current.rects || v.geometry !== current.geometry) return v
+        const interaction = next(v.interaction, { type: 'solved' })
+        return interaction === v.interaction ? v : { ...v, geometry, interaction }
+      }),
     )
   }, [interaction, solving])
 
@@ -520,7 +528,8 @@ export function Canvas() {
       if (event.key !== 'Escape' || !held) return
       event.stopPropagation()
       event.preventDefault()
-      if (viewRef.current?.interaction.held?.cancelled) return
+      if (held.cancelled) return
+      held.cancelled = true
       guides.current?.hide()
       setView((v) => (v && isHolding(v.interaction) ? { ...v, rects: held.before.rects, geometry: held.before.geometry, interaction: next(v.interaction, { type: 'escape' }) } : v))
     }
@@ -552,7 +561,7 @@ export function Canvas() {
     const viewport = flow?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
     const size = camera.size()
     const others = Object.entries(before.rects).flatMap(([other, r]) => (other === id ? [] : [r]))
-    hold.current = { id, kind, before, targets: new SnapTargets(inView(others, viewport, size)), reach: SNAP_PX / viewport.zoom }
+    hold.current = { id, kind, before, cancelled: false, targets: new SnapTargets(inView(others, viewport, size)), reach: SNAP_PX / viewport.zoom }
     if (hoverStyle.current) hoverStyle.current.textContent = ''
     setView((v) => (v ? { ...v, interaction: next(v.interaction, { type: 'pickUp', id, kind }) } : v))
   }, [camera])
@@ -562,9 +571,8 @@ export function Canvas() {
     const held = hold.current
     hold.current = undefined
     guides.current?.hide()
-    const cancelled = viewRef.current?.interaction.held?.cancelled
     setView((v) => (v ? { ...v, interaction: next(v.interaction, { type: 'release' }) } : v))
-    return held && !cancelled ? held : undefined
+    return held && !held.cancelled ? held : undefined
   }, [])
 
   /** Text and sticky notes move and resize on their own: no lines, no guides, no push. One change on drop. */
@@ -610,7 +618,7 @@ export function Canvas() {
           if (held?.kind === 'resize') continue
           if (held) {
             // A drag saves once, when the card is dropped. The card lines up with its neighbors on the way.
-            if (viewRef.current?.interaction.held?.cancelled) continue
+            if (held.cancelled) continue
             const rect = viewRef.current?.rects[id]
             if (!rect) continue
             const lined = held.targets.move({ ...rect, ...position }, held.reach)
@@ -628,7 +636,7 @@ export function Canvas() {
             if (!hold.current) pickUp(id, 'resize')
             const held = hold.current
             const rect = viewRef.current?.rects[id]
-            if (!held || viewRef.current?.interaction.held?.cancelled || held.id !== id || !rect) continue
+            if (!held || held.cancelled || held.id !== id || !rect) continue
             const raw = {
               width: clampTo(change.dimensions.width, CARD_MIN.width, CARD_MAX.width),
               height: clampTo(change.dimensions.height, CARD_MIN.height, CARD_MAX.height),
