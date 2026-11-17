@@ -52,10 +52,32 @@ export function WalkthroughBar() {
     return was
   }, [])
 
+  // Toasts sit above the bar while it plays: it tells the toaster how much of the bottom it holds.
+  const bar = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = bar.current
+    if (!running || !el) return
+    const root = document.documentElement
+    const place = () => {
+      const edge = el.parentElement?.getBoundingClientRect().bottom ?? window.innerHeight
+      const gap = window.innerHeight - edge + (parseFloat(getComputedStyle(el).bottom) || 0)
+      root.style.setProperty('--toast-floor', `${Math.ceil(gap + el.offsetHeight + 8)}px`)
+    }
+    place()
+    const watch = new ResizeObserver(place)
+    watch.observe(el)
+    window.addEventListener('resize', place)
+    return () => {
+      watch.disconnect()
+      window.removeEventListener('resize', place)
+      root.style.removeProperty('--toast-floor')
+    }
+  }, [running, step?.index])
+
   if (!step) return null
   const total = step.scenario.steps.length
   return (
-    <section className={styles.bar} aria-label={`Walkthrough: ${step.scenario.title}`} data-instant={instant || undefined}>
+    <section ref={bar} className={styles.bar} aria-label={`Walkthrough: ${step.scenario.title}`} data-instant={instant || undefined}>
       <p className={styles.caption} aria-live="polite" aria-atomic="true">
         {step.caption}
       </p>
