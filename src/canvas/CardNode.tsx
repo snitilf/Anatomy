@@ -1,14 +1,18 @@
-import { Handle, NodeResizeControl, Position, type Node, type NodeProps } from '@xyflow/react'
+import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProps } from '@xyflow/react'
 import { GraduationCap, StickyNote } from 'lucide-react'
 import { memo } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
+/** Below this zoom a summary would draw under about 8px on screen, so the card shows its title alone. */
+export const SUMMARY_ZOOM = 0.65
+
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
 
 export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Node<CardData>>) {
   const mine = data.noteCount
+  const small = useStore((s) => s.transform[2] < SUMMARY_ZOOM)
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
     <>
@@ -25,9 +29,11 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
       >
         <div className={styles.label}>{data.label}</div>
-        <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }}>
-          {data.summary}
-        </p>
+        {!small && (
+          <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }}>
+            {data.summary}
+          </p>
+        )}
         {(data.hasLesson || mine > 0) && (
           <div className={styles.foot}>
             {data.hasLesson && (

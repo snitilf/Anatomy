@@ -7,7 +7,7 @@ export const MAX_ZOOM = 2
 /** Fitting never enlarges a small board past its real size. */
 export const FIT_MAX_ZOOM = 1
 /** Opening a board fits it when that leaves text readable. Below this, it shows the start of the flow at `START_ZOOM`. */
-export const READABLE_ZOOM = 0.6
+export const READABLE_ZOOM = 0.75
 export const START_ZOOM = 0.8
 /** A board with more parts than this opens fitted whole, however small that makes the text. */
 export const OPEN_FIT_PARTS = 15

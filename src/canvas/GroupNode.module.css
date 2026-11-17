@@ -3,7 +3,7 @@
   height: 100%;
   border-radius: var(--radius-lg);
   /* A light wash, so two areas that overlap show a darker patch where they do. */
-  background: color-mix(in srgb, var(--fg) 2.5%, transparent);
+  background: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
   pointer-events: none;
 }
 
@@ -15,8 +15,8 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
+  font-size: calc(var(--text-sm) * var(--label-scale, 1));
+  line-height: calc(var(--leading-sm) * var(--label-scale, 1));
   font-weight: var(--weight-medium);
   color: var(--fg-3);
 }
