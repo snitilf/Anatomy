@@ -56,3 +56,39 @@ test('a label with no free place shows in full when its line is hovered, and not
   await page.locator(`g[data-edge="${id}"] .react-flow__edge-interaction`).hover({ force: true })
   await expect(hidden).toHaveCSS('opacity', '1')
 })
+
+for (const board of BOARDS) {
+  test(`labels grown to stay readable at low zoom cover no card and no other label: ${board.name}`, async ({ page }) => {
+    // A small window, so that every board can zoom out to about 0.65.
+    await page.setViewportSize({ width: 1100, height: 640 })
+    await open(page, board.file)
+    await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
+    await page.keyboard.press('Shift+Digit0')
+    await page.keyboard.press('ControlOrMeta+Minus')
+    await page.keyboard.press('ControlOrMeta+Minus')
+    const zoom = () => page.evaluate(() => Number(/scale\(([\d.]+)\)/.exec(document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')?.[1]))
+    // Between 0.6, where labels go quiet, and 0.85, where they are not grown, so they are grown and still shown.
+    await expect.poll(async () => { const z = await zoom(); return z > 0.55 && z < 0.85 }).toBe(true)
+    await page.waitForTimeout(300)
+    const found = await page.evaluate(() => {
+      const box = (el: Element) => {
+        const r = el.getBoundingClientRect()
+        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+      }
+      const labels = [...document.querySelectorAll<HTMLElement>('[data-label]')]
+        .filter((el) => getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).opacity !== '0')
+        .map((el) => ({ id: el.dataset.edge ?? '', box: box(el.querySelector('span') ?? el), scale: Number.parseFloat(getComputedStyle(el).getPropertyValue('--label-scale')) || 1, size: Number.parseFloat(getComputedStyle(el).fontSize) }))
+      const cards = [...document.querySelectorAll('.react-flow__node-card')].map((el) => ({ id: (el as HTMLElement).dataset.id ?? '', box: box(el) }))
+      return { labels, cards }
+    })
+    const over = (a: { left: number; top: number; right: number; bottom: number }, b: typeof a) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
+    for (const label of found.labels) {
+      expect(label.scale, `${label.id} scale`).toBeLessThanOrEqual(1.3)
+      for (const card of found.cards) expect(over(label.box, card.box), `${label.id} covers ${card.id}`).toBe(false)
+    }
+    for (let i = 0; i < found.labels.length; i++)
+      for (let j = i + 1; j < found.labels.length; j++) expect(over(found.labels[i]!.box, found.labels[j]!.box), `${found.labels[i]!.id} covers ${found.labels[j]!.id}`).toBe(false)
+    // The crowded boards keep their labels quiet at this zoom, so only the others have any to check.
+    if (board.name !== 'forty parts') expect(found.labels.length).toBeGreaterThan(0)
+  })
+}
