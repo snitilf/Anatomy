@@ -219,6 +219,17 @@ describe('your notes', () => {
     await waitFor(() => expect(panel().getByRole('textbox', { name: 'Add a note' })).toHaveFocus())
   })
 
+  it('keeps focus in the field when Add is pressed from the keyboard', async () => {
+    render(<App />)
+    await loadNordet()
+    const box = panel().getByRole('textbox', { name: 'Add a note' })
+    fireEvent.focus(box)
+    fireEvent.change(box, { target: { value: 'From the keyboard' } })
+    fireEvent.click(panel().getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(within(panel().getByRole('region', { name: 'Notes' })).getByText('From the keyboard')).toBeInTheDocument())
+    expect(box).toHaveFocus()
+  })
+
   it('shows a counter only near the limit', async () => {
     render(<App />)
     await loadNordet()
