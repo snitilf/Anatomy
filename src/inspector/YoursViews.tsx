@@ -248,7 +248,6 @@ export function MarkView({ board, mark }: { board: Board; mark: Mark }) {
         {sentence.length > 0 && <p className={styles.route}>{sentence.flatMap((s, i) => (i > 0 ? [' ', s] : [s]))}</p>}
       </div>
       <Props>
-        <Prop label="Type">{word}</Prop>
         <Status item={mark} />
       </Props>
       {(mark.kind === 'text' || mark.kind === 'sticky') && (
