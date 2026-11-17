@@ -8,9 +8,9 @@ let sheet: HTMLStyleElement | undefined
 export function stepBackRules(keep: string): string {
   // Lines fade by opacity. A label keeps its cutout, so only its words step back, by color, the same way as a faded label.
   return `[data-hover-scope] g[data-ends]:not(${keep}) { opacity: var(--fade-light); }
-[data-hover-scope] [data-label][data-ends]:not(${keep}):not(:hover) { color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent); }
-[data-hover-scope] [data-label][data-ends][data-edited]:not(${keep}):not(:hover),
-[data-hover-scope] [data-label][data-ends][data-mine]:not(${keep}):not(:hover) { color: color-mix(in srgb, var(--yours-text) var(--faded-label), transparent); }
+[data-hover-scope] [data-label][data-ends]:not(${keep}):not(:hover):not([data-selected]) { color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent); }
+[data-hover-scope] [data-label][data-ends][data-edited]:not(${keep}):not(:hover):not([data-selected]),
+[data-hover-scope] [data-label][data-ends][data-mine]:not(${keep}):not(:hover):not([data-selected]) { color: color-mix(in srgb, var(--yours-text) var(--faded-label), transparent); }
 [data-hover-scope] g[data-tone='strong'][data-ends]:not(${keep}) { opacity: var(--fade-strong); }
 [data-hover-scope] g[data-tone='faint'][data-ends]:not(${keep}) { opacity: var(--fade-faint); }`
 }
