@@ -43,7 +43,7 @@ describe('App', () => {
     await loadExample()
     const panel = within(screen.getByTestId('inspector'))
     expect(panel.getByRole('heading', { name: example.title })).toBeInTheDocument()
-    expect(panel.getByText('Revision 1')).toBeInTheDocument()
+    expect(panel.getByText('Revision').closest('div')).toHaveTextContent('Revision1')
     expect(panel.getByText('Covers')).toBeInTheDocument()
     expect(panel.getByText('Does not cover')).toBeInTheDocument()
     // The crumb names where the board came from.
@@ -59,7 +59,7 @@ describe('App', () => {
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
     expect(within(panel).getByText(SOURCE_LABEL[part.source.kind])).toBeInTheDocument()
     expect(within(panel).getByText('Explanation')).toBeInTheDocument()
-    expect(within(panel).getByRole('region', { name: 'Flow' })).toBeInTheDocument()
+    expect(within(panel).getByRole('region', { name: 'Outgoing' })).toBeInTheDocument()
   })
 
   it('shows no source line for the default, the agent explanation', async () => {
@@ -77,6 +77,8 @@ describe('App', () => {
     await loadExample()
     const rel = example.relationships.find((r) => r.kind === 'sends-data-to')!
     const panel = screen.getByTestId('inspector')
+    // Connections start closed. Opening the group lists them.
+    fireEvent.click(within(panel).getByRole('button', { name: /^Connections/ }))
     fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${rel.label}`) })[0]!)
     expect(within(panel).getByRole('heading', { name: rel.label })).toBeInTheDocument()
     expect(within(panel).getByText(/sends data to/)).toBeInTheDocument()

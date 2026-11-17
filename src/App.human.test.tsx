@@ -79,7 +79,7 @@ function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: n
   const positions = (stored as { layer: { positions: Record<string, { x: number; y: number }> } }).layer.positions
   return positions[id]!
 }
-const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Flow' })
+const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Outgoing' })
 const panel = () => within(screen.getByTestId('inspector'))
 
 /** Picks a row in an open picker or the command menu. */
@@ -113,6 +113,8 @@ function selectPart(id: string) {
 }
 
 function addNote(text: string, kind: 'Note' | 'Question' = 'Note') {
+  // The kind and Add show once the field has focus.
+  fireEvent.focus(panel().getByRole('textbox', { name: /^Add a (note|question)$/ }))
   const group = panel().getByRole('radiogroup', { name: 'Kind' })
   fireEvent.click(within(group).getByRole('radio', { name: kind }))
   fireEvent.change(panel().getByRole('textbox', { name: `Add a ${kind.toLowerCase()}` }), { target: { value: text } })
@@ -175,6 +177,7 @@ describe('your notes', () => {
     render(<App />)
     await loadExample()
     const rel = example.relationships.find((r) => r.id === 'approval-to-send')!
+    fireEvent.click(panel().getByRole('button', { name: /^Connections/ }))
     fireEvent.click(panel().getAllByRole('button', { name: new RegExp(rel.label) })[0]!)
     addNote('What if the version is stale?', 'Question')
     const item = panel().getByText('What if the version is stale?').closest('li')!
@@ -399,9 +402,9 @@ describe('a new version of a board you already have', () => {
     await pick(/^Rule check/)
     expect(panel().queryByRole('region', { name: 'Needs relinking' })).not.toBeInTheDocument()
 
-    fireEvent.click(within(changes).getByRole('button', { name: 'Done' }))
-    // With nothing left to review, the tab row goes and the details show.
-    await waitFor(() => expect(panel().queryByRole('tab', { name: /Review/ })).not.toBeInTheDocument())
+    fireEvent.click(panel().getByRole('button', { name: 'Mark reviewed' }))
+    // With nothing left to review, the Review tab goes quiet and the details show.
+    await waitFor(() => expect(panel().getByRole('tab', { name: /Review/ })).toHaveAttribute('aria-disabled', 'true'))
 
     selectPart('rule-check')
     expect(panel().getByText('Where does the date come from?')).toBeInTheDocument()
@@ -415,7 +418,7 @@ describe('a new version of a board you already have', () => {
     fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
     await openFile(first.container, modifiedExample(), 'example.json')
     fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
-    fireEvent.click(await panel().findByRole('button', { name: 'Done' }))
+    fireEvent.click(await panel().findByRole('button', { name: 'Mark reviewed' }))
     const relinking = panel().getByRole('region', { name: 'Needs relinking' })
     expect(within(relinking).getByText('Orphan')).toBeInTheDocument()
   })

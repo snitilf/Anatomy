@@ -46,6 +46,10 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
+.header[data-pointer]:focus-visible {
+  box-shadow: none;
+}
+
 .handle {
   width: 36px;
   height: 4px;
