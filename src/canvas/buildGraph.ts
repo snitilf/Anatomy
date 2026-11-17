@@ -180,10 +180,16 @@ export interface Geometry {
 /** How many times lines that found no room are routed again first. */
 const RIP_UP_PASSES = 2
 
-/** A pill box, as it is drawn. */
-function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>): Rect {
-  const height = pillHeight(shape.labelLines)
-  return { x: shape.labelX - shape.labelWidth / 2, y: shape.labelY - height / 2, width: shape.labelWidth, height }
+/**
+ * The room a pill keeps from other labels. A label grows on screen at low zoom (up to this share, see `LABEL_MAX_SCALE`),
+ * and placement does not know the zoom, so each label holds back the room it may grow into.
+ */
+export const LABEL_GROWTH = 1.3
+
+function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>, room = 1): Rect {
+  const height = pillHeight(shape.labelLines) * room
+  const width = shape.labelWidth * room
+  return { x: shape.labelX - width / 2, y: shape.labelY - height / 2, width, height }
 }
 
 const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
@@ -342,7 +348,7 @@ export function computeGeometry(
       return
     }
     const label = placeLabel(r.route.runs ?? [], r.text, { ...context, own: i })
-    if (!label.hidden) taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
+    if (!label.hidden) taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }, LABEL_GROWTH))
     edges.set(r.id, shapeOf(r, label))
   }
   // A label stays where it was while no moved card's text, no group name, no label placed before it, and no line is under it.
@@ -356,7 +362,7 @@ export function computeGeometry(
       edges.set(r.id, old)
       return
     }
-    taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }))
+    taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }, LABEL_GROWTH))
     edges.set(r.id, shapeOf(r, label))
   })
   routes.forEach((r, i) => {
@@ -370,7 +376,7 @@ export function computeGeometry(
       const box = pillBox(old)
       const clear = !movedAreas.some((a) => overlaps(box, a)) && labelFits(box, { ...context, own: i }, undefined)
       if (clear) {
-        taken.push(box)
+        taken.push(pillBox(old, LABEL_GROWTH))
         edges.set(r.id, old)
         return
       }

@@ -1,6 +1,7 @@
 import { useReactFlow, useStore, useStoreApi, type Viewport } from '@xyflow/react'
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import { LABEL_GROWTH } from './buildGraph'
 import { useAppStore } from '../app/store'
 import type { Rect } from '../layout/geometry'
 import { clampViewport, viewportFor, zoomAround, type Limits } from './camera'
@@ -227,10 +228,11 @@ const TINY_ZOOM = 0.6
 /** Below this zoom, line and group labels are drawn larger on the board, so they stay about this size on screen. */
 const LABEL_FLOOR_PX = 9
 const LABEL_BASE_PX = 11
+const LABEL_MAX_SCALE = LABEL_GROWTH
 
 /**
  * Sets `--label-scale` on the map: how much line and group labels grow so they never render under 9px on screen.
- * It is 1 from about 0.82 zoom up, so zooming in the normal range writes nothing.
+ * It is 1 from about 0.82 zoom up, so zooming in the normal range writes nothing, and it never passes 1.3.
  */
 export function LabelScale() {
   const map = useStore((s) => s.domNode)
@@ -238,8 +240,9 @@ export function LabelScale() {
   useLayoutEffect(() => {
     if (!map) return
     const apply = (zoom: number) => {
-      const scale = Math.min(3, Math.max(1, LABEL_FLOOR_PX / (LABEL_BASE_PX * zoom)))
-      map.style.setProperty('--label-scale', (Math.round(scale * 20) / 20).toString())
+      // Steps of a tenth, rounded up so the floor holds. Placement of labels is worked out at 1x, so the growth stays small.
+      const scale = Math.min(LABEL_MAX_SCALE, Math.max(1, Math.ceil((LABEL_FLOOR_PX / (LABEL_BASE_PX * zoom)) * 10 - 1e-6) / 10))
+      map.style.setProperty('--label-scale', scale.toFixed(1))
     }
     apply(store.getState().transform[2])
     return store.subscribe((state, prev) => {
