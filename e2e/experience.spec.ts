@@ -138,3 +138,24 @@ test('a part opens on its summary and flow, with the citations closed', async ({
   await expect(inspector.getByRole('region', { name: 'Outgoing' })).toBeVisible()
   await expect(inspector.getByRole('button', { name: /^Cited, not checked/ })).toHaveAttribute('aria-expanded', 'false')
 })
+
+test('the composer stays in reach, C focuses it, and a closed group is remembered', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 700 })
+  await open(page, NORDET)
+  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
+  const field = inspector.getByRole('textbox', { name: 'Add a note' })
+  // On the overview, with the list scrolled to the top, the field is already on screen.
+  await expect(field).toBeInViewport()
+  await expect(field).not.toBeFocused()
+  await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } })
+  await page.keyboard.press('c')
+  await expect(field).toBeFocused()
+  await page.keyboard.press('Escape')
+
+  const walkthroughs = inspector.getByRole('button', { name: /^Walkthroughs/ })
+  await expect(walkthroughs).toHaveAttribute('aria-expanded', 'true')
+  await walkthroughs.click()
+  await expect(walkthroughs).toHaveAttribute('aria-expanded', 'false')
+  const stored = await page.evaluate(() => (JSON.parse(localStorage.getItem('anatomy:sidebar') ?? '{}') as { groups?: Record<string, boolean> }).groups)
+  expect(stored).toEqual({ walkthroughs: false })
+})
