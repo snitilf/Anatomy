@@ -82,7 +82,7 @@ export function TopBar() {
         )}
         <div className={styles.group}>
           <Tip label="Command menu" keys={menu.shortcut}>
-            <button type="button" className={clsx(buttons.button, buttons.quiet, styles.control, styles.search)} onClick={menu.run} aria-label="Command menu" aria-haspopup="dialog">
+            <button type="button" className={clsx(buttons.button, buttons.quiet, styles.control, styles.search)} onClick={menu.run} aria-label="Search" aria-description="Opens the command menu" aria-keyshortcuts={menu.command.keys?.[0]?.replace('Mod', 'Meta')} aria-haspopup="dialog">
               <Search size={16} strokeWidth={1.5} aria-hidden="true" />
               <span className={styles.searchWord}>Search</span>
               <kbd className={styles.keys}>{menu.shortcut}</kbd>
