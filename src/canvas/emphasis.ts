@@ -15,7 +15,7 @@ export function emphasizeConnection(id: string | undefined) {
     return
   }
   const edge = CSS.escape(id)
-  sheet.textContent = `[data-hover-scope] [data-ends]:not([data-edge="${edge}"]) { opacity: 0.22; }
+  sheet.textContent = `[data-hover-scope] [data-ends]:not([data-edge="${edge}"]) { opacity: 0.4; }
 [data-hover-scope] [data-edge="${edge}"] { opacity: 1; --line-ink: var(--fg-2); }
 [data-hover-scope][data-labels="quiet"] [data-label][data-edge="${edge}"] { visibility: visible !important; }`
 }

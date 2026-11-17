@@ -670,7 +670,7 @@ export function Canvas() {
     const style = hoverStyle.current
     if (!style || hold.current || node.id.startsWith('group:')) return
     const id = CSS.escape(node.id)
-    style.textContent = `[data-hover-scope] [data-ends]:not([data-ends~="${id}"]) { opacity: 0.22; }
+    style.textContent = `[data-hover-scope] [data-ends]:not([data-ends~="${id}"]) { opacity: 0.4; }
 [data-hover-scope] [data-ends~="${id}"] { opacity: 1; --line-ink: var(--fg-2); }
 [data-hover-scope][data-labels="quiet"] [data-label][data-ends~="${id}"] { visibility: visible !important; }`
   }, [])
