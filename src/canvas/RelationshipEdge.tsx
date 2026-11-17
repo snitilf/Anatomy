@@ -28,7 +28,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           aria-hidden="true"
         />
       )}
-      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends} data-edge={id}>
+      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-tone={style.tone} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}

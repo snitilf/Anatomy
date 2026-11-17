@@ -52,6 +52,7 @@ import { ManualEdge } from './ManualEdge'
 import { RelationshipEdge } from './RelationshipEdge'
 import { inView, SNAP_PX, SnapTargets } from './snap'
 import { SnapGuides, type GuideLines } from './SnapGuides'
+import { stepBackRules } from './emphasis'
 import { ZoomBar } from './ZoomBar'
 
 const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode, proposal: ProposalNode, 'mark-text': TextNode, 'mark-sticky': StickyNode }
@@ -670,7 +671,7 @@ export function Canvas() {
     const style = hoverStyle.current
     if (!style || hold.current || node.id.startsWith('group:')) return
     const id = CSS.escape(node.id)
-    style.textContent = `[data-hover-scope] [data-ends]:not([data-ends~="${id}"]) { opacity: 0.6; }
+    style.textContent = `${stepBackRules(`[data-ends~="${id}"]`)}
 [data-hover-scope] [data-ends~="${id}"] { opacity: 1; --line-ink: var(--fg-2); }
 [data-hover-scope][data-labels="quiet"] [data-label][data-ends~="${id}"] { visibility: visible !important; }`
   }, [])
