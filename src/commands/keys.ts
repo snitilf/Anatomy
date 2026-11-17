@@ -78,6 +78,11 @@ const NAMES: Record<string, string> = {
   Delete: '⌦',
 }
 
+/** The shortcut for `aria-keyshortcuts`: `Mod` becomes Meta on a Mac and Control elsewhere. */
+export function ariaShortcut(keys: Keys | undefined, mac = isMac): string | undefined {
+  return keys?.replace(/\bMod\b/, mac ? 'Meta' : 'Control')
+}
+
 /** The shortcut as it is printed: `⌘⇧Z` on a Mac, `Ctrl Shift Z` elsewhere. */
 export function formatKeys(keys: Keys, mac = isMac): string {
   const tokens = keys === '+' ? ['+'] : keys.split('+').map((t) => (t === '' ? '+' : t))
