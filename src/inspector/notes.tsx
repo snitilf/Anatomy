@@ -293,6 +293,8 @@ export function Composer({ target }: { target: Target }) {
   const [kind, setKind] = useState<Note['kind']>('note')
   const [text, setText] = useState('')
   const [focused, setFocused] = useState(false)
+  /** A pointer is pressing in the form, so the submit is not from the keyboard. */
+  const pressed = useRef(false)
   const asked = useUi((u) => u.composer)
   const seen = useRef(asked)
   useEffect(() => {
@@ -326,7 +328,14 @@ export function Composer({ target }: { target: Target }) {
         data-active={active || undefined}
         onSubmit={(event) => {
           event.preventDefault()
-          submit(false)
+          submit(!pressed.current)
+        }}
+        onPointerDown={() => {
+          pressed.current = true
+        }}
+        onPointerUp={() => {
+          // The click that follows still sees the press. It is over by the next turn.
+          window.setTimeout(() => (pressed.current = false))
         }}
         onFocus={() => setFocused(true)}
         onBlur={(event) => {
