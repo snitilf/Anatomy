@@ -9,7 +9,7 @@ import { COMMANDS, isEnabled } from './list'
 import type { Command, CommandContext, ShellActions } from './types'
 
 /** Focus in one of these keeps its own keys: Escape closes it, and letters type. */
-const OWN_KEYS = 'dialog, [role="dialog"], [role="menu"], [role="listbox"], [data-dismissible], [aria-expanded="true"]'
+const OWN_KEYS = 'dialog, [role="dialog"], [role="menu"], [role="listbox"], [data-dismissible], [aria-expanded="true"][aria-haspopup]'
 
 /**
  * Builds the context every command reads, and listens for every shortcut with one `keydown` listener.
