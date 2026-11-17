@@ -38,6 +38,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           data-edge={id}
           data-selected={selected || undefined}
           data-active={data.active || undefined}
+          data-mine=""
           data-faded={data.faded || undefined}
           data-moving={data.moving || undefined}
           data-hidden={data.labelHidden || undefined}
