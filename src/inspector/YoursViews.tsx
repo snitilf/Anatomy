@@ -1,19 +1,18 @@
-import clsx from 'clsx'
-import { ArrowRight, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Type, Unlink, type LucideIcon } from 'lucide-react'
+import { Check, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Trash2, Type, Unlink, type LucideIcon } from 'lucide-react'
 import { Fragment, useContext, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
 import { CameraSlotContext } from '../canvas/cameraContext'
 import { describeMarkFor } from '../feedback/build'
 import type { MissingRef, Pointed, Ref } from '../feedback/types'
 import { LAYER_LIMITS, type Link, type Mark, type Proposal } from '../layer/model'
-import { linkStatus } from '../layer/status'
+import { linkStatus, wasSent } from '../layer/status'
 import { deletedToast } from '../notes/undoToast'
-import { BackButton, Heading, PartLink } from './bits'
+import { DangerButton, Group, Heading, PartLink, PickerValue, Prop, Props } from './bits'
 import { FlowBlock } from './Flow'
 import { partName } from './names'
+import { answerFor } from './answers'
 import { ItemAnswer } from './notes'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
@@ -27,6 +26,8 @@ function SavedField({
   placeholder,
   max,
   multiline = false,
+  bare = false,
+  inline = false,
   onSave,
 }: {
   label: string
@@ -34,6 +35,10 @@ function SavedField({
   placeholder?: string
   max: number
   multiline?: boolean
+  /** The label is only for assistive technology, because a group or a row names the field. */
+  bare?: boolean
+  /** One line in a row's value column, with no label of its own. */
+  inline?: boolean
   onSave: (value: string) => void
 }) {
   const [draft, setDraft] = useState(value)
@@ -55,8 +60,8 @@ function SavedField({
     onBlur: save,
   }
   return (
-    <label className={styles.field}>
-      <span className={styles.label}>{label}</span>
+    <label className={inline ? styles.inline : styles.field}>
+      <span className={bare ? 'sr-only' : styles.label}>{label}</span>
       {multiline ? (
         <textarea
           {...common}
@@ -83,16 +88,40 @@ function SavedField({
 
 function DeleteButton({ label, onDelete }: { label: string; onDelete: () => void }) {
   return (
-    <div className={styles.actions}>
-      <button type="button" className={clsx(buttons.button, buttons.small)} onClick={onDelete}>
-        {label}
-      </button>
-    </div>
+    <DangerButton icon={Trash2} onClick={onDelete}>
+      {label}
+    </DangerButton>
   )
 }
 
+/** The agent's answer to the item, when it has one. */
 function Answer({ board, id }: { board: Board; id: string }) {
-  return <ItemAnswer board={board} id={id} />
+  const answer = useAppStore((s) => answerFor(s.layer, id))
+  if (!answer) return null
+  return (
+    <Group name="answer" title="Agent's answer">
+      <div className={styles.flush}>
+        <ItemAnswer board={board} id={id} />
+      </div>
+    </Group>
+  )
+}
+
+/** Whether the item went to the agent. */
+function Status({ item }: { item: { id: string } }) {
+  const sent = useAppStore((s) => (s.layer ? wasSent(s.layer, item) : false))
+  return (
+    <Prop label="Status">
+      {sent ? (
+        <>
+          <Check size={14} strokeWidth={1.5} aria-hidden="true" />
+          Sent
+        </>
+      ) : (
+        'Not sent'
+      )}
+    </Prop>
+  )
 }
 
 /** A link the user drew between two parts. */
@@ -101,40 +130,47 @@ export function LinkView({ board, link }: { board: Board; link: Link }) {
   const proposals = useAppStore((s) => s.layer?.proposals ?? [])
   const name = (id: string) => partName(board, id, proposals)
   const broken = linkStatus(board, { proposals }, link) === 'needs-relinking'
+  const missing = name(link.from) === undefined ? 'from' : 'to'
   const remove = () => {
     dispatch({ type: 'linkDeleted', id: link.id })
     deletedToast('Link deleted', dispatch)
   }
+  const end = (which: 'from' | 'to') => {
+    const label = which === 'from' ? 'From' : 'To'
+    const other = which === 'from' ? link.to : link.from
+    const shown = name(link[which]) ?? link[which]
+    return (
+      <Prop label={label}>
+        <Picker
+          label={label}
+          title={`${label}: ${shown}`}
+          className={styles.pickerValue}
+          trigger={<PickerValue>{shown}</PickerValue>}
+          items={partItems(board, proposals, other)}
+          onPick={(part) => dispatch({ type: 'linkEdited', id: link.id, change: { [which]: part } })}
+        />
+      </Prop>
+    )
+  }
   return (
     <div className={styles.view}>
       <div className={styles.head}>
-        <BackButton />
         <Heading icon={Link2}>{link.label || 'Link'}</Heading>
-        <p className={styles.meta}>Link</p>
       </div>
-      <p className={styles.route}>
-        <PartLink id={link.from} name={name(link.from)} />
-        <ArrowRight className={styles.inlineArrow} size={14} strokeWidth={1.5} aria-hidden="true" />
-        <span className="sr-only">to </span>
-        <PartLink id={link.to} name={name(link.to)} />
-      </p>
+      <Props>
+        <Prop label="Label">
+          <SavedField label="Label" bare inline value={link.label} max={LAYER_LIMITS.linkLabel} onSave={(label) => dispatch({ type: 'linkEdited', id: link.id, change: { label } })} />
+        </Prop>
+        {end('from')}
+        {end('to')}
+        <Status item={link} />
+      </Props>
       {broken && (
-        <div className={styles.section}>
-          <p className={styles.notice} data-tone="danger">
-            <Unlink size={14} strokeWidth={1.5} aria-hidden="true" />
-            {name(link.from) === undefined ? link.from : link.to} was removed.
-          </p>
-          <div className={styles.actions}>
-            <Picker
-              label="Attach to"
-              trigger="Attach to"
-              items={partItems(board, proposals, name(link.from) === undefined ? link.to : link.from)}
-              onPick={(part) => dispatch({ type: 'linkEdited', id: link.id, change: { [name(link.from) === undefined ? 'from' : 'to']: part } })}
-            />
-          </div>
-        </div>
+        <p className={styles.notice} data-tone="danger">
+          <Unlink size={14} strokeWidth={1.5} aria-hidden="true" />
+          {link[missing]} was removed.
+        </p>
       )}
-      <SavedField label="Label" value={link.label} max={LAYER_LIMITS.linkLabel} onSave={(label) => dispatch({ type: 'linkEdited', id: link.id, change: { label } })} />
       <Answer board={board} id={link.id} />
       <DeleteButton label="Delete" onDelete={remove} />
     </div>
@@ -202,25 +238,33 @@ export function MarkView({ board, mark }: { board: Board; mark: Mark }) {
   return (
     <div className={styles.view}>
       <div className={styles.head}>
-        <BackButton />
         <Heading icon={icon}>{word}</Heading>
+        {sentence.length > 0 && <p className={styles.route}>{sentence.flatMap((s, i) => (i > 0 ? [' ', s] : [s]))}</p>}
       </div>
-      {sentence.length > 0 && <p className={styles.route}>{sentence.flatMap((s, i) => (i > 0 ? [' ', s] : [s]))}</p>}
+      <Props>
+        <Prop label="Type">{word}</Prop>
+        <Status item={mark} />
+      </Props>
       {(mark.kind === 'text' || mark.kind === 'sticky') && (
-        <SavedField label="Text" value={mark.text} max={LAYER_LIMITS.markText} multiline onSave={(text) => (text || mark.kind === 'sticky' ? change({ text }) : undefined)} />
+        <Group name="mark-text" title="Text">
+          <SavedField label="Text" bare value={mark.text} max={LAYER_LIMITS.markText} multiline onSave={(text) => (text || mark.kind === 'sticky' ? change({ text }) : undefined)} />
+        </Group>
       )}
-      <SavedField
-        label="Note"
-        placeholder="What should the agent do with this?"
-        value={mark.note ?? ''}
-        max={LAYER_LIMITS.noteText}
-        multiline
-        onSave={(note) => {
-          const { note: _old, ...rest } = mark
-          dispatch({ type: 'markChanged', id: mark.id, mark: (note ? { ...rest, note } : rest) as Mark })
-        }}
-      />
-      {!told && <p className={styles.notice}>Not sent. Add a note, or draw it around a part.</p>}
+      <Group name="note" title="Note">
+        <SavedField
+          label="Note"
+          bare
+          placeholder="What should the agent do with this?"
+          value={mark.note ?? ''}
+          max={LAYER_LIMITS.noteText}
+          multiline
+          onSave={(note) => {
+            const { note: _old, ...rest } = mark
+            dispatch({ type: 'markChanged', id: mark.id, mark: (note ? { ...rest, note } : rest) as Mark })
+          }}
+        />
+        {!told && <p className={styles.notice}>Add a note, or draw it around a part.</p>}
+      </Group>
       <Answer board={board} id={mark.id} />
       <DeleteButton label="Delete" onDelete={remove} />
     </div>
@@ -237,12 +281,18 @@ export function ProposalView({ board, proposal }: { board: Board; proposal: Prop
   return (
     <div className={styles.view}>
       <div className={styles.head}>
-        <BackButton />
         <Heading icon={SquarePlus}>{proposal.label}</Heading>
-        <p className={styles.meta}>New part</p>
+        <p className={styles.lead}>New part</p>
       </div>
-      <SavedField label="Name" value={proposal.label} max={LAYER_LIMITS.partLabel} onSave={(label) => label && dispatch({ type: 'proposalChanged', id: proposal.id, change: { label } })} />
-      <SavedField label="Summary" value={proposal.summary} max={LAYER_LIMITS.partSummary} multiline onSave={(summary) => dispatch({ type: 'proposalChanged', id: proposal.id, change: { summary } })} />
+      <Props>
+        <Prop label="Name">
+          <SavedField label="Name" bare inline value={proposal.label} max={LAYER_LIMITS.partLabel} onSave={(label) => label && dispatch({ type: 'proposalChanged', id: proposal.id, change: { label } })} />
+        </Prop>
+        <Status item={proposal} />
+      </Props>
+      <Group name="summary" title="Summary">
+        <SavedField label="Summary" bare value={proposal.summary} max={LAYER_LIMITS.partSummary} multiline onSave={(summary) => dispatch({ type: 'proposalChanged', id: proposal.id, change: { summary } })} />
+      </Group>
       <FlowBlock partId={proposal.id} />
       <Answer board={board} id={proposal.id} />
       <DeleteButton label="Delete" onDelete={remove} />

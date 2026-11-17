@@ -1,9 +1,10 @@
-import { ArrowLeft, ChevronRight, type LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ITEM_LABEL, SOURCE_LABEL } from '../app/labels'
 import { SourceNote } from '../app/SourceNote'
 import type { BoardItem, Source } from '../board/schema'
 import { Markdown } from '../text/markdown'
+import { useGroup } from './hooks'
 import { usePanel } from './panelContext'
 import styles from './view.module.css'
 
@@ -24,43 +25,61 @@ export function Heading({ children, icon: Icon }: { children: ReactNode; icon?: 
   )
 }
 
-/** The way back to the board overview, at the top of every view but the overview. Escape does the same. */
-export function BackButton() {
-  const { choose } = usePanel()
+/** Label and value rows under the title. */
+export function Props({ children }: { children: ReactNode }) {
+  return <dl className={styles.props}>{children}</dl>
+}
+
+export function Prop({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
-      <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" />
-      Overview
-    </button>
+    <div className={styles.prop}>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
   )
 }
 
-export function Section({ title, count, children, label }: { title: string; count?: number | undefined; children: ReactNode; label?: string }) {
+/**
+ * A group of the panel: a 28px header with a chevron, a title and a count, and the content under it.
+ * `name` keys the remembered state. `forceOpen` shows the content whatever was chosen, for a filter that found something.
+ */
+export function Group({
+  name,
+  title,
+  count,
+  defaultOpen = true,
+  forceOpen = false,
+  label,
+  children,
+}: {
+  name: string
+  title: string
+  count?: number | undefined
+  defaultOpen?: boolean
+  forceOpen?: boolean
+  label?: string
+  children: ReactNode
+}) {
+  const [stored, toggle] = useGroup(name, defaultOpen)
+  const open = stored || forceOpen
   return (
-    <section className={styles.section} aria-label={label ?? title}>
-      <h3 className={styles.sectionHead}>
-        {title}
-        {count !== undefined && <span className={styles.count}>{count}</span>}
+    <section className={styles.group} aria-label={label ?? title}>
+      <h3 className={styles.groupHead}>
+        <button type="button" className={styles.groupToggle} aria-expanded={open} onClick={toggle}>
+          <ChevronRight className={styles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" />
+          {title}
+          {count !== undefined && <span className={styles.count}>{count}</span>}
+        </button>
       </h3>
-      {children}
+      {open && <div className={styles.groupBody}>{children}</div>}
     </section>
   )
 }
 
-/** A closed section. */
-export function Disclosure({ title, count, children }: { title: string; count?: number | undefined; children: ReactNode }) {
-  return (
-    <details className={styles.disclosure}>
-      <summary>
-        <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" />
-        {title}
-        {count !== undefined && <span className={styles.count}>{count}</span>}
-      </summary>
-      {children}
-    </details>
-  )
+/** A small heading inside a group. */
+export function SubHead({ children }: { children: ReactNode }) {
+  return <h4 className={styles.subHead}>{children}</h4>
 }
-
 
 /** A part's name as a button that selects it. A part that is gone is struck through. */
 export function PartLink({ id, name }: { id: string; name: string | undefined }) {
@@ -74,6 +93,16 @@ export function PartLink({ id, name }: { id: string; name: string | undefined })
   )
 }
 
+/** The value of a row that can change: the part's name and a chevron, as a button that opens a picker. */
+export function PickerValue({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <span className={styles.clip}>{children}</span>
+      <ChevronDown className={styles.pickerChevron} size={12} strokeWidth={1.5} aria-hidden="true" />
+    </>
+  )
+}
+
 /** Where a part or connection comes from, when it is not the agent's own explanation. */
 export function SourceLine({ source }: { source: Source }) {
   if (source.kind === 'agent-explanation') return null
@@ -83,7 +112,7 @@ export function SourceLine({ source }: { source: Source }) {
 export { SOURCE_LABEL }
 
 /** The explanation, open but held to a height, with a button that shows the rest. */
-export function Explanation({ source }: { source: string }) {
+export function Explanation({ source, extra }: { source: string; extra?: ReactNode }) {
   const body = useRef<HTMLDivElement>(null)
   const [long, setLong] = useState(false)
   const [open, setOpen] = useState(false)
@@ -92,18 +121,23 @@ export function Explanation({ source }: { source: string }) {
     if (el) setLong(el.scrollHeight > 176)
   }, [source])
   return (
-    <Section title="Explanation">
-      <div className={styles.explain} data-clipped={long && !open ? '' : undefined}>
-        <div ref={body}>
-          <Markdown source={source} className={styles.prose ?? ''} />
-        </div>
-      </div>
-      {long && (
-        <button type="button" className={styles.more} aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? 'Show less' : 'Show more'}
-        </button>
+    <Group name="explanation" title="Explanation">
+      {source !== '' && (
+        <>
+          <div className={styles.explain} data-clipped={long && !open ? '' : undefined}>
+            <div ref={body}>
+              <Markdown source={source} className={styles.prose ?? ''} />
+            </div>
+          </div>
+          {long && (
+            <button type="button" className={styles.more} aria-expanded={open} onClick={() => setOpen(!open)}>
+              {open ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </>
       )}
-    </Section>
+      {extra}
+    </Group>
   )
 }
 
@@ -111,7 +145,7 @@ export function Explanation({ source }: { source: string }) {
 export function OpenItems({ items }: { items: readonly BoardItem[] }) {
   if (items.length === 0) return null
   return (
-    <Section title="Open items" count={items.length}>
+    <Group name="open-items" title="Open items" count={items.length}>
       <ul className={styles.items}>
         {items.map((item) => (
           <li key={item.id}>
@@ -120,7 +154,7 @@ export function OpenItems({ items }: { items: readonly BoardItem[] }) {
           </li>
         ))}
       </ul>
-    </Section>
+    </Group>
   )
 }
 
@@ -128,7 +162,7 @@ export function OpenItems({ items }: { items: readonly BoardItem[] }) {
 export function Cited({ source }: { source: Source }) {
   if (source.references.length === 0) return null
   return (
-    <Disclosure title="Cited, not checked" count={source.references.length}>
+    <Group name="cited" title="Cited, not checked" count={source.references.length} defaultOpen={false}>
       <ul className={styles.refs}>
         {source.references.map((r, i) => (
           <li key={i}>
@@ -138,7 +172,7 @@ export function Cited({ source }: { source: Source }) {
           </li>
         ))}
       </ul>
-    </Disclosure>
+    </Group>
   )
 }
 
@@ -162,4 +196,14 @@ export function ShortList({ items, first = 2 }: { items: readonly string[]; firs
   )
 }
 
-
+/** A destructive action at the end of a view: plain words in the danger color. */
+export function DangerButton({ icon: Icon, onClick, children }: { icon: LucideIcon; onClick: () => void; children: ReactNode }) {
+  return (
+    <div className={styles.dangerRow}>
+      <button type="button" className={styles.danger} onClick={onClick}>
+        <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+        {children}
+      </button>
+    </div>
+  )
+}
