@@ -3,10 +3,10 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 40px;
+  gap: 0;
+  height: 44px;
   flex: none;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3);
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -28,7 +28,7 @@
   flex: 0 1 auto;
   min-width: 0;
   max-width: 220px;
-  height: 28px;
+  height: 32px;
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
@@ -71,14 +71,17 @@
 
 .slash {
   flex: none;
-  color: var(--border-strong);
+  margin: 0 2px;
+  color: var(--fg-3);
+  font-size: 14px;
+  line-height: 20px;
 }
 
 .title {
   flex: 0 1 auto;
   min-width: 0;
   margin: 0;
-  padding: 0 var(--space-1);
+  padding: 0 var(--space-2) 0 var(--space-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -92,24 +95,49 @@
   flex: none;
   display: flex;
   align-items: center;
-  margin-left: var(--space-2);
+  margin-left: var(--space-3);
 }
 
+/* Four groups, 16px apart: history, find, send, view. Inside a group the controls sit 4px apart. */
 .end {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-4);
   margin-left: auto;
   flex: none;
 }
 
-.history {
-  display: contents;
+.group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Controls are 32px high, and the icon-only ones 32px wide. */
+.bar .control {
+  min-height: 32px;
+}
+
+.bar .square {
+  width: 32px;
+}
+
+.bar .control::after {
+  inset-block: min(0px, calc((32px - var(--hit)) / 2));
+}
+
+.bar .square::after {
+  inset-inline: min(0px, calc((32px - var(--hit)) / 2));
 }
 
 .search {
   gap: var(--space-2);
   padding: 0 var(--space-2);
+}
+
+.searchWord {
+  color: var(--fg-3);
+  font-weight: var(--weight-regular);
 }
 
 .keys {
@@ -118,12 +146,26 @@
   color: var(--fg-3);
 }
 
+@media (max-width: 1100px) {
+  .searchWord {
+    display: none;
+  }
+}
+
 .toggle[aria-pressed='true'] {
   color: var(--fg);
 }
 
 /* Phone: the title, search, and settings. Undo, redo, the crumb, Saved, and the sidebar toggle step aside. */
 @media (max-width: 760px) {
+  .bar {
+    padding: 0 var(--space-2);
+  }
+
+  .end {
+    gap: var(--space-2);
+  }
+
   .crumb,
   .slash,
   .history,
@@ -140,9 +182,19 @@
     padding-left: var(--space-2);
   }
 
-  .search {
+  .bar .search {
     width: 36px;
     padding: 0;
+  }
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .bar .control {
+    min-height: 36px;
+  }
+
+  .bar .square {
+    width: 36px;
   }
 }
 
@@ -153,6 +205,6 @@
 .crumb::after {
   content: '';
   position: absolute;
-  inset-block: min(0px, calc((28px - var(--hit)) / 2));
+  inset-block: min(0px, calc((32px - var(--hit)) / 2));
   inset-inline: 0;
 }

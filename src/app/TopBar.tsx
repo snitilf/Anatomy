@@ -19,7 +19,7 @@ function CommandIcon({ view, label = view.label, className }: { view: CommandVie
     <Tip label={label} keys={view.shortcut}>
       <button
         type="button"
-        className={clsx(buttons.button, buttons.quiet, buttons.icon, className)}
+        className={clsx(buttons.button, buttons.quiet, buttons.icon, styles.control, styles.square, className)}
         onClick={view.run}
         disabled={!view.enabled}
         aria-label={label}
@@ -75,32 +75,39 @@ export function TopBar() {
       )}
       <div className={styles.end}>
         {hasBoard && (
-          <span className={styles.history}>
+          <div className={clsx(styles.group, styles.history)}>
             <CommandIcon view={undo} />
             <CommandIcon view={redo} />
-          </span>
+          </div>
         )}
-        <Tip label="Command menu" keys={menu.shortcut}>
-          <button type="button" className={clsx(buttons.button, buttons.quiet, styles.search)} onClick={menu.run} aria-label="Command menu" aria-haspopup="dialog">
-            <Search size={16} strokeWidth={1.5} aria-hidden="true" />
-            <kbd className={styles.keys}>{menu.shortcut}</kbd>
-          </button>
-        </Tip>
-        <SendMenu />
-        {hasBoard && (
-          <Tip label={open ? 'Hide sidebar' : 'Show sidebar'} keys={sidebar.shortcut}>
-            <button
-              type="button"
-              className={clsx(buttons.button, buttons.quiet, buttons.icon, styles.toggle)}
-              onClick={sidebar.run}
-              aria-label={open ? 'Hide sidebar' : 'Show sidebar'}
-              aria-pressed={open}
-            >
-              <PanelRight size={16} strokeWidth={1.5} aria-hidden="true" />
+        <div className={styles.group}>
+          <Tip label="Command menu" keys={menu.shortcut}>
+            <button type="button" className={clsx(buttons.button, buttons.quiet, styles.control, styles.search)} onClick={menu.run} aria-label="Command menu" aria-haspopup="dialog">
+              <Search size={16} strokeWidth={1.5} aria-hidden="true" />
+              <span className={styles.searchWord}>Search</span>
+              <kbd className={styles.keys}>{menu.shortcut}</kbd>
             </button>
           </Tip>
-        )}
-        <SettingsMenu />
+        </div>
+        <div className={styles.group}>
+          <SendMenu className={styles.control} />
+        </div>
+        <div className={styles.group}>
+          {hasBoard && (
+            <Tip label={open ? 'Hide sidebar' : 'Show sidebar'} keys={sidebar.shortcut}>
+              <button
+                type="button"
+                className={clsx(buttons.button, buttons.quiet, buttons.icon, styles.control, styles.square, styles.toggle)}
+                onClick={sidebar.run}
+                aria-label={open ? 'Hide sidebar' : 'Show sidebar'}
+                aria-pressed={open}
+              >
+                <PanelRight size={16} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </Tip>
+          )}
+          <SettingsMenu className={clsx(styles.control, styles.square)} />
+        </div>
       </div>
     </header>
   )

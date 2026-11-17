@@ -62,7 +62,7 @@ function DrawnCheck() {
  * can only be fixed before the send. Send copies the prompt first, while the press still allows it, then writes
  * `.anatomy/feedback.json` (or downloads feedback.json for a board opened as a file), then records the send.
  */
-export function SendMenu() {
+export function SendMenu({ className }: { className?: string }) {
   const view = useCommand('send')
   const open = useUi((u) => u.sendOpen)
   const uiApi = useUiApi()
@@ -265,7 +265,7 @@ export function SendMenu() {
           render={
             <button
               type="button"
-              className={clsx(buttons.button, count > 0 && buttons.primary, styles.trigger)}
+              className={clsx(buttons.button, count > 0 && buttons.primary, styles.trigger, className)}
               aria-label={label}
               aria-keyshortcuts="Meta+Enter"
             >
