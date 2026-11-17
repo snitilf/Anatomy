@@ -8,10 +8,10 @@ import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
 import { itemsOf, type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
 import { summarizeLayer } from '../layer/status'
-import { adoptedNow, hasChanges } from '../notes/review'
+import { adoptedNow, hasChanges, reviewCounts } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
-import { answerFor } from './answers'
-import { Disclosure, Section } from './bits'
+import { ANSWER, answerFor } from './answers'
+import { Group, SubHead } from './bits'
 import { partName } from './names'
 import { AgentAnswer, ItemAnswer, NoteBlock } from './notes'
 import notes from './notes.module.css'
@@ -48,22 +48,23 @@ function selectionOf(entry: Item): Selection {
   }
 }
 
-function ItemRow({ board, layer, entry, live = true }: { board: Board; layer: Layer; entry: Item; live?: boolean }) {
+function ItemRow({ board, layer, entry, status, live = true }: { board: Board; layer: Layer; entry: Item; status?: keyof typeof ANSWER; live?: boolean }) {
   const { choose } = usePanel()
-  if (!live) {
-    return (
-      <p className={clsx(styles.row, styles.yours)}>
-        <span className={styles.rowMain}>
-          <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
-        </span>
-      </p>
-    )
-  }
-  return (
-    <button type="button" className={clsx(styles.row, styles.yours)} onClick={() => choose(selectionOf(entry))}>
+  const answer = status ? ANSWER[status] : undefined
+  const Icon = answer?.icon
+  const content = (
+    <>
+      {Icon && <Icon className={styles.rowIcon} size={14} strokeWidth={1.5} aria-hidden="true" />}
       <span className={styles.rowMain}>
         <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
       </span>
+      {answer && <span className={styles.rowEnd}>{answer.label}</span>}
+    </>
+  )
+  if (!live) return <p className={styles.row}>{content}</p>
+  return (
+    <button type="button" className={styles.row} onClick={() => choose(selectionOf(entry))}>
+      {content}
     </button>
   )
 }
@@ -104,18 +105,19 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
   const store = useAppStoreApi()
   const item = { type: entry.type, item: entry.item } as Item
   return (
-    <li className={notes.item}>
-      <ItemRow board={board} layer={layer} entry={item} live={false} />
+    <li className={notes.feedItem}>
+      <ItemRow board={board} layer={layer} entry={item} status={entry.response.status} live={false} />
       {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
-      <AgentAnswer board={board} answer={entry.response} />
-      <div className={notes.stateActions}>
-        <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
+      <AgentAnswer board={board} answer={entry.response} bare />
+      <div className={notes.feedActions}>
+        <button type="button" className={notes.textAction} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
           Restore
         </button>
         {deletable && (
           <button
             type="button"
-            className={clsx(buttons.button, buttons.quiet, buttons.small)}
+            className={notes.textAction}
+            data-tone="danger"
             onClick={() => {
               dispatch({ type: 'archiveDropped', id: entry.item.id })
               deletedToast('Deleted from the archive', dispatch, store)
@@ -134,20 +136,20 @@ function Answers({ board, previous, layer }: { board: Board; previous: Board | u
   const adopted = adoptedNow(board, layer)
   if (answered.length + adopted.length === 0) return null
   return (
-    <Section title="Answers" count={answered.length + adopted.length}>
-      <ul className={notes.list}>
+    <Group name="answers" title="Answers" count={answered.length + adopted.length}>
+      <ul className={notes.feed}>
         {answered.map((entry) => (
-          <li key={entry.item.id} className={notes.item}>
-            <ItemRow board={board} layer={layer} entry={entry} />
+          <li key={entry.item.id} className={notes.feedItem}>
+            <ItemRow board={board} layer={layer} entry={entry} {...(answerFor(layer, entry.item.id) ? { status: answerFor(layer, entry.item.id)!.status } : {})} />
             {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
-            <ItemAnswer board={board} id={entry.item.id} />
+            <ItemAnswer board={board} id={entry.item.id} bare />
           </li>
         ))}
         {adopted.map((entry) => (
           <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />
         ))}
       </ul>
-    </Section>
+    </Group>
   )
 }
 
@@ -157,13 +159,13 @@ function Archive({ board, previous, layer }: { board: Board; previous: Board | u
   const older = layer.archive.filter((e) => !now.has(e)).reverse()
   if (older.length === 0) return null
   return (
-    <Disclosure title="Archive" count={older.length}>
-      <ul className={notes.list}>
+    <Group name="archive" title="Archive" count={older.length} defaultOpen={false}>
+      <ul className={notes.feed}>
         {older.map((entry) => (
           <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} deletable />
         ))}
       </ul>
-    </Disclosure>
+    </Group>
   )
 }
 
@@ -176,16 +178,20 @@ function NeedsRelinking({ board, layer, previous }: { board: Board; layer: Layer
   const was = previous ?? board
   const ids = new Set([...board.components.map((c) => c.id), ...layer.proposals.map((p) => p.id)])
   return (
-    <Section title="Needs relinking" count={count}>
-      <ul className={notes.list}>
-        {needsRelinking.map((note) => (
-          <NoteBlock key={note.id} note={note} board={board} />
-        ))}
+    <Group name="relinking" title="Needs relinking" count={count}>
+      {needsRelinking.length > 0 && (
+        <ul className={notes.list}>
+          {needsRelinking.map((note) => (
+            <NoteBlock key={note.id} note={note} board={board} />
+          ))}
+        </ul>
+      )}
+      <ul className={clsx(notes.feed, notes.plain)}>
         {brokenLinks.map((link) => {
           const missing = ids.has(link.from) ? 'to' : 'from'
           return (
-            <li key={link.id} className={notes.item}>
-              <button type="button" className={clsx(styles.row, styles.yours)} onClick={() => choose({ type: 'link', id: link.id })}>
+            <li key={link.id} className={notes.feedItem}>
+              <button type="button" className={styles.row} onClick={() => choose({ type: 'link', id: link.id })}>
                 <span className={styles.rowMain}>
                   <span className={styles.rowTitle}>{link.label || 'Link'}</span>
                   <span className={styles.rowMeta}>
@@ -221,12 +227,11 @@ function NeedsRelinking({ board, layer, previous }: { board: Board; layer: Layer
           )
         })}
       </ul>
-    </Section>
+    </Group>
   )
 }
 
 function Changes({ board, previous, changes }: { board: Board; previous: Board | undefined; changes: BoardDiff }) {
-  const dispatch = useAppDispatch()
   const { choose } = usePanel()
   const was = previous ?? board
   const names = (b: Board, id: string) => b.components.find((c) => c.id === id)?.label ?? id
@@ -240,15 +245,14 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
     { title: 'Removed', parts: changes.removed.components, lines: changes.removed.relationships, removed: true },
   ]
   return (
-    <Section title={`Changed in revision ${board.revision}`}>
+    <Group name="changes" title={`Changed in revision ${board.revision}`}>
       {changes.boardChanged && <p className={styles.empty}>The title, goal, or scope changed.</p>}
       {groups.map((g) =>
         g.parts.length + g.lines.length === 0 ? null : (
-          <div key={g.title} className={styles.section}>
-            <h4 className={styles.sectionHead}>
-              {g.title}
-              <span className={styles.count}>{g.parts.length + g.lines.length}</span>
-            </h4>
+          <div key={g.title}>
+            <SubHead>
+              {g.title} {g.parts.length + g.lines.length}
+            </SubHead>
             <ul className={styles.rows}>
               {g.parts.map((id) => (
                 <li key={`c-${id}`}>
@@ -299,13 +303,25 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
           </div>
         ),
       )}
-      <div className={styles.actions}>
-        <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'changesDismissed' })}>
-          Done
-        </button>
-      </div>
-    </Section>
+    </Group>
   )
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** One sentence for what the revision did. */
+function summary(board: Board, answers: number, changes: BoardDiff | undefined): string {
+  const clauses: string[] = []
+  if (answers > 0) clauses.push(`answered ${plural(answers, 'item')}`)
+  if (changes) {
+    const count = (pick: (c: BoardDiff['added']) => readonly string[]) => pick(changes.added).length + pick(changes.changed).length + pick(changes.removed).length
+    const parts = count((c) => c.components)
+    const lines = count((c) => c.relationships)
+    if (parts > 0) clauses.push(`changed ${plural(parts, 'part')}`)
+    if (lines > 0) clauses.push(`changed ${plural(lines, 'connection')}`)
+  }
+  if (clauses.length === 0) return `Revision ${board.revision} is open.`
+  return `Revision ${board.revision} ${clauses.join(' and ')}.`
 }
 
 /** Everything that needs a look after a new revision: answers, broken notes and links, and what changed. */
@@ -313,18 +329,20 @@ export function Review() {
   const { board, layer, previous, changes } = useAppStore(useShallow((s) => ({ board: s.board, layer: s.layer, previous: s.previousBoard, changes: s.changes })))
   if (!board || !layer) return null
   const outdated = summarizeLayer(board, layer).outdated
+  const counts = reviewCounts(board, layer, changes)
   return (
     <div className={styles.view}>
+      <p className={styles.summary}>{summary(board, counts.answers, changes)}</p>
       <Answers board={board} previous={previous} layer={layer} />
       <NeedsRelinking board={board} layer={layer} previous={previous} />
       {outdated.length > 0 && (
-        <Section title="Possibly outdated" count={outdated.length}>
+        <Group name="outdated" title="Possibly outdated" count={outdated.length}>
           <ul className={notes.list}>
             {outdated.map((note) => (
               <NoteBlock key={note.id} note={note} board={board} showTarget />
             ))}
           </ul>
-        </Section>
+        </Group>
       )}
       {hasChanges(changes) && <Changes board={board} previous={previous} changes={changes} />}
       <Archive board={board} previous={previous} layer={layer} />
@@ -332,3 +350,18 @@ export function Review() {
   )
 }
 
+/** The pinned end of the review: how many items need a decision, and the one action that marks the changes as seen. */
+export function ReviewFooter() {
+  const dispatch = useAppDispatch()
+  const { board, layer, changes } = useAppStore(useShallow((s) => ({ board: s.board, layer: s.layer, changes: s.changes })))
+  if (!hasChanges(changes)) return null
+  const { decisions } = reviewCounts(board, layer, changes)
+  return (
+    <div className={notes.footer}>
+      {decisions > 0 && <span className={notes.footerText}>{decisions} to review</span>}
+      <button type="button" className={clsx(buttons.button, buttons.primary, buttons.small, notes.footerAction)} onClick={() => dispatch({ type: 'changesDismissed' })}>
+        Mark reviewed
+      </button>
+    </div>
+  )
+}

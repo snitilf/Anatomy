@@ -3,8 +3,9 @@ import { useRef, useState } from 'react'
 import type { Board, BoardComponent } from '../board/schema'
 import { findLesson } from '../lessons/catalog'
 import { LessonDialog } from '../lessons/LessonDialog'
-import { BackButton, Cited, Explanation, Heading, OpenItems, Section, SourceLine } from './bits'
+import { Cited, Explanation, Group, Heading, OpenItems, Prop, Props, SourceLine } from './bits'
 import { FlowBlock } from './Flow'
+import { usePlainFlow } from './hooks'
 import { NotesSection } from './notes'
 import styles from './view.module.css'
 
@@ -14,7 +15,7 @@ function Lesson({ id }: { id: string }) {
   const lesson = findLesson(id)
   if (!lesson) return null
   return (
-    <Section title="Lesson">
+    <Group name="lesson" title="Lesson">
       <ul className={styles.rows}>
         <li>
           <button ref={opener} type="button" className={`${styles.row} ${styles.lesson}`} onClick={() => setOpen(true)}>
@@ -36,28 +37,54 @@ function Lesson({ id }: { id: string }) {
           }}
         />
       )}
-    </Section>
+    </Group>
+  )
+}
+
+/** What a part takes in and gives out that no connection names, as prose. */
+function Takes({ plain }: { plain: ReturnType<typeof usePlainFlow> }) {
+  return (
+    <>
+      {([['Takes in', plain.in], ['Gives out', plain.out]] as const).map(([label, list]) =>
+        list.length === 0 ? null : (
+          <div key={label} className={styles.takes}>
+            <p className={styles.takesLabel}>{label}</p>
+            <ul className={styles.plainList}>
+              {list.map((text, i) => (
+                <li key={i}>{text}</li>
+              ))}
+            </ul>
+          </div>
+        ),
+      )}
+    </>
   )
 }
 
 export function PartView({ board, component }: { board: Board; component: BoardComponent }) {
   const items = board.items.filter((i) => i.about === component.id)
   const group = board.groups.find((g) => g.id === component.group)
+  const plain = usePlainFlow(component.id)
+  const hasPlain = plain.in.length + plain.out.length > 0
+  const hasSource = component.source.kind !== 'agent-explanation'
   return (
     <div className={styles.view}>
       <div className={styles.head}>
-        <BackButton />
         <Heading>{component.label}</Heading>
-        {(group || component.source.kind !== 'agent-explanation') && (
-          <p className={styles.meta}>
-            {group && <span>{group.label}</span>}
-            <SourceLine source={component.source} />
-          </p>
-        )}
+        <p className={styles.lead}>{component.summary}</p>
       </div>
-      <p className={styles.lead}>{component.summary}</p>
+      {(group || hasSource) && (
+        <Props>
+          {group && <Prop label="Group">{group.label}</Prop>}
+          {hasSource && (
+            <Prop label="Source">
+              <SourceLine source={component.source} />
+            </Prop>
+          )}
+        </Props>
+      )}
       <FlowBlock partId={component.id} />
-      {component.explanation && <Explanation source={component.explanation} />}
+      {(component.explanation || hasPlain) && <Explanation source={component.explanation ?? ''} extra={<Takes plain={plain} />} />}
       {component.lesson !== undefined && <Lesson id={component.lesson} />}
       <OpenItems items={items} />
       <Cited source={component.source} />

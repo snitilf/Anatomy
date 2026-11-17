@@ -46,57 +46,121 @@
   outline: none;
 }
 
-.tabs {
-  display: flex;
+/* The pinned header: where you are, and the switch between Details and Review. It is always there, so nothing shifts when a revision arrives. */
+.top {
   flex: none;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3) 0;
+  padding: 0 var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--border);
 }
 
-.tab {
+.where {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 44px;
+}
+
+.back {
   appearance: none;
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   height: 32px;
-  padding: 0 var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2) 0 var(--space-1);
   border: 0;
+  border-radius: var(--radius-sm);
   background: none;
-  color: var(--fg-3);
+  color: var(--fg-2);
   font: inherit;
   font-weight: var(--weight-medium);
   cursor: pointer;
 }
 
-.tab[data-active] {
-  color: var(--fg);
-}
-
-.tab[data-active]::after {
+.back::after {
   content: '';
   position: absolute;
-  left: var(--space-2);
-  right: var(--space-2);
-  bottom: -1px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--fg);
+  inset-block: min(0px, calc((32px - var(--hit)) / 2));
+  inset-inline: 0;
+}
+
+.back:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.here {
+  color: var(--fg-3);
+  font-weight: var(--weight-medium);
+}
+
+.esc {
+  margin-left: auto;
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--fg-3);
+  opacity: 0;
+}
+
+.where:hover .esc,
+.where:focus-within .esc {
+  opacity: 1;
+}
+
+/* Two segments, 28px high. */
+.switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+}
+
+.tab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.tab[data-active] {
+  background: var(--raised);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.tab[data-disabled] {
+  color: var(--fg-3);
+  cursor: default;
 }
 
 .tab:focus-visible {
   outline: none;
-  border-radius: var(--radius-sm);
   box-shadow: var(--ring);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .tab:hover {
-    color: var(--fg-2);
+  .back:hover {
+    background: var(--hover);
+    color: var(--fg);
   }
 
-  .tab[data-active]:hover {
+  .tab:not([data-active], [data-disabled]):hover {
     color: var(--fg);
   }
 }
@@ -105,6 +169,40 @@
   color: var(--fg-3);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-regular);
+}
+
+/* Phone: the header is one row, with the switch at its right. */
+@media (max-width: 760px) {
+  .top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+  }
+
+  .where {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+  }
+
+  .back {
+    height: 44px;
+  }
+
+  .esc {
+    display: none;
+  }
+
+  .switch {
+    flex: none;
+    grid-template-columns: auto auto;
+  }
+
+  .tab {
+    height: 32px;
+    padding: 0 var(--space-3);
+  }
 }
 
 .scroll {
@@ -116,5 +214,5 @@
 }
 
 .content {
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  padding: var(--space-4) var(--space-4) var(--space-6);
 }

@@ -1,3 +1,4 @@
+import { CircleCheck, CircleX, MessageSquareReply } from 'lucide-react'
 import type { Board } from '../board/schema'
 import type { Layer, Response } from '../layer/model'
 import type { PickerItem } from './pickerItems'
@@ -16,3 +17,10 @@ export function targetItems(board: Board): PickerItem[] {
     ...board.relationships.map((r) => ({ value: `relationship:${r.id}`, label: `${r.label}: ${names.get(r.from) ?? r.from} to ${names.get(r.to) ?? r.to}`, group: 'Connections' })),
   ]
 }
+
+export const ANSWER = {
+  adopted: { label: 'Adopted', icon: CircleCheck },
+  declined: { label: 'Declined', icon: CircleX },
+  answered: { label: 'Answered', icon: MessageSquareReply },
+} as const
+

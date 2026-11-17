@@ -1,15 +1,14 @@
 import clsx from 'clsx'
-import { ArrowRight, CircleHelp } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { KIND_WORDS } from '../app/labels'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board, BoardRelationship } from '../board/schema'
 import { newId } from '../layer/edits'
-import { BackButton, Cited, Explanation, Heading, OpenItems, PartLink, Section, SourceLine } from './bits'
+import { Cited, Explanation, Heading, OpenItems, PartLink, PickerValue, Prop, Props, SourceLine } from './bits'
 import { endsOf } from './flowRows'
 import { partName } from './names'
-import flow from './Flow.module.css'
 import { NotesSection } from './notes'
 import { Picker } from './Picker'
 import { partItems } from './pickerItems'
@@ -19,6 +18,8 @@ import styles from './view.module.css'
 function moved(relationshipId: string, end: 'from' | 'to', part: string, id: string | undefined) {
   return { type: 'reconnected', relationshipId, end, part, id: id ?? newId('edit'), now: new Date() } as const
 }
+
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
 export function ConnectionView({ board, relationship: r }: { board: Board; relationship: BoardRelationship }) {
   const dispatch = useAppDispatch()
@@ -31,80 +32,68 @@ export function ConnectionView({ board, relationship: r }: { board: Board; relat
 
   const move = (end: 'from' | 'to', part: string) => dispatch(moved(r.id, end, part, ends.edit?.id))
 
+  /** The end as a picker button. An end the user moved says so, with the part it left. */
+  const end = (which: 'from' | 'to') => {
+    const other = which === 'from' ? ends.to : ends.from
+    const label = which === 'from' ? 'From' : 'To'
+    const shown = name(ends[which]) ?? ends[which]
+    return (
+      <Prop label={label}>
+        <Picker
+          label={label}
+          title={`${label}: ${shown}`}
+          className={styles.pickerValue}
+          trigger={<PickerValue>{shown}</PickerValue>}
+          items={partItems(board, proposals, other)}
+          onPick={(part) => move(which, part)}
+        />
+        {ends[which] !== r[which] && (
+          <>
+            <span className={styles.moved}>moved</span>
+            <s className={styles.was}>{name(r[which]) ?? r[which]}</s>
+          </>
+        )}
+      </Prop>
+    )
+  }
+
   return (
     <div className={styles.view}>
       <div className={styles.head}>
-        <BackButton />
         <Heading>{r.label}</Heading>
-        {r.source.kind !== 'agent-explanation' && (
-          <p className={styles.meta}>
-            <SourceLine source={r.source} />
-          </p>
-        )}
-      </div>
-      <p className={styles.route}>
-        <PartLink id={r.from} name={name(r.from)} />{' '}
-        {unknown ? (
-          <>
-            <ArrowRight className={styles.inlineArrow} size={14} strokeWidth={1.5} aria-hidden="true" />
-            <span className="sr-only">to</span>
-          </>
-        ) : (
-          KIND_WORDS[r.kind]
-        )}{' '}
-        <PartLink id={r.to} name={name(r.to)} />
-      </p>
-      {unknown && (
-        <p className={styles.notice}>
-          <CircleHelp size={14} strokeWidth={1.5} aria-hidden="true" />
-          {KIND_WORDS.unknown}
+        <p className={styles.route}>
+          <PartLink id={r.from} name={name(r.from)} />{' '}
+          {unknown ? (
+            <>
+              <ArrowRight className={styles.inlineArrow} size={14} strokeWidth={1.5} aria-hidden="true" />
+              <span className="sr-only">to</span>
+            </>
+          ) : (
+            KIND_WORDS[r.kind]
+          )}{' '}
+          <PartLink id={r.to} name={name(r.to)} />
         </p>
-      )}
+      </div>
+      <Props>
+        {end('from')}
+        <Prop label="Kind">{unknown ? KIND_WORDS.unknown : capital(KIND_WORDS[r.kind])}</Prop>
+        {end('to')}
+        {r.source.kind !== 'agent-explanation' && (
+          <Prop label="Source">
+            <SourceLine source={r.source} />
+          </Prop>
+        )}
+      </Props>
       {ends.edit && (
-        <Section title="You moved">
-          <ul className={clsx(flow.block, flow.moved)}>
-            {(['from', 'to'] as const)
-              .filter((end) => ends[end] !== r[end])
-              .map((end) => (
-                <li key={end} className={flow.row} data-yours="moved">
-                  <span className={flow.what} data-text="">
-                    {end === 'from' ? 'Start' : 'End'}
-                  </span>
-                  <span className={flow.end}>
-                    <s className={flow.was}>{name(r[end]) ?? r[end]}</s>
-                    <span className="sr-only"> moved to </span>
-                    <ArrowRight className={flow.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
-                    <PartLink id={ends[end]} name={name(ends[end])} />
-                  </span>
-                </li>
-              ))}
-          </ul>
-          <div className={styles.actions}>
-            <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => ends.edit && dispatch({ type: 'reconnectDeleted', id: ends.edit.id })}>
-              Put back
-            </button>
-          </div>
-        </Section>
+        <div className={styles.actions}>
+          <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={() => ends.edit && dispatch({ type: 'reconnectDeleted', id: ends.edit.id })}>
+            Put back
+          </button>
+        </div>
       )}
       {r.explanation && <Explanation source={r.explanation} />}
       <OpenItems items={items} />
       <Cited source={r.source} />
-      <Section title="Move end">
-        <div className={styles.actions}>
-          <Picker
-            label="From"
-            title={`From: ${name(ends.from) ?? ends.from}`}
-            className={clsx(buttons.button, buttons.small, styles.moveEnd)}
-            trigger={<span className={styles.clip}>From: {name(ends.from) ?? ends.from}</span>}
-            items={partItems(board, proposals, ends.to)} onPick={(part) => move('from', part)} />
-          <Picker
-            label="To"
-            title={`To: ${name(ends.to) ?? ends.to}`}
-            className={clsx(buttons.button, buttons.small, styles.moveEnd)}
-            trigger={<span className={styles.clip}>To: {name(ends.to) ?? ends.to}</span>}
-            items={partItems(board, proposals, ends.from)} onPick={(part) => move('to', part)} />
-        </div>
-      </Section>
       <NotesSection target={{ type: 'relationship', id: r.id }} />
     </div>
   )

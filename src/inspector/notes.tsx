@@ -1,11 +1,11 @@
 import clsx from 'clsx'
-import { CircleCheck, CircleHelp, CircleX, History, MessageSquareReply, Pencil, StickyNote, Trash2, Unlink } from 'lucide-react'
+import { CircleHelp, History, Pencil, StickyNote, Trash2, Unlink } from 'lucide-react'
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { Tip } from '../app/Tip'
-import { useUi } from '../app/ui'
+import { useUi, useUiApi } from '../app/ui'
 import type { Board } from '../board/schema'
 import { changedFields } from '../layer/diff'
 import { newId } from '../layer/edits'
@@ -13,32 +13,29 @@ import { LAYER_LIMITS, type Note, type NoteStatus, type Response, type Target } 
 import { noteStatus, wasSent } from '../layer/status'
 import { sameTarget, targetName } from '../notes/targets'
 import { deletedToast } from '../notes/undoToast'
-import { answerFor, targetItems } from './answers'
-import { PartLink, Section } from './bits'
+import { ANSWER, answerFor, targetItems } from './answers'
+import { formatKeys } from '../commands/keys'
+import { Group, PartLink } from './bits'
 import { partName, shortDate } from './names'
 import styles from './notes.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
 
 
-const ANSWER = {
-  adopted: { label: 'Adopted', icon: CircleCheck },
-  declined: { label: 'Declined', icon: CircleX },
-  answered: { label: 'Answered', icon: MessageSquareReply },
-} as const
-
 /**
  * The agent's answer to one of the user's items. The agent wrote it, so it is neutral: never the color of the user's own work.
- * `onDismiss` puts the item and its answer in the archive.
+ * `onDismiss` puts the item and its answer in the archive. `bare` leaves out the status line, for a row that shows the status itself.
  */
-export function AgentAnswer({ board, answer, onDismiss }: { board: Board; answer: Response; onDismiss?: (() => void) | undefined }) {
+export function AgentAnswer({ board, answer, onDismiss, bare = false }: { board: Board; answer: Response; onDismiss?: (() => void) | undefined; bare?: boolean }) {
   const { label, icon: Icon } = ANSWER[answer.status]
   return (
     <div className={styles.answer}>
-      <p className={styles.answerHead}>
-        <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
-        {label}
-      </p>
+      {!bare && (
+        <p className={styles.answerHead}>
+          <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+          {label}
+        </p>
+      )}
       {answer.text !== '' && <p className={styles.answerText}>{answer.text}</p>}
       {answer.status === 'adopted' && answer.changed.length > 0 && (
         <p className={styles.answerChanged}>
@@ -53,7 +50,7 @@ export function AgentAnswer({ board, answer, onDismiss }: { board: Board; answer
       )}
       {onDismiss && (
         <div className={styles.answerActions}>
-          <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={onDismiss}>
+          <button type="button" className={styles.textAction} onClick={onDismiss}>
             Dismiss
           </button>
         </div>
@@ -63,11 +60,11 @@ export function AgentAnswer({ board, answer, onDismiss }: { board: Board; answer
 }
 
 /** The answer to an item still on the map, with Dismiss. Nothing when the agent has not answered it. */
-export function ItemAnswer({ board, id }: { board: Board; id: string }) {
+export function ItemAnswer({ board, id, bare = false }: { board: Board; id: string; bare?: boolean }) {
   const dispatch = useAppDispatch()
   const answer = useAppStore((s) => answerFor(s.layer, id))
   if (!answer) return null
-  return <AgentAnswer board={board} answer={answer} onDismiss={() => dispatch({ type: 'itemsArchived', answers: [{ id, response: answer }], now: new Date() })} />
+  return <AgentAnswer board={board} answer={answer} bare={bare} onDismiss={() => dispatch({ type: 'itemsArchived', answers: [{ id, response: answer }], now: new Date() })} />
 }
 
 function decode(value: string): Target {
@@ -283,86 +280,113 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
   )
 }
 
-/** One field to write a note or a question. Cmd or Ctrl with Enter adds it, and C focuses it from anywhere. */
+/**
+ * The pinned field to write a note or a question about what the panel shows. One row at rest. When it has focus or words,
+ * it grows, with the kind and the Add button under it. C focuses it from anywhere. Cmd or Ctrl with Enter adds.
+ */
 export function Composer({ target }: { target: Target }) {
   const dispatch = useAppDispatch()
+  const ui = useUiApi()
   const name = useId()
+  const form = useRef<HTMLFormElement>(null)
   const field = useRef<HTMLTextAreaElement>(null)
   const [kind, setKind] = useState<Note['kind']>('note')
   const [text, setText] = useState('')
+  const [focused, setFocused] = useState(false)
   const asked = useUi((u) => u.composer)
   const seen = useRef(asked)
   useEffect(() => {
     if (asked === seen.current) return
     seen.current = asked
     field.current?.focus()
-    field.current?.scrollIntoView?.({ block: 'nearest' })
   }, [asked])
   const empty = text.trim().length === 0
+  const active = focused || !empty
 
   function submit() {
     if (empty) return
     dispatch({ type: 'noteAdded', kind, text: text.trim(), target, id: newId('note'), now: new Date() })
+    // The new note shows in its group, even if the user had closed it.
+    ui.setGroup('notes', true)
     setText('')
+    field.current?.focus()
   }
 
   return (
     <form
+      ref={form}
       className={styles.composer}
+      data-active={active || undefined}
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!form.current?.contains(event.relatedTarget as Node | null)) setFocused(false)
+      }}
     >
-      <textarea
-        ref={field}
-        className={styles.textarea}
-        name="note-text"
-        aria-label={kind === 'note' ? 'Add a note' : 'Add a question'}
-        placeholder={kind === 'note' ? 'Add a note' : 'Add a question'}
-        value={text}
-        maxLength={LAYER_LIMITS.noteText}
-        rows={2}
-        data-composer=""
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-            event.preventDefault()
-            submit()
-          } else if (event.key === 'Escape') {
-            event.currentTarget.blur()
-          }
-        }}
-      />
-      <div className={styles.composerFoot}>
-        <div className={styles.switch} role="radiogroup" aria-label="Kind">
-          {(['note', 'question'] as const).map((k) => (
-            <label key={k} className={styles.option}>
-              <input type="radio" name={name} className={styles.radio} checked={kind === k} onChange={() => setKind(k)} />
-              <span className={styles.face}>{k === 'note' ? 'Note' : 'Question'}</span>
-            </label>
-          ))}
-        </div>
-        {text.length >= LAYER_LIMITS.noteText - 200 && (
-          <span className={styles.counter} role="status">
-            {text.length} of {LAYER_LIMITS.noteText}
-          </span>
+      <div className={styles.composeBox}>
+        <textarea
+          ref={field}
+          className={styles.compose}
+          name="note-text"
+          aria-label={kind === 'note' ? 'Add a note' : 'Add a question'}
+          placeholder={kind === 'note' ? 'Add a note' : 'Add a question'}
+          value={text}
+          maxLength={LAYER_LIMITS.noteText}
+          rows={active ? 3 : 1}
+          data-composer=""
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+              event.preventDefault()
+              submit()
+            } else if (event.key === 'Escape') {
+              event.currentTarget.blur()
+            }
+          }}
+        />
+        {!active && (
+          <kbd className={styles.hint} aria-hidden="true">
+            C
+          </kbd>
         )}
-        <button type="submit" className={clsx(buttons.button, buttons.small)} disabled={empty}>
-          Add
-        </button>
       </div>
+      {active && (
+        <div className={styles.composerFoot}>
+          <div className={styles.switch} role="radiogroup" aria-label="Kind">
+            {(['note', 'question'] as const).map((k) => (
+              <label key={k} className={styles.option}>
+                <input type="radio" name={name} className={styles.radio} checked={kind === k} onChange={() => setKind(k)} />
+                <span className={styles.face}>{k === 'note' ? 'Note' : 'Question'}</span>
+              </label>
+            ))}
+          </div>
+          {text.length >= LAYER_LIMITS.noteText - 200 && (
+            <span className={styles.counter} role="status">
+              {text.length} of {LAYER_LIMITS.noteText}
+            </span>
+          )}
+          <button type="submit" className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)} disabled={empty} aria-keyshortcuts="Control+Enter Meta+Enter">
+            Add
+            <kbd className={styles.addHint} aria-hidden="true">
+              {formatKeys('Mod+Enter')}
+            </kbd>
+          </button>
+        </div>
+      )}
     </form>
   )
 }
 
-/** The notes on one target, and the composer. */
+/** The notes on one target. The composer is pinned under the panel. */
 export function NotesSection({ target }: { target: Target }) {
   const { board, notes } = useAppStore(useShallow((s) => ({ board: s.board, notes: s.layer?.notes })))
   if (!board || !notes) return null
   const mine = notes.filter((n) => sameTarget(n.target, target))
   return (
-    <Section title="Notes" count={mine.length > 0 ? mine.length : undefined}>
+    <Group name="notes" title="Notes" count={mine.length}>
       {mine.length > 0 && (
         <ul className={styles.list}>
           {mine.map((note) => (
@@ -370,8 +394,6 @@ export function NotesSection({ target }: { target: Target }) {
           ))}
         </ul>
       )}
-      <Composer target={target} />
-    </Section>
+    </Group>
   )
 }
-
