@@ -125,6 +125,33 @@ test('resizing a card on forty parts stays smooth', async ({ page }) => {
   expect(Number.parseFloat(await page.locator(`.react-flow__node-card[data-id="${spot.id}"]`).evaluate((n) => (n as HTMLElement).style.width))).toBeGreaterThan(box.width / 2)
 })
 
+// The release is where the lines of the resized card and of the cards it pushes aside are solved again.
+// The longest frame after the release is checked on its own, because the frame log of a whole gesture hides it among its frames.
+const RELEASE_MS = 50
+for (const board of [BOARDS[2]!, BOARDS[3]!, { name: 'sixty parts', file: 'e2e/fixtures/sixty-parts.board.json' }]) {
+  test(`releasing a resize leaves no long frame: ${board.name}`, async ({ page }) => {
+    await open(page, board.file)
+    const spot = await grabbable(page)
+    const box = (await page.locator(`.react-flow__node-card[data-id="${spot.id}"]`).boundingBox())!
+    const corner = { x: box.x + box.width - 5, y: box.y + box.height - 5 }
+    await page.mouse.move(corner.x, corner.y)
+    await page.mouse.down()
+    for (let i = 1; i <= 20; i++) {
+      await page.mouse.move(corner.x + i * 3, corner.y + i * 2)
+      await nextFrame(page)
+    }
+    await startFrameLog(page)
+    await page.mouse.up()
+    await page.waitForTimeout(600)
+    const frames = await stopFrameLog(page)
+    const max = Math.max(...frames)
+    console.log(`[resize release] ${board.name}: frames=${frames.length} max=${max.toFixed(1)}ms`)
+    expect(max, `longest frame after the release on ${board.name}`).toBeLessThan(RELEASE_MS)
+    // The lines of the card come back once they are solved.
+    await expect(page.locator('.react-flow__edge').first()).toBeVisible()
+  })
+}
+
 test('dragging a card on a board with 150 strokes and 20 sticky notes stays smooth', async ({ page }) => {
   const board = await readFile(BOARDS[2]!.file, 'utf8')
   const id = (JSON.parse(board) as { id: string }).id
