@@ -21,6 +21,8 @@ export function AppToaster({ id }: { id?: string }) {
     <Toaster
       {...(id ? { id } : {})}
       position="bottom-center"
+      offset={{ bottom: 72 }}
+      mobileOffset={{ bottom: 80 }}
       theme={theme}
       duration={2500}
       visibleToasts={1}
