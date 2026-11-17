@@ -106,6 +106,30 @@ test('the walkthrough bar steps with the arrow keys and closes with Escape', asy
   await expect(bar).toBeHidden()
 })
 
+test('the top bar is 44px high with 32px controls in four groups: 4px inside a group, 16px between', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, EXAMPLE)
+  const bar = page.getByRole('banner')
+  expect((await bar.boundingBox())!.height).toBe(44)
+  const box = async (name: string | RegExp) => (await bar.getByRole('button', { name }).boundingBox())!
+  const undo = await box('Undo')
+  const redo = await box('Redo')
+  const search = await box('Command menu')
+  const send = await box(/^Send to agent/)
+  const toggle = await box(/sidebar$/)
+  const settings = await box('Settings')
+  for (const control of [undo, redo, search, send, toggle, settings]) expect(control.height).toBe(32)
+  expect(undo.width).toBe(32)
+  const gap = (a: { x: number; width: number }, b: { x: number }) => Math.round(b.x - (a.x + a.width))
+  expect(gap(undo, redo)).toBe(4)
+  expect(gap(redo, search)).toBe(16)
+  expect(gap(search, send)).toBe(16)
+  expect(gap(send, toggle)).toBe(16)
+  expect(gap(toggle, settings)).toBe(4)
+  // The search trigger says what it is.
+  await expect(bar.getByRole('button', { name: 'Command menu' })).toContainText('Search')
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
@@ -135,5 +159,39 @@ test.describe('on a phone', () => {
     await expect(sheet).toHaveAttribute('data-stop', '0')
     await page.locator('.react-flow__node-card').first().click()
     await expect(sheet).toHaveAttribute('data-stop', '1')
+  })
+
+  test('rows in the sheet are 44px, and a part picked on the map stays above the sheet', async ({ page }) => {
+    await open(page, EXAMPLE)
+    const sheet = page.getByRole('region', { name: 'Sidebar' })
+    await page.locator('.react-flow__node-card').first().click()
+    await expect(sheet).toHaveAttribute('data-stop', '1')
+    // Return to the overview, whose parts are rows.
+    await sheet.getByRole('button', { name: 'Overview' }).click()
+    const row = sheet.getByRole('button', { name: /^Approval/ }).first()
+    expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    // A part chosen from the list is shown on the map above the half-height sheet.
+    await row.click()
+    await expect(sheet).toHaveAttribute('data-stop', '1')
+    const top = (await sheet.boundingBox())!.y
+    await expect
+      .poll(async () => {
+        const card = (await page.locator('.react-flow__node-card.selected').first().boundingBox())!
+        return card.y + card.height <= top + 1
+      })
+      .toBe(true)
+  })
+
+  test('a drag of the sheet header leaves no focus ring', async ({ page }) => {
+    await open(page, EXAMPLE)
+    const sheet = page.getByRole('region', { name: 'Sidebar' })
+    const header = sheet.getByRole('button').first()
+    const box = (await header.boundingBox())!
+    const x = box.x + box.width / 2
+    await page.mouse.move(x, box.y + 20)
+    await page.mouse.down()
+    for (let i = 1; i <= 20; i++) await page.mouse.move(x, box.y + 20 - i * 18)
+    await page.mouse.up()
+    await expect(header).toHaveCSS('box-shadow', 'none')
   })
 })

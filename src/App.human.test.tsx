@@ -188,6 +188,26 @@ describe('your notes', () => {
     expect(screen.getByRole('img', { name: '1 note or question from you' })).toBeInTheDocument()
   })
 
+  it('keeps the composer to one row until it is used', async () => {
+    render(<App />)
+    await loadExample()
+    const box = panel().getByRole('textbox', { name: 'Add a note' })
+    expect(panel().queryByRole('radiogroup', { name: 'Kind' })).not.toBeInTheDocument()
+    fireEvent.focus(box)
+    expect(panel().getByRole('radiogroup', { name: 'Kind' })).toBeInTheDocument()
+    expect(panel().getByRole('button', { name: 'Add' })).toBeDisabled()
+  })
+
+  it('shows a note under its group even when the group was closed', async () => {
+    render(<App />)
+    await loadExample()
+    fireEvent.click(panel().getByRole('button', { name: /^Notes/ }))
+    expect(panel().getByRole('button', { name: /^Notes/ })).toHaveAttribute('aria-expanded', 'false')
+    addNote('Back in view')
+    expect(panel().getByRole('button', { name: /^Notes/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(within(panel().getByRole('region', { name: 'Notes' })).getByText('Back in view')).toBeInTheDocument()
+  })
+
   it('shows a counter only near the limit', async () => {
     render(<App />)
     await loadExample()

@@ -74,6 +74,11 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   await page.waitForTimeout(400)
   await expect(sendButton(page)).toHaveAccessibleName('Send to agent')
 
+  // The Review switch is always in the header, quiet while there is nothing to review.
+  const panelTop = async () => (await page.getByRole('complementary').locator('[data-scroll]').boundingBox())!.y
+  await expect(page.getByRole('tab', { name: /^Review/ })).toHaveAttribute('aria-disabled', 'true')
+  const scrollTopBefore = await panelTop()
+
   // A question about the board.
   await addNote(page, 'Question', 'Where are the short codes kept?')
 
@@ -159,6 +164,10 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   await expect(page.getByRole('complementary').getByText('Revision', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText('2', { timeout: 15_000 })
   await expect(page.locator(`[data-label][data-edge="${line.id}"][data-edited]`)).toHaveCount(0)
   await expect(page.locator(`[data-label][data-edge="${line.id}"]`)).toHaveAttribute('data-ends', `${line.ends[0]} ${other.id}`)
+
+  // Nothing in the panel moved when the review became available.
+  await expect(page.getByRole('tab', { name: /^Review/ })).not.toHaveAttribute('aria-disabled', 'true')
+  expect(await panelTop()).toBe(scrollTopBefore)
 
   // Review shows each answer, and the moved connection before and after.
   await page.getByRole('tab', { name: /^Review/ }).click()
