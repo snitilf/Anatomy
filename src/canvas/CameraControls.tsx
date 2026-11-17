@@ -35,6 +35,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
   const phone = usePhone()
   const stop = useUi((u) => u.sheet)
   const previous = useRef<string | undefined>(undefined)
+  /** The selection that was picked on the map, which the sheet coming up does not move the view for. */
+  const pickedKey = useRef<string | undefined>(undefined)
   const key = selection && selection.type !== 'board' ? `${selection.type}:${selection.id}` : undefined
   // On a phone the sheet covers the lower half of the map once a selection raises it, so the part has to sit in the upper half.
   const covered = phone && !playing && stop !== 2
@@ -58,7 +60,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
         if (next) camera.move(next)
         return
       }
-      if (selection.type === 'component' && picked && !covered) return
+      // A card picked on the map is under the pointer already, so the view stays put, even where the sheet covers it.
+      if (selection.type === 'component' && picked) return
       const node = rectOf(selection.id)
       if (!node) return
       const next = viewportFor(flow.getViewport(), area, node, narrow)
@@ -71,14 +74,16 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
     if (previous.current === key) return
     previous.current = key
     const here = takePicked()
-    reveal(selection?.type === 'component' && here === selection.id)
+    const picked = selection?.type === 'component' && here === selection.id
+    pickedKey.current = picked ? key : undefined
+    reveal(picked)
     // `reveal` follows the size of the map, which does not start a reveal of its own.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, selection, takePicked])
 
   // The sheet coming up to half over a part that is already selected.
   useEffect(() => {
-    if (phone && stop === 1) reveal(false)
+    if (phone && stop === 1 && pickedKey.current !== key) reveal(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phone, stop, height])
 
