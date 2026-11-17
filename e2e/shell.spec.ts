@@ -188,7 +188,8 @@ test.describe('on a phone', () => {
     await sheet.getByRole('button').first().click()
     await expect(sheet).toHaveAttribute('data-stop', '1')
     await sheet.getByRole('button', { name: /^Connections/ }).click()
-    await sheet.getByRole('button', { name: /^Connections/ }).locator('xpath=ancestor::section[1]').getByRole('listitem').first().getByRole('button').click()
+    // A long connection: its ends are far apart.
+    await sheet.getByRole('button', { name: /^GET short code/ }).click()
     // Half of the map: the sheet has settled there.
     const top = 44 + (844 - 44) / 2
     await expect
