@@ -38,7 +38,7 @@ import { ProposalNode, StickyNode, TextNode } from '../whiteboard/nodes'
 import { STICKY_MAX, STICKY_MIN, STICKY_SIZE } from '../whiteboard/sizes'
 import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
-import { buildAfterMove, fontsLoaded, refreshWhenIdle } from './fontRefresh'
+import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
@@ -75,12 +75,8 @@ interface View {
   base: CardPlacement | undefined
   rects: Record<string, Rect>
   geometry: Geometry
-  /** The card under the pointer, moved or resized. */
-  held?: string
-  /** Set while the lines of a moved card are hidden: milliseconds to wait before the full build. */
-  settle?: number
-  /** Fonts loaded while the view was busy: it is built again once it is idle. */
-  fontStale?: true
+  /** What the map is doing: a card in hand, lines waiting for the full build, the build, a font refresh owed. */
+  interaction: Interaction
 }
 
 const NO_PLACEMENT: CardPlacement = { positions: {}, sizes: {} }
@@ -99,7 +95,7 @@ interface UserLines {
 }
 
 /** A build with no previous geometry, from the cards where they are now: nothing in motion or unsaved moves. */
-const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects)
+const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects, undefined, next(v.interaction, { type: 'rebuilt' }))
 
 /** The last solve. React may render the same change twice, and the second render must not solve again. */
 let lastSolve: { board: Board; links: UserLines['links']; reconnects: UserLines['reconnects']; previous: Geometry | undefined; rects: Record<string, Rect>; geometry: Geometry } | undefined
@@ -115,9 +111,9 @@ export function solve(board: Board, rects: Record<string, Rect>, links: UserLine
 }
 
 /** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
-function fullView(board: Board, base: CardPlacement | undefined, user: UserLines, rects = placeAll(board, base, user.proposals), previous?: Geometry): View {
+function fullView(board: Board, base: CardPlacement | undefined, user: UserLines, rects = placeAll(board, base, user.proposals), previous?: Geometry, interaction: Interaction = IDLE): View {
   const { links, proposals, reconnects } = user
-  return { board, links, proposals, reconnects, base, rects, geometry: solve(board, rects, links, previous, reconnects) }
+  return { board, links, proposals, reconnects, base, rects, geometry: solve(board, rects, links, previous, reconnects), interaction }
 }
 
 function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
@@ -133,16 +129,17 @@ function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
 }
 
 /** The cheap update for one card that moved or changed size: its lines are hidden and its group area follows. */
-function changed(view: View, id: string, rect: Rect, settle: number): View {
+function changed(view: View, id: string, rect: Rect, event: Event): View {
   const at = view.rects[id]
   if (!at || (at.x === rect.x && at.y === rect.y && at.width === rect.width && at.height === rect.height)) return view
+  if (view.interaction.held?.cancelled) return view
   const rects = { ...view.rects, [id]: rect }
-  return { ...view, rects, geometry: moveCard(view.board, view.geometry, rects, id), settle }
+  return { ...view, rects, geometry: moveCard(view.board, view.geometry, rects, id), interaction: next(view.interaction, event) }
 }
 
 /** Only cards that were already there moved or changed size, and nothing else about the lines changed. */
 function movedOnly(view: View, rects: Record<string, Rect>, reconnects: View['reconnects']): boolean {
-  if (view.fontStale || reconnects !== view.reconnects) return false
+  if (view.interaction.stale || reconnects !== view.reconnects) return false
   const ids = Object.keys(rects)
   return ids.length === Object.keys(view.rects).length && ids.every((id) => view.rects[id] !== undefined)
 }
@@ -158,7 +155,7 @@ function settling(view: View, base: CardPlacement | undefined, proposals: View['
     if (was && was.x === rect.x && was.y === rect.y && was.width === rect.width && was.height === rect.height) continue
     geometry = moveCard(view.board, geometry, rects, id)
   }
-  return { ...view, base, proposals, rects, geometry, settle: 0 }
+  return { ...view, base, proposals, rects, geometry, interaction: next(view.interaction, { type: 'external', change: 'moved' }) }
 }
 
 /** How long one frame may spend on the build that follows a drop or a resize. */
@@ -184,8 +181,6 @@ function solveInSlices(view: View, reuse: boolean, done: (geometry: Geometry) =>
   return () => window.cancelAnimationFrame(frame)
 }
 
-/** Arrow keys repeat quickly. The full build and the save wait until they stop. */
-const KEY_SETTLE_MS = 250
 const DROP_PAN_MS = 160
 /** How long cards glide when a drop pushes them aside. */
 const PUSH_MS = 150
@@ -208,7 +203,6 @@ interface Hold {
   kind: 'drag' | 'resize'
   /** The map as it was when the card was picked up. Escape puts it back. */
   before: View
-  cancelled: boolean
   /** The edges and middles of the other cards in view, for the alignment guides. */
   targets: SnapTargets
   /** Snapping reach in board pixels at the zoom of the moment. */
@@ -273,24 +267,26 @@ export function Canvas() {
     const user = { links: view.links, proposals, reconnects }
     shown =
       sameRects(rects, view.rects) && reconnects === view.reconnects
-        ? { ...view, base: stored, proposals, ...(view.settle === undefined ? {} : { settle: 0 }) }
+        ? { ...view, base: stored, proposals, interaction: next(view.interaction, { type: 'external', change: 'same' }) }
         : movedOnly(view, rects, reconnects)
           ? settling(view, stored, proposals, rects)
-          : buildAfterMove(view, (reuse) => fullView(view.board, stored, user, rects, reuse ? view.geometry : undefined))
+          : fullView(view.board, stored, user, rects, reusesLines(view.interaction) ? view.geometry : undefined, next(view.interaction, { type: 'rebuilt' }))
     setView(shown)
   }
   // Text measured before its font faces loaded was sized with the fallback. When they are in, the map is built again, once.
+  const interaction = shown?.interaction
   useEffect(
     () =>
-      onTextMeasured(() => setView((v) => (v ? fontsLoaded(v, rebuildFromRects) : v))),
+      onTextMeasured(() => setView((v) => (v ? (isBusy(v.interaction) ? { ...v, interaction: next(v.interaction, { type: 'fontsLoaded' }) } : rebuildFromRects(v)) : v))),
     [],
   )
   useEffect(() => {
-    if (shown?.fontStale) return afterPaint(() => setView((v) => (v ? refreshWhenIdle(v, rebuildFromRects) : v)))
-  }, [shown])
+    if (interaction?.stale && !isBusy(interaction)) {
+      return afterPaint(() => setView((v) => (v && v.interaction.stale && !isBusy(v.interaction) ? rebuildFromRects(v) : v)))
+    }
+  }, [interaction])
   const viewRef = useRef(shown)
   const hold = useRef<Hold | undefined>(undefined)
-  const keyMoves = useRef(new Set<string>())
   const pickedOnMap = useRef<string | undefined>(undefined)
   const playing = useRef(false)
   const guides = useRef<GuideLines>(null)
@@ -311,11 +307,10 @@ export function Canvas() {
   const saveKeyMoves = useCallback(
     (current: View) => {
       const moves: Record<string, Point> = {}
-      for (const id of keyMoves.current) {
+      for (const id of pendingMoves(current.interaction)) {
         const rect = current.rects[id]
         if (rect) moves[id] = { x: rect.x, y: rect.y }
       }
-      keyMoves.current.clear()
       if (Object.keys(moves).length === 0) return
       const aside = pushAside(current, Object.keys(moves))
       dispatch({ type: 'cardsMoved', positions: { ...aside, ...moves } })
@@ -455,17 +450,18 @@ export function Canvas() {
     () => ({ proposals: proposals ?? [], reconnects: reconnects ?? [], marks: marks ?? [], moving, editing: editing?.id }),
     [proposals, reconnects, marks, moving, editing],
   )
+  const held = interaction && heldOf(interaction)
+  const rectsNow = shown?.rects
+  const geometryNow = shown?.geometry
   const graph = useMemo(
     () =>
-      board && shown
-        ? assembleGraph(board, shown.rects, shown.geometry, selection, step?.highlight, links ?? [], noteCounts, cache, shown.held, pushed, user)
+      board && rectsNow && geometryNow
+        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user)
         : undefined,
-    [board, shown, selection, step, links, noteCounts, cache, pushed, user],
+    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, cache, pushed, user],
   )
 
   // What arrow ends attach to: every card, and every connection's drawn line, where the user's moved line wins.
-  const rectsNow = shown?.rects
-  const geometryNow = shown?.geometry
   const scene = useMemo<Scene>(() => {
     const lines = new Map<string, readonly Point[]>()
     for (const r of board?.relationships ?? []) {
@@ -480,46 +476,42 @@ export function Canvas() {
   // Arrows attached to the card in hand, or to a connection that is hidden with it, wait for the drop too.
   const hiddenArrows = useMemo(() => {
     const out = new Set<string>()
-    if (!shown) return out
-    const held = shown.held
+    if (!geometryNow) return out
     const hiddenLines = new Set<string>()
     for (const r of board?.relationships ?? []) {
-      if (shown.geometry.edges.get(r.id)?.cheap || shown.geometry.edges.get(editedId(r.id))?.cheap) hiddenLines.add(r.id)
+      if (geometryNow.edges.get(r.id)?.cheap || geometryNow.edges.get(editedId(r.id))?.cheap) hiddenLines.add(r.id)
     }
     if (held === undefined && hiddenLines.size === 0) return out
     const attached = (end: MarkEnd) =>
       (end.type === 'part' && end.id === held) || (end.type === 'relationship' && hiddenLines.has(end.id))
     for (const m of marks ?? []) if (m.kind === 'arrow' && (attached(m.from) || attached(m.to))) out.add(m.id)
     return out
-  }, [shown, board, marks])
+  }, [geometryNow, held, board, marks])
   const getScene = useCallback(() => sceneRef.current, [])
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
 
   // The full build comes after the drop, or after the last arrow key, and so does the save of keyboard moves.
-  const settle = shown?.held === undefined ? shown?.settle : undefined
+  const waiting = interaction && !isHolding(interaction) && interaction.work.mode === 'settling' ? interaction.work.wait : undefined
   useEffect(() => {
-    if (settle === undefined) return
-    let cancelBuild: (() => void) | undefined
-    const settleNow = () => {
+    if (waiting === undefined) return
+    const due = () => {
       const current = viewRef.current
-      if (!current || current.settle === undefined || current.held !== undefined) return
+      if (!current || current.interaction.work.mode !== 'settling' || isHolding(current.interaction)) return
       saveKeyMoves(current)
-      // The lines stay hidden while the build runs. A card picked up meanwhile, or any other change, cancels it.
-      cancelBuild = solveInSlices(current, !current.fontStale, (geometry) =>
-        setView((v) => {
-          if (!v || v.rects !== current.rects || v.geometry !== current.geometry || v.held !== undefined) return v
-          const { held: _held, settle: _settle, fontStale: _stale, ...rest } = v
-          return { ...rest, geometry }
-        }),
-      )
+      setView((v) => (v ? { ...v, interaction: next(v.interaction, { type: 'settleDue' }) } : v))
     }
-    const cancelWait = settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
-    return () => {
-      cancelWait()
-      cancelBuild?.()
-    }
-  }, [settle, shown, saveKeyMoves])
+    return waiting === 0 ? afterPaint(due) : cancelTimer(window.setTimeout(due, waiting))
+  }, [interaction, waiting, saveKeyMoves])
+  // The lines stay hidden while the build runs. A card picked up meanwhile, or any other change, cancels it.
+  const solving = interaction !== undefined && !isHolding(interaction) && interaction.work.mode === 'solving'
+  useEffect(() => {
+    const current = viewRef.current
+    if (!solving || !current) return
+    return solveInSlices(current, reusesLines(current.interaction), (geometry) =>
+      setView((v) => (v && v.rects === current.rects && v.geometry === current.geometry ? { ...v, geometry, interaction: next(v.interaction, { type: 'solved' }) } : v)),
+    )
+  }, [interaction, solving])
 
   // Escape while a card is held puts it back and leaves the selection and focus alone.
   useEffect(() => {
@@ -528,14 +520,9 @@ export function Canvas() {
       if (event.key !== 'Escape' || !held) return
       event.stopPropagation()
       event.preventDefault()
-      if (held.cancelled) return
-      held.cancelled = true
+      if (viewRef.current?.interaction.held?.cancelled) return
       guides.current?.hide()
-      setView((v) => {
-        if (!v) return v
-        const { held: _held, ...rest } = v
-        return { ...rest, rects: held.before.rects, geometry: held.before.geometry, ...(held.before.settle === undefined ? {} : { settle: held.before.settle }) }
-      })
+      setView((v) => (v && isHolding(v.interaction) ? { ...v, rects: held.before.rects, geometry: held.before.geometry, interaction: next(v.interaction, { type: 'escape' }) } : v))
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -565,9 +552,9 @@ export function Canvas() {
     const viewport = flow?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
     const size = camera.size()
     const others = Object.entries(before.rects).flatMap(([other, r]) => (other === id ? [] : [r]))
-    hold.current = { id, kind, before, cancelled: false, targets: new SnapTargets(inView(others, viewport, size)), reach: SNAP_PX / viewport.zoom }
+    hold.current = { id, kind, before, targets: new SnapTargets(inView(others, viewport, size)), reach: SNAP_PX / viewport.zoom }
     if (hoverStyle.current) hoverStyle.current.textContent = ''
-    setView((v) => (v ? { ...v, held: id } : v))
+    setView((v) => (v ? { ...v, interaction: next(v.interaction, { type: 'pickUp', id, kind }) } : v))
   }, [camera])
 
   /** Lets go of the card in hand. Returns the hold, unless Escape cancelled it. */
@@ -575,12 +562,9 @@ export function Canvas() {
     const held = hold.current
     hold.current = undefined
     guides.current?.hide()
-    setView((v) => {
-      if (!v) return v
-      const { held: _dropped, ...rest } = v
-      return rest
-    })
-    return held && !held.cancelled ? held : undefined
+    const cancelled = viewRef.current?.interaction.held?.cancelled
+    setView((v) => (v ? { ...v, interaction: next(v.interaction, { type: 'release' }) } : v))
+    return held && !cancelled ? held : undefined
   }, [])
 
   /** Text and sticky notes move and resize on their own: no lines, no guides, no push. One change on drop. */
@@ -626,17 +610,16 @@ export function Canvas() {
           if (held?.kind === 'resize') continue
           if (held) {
             // A drag saves once, when the card is dropped. The card lines up with its neighbors on the way.
-            if (held.cancelled) continue
+            if (viewRef.current?.interaction.held?.cancelled) continue
             const rect = viewRef.current?.rects[id]
             if (!rect) continue
             const lined = held.targets.move({ ...rect, ...position }, held.reach)
             guides.current?.show(lined.vertical, lined.horizontal)
-            setView((v) => (v ? changed(v, id, { ...rect, x: Math.round(lined.x), y: Math.round(lined.y) }, 0) : v))
+            setView((v) => (v ? changed(v, id, { ...rect, x: Math.round(lined.x), y: Math.round(lined.y) }, { type: 'move' }) : v))
           } else {
-            keyMoves.current.add(id)
             setView((v) => {
               const rect = v?.rects[id]
-              return v && rect ? changed(v, id, { ...rect, ...position }, KEY_SETTLE_MS) : v
+              return v && rect ? changed(v, id, { ...rect, ...position }, { type: 'keyMove', id }) : v
             })
           }
         } else if (change.type === 'dimensions' && change.resizing !== undefined && change.dimensions) {
@@ -645,7 +628,7 @@ export function Canvas() {
             if (!hold.current) pickUp(id, 'resize')
             const held = hold.current
             const rect = viewRef.current?.rects[id]
-            if (!held || held.cancelled || held.id !== id || !rect) continue
+            if (!held || viewRef.current?.interaction.held?.cancelled || held.id !== id || !rect) continue
             const raw = {
               width: clampTo(change.dimensions.width, CARD_MIN.width, CARD_MAX.width),
               height: clampTo(change.dimensions.height, CARD_MIN.height, CARD_MAX.height),
@@ -657,7 +640,7 @@ export function Canvas() {
               height: clampTo(lined.horizontal ? Math.round(lined.height) : snap(raw.height), CARD_MIN.height, CARD_MAX.height),
             }
             guides.current?.show(lined.vertical, lined.horizontal)
-            setView((v) => (v ? changed(v, id, { ...rect, ...size }, 0) : v))
+            setView((v) => (v ? changed(v, id, { ...rect, ...size }, { type: 'move' }) : v))
           } else if (hold.current?.kind === 'resize') {
             const held = letGo()
             const current = viewRef.current
@@ -698,7 +681,6 @@ export function Canvas() {
       // React Flow's own position has no snapping, so the drop is read from the map.
       const rect = current?.rects[node.id]
       if (!held || !current || !rect) return
-      keyMoves.current.delete(node.id)
       const aside = pushAside(current, [node.id])
       dispatch({ type: 'cardsMoved', positions: { ...aside, [node.id]: { x: rect.x, y: rect.y } } })
       showPushed(Object.keys(aside))
@@ -975,7 +957,7 @@ export function Canvas() {
           <FlowHandle onFlow={setFlow} />
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} className={styles.dots ?? ''} />
           <KeepSelectionInView takePicked={takePicked} rectOf={rectOf} />
-          <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={shown?.held !== undefined} rectOf={rectOf} />
+          <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={held !== undefined} rectOf={rectOf} />
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <SnapGuides ref={guides} />
