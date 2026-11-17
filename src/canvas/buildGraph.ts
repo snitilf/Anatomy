@@ -8,7 +8,7 @@ import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { groupBand } from './bands'
 import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
-import { KIND_STYLE, TONE_COLOR } from './kinds'
+import { TONE_COLOR } from './kinds'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
@@ -434,7 +434,7 @@ const markers = new Map<string, EdgeMarker>()
 function markerFor(color: string): EdgeMarker {
   let marker = markers.get(color)
   if (!marker) {
-    marker = { type: MarkerType.ArrowClosed, color, width: 16, height: 16 }
+    marker = { type: MarkerType.ArrowClosed, color, width: 12, height: 12 }
     markers.set(color, marker)
   }
   return marker
@@ -587,7 +587,7 @@ export function assembleGraph(
     const selected = selection?.type === 'relationship' && selection.id === r.id
     const active = selected || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
     const highlighted = playing && highlight.has(r.id)
-    const color = active || highlighted ? 'var(--accent)' : moved ? 'var(--yours)' : TONE_COLOR[KIND_STYLE[r.kind].tone]
+    const color = active || highlighted ? 'var(--accent)' : moved ? 'var(--yours)' : TONE_COLOR.strong
     edges.push(
       stable(cache.edges, {
         id: r.id,

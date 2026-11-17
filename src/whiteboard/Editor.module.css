@@ -61,7 +61,7 @@
   border-radius: var(--radius-sm);
   outline: 1px solid var(--accent) !important;
   outline-offset: 3px;
-  background: color-mix(in srgb, var(--yours) 18%, var(--raised)) !important;
+  background: color-mix(in srgb, var(--yours) var(--sticky-mix), var(--raised)) !important;
   color: var(--fg) !important;
   font-size: var(--text-md) !important;
   line-height: var(--leading-md) !important;

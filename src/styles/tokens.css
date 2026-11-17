@@ -19,6 +19,17 @@
   --active: rgb(26 27 35 / 0.08);
   --border: rgb(26 27 35 / 0.09);
   --border-strong: rgb(26 27 35 / 0.16);
+  /* The outline of a card: a real edge against the canvas and the group wash. */
+  --card-edge: rgb(26 27 35 / 0.34);
+  /* Connection ink: a share of the text color, never a hue. */
+  --line-strong: color-mix(in srgb, var(--fg) 56%, transparent);
+  --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
+  --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);
+  /* The wash of a group area, and of two that overlap. */
+  --wash-share: 4.5%;
+  --wash-share-2: 8.8%;
+  /* How much amber a sticky note takes from the card color. */
+  --sticky-mix: 26%;
 
   /* Text. All three pass 4.5 to 1 on every surface they sit on, hover and tint fills included. */
   --fg: #1a1b23;
@@ -32,10 +43,10 @@
   --on-accent: #ffffff;
 
   /* The alignment guides while a card moves: a faint teal, in no other use. */
-  --guide: rgb(29 151 163 / 0.4);
+  --guide: rgb(29 151 163 / 0.7);
 
   /* Yours: everything the user made. Amber is used for nothing else. */
-  --yours: #bf7b0f;
+  --yours: #b4690a;
   --yours-text: #8b5002;
   --yours-tint: rgb(232 160 40 / 0.12);
 
@@ -43,7 +54,7 @@
   --danger-tint: rgb(179 34 43 / 0.08);
   --danger-fill: #b3222b;
 
-  --focus: rgb(91 95 214 / 0.75);
+  --focus: rgb(91 95 214 / 0.85);
   --scrim: rgb(26 27 35 / 0.32);
   --shadow-float: 0 1px 2px rgb(26 27 50 / 0.06), 0 8px 24px -4px rgb(26 27 50 / 0.12);
 
@@ -53,11 +64,18 @@
 :root[data-theme='dark'] {
   --bg: #181920;
   --panel: #12131a;
-  --raised: #20212a;
+  --raised: #262833;
   --hover: rgb(232 233 239 / 0.05);
   --active: rgb(232 233 239 / 0.08);
   --border: rgb(232 233 239 / 0.08);
   --border-strong: rgb(232 233 239 / 0.14);
+  --card-edge: rgb(232 233 239 / 0.3);
+  --line-strong: color-mix(in srgb, var(--fg) 48%, transparent);
+  --line-light: color-mix(in srgb, var(--fg) 40%, transparent);
+  --line-faint: color-mix(in srgb, var(--fg) 33%, transparent);
+  --wash-share: 5%;
+  --wash-share-2: 9.8%;
+  --sticky-mix: 18%;
 
   --fg: #e8e9ef;
   --fg-2: #b4b7c2;
@@ -68,7 +86,7 @@
   --accent-tint: rgb(110 116 240 / 0.16);
   --on-accent: #ffffff;
 
-  --guide: rgb(46 130 139 / 0.45);
+  --guide: rgb(58 163 174 / 0.6);
 
   --yours: #e8a33d;
   --yours-text: #f0b45a;
@@ -78,7 +96,7 @@
   --danger-tint: rgb(242 115 123 / 0.1);
   --danger-fill: #c42f3a;
 
-  --focus: rgb(130 136 255 / 0.7);
+  --focus: rgb(130 136 255 / 0.85);
   --scrim: rgb(8 8 14 / 0.6);
   --shadow-float: 0 1px 2px rgb(6 6 12 / 0.35), 0 12px 32px -6px rgb(6 6 12 / 0.5);
 
