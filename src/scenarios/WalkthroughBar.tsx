@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { lastInputWasKeyboard } from '../app/inputMode'
 import { useAppStore } from '../app/store'
@@ -40,7 +40,17 @@ export function WalkthroughBar() {
     // The focus that starts the walkthrough is not a request for the tooltip, which would cover the caption.
     startedFocus.current = true
     nextButton.current?.focus({ preventScroll: true })
+    // If Next already had focus nothing opened, so the flag must not wait for a later, real keyboard focus.
+    const settled = requestAnimationFrame(() => {
+      startedFocus.current = false
+    })
+    return () => cancelAnimationFrame(settled)
   }, [running])
+  const quietFocus = useCallback(() => {
+    const was = startedFocus.current
+    startedFocus.current = false
+    return was
+  }, [])
 
   if (!step) return null
   const total = step.scenario.steps.length
@@ -60,7 +70,7 @@ export function WalkthroughBar() {
             Step {step.index + 1} of {total}
           </span>
         </p>
-        <StepButton view={next} label="Next" disabled={step.index === total - 1} buttonRef={nextButton} quietFocus={() => { const was = startedFocus.current; startedFocus.current = false; return was }} />
+        <StepButton view={next} label="Next" disabled={step.index === total - 1} buttonRef={nextButton} quietFocus={quietFocus} />
         <StepButton view={close} label="Close" />
       </div>
     </section>

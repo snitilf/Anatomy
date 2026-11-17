@@ -86,6 +86,23 @@ describe('walkthroughs', () => {
     await waitFor(() => expect(button).toHaveFocus())
   })
 
+  it('keeps the tooltip shut for the focus that starts a walkthrough, and shows it for a later keyboard focus', async () => {
+    render(<App />)
+    await loadNordet()
+    play()
+    const next = within(bar()).getByRole('button', { name: 'Next' })
+    await waitFor(() => expect(next).toHaveFocus())
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+    })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    // The same button, focused later from the keyboard, shows its tooltip.
+    act(() => next.blur())
+    fireEvent.keyDown(document.body, { key: 'Shift' })
+    act(() => next.focus())
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Next')
+  })
+
   it('closes from the Close button', async () => {
     render(<App />)
     await loadNordet()
