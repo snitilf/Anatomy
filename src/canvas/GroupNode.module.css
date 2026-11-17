@@ -15,8 +15,8 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: calc(var(--text-sm) * var(--label-scale, 1));
-  line-height: calc(var(--leading-sm) * var(--label-scale, 1));
+  font-size: calc(var(--text-sm) * min(var(--label-scale, 1), 2));
+  line-height: calc(var(--leading-sm) * min(var(--label-scale, 1), 2));
   font-weight: var(--weight-medium);
   color: var(--fg-3);
 }
