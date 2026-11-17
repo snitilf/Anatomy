@@ -9,6 +9,8 @@ import type { Editing, Tool } from '../whiteboard/tools'
  */
 export interface UiState {
   sidebar: { open: boolean; width: number }
+  /** Which sidebar groups the user opened or closed, by group name. A group that is not here follows its default. */
+  groups: Record<string, boolean>
   tab: 'details' | 'review'
   menuOpen: boolean
   /** The Send to agent popover. */
@@ -47,9 +49,22 @@ function readSidebar(): UiState['sidebar'] {
   return { open: true, width: SIDEBAR.width }
 }
 
-function writeSidebar(sidebar: UiState['sidebar']) {
+function readGroups(): Record<string, boolean> {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(sidebar))
+    const raw = JSON.parse(window.localStorage.getItem(KEY) ?? 'null') as { groups?: unknown } | null
+    const groups: Record<string, boolean> = {}
+    if (raw && typeof raw.groups === 'object' && raw.groups !== null) {
+      for (const [name, open] of Object.entries(raw.groups)) if (typeof open === 'boolean') groups[name] = open
+    }
+    return groups
+  } catch {
+    return {}
+  }
+}
+
+function writeSidebar(sidebar: UiState['sidebar'], groups: UiState['groups']) {
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify({ ...sidebar, groups }))
   } catch {
     // Without storage the sidebar starts at its default next time.
   }
@@ -60,6 +75,7 @@ export interface UiApi {
   setSidebarOpen(open: boolean): void
   toggleSidebar(): void
   setSidebarWidth(width: number, persist?: boolean): void
+  setGroup(name: string, open: boolean): void
   setTab(tab: UiState['tab']): void
   setMenuOpen(open: boolean): void
   setSendOpen(open: boolean): void
@@ -76,6 +92,7 @@ export interface UiApi {
 export function createUi(): UiApi {
   const store = createStore<UiState>(() => ({
     sidebar: typeof window === 'undefined' ? { open: true, width: SIDEBAR.width } : readSidebar(),
+    groups: typeof window === 'undefined' ? {} : readGroups(),
     tab: 'details',
     menuOpen: false,
     sendOpen: false,
@@ -89,7 +106,7 @@ export function createUi(): UiApi {
   }))
   const setSidebar = (sidebar: UiState['sidebar'], persist = true) => {
     store.setState({ sidebar })
-    if (persist) writeSidebar(sidebar)
+    if (persist) writeSidebar(sidebar, store.getState().groups)
   }
   return {
     store,
@@ -99,6 +116,10 @@ export function createUi(): UiApi {
       setSidebar({ ...s, open: !s.open })
     },
     setSidebarWidth: (width, persist = true) => setSidebar({ ...store.getState().sidebar, width: clampWidth(width) }, persist),
+    setGroup: (name, open) => {
+      store.setState((s) => ({ groups: { ...s.groups, [name]: open } }))
+      writeSidebar(store.getState().sidebar, store.getState().groups)
+    },
     setTab: (tab) => store.setState({ tab }),
     setMenuOpen: (menuOpen) => store.setState({ menuOpen }),
     setSendOpen: (sendOpen) => store.setState({ sendOpen }),
