@@ -72,8 +72,9 @@ test.describe('zoom bar', () => {
     await page.keyboard.press('ControlOrMeta+Equal')
     await page.keyboard.press('ControlOrMeta+Digit0')
     await expect.poll(() => zoomOf(page)).toBeCloseTo(1, 3)
+    // The board opens at the start of the flow when the whole of it would be too small to read, and Fit shows all of it.
     await page.keyboard.press('Shift+Digit1')
-    await expect.poll(() => zoomOf(page)).toBeCloseTo(start, 2)
+    await expect.poll(() => zoomOf(page)).toBeLessThanOrEqual(start + 0.005)
   })
 
   for (const file of [SHORTENER, FORTY]) {

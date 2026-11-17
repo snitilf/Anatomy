@@ -72,6 +72,8 @@ async function dragLine(page: Page, from: { x: number; y: number }, to: { x: num
 }
 
 test('the whiteboard: draw, write, propose, re-point, undo, and everything comes back after a reload', async ({ page }) => {
+  // Wide enough that Nordet opens fitted whole, with every card in the open.
+  await page.setViewportSize({ width: 1440, height: 900 })
   await openFolder(page, 'src/examples/nordet.board.json')
   const map = await boxOf(page, '.react-flow')
   const toolbar = page.getByRole('toolbar', { name: 'Whiteboard tools' })

@@ -33,7 +33,7 @@ for (const board of BOARDS) {
             for (const r of rects) lines.add(Math.round(r.top))
           }
         }
-        return { id: el.dataset.edge, lines: lines.size, brokenWord, overflow: el.scrollWidth - el.clientWidth, height: el.offsetHeight }
+        return { id: el.dataset.edge, lines: lines.size, brokenWord, overflow: el.scrollWidth - el.clientWidth, height: el.offsetHeight, scale: Number.parseFloat(getComputedStyle(el).getPropertyValue('--label-scale')) || 1 }
       }),
     )
     expect(pills.length).toBeGreaterThan(0)
@@ -41,7 +41,7 @@ for (const board of BOARDS) {
       expect(pill.brokenWord, `${pill.id} breaks a word`).toBe(false)
       expect(pill.lines, `${pill.id} lines`).toBeLessThanOrEqual(2)
       expect(pill.overflow, `${pill.id} overflows its pill`).toBeLessThanOrEqual(1)
-      expect(pill.height, `${pill.id} height`).toBeLessThanOrEqual(16 * 2 + 6 + 2)
+      expect(pill.height, `${pill.id} height`).toBeLessThanOrEqual(16 * pill.scale * 2 + 6 + 2)
     }
   })
 }
