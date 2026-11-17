@@ -122,12 +122,13 @@
   width: 32px;
 }
 
+/* The pointer answers a little outside the look of the control. */
 .bar .control::after {
-  inset-block: min(0px, calc((32px - var(--hit)) / 2));
+  inset-block: min(-2px, calc((32px - var(--hit)) / 2));
 }
 
 .bar .square::after {
-  inset-inline: min(0px, calc((32px - var(--hit)) / 2));
+  inset-inline: min(-2px, calc((32px - var(--hit)) / 2));
 }
 
 .search {

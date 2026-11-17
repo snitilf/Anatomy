@@ -49,6 +49,8 @@ async function dragLine(page: Page, from: { x: number; y: number }, to: { x: num
 
 async function addNote(page: Page, kind: 'Note' | 'Question', text: string) {
   const panel = page.getByRole('complementary')
+  // The kind and Add show while the field has focus.
+  await panel.getByRole('textbox', { name: /^Add a (note|question)$/ }).click()
   await panel.getByRole('radio', { name: kind }).check()
   await panel.getByRole('textbox', { name: kind === 'Note' ? 'Add a note' : 'Add a question' }).fill(text)
   await panel.getByRole('button', { name: 'Add', exact: true }).click()
@@ -154,7 +156,7 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   await writeFile(page, 'board.json', JSON.stringify(next, null, 2))
 
   // The poll picks it up. The adopted move leaves the map, and the agent's own line now has the new end.
-  await expect(page.getByText('Revision 2', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('complementary').getByText('Revision', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText('2', { timeout: 15_000 })
   await expect(page.locator(`[data-label][data-edge="${line.id}"][data-edited]`)).toHaveCount(0)
   await expect(page.locator(`[data-label][data-edge="${line.id}"]`)).toHaveAttribute('data-ends', `${line.ends[0]} ${other.id}`)
 
@@ -171,13 +173,13 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   const declined = answers.getByRole('listitem').filter({ hasText: 'They are separate on purpose.' })
   await declined.getByRole('button', { name: 'Dismiss' }).click()
   await expect(page.locator('[data-mark]')).toHaveCount(0)
-  await review.locator('summary', { hasText: 'Archive' }).click()
+  await review.getByRole('button', { name: /^Archive/ }).click()
   const archived = review.getByRole('listitem').filter({ hasText: 'They are separate on purpose.' })
   // Delete removes it for good, and the toast's Undo brings it back.
   await archived.getByRole('button', { name: 'Delete' }).click()
   await expect(archived).toHaveCount(0)
   await page.locator('[data-sonner-toast]').getByRole('button', { name: 'Undo', exact: true }).click()
-  await review.locator('summary', { hasText: 'Archive' }).click()
+  // The group stays open: the panel remembers it.
   await expect(archived).toHaveCount(1)
   await archived.getByRole('button', { name: 'Restore' }).click()
   await expect(page.locator('[data-mark]')).toHaveCount(1)
