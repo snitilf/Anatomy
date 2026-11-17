@@ -104,8 +104,10 @@ const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects
 /** The last solve. React may render the same change twice, and the second render must not solve again. */
 let lastSolve: { board: Board; links: UserLines['links']; reconnects: UserLines['reconnects']; previous: Geometry | undefined; rects: Record<string, Rect>; geometry: Geometry } | undefined
 
-function solve(board: Board, rects: Record<string, Rect>, links: UserLines['links'], previous: Geometry | undefined, reconnects: UserLines['reconnects']): Geometry {
-  const last = lastSolve
+export function solve(board: Board, rects: Record<string, Rect>, links: UserLines['links'], previous: Geometry | undefined, reconnects: UserLines['reconnects']): Geometry {
+  // Only a solve that builds on a previous one is repeated by React. A solve from scratch, such as the one after the fonts
+  // load, is never taken from the last one, because the text sizes may have changed since.
+  const last = previous ? lastSolve : undefined
   if (last && last.board === board && last.links === links && last.reconnects === reconnects && last.previous === previous && sameRects(last.rects, rects)) return last.geometry
   const geometry = computeGeometry(board, rects, links ?? [], previous, reconnects ?? [])
   lastSolve = { board, links, reconnects, previous, rects, geometry }
@@ -271,7 +273,7 @@ export function Canvas() {
     const user = { links: view.links, proposals, reconnects }
     shown =
       sameRects(rects, view.rects) && reconnects === view.reconnects
-        ? { ...view, base: stored, proposals }
+        ? { ...view, base: stored, proposals, ...(view.settle === undefined ? {} : { settle: 0 }) }
         : movedOnly(view, rects, reconnects)
           ? settling(view, stored, proposals, rects)
           : buildAfterMove(view, (reuse) => fullView(view.board, stored, user, rects, reuse ? view.geometry : undefined))
