@@ -49,6 +49,11 @@ describe('the interaction machine', () => {
     expect(next(solving, { type: 'settleDue' })).toBe(solving)
   })
 
+  it('leaves the state untouched when a solve finishes after a card was picked up', () => {
+    const picked = run([key('a'), { type: 'settleDue' }, pick('b')])
+    expect(next(picked, { type: 'solved' })).toBe(picked)
+  })
+
   it('ignores a settle timer and a finished solve that do not match the phase', () => {
     expect(next(IDLE, { type: 'settleDue' })).toBe(IDLE)
     expect(next(IDLE, { type: 'solved' })).toBe(IDLE)

@@ -296,6 +296,27 @@ test.describe('moving and resizing cards', () => {
     expect(after).toBe(0)
   })
 
+  test('after Escape, moving the pointer shows no alignment guides until the release', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, SHORTENER)
+    const spot = await grabbable(page)
+    const boxes = await cardBoxes(page)
+    const self = boxes.find((b) => b.id === spot.id)!
+    const target = boxes.find((b) => b.id !== spot.id && Math.abs(b.left - self.left) > 300)!
+    const dy = target.top + 3 - self.top
+    const visible = () => page.evaluate(() => [...document.querySelectorAll<SVGLineElement>('.react-flow__viewport-portal line')].filter((l) => l.style.visibility === 'visible').length)
+    await slowDrag(page, spot, { x: spot.x + 40, y: spot.y + dy })
+    const trailing = (await cardBoxes(page)).find((b) => b.id === spot.id)!
+    await page.mouse.move(spot.x + 40, spot.y + dy + (target.top + 3 - trailing.top), { steps: 4 })
+    await nextFrame(page)
+    expect(await visible()).toBeGreaterThan(0)
+    await page.keyboard.press('Escape')
+    await page.mouse.move(spot.x + 41, spot.y + dy + (target.top + 3 - trailing.top) + 1, { steps: 3 })
+    await nextFrame(page)
+    expect(await visible()).toBe(0)
+    await page.mouse.up()
+  })
+
   test('a card resized from its corner snaps to the grid, saves once, and undo restores it', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await open(page, SHORTENER)
