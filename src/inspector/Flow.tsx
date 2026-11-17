@@ -1,10 +1,10 @@
 import clsx from 'clsx'
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
-import { useUi } from '../app/ui'
+import { useUi, useUiApi } from '../app/ui'
 import type { Board } from '../board/schema'
 import { emphasizeConnection } from '../canvas/emphasis'
 import { newId } from '../layer/edits'
@@ -15,62 +15,54 @@ import styles from './Flow.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
 import { partItems, useRequestedOpen } from './pickerItems'
+import { Group } from './bits'
 
-function Row({ row, side, names }: { row: FlowRow; side: Side; names: (id: string) => string | undefined }) {
+/** One connection at a part: the part at the other end is the name, and the connection's label is the quiet text at the right. */
+function Row({ row, side, names }: { row: FlowRow & { part: string }; side: Side; names: (id: string) => string | undefined }) {
   const { choose } = usePanel()
   const Arrow = side === 'in' ? ArrowLeft : ArrowRight
-  const name = row.part === undefined ? undefined : names(row.part)
+  const name = names(row.part)
   const what = row.unlabeled ? 'Link' : row.what
   const select = row.select
   return (
-    <li className={styles.row} data-yours={row.yours}>
-      {select ? (
-        <button
-          type="button"
-          className={styles.what}
-          data-unlabeled={row.unlabeled || undefined}
-          onClick={() => choose(select)}
-          onPointerEnter={() => emphasizeConnection(row.edge)}
-          onPointerLeave={() => emphasizeConnection(undefined)}
-          onFocus={() => emphasizeConnection(row.edge)}
-          onBlur={() => emphasizeConnection(undefined)}
-        >
-          {what}
-        </button>
-      ) : (
-        <span className={styles.what} data-text="">
-          {what}
-        </span>
-      )}
-      {row.part !== undefined && (
-        <span className={styles.end}>
+    <li
+      className={styles.row}
+      data-yours={row.yours}
+      onPointerEnter={() => emphasizeConnection(row.edge)}
+      onPointerLeave={() => emphasizeConnection(undefined)}
+      onFocus={() => emphasizeConnection(row.edge)}
+      onBlur={() => emphasizeConnection(undefined)}
+    >
+      {name === undefined ? (
+        <span className={clsx(styles.part, styles.gone)}>
           <Arrow className={styles.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
-          <span className="sr-only">{side === 'in' ? 'from' : 'to'} </span>
+          <span className={styles.name}>{row.part}</span>
+        </span>
+      ) : (
+        <button type="button" className={styles.part} onClick={() => choose({ type: row.part.startsWith('part-') ? 'proposal' : 'component', id: row.part })}>
+          <Arrow className={styles.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
+          <span className={styles.name}>{name}</span>
           {row.was !== undefined && (
             <>
               <s className={styles.was}>{names(row.was) ?? row.was}</s>
-              <span className="sr-only"> moved to </span>
+              <span className="sr-only"> moved from</span>
             </>
           )}
-          {name === undefined ? (
-            <span className={styles.gone}>{row.part}</span>
-          ) : (
-            <button type="button" className={styles.part} onClick={() => choose({ type: row.part?.startsWith('part-') ? 'proposal' : 'component', id: row.part as string })}>
-              {name}
-            </button>
-          )}
-        </span>
+        </button>
+      )}
+      {select && (
+        <button type="button" className={styles.what} data-unlabeled={row.unlabeled || undefined} onClick={() => choose(select)}>
+          {what}
+        </button>
       )}
     </li>
   )
 }
 
 /** Adds a link from this part: pick the other part, then give it a label. */
-function AddLink({ partId, board }: { partId: string; board: Board }) {
+function AddLink({ partId, board, open, setOpen }: { partId: string; board: Board; open: boolean; setOpen: (open: boolean) => void }) {
   const dispatch = useAppDispatch()
   const proposals = useAppStore((s) => s.layer?.proposals ?? [])
-  const asked = useUi((u) => u.linkPicker)
-  const [open, setOpen] = useRequestedOpen(asked)
   const [to, setTo] = useState<string | undefined>()
   const [label, setLabel] = useState('')
   const { choose } = usePanel()
@@ -122,7 +114,7 @@ function AddLink({ partId, board }: { partId: string; board: Board }) {
   return (
     <Picker
       label="Add link"
-      className={clsx(buttons.button, buttons.quiet, buttons.small, styles.add)}
+      className={styles.add}
       trigger={
         <>
           <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
@@ -138,33 +130,43 @@ function AddLink({ partId, board }: { partId: string; board: Board }) {
 }
 
 /**
- * What flows into a part and what flows out: the agent's connections, the board's inputs and outputs, and the user's
- * links in their color. It replaces separate lists of inputs, outputs, and connections.
+ * What flows into a part and what flows out, as two flat groups: the agent's connections and the user's links in
+ * their color. A plain input or output with no part at the other end is not a row. It reads in the explanation.
  */
 export function FlowBlock({ partId }: { partId: string }) {
   const { board, layer } = useAppStore(useShallow((s) => ({ board: s.board, layer: s.layer })))
+  const ui = useUiApi()
+  const asked = useUi((u) => u.linkPicker)
+  const [open, setOpen] = useRequestedOpen(asked)
+  // A request for the link picker opens the group that holds it.
+  useEffect(() => {
+    if (open) ui.setGroup('outgoing', true)
+  }, [open, ui])
   if (!board) return null
   const rows = flowRows(board, layer, partId)
   const names = (id: string) => partName(board, id, layer?.proposals)
+  const withPart = (side: Side) => rows[side].filter((row): row is FlowRow & { part: string } => row.part !== undefined)
+  const incoming = withPart('in')
+  const outgoing = withPart('out')
   return (
-    <section className={styles.section} aria-label="Flow">
-      {(rows.in.length > 0 || rows.out.length > 0) && (
-        <div className={styles.block}>
-          {(['in', 'out'] as const).map((side) =>
-            rows[side].length === 0 ? null : (
-              <div key={side} className={styles.half}>
-                <h3 className={styles.halfLabel}>{side === 'in' ? 'In' : 'Out'}</h3>
-                <ul className={styles.rows}>
-                  {rows[side].map((row) => (
-                    <Row key={row.key} row={row} side={side} names={names} />
-                  ))}
-                </ul>
-              </div>
-            ),
-          )}
-        </div>
+    <>
+      {incoming.length > 0 && (
+        <Group name="incoming" title="Incoming" count={incoming.length}>
+          <ul className={styles.rows}>
+            {incoming.map((row) => (
+              <Row key={row.key} row={row} side="in" names={names} />
+            ))}
+          </ul>
+        </Group>
       )}
-      <AddLink partId={partId} board={board} />
-    </section>
+      <Group name="outgoing" title="Outgoing" count={outgoing.length}>
+        <ul className={styles.rows}>
+          {outgoing.map((row) => (
+            <Row key={row.key} row={row} side="out" names={names} />
+          ))}
+        </ul>
+        <AddLink partId={partId} board={board} open={open} setOpen={setOpen} />
+      </Group>
+    </>
   )
 }

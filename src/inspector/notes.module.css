@@ -1,12 +1,13 @@
 .list {
   display: grid;
-  gap: var(--space-2);
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .item {
+  --indent: 34px;
   display: grid;
   gap: var(--space-1);
 }
@@ -144,7 +145,7 @@
 .state {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  padding: var(--space-1) 0 var(--space-1) var(--indent, var(--space-3));
 }
 
 .stateLine {
@@ -168,15 +169,11 @@
   color: var(--danger);
 }
 
-/* The agent's answer: neutral, indented under the item it answers. */
+/* The agent's answer: neutral and flat, indented under the item it answers. */
 .answer {
   display: grid;
   gap: 2px;
-  margin-left: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--border);
+  padding: 2px 0 0 var(--indent, 22px);
 }
 
 .answerHead {
@@ -184,29 +181,106 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  color: var(--fg-2);
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
 }
 
 .answerText,
 .answerChanged {
   margin: 0;
-  color: var(--fg);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: 18px;
   text-wrap: pretty;
 }
 
 .answerChanged {
-  color: var(--fg-2);
+  color: var(--fg-3);
 }
 
 .answerActions {
   display: flex;
-  margin: var(--space-1) 0 0 calc(var(--space-2) * -1);
+  margin-left: calc(var(--space-2) * -1);
 }
 
-.composer {
+/* A text-only action: no box, quiet until it is hovered. */
+.textAction {
+  appearance: none;
+  position: relative;
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.textAction::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, calc((24px - var(--hit)) / 2));
+  inset-inline: 0;
+}
+
+.textAction:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.textAction[data-tone='danger']:hover {
+  color: var(--danger);
+}
+
+/* In the review feed, actions show on hover and on focus, and always where there is no hover. */
+.feed {
+  /* A row's own padding, its icon, and the gap to its words. */
+  --indent: 30px;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  margin: 0 calc(var(--space-2) * -1);
+  padding: 0;
+  list-style: none;
+}
+
+.feedItem {
+  display: grid;
+  gap: 2px;
+}
+
+.feedItem .answerActions,
+.feedActions {
+  display: flex;
+  opacity: 0;
+}
+
+.feedActions {
+  padding-left: calc(var(--indent) - var(--space-2));
+}
+
+.feedItem:focus-within .answerActions,
+.feedItem:focus-within .feedActions {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .feedItem:hover .answerActions,
+  .feedItem:hover .feedActions {
+    opacity: 1;
+  }
+}
+
+@media (hover: none), (max-width: 760px) {
+  .feedItem .answerActions,
+  .feedActions {
+    opacity: 1;
+  }
 }
 
 .textarea {
@@ -233,13 +307,79 @@
   box-shadow: var(--ring);
 }
 
+/* The pinned composer: one 36px row at rest, three lines and a footer while it is in use. */
+.composer {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.composeBox {
+  position: relative;
+}
+
+.compose {
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--fg);
+  font: inherit;
+  resize: none;
+}
+
+.compose::placeholder {
+  color: var(--fg-3);
+}
+
+.compose:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.hint,
+.addHint {
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--fg-3);
+}
+
+.hint {
+  position: absolute;
+  top: 10px;
+  right: var(--space-2);
+  pointer-events: none;
+}
+
+.addHint {
+  color: inherit;
+  opacity: 0.75;
+}
+
+@media (pointer: coarse) {
+  .hint,
+  .addHint {
+    display: none;
+  }
+}
+
 .composerFoot {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.composerFoot > button {
+.composerFoot > .add {
   margin-left: auto;
 }
 
@@ -318,7 +458,8 @@
 }
 
 @media (max-width: 760px) {
-  .textarea {
+  .textarea,
+  .compose {
     font-size: 16px;
   }
 }
@@ -355,4 +496,30 @@
   content: '';
   position: absolute;
   inset: min(0px, calc((24px - var(--hit)) / 2));
+}
+
+/* The pinned end of the review. */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.footerText {
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.footerAction {
+  margin-left: auto;
+}
+
+.plain {
+  --indent: var(--space-2);
 }

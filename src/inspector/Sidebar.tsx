@@ -1,5 +1,6 @@
 import { Tabs } from '@base-ui/react/tabs'
-import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { ChevronLeft } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import type { Selection } from '../app/state'
@@ -7,17 +8,31 @@ import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { SIDEBAR, useUi, useUiApi } from '../app/ui'
 import { usePhone } from '../app/usePhone'
 import { findItem } from '../layer/edits'
+import type { Layer, Target } from '../layer/model'
+import type { Board } from '../board/schema'
 import { hasChanges, reviewCounts } from '../notes/review'
 import { ConnectionView } from './ConnectionView'
 import { Overview } from './Overview'
 import { PanelContext } from './panelContext'
 import { PartView } from './PartView'
-import { Review } from './Review'
+import { Composer } from './notes'
+import { Review, ReviewFooter } from './Review'
 import { Sheet } from './Sheet'
 import styles from './Sidebar.module.css'
 import { LinkView, MarkView, ProposalView } from './YoursViews'
 
 const selectionKey = (s: Selection | undefined) => (s && s.type !== 'board' ? `${s.type}:${s.id}` : 'board')
+
+/** What a note written in the panel is about: the part or connection shown, or the board. A user's own item has its own note field. */
+function composerTarget(board: Board | undefined, layer: Layer | undefined, s: Selection | undefined): Target | undefined {
+  if (!board) return undefined
+  if (s?.type === 'component' && board.components.some((c) => c.id === s.id)) return { type: 'component', id: s.id }
+  if (s?.type === 'relationship' && board.relationships.some((r) => r.id === s.id)) return { type: 'relationship', id: s.id }
+  if (s && layer && (s.type === 'link' || s.type === 'mark' || s.type === 'proposal') && findItem(layer, s.id)) return undefined
+  return { type: 'board' }
+}
+
+const KIND_WORD = { board: 'Overview', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part' } as const
 
 /** The view for the selection: the overview, a part, a connection, or something the user made. */
 function Details() {
@@ -80,12 +95,6 @@ function Body({ header }: { header?: ReactNode }) {
     if (!reviewing) scroll.current?.scrollTo?.({ top: 0 })
   }, [key, board?.id, reviewing])
 
-  useEffect(() => {
-    if (!focusNext.current) return
-    focusNext.current = false
-    headingRef.current?.focus()
-  }, [key])
-
   // A new revision does not switch tabs. A toast says it is open and offers the review.
   const revision = useRef(board ? `${board.id}:${board.revision}` : '')
   useEffect(() => {
@@ -107,28 +116,61 @@ function Body({ header }: { header?: ReactNode }) {
     }
   }, [board, changes, ui])
 
+  // A change of view made from inside the panel is also said aloud, because the heading it focuses is not a control.
+  const [announced, setAnnounced] = useState('')
+  useEffect(() => {
+    if (!focusNext.current) return
+    focusNext.current = false
+    headingRef.current?.focus()
+    const text = headingRef.current?.textContent
+    setAnnounced(text ? `${KIND_WORD[selection?.type ?? 'board']}, ${text}` : '')
+  }, [key, selection?.type])
+
   const panel = useMemo(() => ({ choose, headingRef }), [choose])
   const content = reviewing ? <Review /> : <Details />
+  const target = composerTarget(board, layer, selection)
+  const canBack = !reviewing && selection !== undefined && selection.type !== 'board'
   return (
     <PanelContext.Provider value={panel}>
       {header}
-      {counts.total > 0 && (
-        <Tabs.Root value={reviewing ? 'review' : 'details'} onValueChange={(value) => ui.setTab(value as 'details' | 'review')}>
-          <Tabs.List className={styles.tabs} aria-label="Sidebar">
-            <Tabs.Tab className={styles.tab} value="details">
-              Details
-            </Tabs.Tab>
-            <Tabs.Tab className={styles.tab} value="review">
-              Review
-              {counts.decisions > 0 && <span className={styles.tabCount}>{counts.decisions}</span>}
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs.Root>
-      )}
+      <Tabs.Root className={styles.top} value={reviewing ? 'review' : 'details'} onValueChange={(value) => ui.setTab(value as 'details' | 'review')}>
+        <div className={styles.where}>
+          {canBack ? (
+            <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
+              <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
+              Overview
+            </button>
+          ) : (
+            <span className={styles.here}>{reviewing ? 'Review' : 'Overview'}</span>
+          )}
+          {canBack && (
+            <kbd className={styles.esc} aria-hidden="true">
+              Esc
+            </kbd>
+          )}
+        </div>
+        <Tabs.List className={styles.switch} aria-label="Sidebar">
+          <Tabs.Tab className={styles.tab} value="details">
+            Details
+          </Tabs.Tab>
+          <Tabs.Tab className={styles.tab} value="review" disabled={counts.total === 0}>
+            Review
+            {counts.decisions > 0 && (
+              <span className={styles.tabCount} title={`${counts.decisions} need a decision`}>
+                {counts.decisions}
+              </span>
+            )}
+          </Tabs.Tab>
+        </Tabs.List>
+      </Tabs.Root>
       <div ref={scroll} className={styles.scroll} data-scroll="">
         <div key={reviewing ? 'review' : key} className={styles.content}>
           {content}
         </div>
+      </div>
+      {reviewing ? <ReviewFooter /> : target && <Composer key={`${target.type}:${'id' in target ? target.id : ''}`} target={target} />}
+      <div className="sr-only" role="status" aria-live="polite">
+        {announced}
       </div>
     </PanelContext.Provider>
   )

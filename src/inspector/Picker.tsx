@@ -29,7 +29,7 @@ export function Picker({
   placeholder?: string
   open?: boolean
   onOpenChange?: (open: boolean) => void
-  className?: string
+  className?: string | undefined
   /** The full text of a trigger that may be cut short. */
   title?: string
 }) {

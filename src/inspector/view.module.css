@@ -1,36 +1,28 @@
 /* Every view of the sidebar: the overview, a selection, and the review. */
 
 .view {
+  --row: 28px;
   grid-template-columns: minmax(0, 1fr);
   display: grid;
-  gap: var(--space-5);
+  align-content: start;
+  gap: var(--space-1);
   /* A word with no spaces wraps instead of widening the panel. */
   overflow-wrap: anywhere;
 }
 
+/* Rows are 44px where a finger taps: on a touch screen, and in the phone sheet. */
+@media (pointer: coarse), (max-width: 760px) {
+  .view {
+    --row: 44px;
+  }
+}
+
+/* The title block: 15/22 title, the lead under it, 20px to what follows. */
 .head {
   grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: var(--space-1);
-}
-
-.back {
-  appearance: none;
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: 24px;
-  margin: calc(var(--space-1) * -1) 0 var(--space-1) calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-3);
-  font: inherit;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  cursor: pointer;
+  margin-bottom: var(--space-4);
 }
 
 .titleRow {
@@ -55,22 +47,16 @@
   color: var(--fg);
 }
 
+/* Focus moves here when the view changes, for a screen reader. The heading is not a control, so it shows no box. */
+.title:focus,
 .title:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-  border-radius: var(--radius-xs);
+  outline: none;
 }
 
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+.lead {
   margin: 0;
-  color: var(--fg-3);
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-variant-numeric: tabular-nums;
+  color: var(--fg-2);
+  text-wrap: pretty;
 }
 
 .source {
@@ -79,28 +65,116 @@
   gap: var(--space-1);
 }
 
-.lead {
-  margin: 0;
-  color: var(--fg);
-  text-wrap: pretty;
+.source svg {
+  color: var(--fg-3);
 }
 
-.section {
-  grid-template-columns: minmax(0, 1fr);
+/* Label and value rows. */
+.props {
   display: grid;
-  gap: var(--space-2);
-  min-width: 0;
+  margin: 0 0 var(--space-1);
+  padding: 0;
 }
 
-.sectionHead {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0;
+.prop {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: var(--row);
+}
+
+.prop dt {
   color: var(--fg-3);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
+}
+
+.prop dd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.moved {
+  flex: none;
+  color: var(--yours-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.was {
+  min-width: 0;
+  color: var(--fg-3);
+}
+
+/* A value that can change: a button that opens a picker. */
+.pickerValue {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 28px;
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pickerChevron {
+  flex: none;
+  color: var(--fg-3);
+}
+
+/* Groups: a 28px header that opens and closes, and the content under it. */
+.group {
+  grid-template-columns: minmax(0, 1fr);
+  display: grid;
+  min-width: 0;
+}
+
+.groupHead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
+}
+
+.groupToggle {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% + var(--space-4));
+  height: 28px;
+  margin: 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chevron {
+  flex: none;
+}
+
+.groupToggle[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
 }
 
 .count {
@@ -108,11 +182,26 @@
   font-weight: var(--weight-regular);
 }
 
+.groupBody {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.subHead {
+  margin: 0;
+  padding-top: var(--space-1);
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  font-weight: var(--weight-medium);
+}
+
 /* Lists of rows. Each row is one button. */
 .rows {
   grid-template-columns: minmax(0, 1fr);
   display: grid;
-  gap: 1px;
+  gap: 0;
   margin: 0 calc(var(--space-2) * -1);
   padding: 0;
   list-style: none;
@@ -124,8 +213,8 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: 32px;
-  padding: 6px var(--space-2);
+  min-height: var(--row);
+  padding: 4px var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
@@ -177,14 +266,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A walkthrough plays: its icon shows at rest. */
 .play {
   flex: none;
-  color: var(--fg-2);
-  opacity: 0;
-}
-
-.row:focus-visible .play {
-  opacity: 1;
+  color: var(--fg-3);
 }
 
 .wraps {
@@ -198,14 +283,14 @@
   color: var(--fg-3);
 }
 
-/* Things the user made: a tinted row, never a border or badge. */
-.yours {
-  background: var(--yours-tint);
-}
-
+/* Things the user made: the glyph is amber, the row stays quiet until it is hovered or focused. */
 .yoursIcon {
   flex: none;
   color: var(--yours);
+}
+
+.yours:focus-visible {
+  background: var(--yours-tint);
 }
 
 .more {
@@ -230,10 +315,21 @@
   gap: var(--space-1);
   margin: 0;
   padding-left: 18px;
+  color: var(--fg-2);
 }
 
 .plainList li::marker {
   color: var(--fg-3);
+}
+
+/* The filter stays at the top of the panel while the lists scroll under it. */
+.filterBar {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  margin: 0 calc(var(--space-4) * -1);
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  background: var(--panel);
 }
 
 .filter {
@@ -270,7 +366,7 @@
 }
 
 .prose {
-  color: var(--fg);
+  color: var(--fg-2);
   text-wrap: pretty;
 }
 
@@ -302,6 +398,18 @@
   margin-bottom: 0;
 }
 
+.takes {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.takesLabel {
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
 /* Open items: the kind above the text. */
 .items {
   display: grid;
@@ -309,6 +417,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  color: var(--fg-2);
 }
 
 .itemKind {
@@ -316,37 +425,6 @@
   color: var(--fg-3);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
-}
-
-/* Closed sections. */
-.disclosure > summary {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  width: fit-content;
-  list-style: none;
-  color: var(--fg-3);
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-
-.disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.chevron {
-  align-self: center;
-  color: var(--fg-3);
-}
-
-.disclosure[open] .chevron {
-  transform: rotate(90deg);
-}
-
-.disclosure[open] > summary {
-  margin-bottom: var(--space-2);
 }
 
 .refs {
@@ -398,12 +476,6 @@
   transition: text-decoration-color 120ms var(--ease-out);
 }
 
-.partLink:focus-visible {
-  outline: none;
-  border-radius: 2px;
-  box-shadow: var(--ring);
-}
-
 .gone {
   color: var(--fg-3);
   text-decoration: line-through;
@@ -436,6 +508,11 @@
   background: var(--raised);
   color: var(--fg);
   font: inherit;
+}
+
+.input {
+  min-height: 28px;
+  padding-block: 3px;
 }
 
 .textarea {
@@ -482,37 +559,65 @@
   color: var(--danger);
 }
 
+/* The review's one line of summary. */
+.summary {
+  margin: 0 0 var(--space-3);
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+
+/* Delete: plain words in the danger color, at the end of the view. */
+.dangerRow {
+  display: flex;
+  margin-top: var(--space-4);
+}
+
+.danger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--row);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--danger);
+  font: inherit;
+  cursor: pointer;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .row,
-  .back,
-  .more {
+  .more,
+  .groupToggle,
+  .pickerValue,
+  .danger {
     transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
   }
 
   .row:hover,
-  .more:hover {
+  .more:hover,
+  .pickerValue:hover {
     background: var(--hover);
   }
 
-  .yours:hover {
-    background: color-mix(in srgb, var(--yours-tint), var(--fg) 4%);
-  }
-
-  .back:hover {
-    color: var(--fg);
+  .groupToggle:hover {
     background: var(--hover);
+    color: var(--fg-2);
   }
 
   .row:hover .play {
-    opacity: 1;
+    color: var(--fg);
   }
 
   .partLink:hover {
     text-decoration-color: currentColor;
   }
 
-  .disclosure > summary:hover {
-    color: var(--fg-2);
+  .danger:hover {
+    background: var(--danger-tint);
   }
 
   .input:hover,
@@ -523,9 +628,11 @@
 }
 
 .row:focus-visible,
-.back:focus-visible,
 .more:focus-visible,
-.disclosure > summary:focus-visible {
+.groupToggle:focus-visible,
+.pickerValue:focus-visible,
+.danger:focus-visible,
+.partLink:focus-visible {
   outline: none;
   box-shadow: var(--ring);
   border-radius: var(--radius-sm);
@@ -543,12 +650,6 @@
   }
 }
 
-/* A button whose text may be longer than the panel: one line, cut with an ellipsis. */
-.moveEnd {
-  min-width: 0;
-  max-width: 100%;
-}
-
 .clip {
   display: block;
   min-width: 0;
@@ -557,18 +658,8 @@
   white-space: nowrap;
 }
 
-.back {
-  position: relative;
-}
-
-.back::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((24px - var(--hit)) / 2));
-  inset-inline: 0;
-}
-
-.more {
+.more,
+.groupToggle {
   position: relative;
 }
 
@@ -577,4 +668,16 @@
   position: absolute;
   inset-block: min(0px, calc((24px - var(--hit)) / 2));
   inset-inline: 0;
+}
+
+/* An answer inside a group needs no indent. */
+.flush {
+  --indent: 0px;
+}
+
+/* A one-line field in a row's value column. */
+.inline {
+  display: block;
+  flex: 1;
+  min-width: 0;
 }
