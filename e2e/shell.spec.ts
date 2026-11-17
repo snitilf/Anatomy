@@ -182,6 +182,23 @@ test.describe('on a phone', () => {
       .toBe(true)
   })
 
+  test('a connection chosen from the list fits both ends above the sheet', async ({ page }) => {
+    await open(page, SHORTENER)
+    const sheet = page.getByRole('region', { name: 'Sidebar' })
+    await sheet.getByRole('button').first().click()
+    await expect(sheet).toHaveAttribute('data-stop', '1')
+    await sheet.getByRole('button', { name: /^Connections/ }).click()
+    await sheet.getByRole('button', { name: /^Connections/ }).locator('xpath=ancestor::section[1]').getByRole('listitem').first().getByRole('button').click()
+    // Half of the map: the sheet has settled there.
+    const top = 44 + (844 - 44) / 2
+    await expect
+      .poll(async () => {
+        const path = (await page.locator('.react-flow__edge.selected .react-flow__edge-path').first().boundingBox())!
+        return path.y + path.height <= top + 1 && path.x >= -1 && path.x + path.width <= 391
+      })
+      .toBe(true)
+  })
+
   test('a drag of the sheet header leaves no focus ring', async ({ page }) => {
     await open(page, NORDET)
     const sheet = page.getByRole('region', { name: 'Sidebar' })

@@ -6,7 +6,7 @@ import { useAppStore } from '../app/store'
 import { useUi } from '../app/ui'
 import { usePhone } from '../app/usePhone'
 import type { Rect } from '../layout/geometry'
-import { clampViewport, viewportFor, zoomAround, type Limits } from './camera'
+import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 
 const STEP_MS = 220
@@ -56,8 +56,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
           camera.frame({ box: ends, padding: 0.25, maxZoom: 0.9 })
           return
         }
-        const next = viewportFor(flow.getViewport(), area, ends, true)
-        if (next) camera.move(next)
+        // Both ends fit in the part of the map above the sheet, at any zoom the limits allow.
+        camera.move(frameViewport(camera.limits(), area, { box: ends, padding: 0.25, maxZoom: 0.9 }))
         return
       }
       // A card picked on the map is under the pointer already, so the view stays put, even where the sheet covers it.
