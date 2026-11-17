@@ -114,7 +114,7 @@ test('the top bar is 44px high with 32px controls in four groups: 4px inside a g
   const box = async (name: string | RegExp) => (await bar.getByRole('button', { name }).boundingBox())!
   const undo = await box('Undo')
   const redo = await box('Redo')
-  const search = await box('Command menu')
+  const search = await box('Search')
   const send = await box(/^Send to agent/)
   const toggle = await box(/sidebar$/)
   const settings = await box('Settings')
@@ -127,7 +127,7 @@ test('the top bar is 44px high with 32px controls in four groups: 4px inside a g
   expect(gap(send, toggle)).toBe(16)
   expect(gap(toggle, settings)).toBe(4)
   // The search trigger says what it is.
-  await expect(bar.getByRole('button', { name: 'Command menu' })).toContainText('Search')
+  await expect(bar.getByRole('button', { name: 'Search' })).toContainText('Search')
 })
 
 test.describe('on a phone', () => {
