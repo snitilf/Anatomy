@@ -24,7 +24,7 @@ function ThemeItem({ mode }: { mode: ThemeMode }) {
 }
 
 /** The theme, and the guide for making a board. */
-export function SettingsMenu({ className }: { className?: string }) {
+export function SettingsMenu({ className }: { className?: string | undefined }) {
   const mode = useThemeMode()
   const howTo = useCommand('howto')
   const HowToIcon = howTo.command.icon
