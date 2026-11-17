@@ -40,7 +40,7 @@ import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { buildAfterMove, fontsLoaded, refreshWhenIdle } from './fontRefresh'
 import { onTextMeasured } from './textMeasure'
-import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
+import { assembleGraph, computeGeometry, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
@@ -101,10 +101,21 @@ interface UserLines {
 /** A build with no previous geometry, from the cards where they are now: nothing in motion or unsaved moves. */
 const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects)
 
+/** The last solve. React may render the same change twice, and the second render must not solve again. */
+let lastSolve: { board: Board; links: UserLines['links']; reconnects: UserLines['reconnects']; previous: Geometry | undefined; rects: Record<string, Rect>; geometry: Geometry } | undefined
+
+function solve(board: Board, rects: Record<string, Rect>, links: UserLines['links'], previous: Geometry | undefined, reconnects: UserLines['reconnects']): Geometry {
+  const last = lastSolve
+  if (last && last.board === board && last.links === links && last.reconnects === reconnects && last.previous === previous && sameRects(last.rects, rects)) return last.geometry
+  const geometry = computeGeometry(board, rects, links ?? [], previous, reconnects ?? [])
+  lastSolve = { board, links, reconnects, previous, rects, geometry }
+  return geometry
+}
+
 /** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
 function fullView(board: Board, base: CardPlacement | undefined, user: UserLines, rects = placeAll(board, base, user.proposals), previous?: Geometry): View {
   const { links, proposals, reconnects } = user
-  return { board, links, proposals, reconnects, base, rects, geometry: computeGeometry(board, rects, links ?? [], previous, reconnects ?? []) }
+  return { board, links, proposals, reconnects, base, rects, geometry: solve(board, rects, links, previous, reconnects) }
 }
 
 function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
@@ -125,6 +136,50 @@ function changed(view: View, id: string, rect: Rect, settle: number): View {
   if (!at || (at.x === rect.x && at.y === rect.y && at.width === rect.width && at.height === rect.height)) return view
   const rects = { ...view.rects, [id]: rect }
   return { ...view, rects, geometry: moveCard(view.board, view.geometry, rects, id), settle }
+}
+
+/** Only cards that were already there moved or changed size, and nothing else about the lines changed. */
+function movedOnly(view: View, rects: Record<string, Rect>, reconnects: View['reconnects']): boolean {
+  if (view.fontStale || reconnects !== view.reconnects) return false
+  const ids = Object.keys(rects)
+  return ids.length === Object.keys(view.rects).length && ids.every((id) => view.rects[id] !== undefined)
+}
+
+/**
+ * A resize or a drop that pushes other cards aside lands on the cheap path of a drag: the lines of every card that
+ * changed are hidden, and the full build, which keeps the lines nothing touched, follows after the next paint.
+ */
+function settling(view: View, base: CardPlacement | undefined, proposals: View['proposals'], rects: Record<string, Rect>): View {
+  let geometry = view.geometry
+  for (const [id, rect] of Object.entries(rects)) {
+    const was = view.rects[id]
+    if (was && was.x === rect.x && was.y === rect.y && was.width === rect.width && was.height === rect.height) continue
+    geometry = moveCard(view.board, geometry, rects, id)
+  }
+  return { ...view, base, proposals, rects, geometry, settle: 0 }
+}
+
+/** How long one frame may spend on the build that follows a drop or a resize. */
+const SLICE_MS = 8
+
+/**
+ * Solves the lines in slices, one per frame, so no frame holds the whole build. Returns what cancels it.
+ * The result is the same as `computeGeometry` gives.
+ */
+function solveInSlices(view: View, reuse: boolean, done: (geometry: Geometry) => void): () => void {
+  const steps = geometrySteps(view.board, view.rects, view.links ?? [], reuse ? view.geometry : undefined, view.reconnects ?? [])
+  let frame = 0
+  const run = () => {
+    const start = performance.now()
+    for (;;) {
+      const step = steps.next()
+      if (step.done) return done(step.value)
+      if (performance.now() - start > SLICE_MS) break
+    }
+    frame = window.requestAnimationFrame(run)
+  }
+  frame = window.requestAnimationFrame(run)
+  return () => window.cancelAnimationFrame(frame)
 }
 
 /** Arrow keys repeat quickly. The full build and the save wait until they stop. */
@@ -217,7 +272,9 @@ export function Canvas() {
     shown =
       sameRects(rects, view.rects) && reconnects === view.reconnects
         ? { ...view, base: stored, proposals }
-        : buildAfterMove(view, (reuse) => fullView(view.board, stored, user, rects, reuse ? view.geometry : undefined))
+        : movedOnly(view, rects, reconnects)
+          ? settling(view, stored, proposals, rects)
+          : buildAfterMove(view, (reuse) => fullView(view.board, stored, user, rects, reuse ? view.geometry : undefined))
     setView(shown)
   }
   // Text measured before its font faces loaded was sized with the fallback. When they are in, the map is built again, once.
@@ -441,13 +498,25 @@ export function Canvas() {
   const settle = shown?.held === undefined ? shown?.settle : undefined
   useEffect(() => {
     if (settle === undefined) return
+    let cancelBuild: (() => void) | undefined
     const settleNow = () => {
       const current = viewRef.current
-      if (!current) return
+      if (!current || current.settle === undefined || current.held !== undefined) return
       saveKeyMoves(current)
-      setView((v) => (v && v.settle !== undefined && v.held === undefined ? buildAfterMove(v, (reuse) => fullView(v.board, v.base, v, v.rects, reuse ? v.geometry : undefined)) : v))
+      // The lines stay hidden while the build runs. A card picked up meanwhile, or any other change, cancels it.
+      cancelBuild = solveInSlices(current, !current.fontStale, (geometry) =>
+        setView((v) => {
+          if (!v || v.rects !== current.rects || v.geometry !== current.geometry || v.held !== undefined) return v
+          const { held: _held, settle: _settle, fontStale: _stale, ...rest } = v
+          return { ...rest, geometry }
+        }),
+      )
     }
-    return settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
+    const cancelWait = settle === 0 ? afterPaint(settleNow) : cancelTimer(window.setTimeout(settleNow, settle))
+    return () => {
+      cancelWait()
+      cancelBuild?.()
+    }
   }, [settle, shown, saveKeyMoves])
 
   // Escape while a card is held puts it back and leaves the selection and focus alone.
