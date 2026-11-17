@@ -1,3 +1,7 @@
+.line :global(.react-flow__edge-path) {
+  vector-effect: non-scaling-stroke;
+}
+
 .line {
   transition: opacity 120ms var(--ease-out);
 }
@@ -5,12 +9,12 @@
 /* The pointer on a line draws it in the accent, like a selected one. */
 .line:hover :global(.react-flow__edge-path) {
   stroke: var(--accent) !important;
-  stroke-width: 1.5px !important;
+  stroke-width: 1.75px !important;
 }
 
 /* A part is selected: the lines that are not its own step back. */
 .line[data-faded] {
-  opacity: 0.35;
+  opacity: 0.55;
 }
 
 .line[data-faded]:hover {
@@ -18,7 +22,7 @@
 }
 
 .line[data-dimmed] {
-  opacity: 0.28;
+  opacity: 0.45;
 }
 
 .line[data-dimmed]:hover {
@@ -32,11 +36,11 @@
 .pill {
   position: absolute;
   box-sizing: border-box;
-  width: var(--label-width, 150px);
+  width: calc(var(--label-width, 150px) * var(--label-scale, 1));
   padding: 3px 6px;
   color: var(--fg-2);
-  font-size: var(--text-xs);
-  line-height: 16px;
+  font-size: calc(var(--text-xs) * var(--label-scale, 1));
+  line-height: calc(16px * var(--label-scale, 1));
   text-align: center;
   text-wrap: balance;
   /* A word is never broken. The pill is sized to its text, at spaces only, so nothing is cut either. */
@@ -60,11 +64,11 @@
 }
 
 .pill[data-depth='1'] .cutout {
-  background: color-mix(in srgb, var(--fg) 2.5%, var(--bg));
+  background: color-mix(in srgb, var(--fg) var(--wash-share), var(--bg));
 }
 
 .pill[data-depth='2'] .cutout {
-  background: color-mix(in srgb, var(--fg) 4.9%, var(--bg));
+  background: color-mix(in srgb, var(--fg) var(--wash-share-2), var(--bg));
 }
 
 .pill:hover {
@@ -118,7 +122,7 @@
 /* A faded label keeps its cutout. Only the words step back, so the line never shows through them. */
 .pill[data-dimmed],
 .pill[data-faded] {
-  color: color-mix(in srgb, var(--fg-2) 45%, transparent);
+  color: color-mix(in srgb, var(--fg-2) 70%, transparent);
 }
 
 .pill[data-dimmed]:hover,
@@ -144,7 +148,7 @@
 }
 
 .pill.mine[data-faded] {
-  color: color-mix(in srgb, var(--yours-text) 45%, transparent);
+  color: color-mix(in srgb, var(--yours-text) 70%, transparent);
 }
 
 /* Where a connection ran before the user moved its end: the agent's line, dimmed, under the user's. */

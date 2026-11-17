@@ -43,7 +43,7 @@ import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
-import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, WheelZoom } from './CameraControls'
+import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -918,6 +918,7 @@ export function Canvas() {
           <SpaceHand />
           <ZoomBar />
           <WheelZoom />
+          <LabelScale />
           <MapHint />
         </ReactFlow>
       </CameraContext.Provider>

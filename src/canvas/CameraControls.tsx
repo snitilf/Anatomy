@@ -1,4 +1,4 @@
-import { useReactFlow, useStore, type Viewport } from '@xyflow/react'
+import { useReactFlow, useStore, useStoreApi, type Viewport } from '@xyflow/react'
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../app/store'
@@ -217,13 +217,38 @@ export function WheelZoom() {
 /** Zoom at and above which every connection label shows. */
 export const LABELS_ZOOM = 0.9
 /** Below this zoom label text is too small to read on any board. */
-const TINY_ZOOM = 0.5
+const TINY_ZOOM = 0.6
 
 /**
  * Reports how labels show on the map: all of them when zoomed in, or on a quiet map only those of the selection
  * and of the card under the pointer. A crowded board is quiet below `LABELS_ZOOM`, and every board is quiet when the
  * text would be too small to read. Only a change across a threshold renders.
  */
+/** Below this zoom, line and group labels are drawn larger on the board, so they stay about this size on screen. */
+const LABEL_FLOOR_PX = 9
+const LABEL_BASE_PX = 11
+
+/**
+ * Sets `--label-scale` on the map: how much line and group labels grow so they never render under 9px on screen.
+ * It is 1 from about 0.82 zoom up, so zooming in the normal range writes nothing.
+ */
+export function LabelScale() {
+  const map = useStore((s) => s.domNode)
+  const store = useStoreApi()
+  useLayoutEffect(() => {
+    if (!map) return
+    const apply = (zoom: number) => {
+      const scale = Math.min(3, Math.max(1, LABEL_FLOOR_PX / (LABEL_BASE_PX * zoom)))
+      map.style.setProperty('--label-scale', (Math.round(scale * 20) / 20).toString())
+    }
+    apply(store.getState().transform[2])
+    return store.subscribe((state, prev) => {
+      if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
+    })
+  }, [map, store])
+  return null
+}
+
 export function LabelMode({ crowded, onChange }: { crowded: boolean; onChange: (quiet: boolean) => void }) {
   const near = useStore((s) => s.transform[2] >= LABELS_ZOOM)
   const tiny = useStore((s) => s.transform[2] < TINY_ZOOM)

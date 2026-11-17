@@ -13,7 +13,7 @@
 .sticky {
   padding: var(--space-3);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--yours) 18%, var(--raised));
+  background: color-mix(in srgb, var(--yours) var(--sticky-mix), var(--raised));
   color: var(--fg);
   font-size: var(--text-md);
   line-height: var(--leading-md);
