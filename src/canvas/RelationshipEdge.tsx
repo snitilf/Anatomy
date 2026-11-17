@@ -35,7 +35,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           {...(markerEnd ? { markerEnd } : {})}
           interactionWidth={interactionWidth ?? 28}
           style={{
-            stroke: emphasized ? 'var(--accent)' : ink,
+            stroke: emphasized ? 'var(--accent-line)' : ink,
             strokeWidth: emphasized ? Math.max(SELECTED_WIDTH, style.width) : style.width,
             strokeDasharray: style.dash || undefined,
             strokeLinecap: style.dash.startsWith('1.5') ? 'round' : 'butt',

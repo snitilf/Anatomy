@@ -44,6 +44,8 @@
   /* The accent marks the agent's content in focus: selection, focus, the primary action. */
   --accent: #4d51cb;
   --accent-text: #4a4ec3;
+  /* A selected or hovered connection: its stroke, arrowhead and label. Stronger than every rest line. */
+  --accent-line: #3a3eb8;
   --accent-tint: rgb(91 95 214 / 0.1);
   --on-accent: #ffffff;
 
@@ -91,6 +93,7 @@
 
   --accent: #5e63e0;
   --accent-text: #9ea2ff;
+  --accent-line: #9ea2ff;
   --accent-tint: rgb(110 116 240 / 0.16);
   --on-accent: #ffffff;
 
