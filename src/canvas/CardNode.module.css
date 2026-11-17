@@ -43,7 +43,7 @@
 }
 
 .card[data-dimmed] {
-  opacity: 0.32;
+  opacity: 0.5;
 }
 
 .card[data-dimmed]:hover {
@@ -67,6 +67,17 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: none;
+}
+
+/* Too small to read: the summary stays in the page for screen readers and drops out of the picture. */
+.summary[data-small] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .summary {
