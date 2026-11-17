@@ -36,14 +36,14 @@
   /* How much amber a sticky note takes from the card color. */
   --sticky-mix: 26%;
 
-  /* Text. All three pass 4.5 to 1 on every surface they sit on, hover and tint fills included. */
+  /* Text. Every text token passes 4.5 to 1 on every surface it sits on: canvas, shell and card, each with the hover or active fill and the accent, amber or danger tint, and the two together. */
   --fg: #1a1b23;
   --fg-2: #505361;
-  --fg-3: #575968;
+  --fg-3: #545665;
 
   /* The accent marks the agent's content in focus: selection, focus, the primary action. */
   --accent: #4d51cb;
-  --accent-text: #4a4ec3;
+  --accent-text: #4649b7;
   /* A selected or hovered connection: its stroke, arrowhead and label. Stronger than every rest line. */
   --accent-line: #3a3eb8;
   --accent-tint: rgb(91 95 214 / 0.1);
@@ -54,10 +54,10 @@
 
   /* Yours: everything the user made. Amber is used for nothing else. */
   --yours: #b4690a;
-  --yours-text: #8b5002;
+  --yours-text: #814a02;
   --yours-tint: rgb(232 160 40 / 0.12);
 
-  --danger: #b3222b;
+  --danger: #a82028;
   --danger-tint: rgb(179 34 43 / 0.08);
   --danger-fill: #b3222b;
 
@@ -71,7 +71,7 @@
 :root[data-theme='dark'] {
   --bg: #181920;
   --panel: #12131a;
-  --raised: #2b2d3a;
+  --raised: #2e3141;
   --hover: rgb(232 233 239 / 0.05);
   --active: rgb(232 233 239 / 0.08);
   --border: rgb(232 233 239 / 0.08);
@@ -83,16 +83,16 @@
   --line-strong: color-mix(in srgb, var(--fg) 58%, transparent);
   --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
   --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);
-  --wash-share: 6%;
-  --wash-share-2: 11.6%;
+  --wash-share: 5.8%;
+  --wash-share-2: 11.3%;
   --sticky-mix: 18%;
 
   --fg: #e8e9ef;
-  --fg-2: #b4b7c2;
-  --fg-3: #9b9eaa;
+  --fg-2: #c8cbd5;
+  --fg-3: #b7bac4;
 
   --accent: #5e63e0;
-  --accent-text: #9ea2ff;
+  --accent-text: #afb3ff;
   --accent-line: #9ea2ff;
   --accent-tint: rgb(110 116 240 / 0.16);
   --on-accent: #ffffff;
@@ -103,7 +103,7 @@
   --yours-text: #f0b45a;
   --yours-tint: rgb(232 163 61 / 0.13);
 
-  --danger: #f2737b;
+  --danger: #f6a3a8;
   --danger-tint: rgb(242 115 123 / 0.1);
   --danger-fill: #c42f3a;
 
