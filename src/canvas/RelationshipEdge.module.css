@@ -8,7 +8,7 @@
 
 /* The pointer on a line draws it in the accent, like a selected one. */
 .line:hover :global(.react-flow__edge-path) {
-  stroke: var(--accent) !important;
+  stroke: var(--accent-line) !important;
   stroke-width: 1.75px !important;
 }
 
@@ -90,7 +90,7 @@
 
 .pill[data-selected] {
   z-index: 1;
-  color: var(--accent-text);
+  color: var(--accent-line);
   font-weight: var(--weight-medium);
 }
 
@@ -144,7 +144,7 @@
 }
 
 .pill.mine[data-selected] {
-  color: var(--accent-text);
+  color: var(--accent-line);
 }
 
 .pill.mine[data-faded] {
@@ -163,5 +163,5 @@
 }
 
 .pill[data-edited][data-selected] {
-  color: var(--accent-text);
+  color: var(--accent-line);
 }

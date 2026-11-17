@@ -23,7 +23,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           {...(markerEnd ? { markerEnd } : {})}
           interactionWidth={interactionWidth ?? 28}
           style={{
-            stroke: emphasized ? 'var(--accent)' : 'var(--yours)',
+            stroke: emphasized ? 'var(--accent-line)' : 'var(--yours)',
             strokeWidth: emphasized ? SELECTED_WIDTH : MANUAL_STYLE.width,
             strokeDasharray: MANUAL_STYLE.dash,
             strokeLinecap: 'round',
