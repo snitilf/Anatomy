@@ -218,8 +218,6 @@ export function Overview({ board }: { board: Board }) {
       </div>
       <Props>
         <Prop label="Revision">{board.revision}</Prop>
-        <Prop label="Parts">{board.components.length}</Prop>
-        <Prop label="Connections">{board.relationships.length}</Prop>
       </Props>
       {board.components.length > FILTER_FROM && (
         <div className={styles.filterBar}>
