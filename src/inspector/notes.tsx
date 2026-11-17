@@ -303,80 +303,88 @@ export function Composer({ target }: { target: Target }) {
   const empty = text.trim().length === 0
   const active = focused || !empty
 
-  function submit() {
+  /** From the keyboard the field stays in use, for the next note. After a press on Add it closes. */
+  function submit(keyboard: boolean) {
     if (empty) return
     dispatch({ type: 'noteAdded', kind, text: text.trim(), target, id: newId('note'), now: new Date() })
     // The new note shows in its group, even if the user had closed it.
     ui.setGroup('notes', true)
     setText('')
-    field.current?.focus()
+    if (keyboard) {
+      field.current?.focus()
+    } else {
+      field.current?.blur()
+      setFocused(false)
+    }
   }
 
   return (
-    <form
-      ref={form}
-      className={styles.composer}
-      data-active={active || undefined}
-      onSubmit={(event) => {
-        event.preventDefault()
-        submit()
-      }}
-      onFocus={() => setFocused(true)}
-      onBlur={(event) => {
-        if (!form.current?.contains(event.relatedTarget as Node | null)) setFocused(false)
-      }}
-    >
-      <div className={styles.composeBox}>
-        <textarea
-          ref={field}
-          className={styles.compose}
-          name="note-text"
-          aria-label={kind === 'note' ? 'Add a note' : 'Add a question'}
-          placeholder={kind === 'note' ? 'Add a note' : 'Add a question'}
-          value={text}
-          maxLength={LAYER_LIMITS.noteText}
-          rows={active ? 3 : 1}
-          data-composer=""
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-              event.preventDefault()
-              submit()
-            } else if (event.key === 'Escape') {
-              event.currentTarget.blur()
-            }
-          }}
-        />
-        {!active && (
-          <kbd className={styles.hint} aria-hidden="true">
-            C
-          </kbd>
-        )}
-      </div>
-      {active && (
-        <div className={styles.composerFoot}>
-          <div className={styles.switch} role="radiogroup" aria-label="Kind">
-            {(['note', 'question'] as const).map((k) => (
-              <label key={k} className={styles.option}>
-                <input type="radio" name={name} className={styles.radio} checked={kind === k} onChange={() => setKind(k)} />
-                <span className={styles.face}>{k === 'note' ? 'Note' : 'Question'}</span>
-              </label>
-            ))}
-          </div>
-          {text.length >= LAYER_LIMITS.noteText - 200 && (
-            <span className={styles.counter} role="status">
-              {text.length} of {LAYER_LIMITS.noteText}
-            </span>
-          )}
-          <button type="submit" className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)} disabled={empty} aria-keyshortcuts="Control+Enter Meta+Enter">
-            Add
-            <kbd className={styles.addHint} aria-hidden="true">
-              {formatKeys('Mod+Enter')}
+    <div className={styles.composerSlot}>
+      <form
+        ref={form}
+        className={styles.composer}
+        data-active={active || undefined}
+        onSubmit={(event) => {
+          event.preventDefault()
+          submit(false)
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={(event) => {
+          if (!form.current?.contains(event.relatedTarget as Node | null)) setFocused(false)
+        }}
+      >
+        <div className={styles.composeBox}>
+          <textarea
+            ref={field}
+            className={styles.compose}
+            name="note-text"
+            aria-label={kind === 'note' ? 'Add a note' : 'Add a question'}
+            placeholder={kind === 'note' ? 'Add a note' : 'Add a question'}
+            value={text}
+            maxLength={LAYER_LIMITS.noteText}
+            rows={active ? 3 : 1}
+            data-composer=""
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                event.preventDefault()
+                submit(true)
+              } else if (event.key === 'Escape') {
+                event.currentTarget.blur()
+              }
+            }}
+          />
+          {!active && (
+            <kbd className={styles.hint} aria-hidden="true">
+              C
             </kbd>
-          </button>
+          )}
         </div>
-      )}
-    </form>
+        {active && (
+          <div className={styles.composerFoot}>
+            <div className={styles.switch} role="radiogroup" aria-label="Kind">
+              {(['note', 'question'] as const).map((k) => (
+                <label key={k} className={styles.option}>
+                  <input type="radio" name={name} className={styles.radio} checked={kind === k} onChange={() => setKind(k)} />
+                  <span className={styles.face}>{k === 'note' ? 'Note' : 'Question'}</span>
+                </label>
+              ))}
+            </div>
+            {text.length >= LAYER_LIMITS.noteText - 200 && (
+              <span className={styles.counter} role="status">
+                {text.length} of {LAYER_LIMITS.noteText}
+              </span>
+            )}
+            <button type="submit" className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)} disabled={empty} aria-keyshortcuts="Control+Enter Meta+Enter">
+              Add
+              <kbd className={styles.addHint} aria-hidden="true">
+                {formatKeys('Mod+Enter')}
+              </kbd>
+            </button>
+          </div>
+        )}
+      </form>
+    </div>
   )
 }
 

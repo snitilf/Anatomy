@@ -5,7 +5,7 @@ const BOARD_FILE = 'src/examples/example.board.json'
 const BOARD_TITLE = 'Example: check-in on a late order'
 
 // A part row in the overview reads "Label Group". Connection rows read "Label to Other".
-const partRow = (label: string) => new RegExp(`^${label} (?!to )`)
+const partRow = (label: string) => new RegExp(`^${label}(?!\\w| to )`)
 
 test('open, inspect, walk through, learn, take a note, reload, export, and open the export in a fresh browser', async ({ page }, testInfo) => {
   const requests: string[] = []
@@ -32,7 +32,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(inspector.locator('[data-source]')).toHaveCount(0)
 
   // Inspect a connection: its kind in plain English.
-  await inspector.getByRole('region', { name: 'Flow' }).getByRole('button', { name: 'proposes an action' }).click()
+  await inspector.getByRole('button', { name: 'proposes an action' }).click()
   await expect(inspector.getByRole('heading', { name: 'proposes an action', level: 2 })).toBeVisible()
   await expect(inspector.getByText(/Rule check triggers Preview/)).toBeVisible()
 

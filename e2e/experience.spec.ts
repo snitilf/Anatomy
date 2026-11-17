@@ -105,10 +105,10 @@ test('selecting a part softens the other lines, and a selected connection is dra
     page.evaluate(() => [...document.querySelectorAll<SVGElement>('.react-flow__edge g[data-faded]')].length)
   expect(await opacities()).toBe(0)
 
-  await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
+  await inspector.getByRole('button', { name: /^Approval(?!\w| to )/ }).click()
   expect(await opacities()).toBeGreaterThan(0)
 
-  await inspector.getByRole('region', { name: 'Flow' }).getByRole('button', { name: 'approved action version' }).click()
+  await inspector.getByRole('button', { name: 'approved action version' }).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -126,7 +126,7 @@ test('the panel starts at the top for every new selection', async ({ page }) => 
   const scroller = inspector.locator('[data-scroll]')
   await scroller.evaluate((el) => el.scrollTo({ top: 400 }))
   expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
-  await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
+  await inspector.getByRole('button', { name: /^Approval(?!\w| to )/ }).click()
   await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
   expect(await scroller.evaluate((el) => el.scrollTop)).toBe(0)
 })
@@ -134,8 +134,7 @@ test('the panel starts at the top for every new selection', async ({ page }) => 
 test('a part opens on its summary and flow, with the citations closed', async ({ page }) => {
   await open(page, EXAMPLE)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
-  await inspector.getByRole('button', { name: /^Approval (?!to )/ }).click()
-  await expect(inspector.getByRole('region', { name: 'Flow' })).toBeVisible()
-  await expect(inspector.locator('details')).not.toHaveCount(0)
-  await expect(inspector.locator('details[open]')).toHaveCount(0)
+  await inspector.getByRole('button', { name: /^Approval(?!\w| to )/ }).click()
+  await expect(inspector.getByRole('region', { name: 'Outgoing' })).toBeVisible()
+  await expect(inspector.getByRole('button', { name: /^Cited, not checked/ })).toHaveAttribute('aria-expanded', 'false')
 })

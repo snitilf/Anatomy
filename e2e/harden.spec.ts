@@ -36,14 +36,18 @@ for (const width of [1440, 390]) {
 
     test('rows of the overview end in an ellipsis instead of running past the sidebar', async ({ page }) => {
       await open(page, WORST)
-      if (width > 800) await expect(page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first()).toBeVisible()
+      if (width > 800) {
+        // Connections start closed. Opening them shows the longest names.
+        await page.getByTestId('inspector').getByRole('button', { name: /^Connections/ }).click()
+        await expect(page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first()).toBeVisible()
+      }
       expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
     })
 
     test('a connection between long-named parts keeps its Move end buttons inside the sidebar, with the full name on hover', async ({ page }) => {
       await open(page, WORST)
       await page.locator('.react-flow__node-card[data-id="long-nospace"]').click({ force: true })
-      await page.getByTestId('inspector').getByRole('region', { name: 'Flow' }).getByRole('button', { name: /^approvedActionVersio/ }).first().click()
+      await page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first().click()
       const from = page.getByTestId('inspector').getByRole('button', { name: 'From', exact: true })
       await expect(from).toBeVisible()
       await expect(from).toHaveAttribute('title', /^From: Authentication_/)
