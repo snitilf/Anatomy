@@ -169,7 +169,7 @@ function Body({ header }: { header?: ReactNode }) {
         </div>
       </div>
       {reviewing ? <ReviewFooter /> : target && <Composer key={`${target.type}:${'id' in target ? target.id : ''}`} target={target} />}
-      <div className="sr-only" role="status" aria-live="polite">
+      <div className="sr-only" aria-live="polite">
         {announced}
       </div>
     </PanelContext.Provider>

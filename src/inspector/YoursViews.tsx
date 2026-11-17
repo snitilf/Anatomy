@@ -1,4 +1,4 @@
-import { Check, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Trash2, Type, Unlink, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Check, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Trash2, Type, Unlink, type LucideIcon } from 'lucide-react'
 import { Fragment, useContext, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
@@ -156,6 +156,12 @@ export function LinkView({ board, link }: { board: Board; link: Link }) {
     <div className={styles.view}>
       <div className={styles.head}>
         <Heading icon={Link2}>{link.label || 'Link'}</Heading>
+        <p className={styles.route}>
+          <PartLink id={link.from} name={name(link.from)} />
+          <ArrowRight className={styles.inlineArrow} size={14} strokeWidth={1.5} aria-hidden="true" />
+          <span className="sr-only">to </span>
+          <PartLink id={link.to} name={name(link.to)} />
+        </p>
       </div>
       <Props>
         <Prop label="Label">

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { LABEL_GROWTH } from './buildGraph'
 import { useAppStore } from '../app/store'
+import { useUi } from '../app/ui'
+import { usePhone } from '../app/usePhone'
 import type { Rect } from '../layout/geometry'
 import { clampViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
@@ -25,32 +27,60 @@ function box(rects: readonly Rect[]): Rect | undefined {
  * A part picked on the map itself (a click, or the start of a drag) is under the pointer already, so the view stays put.
  */
 export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => string | undefined; rectOf: (id: string) => Rect | undefined }) {
-  const { selection, board } = useAppStore(useShallow((s) => ({ selection: s.selection, board: s.board })))
+  const { selection, board, playing } = useAppStore(useShallow((s) => ({ selection: s.selection, board: s.board, playing: s.scenario !== undefined })))
   const flow = useReactFlow()
   const camera = useCamera()
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
+  const phone = usePhone()
+  const stop = useUi((u) => u.sheet)
   const previous = useRef<string | undefined>(undefined)
   const key = selection && selection.type !== 'board' ? `${selection.type}:${selection.id}` : undefined
+  // On a phone the sheet covers the lower half of the map once a selection raises it, so the part has to sit in the upper half.
+  const covered = phone && !playing && stop !== 2
+
+  /** Moves the camera so the selection shows in the part of the map that is not under the sheet. */
+  const reveal = useCallback(
+    (picked: boolean) => {
+      if (!selection || selection.type === 'board' || !board) return
+      const size = camera.size()
+      const area = covered ? { ...size, height: size.height / 2 } : size
+      const narrow = width > 0 && width < 600
+      if (selection.type === 'relationship') {
+        const r = board.relationships.find((x) => x.id === selection.id)
+        const ends = r ? box([rectOf(r.from), rectOf(r.to)].filter((x): x is Rect => x !== undefined)) : undefined
+        if (!ends || !narrow) return
+        if (!covered) {
+          camera.frame({ box: ends, padding: 0.25, maxZoom: 0.9 })
+          return
+        }
+        const next = viewportFor(flow.getViewport(), area, ends, true)
+        if (next) camera.move(next)
+        return
+      }
+      if (selection.type === 'component' && picked && !covered) return
+      const node = rectOf(selection.id)
+      if (!node) return
+      const next = viewportFor(flow.getViewport(), area, node, narrow)
+      if (next) camera.move(next)
+    },
+    [selection, board, camera, flow, width, covered, rectOf],
+  )
 
   useEffect(() => {
     if (previous.current === key) return
     previous.current = key
     const here = takePicked()
-    if (selection?.type === 'component' && here === selection.id) return
-    if (!selection || selection.type === 'board' || !board) return
-    const narrow = width > 0 && width < 600
-    if (selection.type === 'relationship') {
-      const r = board.relationships.find((x) => x.id === selection.id)
-      const ends = r ? box([rectOf(r.from), rectOf(r.to)].filter((x): x is Rect => x !== undefined)) : undefined
-      if (ends && narrow) camera.frame({ box: ends, padding: 0.25, maxZoom: 0.9 })
-      return
-    }
-    const node = rectOf(selection.id)
-    if (!node) return
-    const next = viewportFor(flow.getViewport(), camera.size(), node, narrow)
-    if (next) camera.move(next)
-  }, [key, selection, board, flow, camera, width, height, takePicked, rectOf])
+    reveal(selection?.type === 'component' && here === selection.id)
+    // `reveal` follows the size of the map, which does not start a reveal of its own.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, selection, takePicked])
+
+  // The sheet coming up to half over a part that is already selected.
+  useEffect(() => {
+    if (phone && stop === 1) reveal(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phone, stop, height])
 
   return null
 }
