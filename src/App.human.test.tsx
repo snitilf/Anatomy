@@ -201,6 +201,8 @@ describe('your notes', () => {
   it('shows a note under its group even when the group was closed', async () => {
     render(<App />)
     await loadExample()
+    expect(panel().queryByRole('button', { name: /^Notes/ })).not.toBeInTheDocument()
+    addNote('First thought')
     fireEvent.click(panel().getByRole('button', { name: /^Notes/ }))
     expect(panel().getByRole('button', { name: /^Notes/ })).toHaveAttribute('aria-expanded', 'false')
     addNote('Back in view')
