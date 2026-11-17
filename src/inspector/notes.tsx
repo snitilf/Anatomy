@@ -399,15 +399,15 @@ export function NotesSection({ target }: { target: Target }) {
   const { board, notes } = useAppStore(useShallow((s) => ({ board: s.board, notes: s.layer?.notes })))
   if (!board || !notes) return null
   const mine = notes.filter((n) => sameTarget(n.target, target))
+  // The note field at the bottom of the panel is the way to add one, so an empty list takes no room.
+  if (mine.length === 0) return null
   return (
     <Group name="notes" title="Notes" count={mine.length}>
-      {mine.length > 0 && (
-        <ul className={styles.list}>
-          {mine.map((note) => (
-            <NoteBlock key={note.id} note={note} board={board} />
-          ))}
-        </ul>
-      )}
+      <ul className={styles.list}>
+        {mine.map((note) => (
+          <NoteBlock key={note.id} note={note} board={board} />
+        ))}
+      </ul>
     </Group>
   )
 }
