@@ -24,14 +24,14 @@ function ThemeItem({ mode }: { mode: ThemeMode }) {
 }
 
 /** The theme, and the guide for making a board. */
-export function SettingsMenu() {
+export function SettingsMenu({ className }: { className?: string }) {
   const mode = useThemeMode()
   const howTo = useCommand('howto')
   const HowToIcon = howTo.command.icon
   return (
     <Menu.Root>
       <Tip label="Settings">
-        <Menu.Trigger className={clsx(buttons.button, buttons.quiet, buttons.icon)} aria-label="Settings">
+        <Menu.Trigger className={clsx(buttons.button, buttons.quiet, buttons.icon, className)} aria-label="Settings">
           <Settings2 size={16} strokeWidth={1.5} aria-hidden="true" />
         </Menu.Trigger>
       </Tip>
