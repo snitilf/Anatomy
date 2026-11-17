@@ -14,7 +14,7 @@
 
 /* A part is selected: the lines that are not its own step back. */
 .line[data-faded] {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .line[data-faded]:hover {
@@ -22,7 +22,7 @@
 }
 
 .line[data-dimmed] {
-  opacity: 0.45;
+  opacity: 0.5;
 }
 
 .line[data-dimmed]:hover {
@@ -122,7 +122,7 @@
 /* A faded label keeps its cutout. Only the words step back, so the line never shows through them. */
 .pill[data-dimmed],
 .pill[data-faded] {
-  color: color-mix(in srgb, var(--fg-2) 70%, transparent);
+  color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent);
 }
 
 .pill[data-dimmed]:hover,
@@ -148,7 +148,7 @@
 }
 
 .pill.mine[data-faded] {
-  color: color-mix(in srgb, var(--yours-text) 70%, transparent);
+  color: color-mix(in srgb, var(--yours-text) var(--faded-label), transparent);
 }
 
 /* Where a connection ran before the user moved its end: the agent's line, dimmed, under the user's. */

@@ -9,6 +9,7 @@
   overflow: hidden;
   background: var(--raised);
   border: 1px solid var(--card-edge);
+  box-shadow: var(--card-shadow);
   border-radius: var(--radius-md);
   cursor: grab;
   /* A card never changes the layout or paint outside itself, so moving one repaints only that card. */

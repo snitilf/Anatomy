@@ -348,5 +348,5 @@ test('the card under the pointer keeps its lines and the rest step back', async 
   }, spot.id)
   expect(opacities.own.length).toBeGreaterThan(0)
   expect(Math.min(...opacities.own)).toBe(1)
-  expect(Math.max(...opacities.rest)).toBeLessThan(0.5)
+  expect(Math.max(...opacities.rest)).toBeLessThan(0.7)
 })
