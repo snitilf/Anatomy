@@ -208,6 +208,17 @@ describe('your notes', () => {
     expect(within(panel().getByRole('region', { name: 'Notes' })).getByText('Back in view')).toBeInTheDocument()
   })
 
+  it('keeps C working after a group was opened with the keyboard', async () => {
+    render(<App />)
+    await loadExample()
+    const toggle = panel().getByRole('button', { name: /^Covers/ })
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    toggle.focus()
+    fireEvent.keyDown(toggle, { key: 'c' })
+    await waitFor(() => expect(panel().getByRole('textbox', { name: 'Add a note' })).toHaveFocus())
+  })
+
   it('shows a counter only near the limit', async () => {
     render(<App />)
     await loadExample()
