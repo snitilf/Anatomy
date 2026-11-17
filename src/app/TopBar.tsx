@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { ChevronDown, PanelRight, Search } from 'lucide-react'
 import { useCommand, type CommandView } from '../commands/context'
+import { ariaShortcut } from '../commands/keys'
 import buttons from './buttons.module.css'
 import { OpenMenu } from './OpenMenu'
 import { SaveStatus } from './SaveStatus'
@@ -23,7 +24,7 @@ function CommandIcon({ view, label = view.label, className }: { view: CommandVie
         onClick={view.run}
         disabled={!view.enabled}
         aria-label={label}
-        aria-keyshortcuts={view.command.keys?.[0]?.replace('Mod', 'Meta')}
+        aria-keyshortcuts={ariaShortcut(view.command.keys?.[0])}
       >
         <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
       </button>
@@ -82,7 +83,7 @@ export function TopBar() {
         )}
         <div className={styles.group}>
           <Tip label="Command menu" keys={menu.shortcut}>
-            <button type="button" className={clsx(buttons.button, buttons.quiet, styles.control, styles.search)} onClick={menu.run} aria-label="Search" aria-description="Opens the command menu" aria-keyshortcuts={menu.command.keys?.[0]?.replace('Mod', 'Meta')} aria-haspopup="dialog">
+            <button type="button" className={clsx(buttons.button, buttons.quiet, styles.control, styles.search)} onClick={menu.run} aria-label="Search" aria-description="Opens the command menu" aria-keyshortcuts={ariaShortcut(menu.command.keys?.[0])} aria-haspopup="dialog">
               <Search size={16} strokeWidth={1.5} aria-hidden="true" />
               <span className={styles.searchWord}>Search</span>
               <kbd className={styles.keys}>{menu.shortcut}</kbd>

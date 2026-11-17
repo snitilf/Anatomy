@@ -5,6 +5,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { CameraSlotContext } from '../canvas/cameraContext'
 import { useCommand } from '../commands/context'
+import { ariaShortcut } from '../commands/keys'
 import { buildFeedback, serializeFeedback, unsentCount, type FeedbackDraft } from '../feedback/build'
 import { summarize } from '../feedback/summary'
 import { newId } from '../layer/edits'
@@ -267,7 +268,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
               type="button"
               className={clsx(buttons.button, count > 0 && buttons.primary, styles.trigger, className)}
               aria-label={label}
-              aria-keyshortcuts="Meta+Enter"
+              aria-keyshortcuts={ariaShortcut('Mod+Enter')}
             >
               <span className={styles.long}>{view.label}</span>
               <span className={styles.short}>Send</span>
