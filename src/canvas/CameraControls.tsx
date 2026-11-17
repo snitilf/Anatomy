@@ -57,7 +57,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
           return
         }
         // Both ends fit in the part of the map above the sheet, at any zoom the limits allow.
-        camera.move(frameViewport(camera.limits(), area, { box: ends, padding: 0.25, maxZoom: 0.9 }))
+        // Set directly: `move` would center a board that fits in the map on the whole map, under the sheet.
+        void flow.setViewport(frameViewport(camera.limits(), area, { box: ends, padding: 0.25, maxZoom: 0.9 }), { duration: 0 })
         return
       }
       // A card picked on the map is under the pointer already, so the view stays put, even where the sheet covers it.
