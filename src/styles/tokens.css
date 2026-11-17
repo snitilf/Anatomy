@@ -26,6 +26,10 @@
   --card-shadow: 0 1px 2px rgb(26 27 50 / 0.06);
   /* How much of the label color a faded label keeps. */
   --faded-label: 80%;
+  /* How much of a line is left when it steps back (a part is selected, a card is hovered, a walkthrough plays). Each ink keeps 2 to 1 on the canvas and on a group wash. */
+  --fade-strong: 0.56;
+  --fade-light: 0.64;
+  --fade-faint: 0.72;
   /* Connection ink: a share of the text color, never a hue. */
   --line-strong: color-mix(in srgb, var(--fg) 66%, transparent);
   --line-light: color-mix(in srgb, var(--fg) 58%, transparent);
@@ -80,6 +84,9 @@
   --group-edge: color-mix(in srgb, var(--fg) 14%, transparent);
   --card-shadow: 0 1px 2px rgb(6 6 12 / 0.3);
   --faded-label: 70%;
+  --fade-strong: 0.5;
+  --fade-light: 0.56;
+  --fade-faint: 0.68;
   --line-strong: color-mix(in srgb, var(--fg) 58%, transparent);
   --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
   --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);

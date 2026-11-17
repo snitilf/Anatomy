@@ -12,19 +12,23 @@
   stroke-width: 1.75px !important;
 }
 
-/* A part is selected: the lines that are not its own step back. */
-.line[data-faded] {
-  opacity: 0.6;
-}
-
-.line[data-faded]:hover {
-  opacity: 1;
-}
-
+/* A part is selected, or a walkthrough plays: the lines that are not in focus step back, each ink by its own share. */
+.line[data-faded],
 .line[data-dimmed] {
-  opacity: 0.5;
+  opacity: var(--fade-light);
 }
 
+.line[data-faded][data-tone='strong'],
+.line[data-dimmed][data-tone='strong'] {
+  opacity: var(--fade-strong);
+}
+
+.line[data-faded][data-tone='faint'],
+.line[data-dimmed][data-tone='faint'] {
+  opacity: var(--fade-faint);
+}
+
+.line[data-faded]:hover,
 .line[data-dimmed]:hover {
   opacity: 1;
 }
@@ -154,7 +158,7 @@
 /* Where a connection ran before the user moved its end: the agent's line, dimmed, under the user's. */
 .ghost {
   fill: none;
-  opacity: 0.35;
+  opacity: 0.6;
   pointer-events: none;
 }
 
