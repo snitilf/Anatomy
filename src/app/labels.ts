@@ -11,7 +11,7 @@ export const SOURCE_LABEL: Record<SourceKind, string> = {
 /** One plain sentence about how far to trust a source. */
 export const SOURCE_MEANING: Record<SourceKind, string> = {
   'agent-explanation': 'Your agent describes this as it understands it.',
-  'agent-proposal': 'Your agent suggests this. Nobody has decided it yet.',
+  'agent-proposal': 'Your agent suggests this.',
   'documented-intent': 'A written plan or spec says this.',
   'user-stated': 'You told your agent this.',
 }
