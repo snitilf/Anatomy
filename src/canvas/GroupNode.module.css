@@ -4,6 +4,8 @@
   border-radius: var(--radius-lg);
   /* A light wash, so two areas that overlap show a darker patch where they do. */
   background: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
+  border: 1px solid var(--group-edge);
+  box-sizing: border-box;
   pointer-events: none;
 }
 

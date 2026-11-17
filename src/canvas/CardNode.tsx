@@ -5,8 +5,8 @@ import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
-/** Below this zoom a summary would draw under about 8px on screen, so the card shows its title alone. */
-export const SUMMARY_ZOOM = 0.65
+/** Below this zoom a summary would draw under 9px on screen, so the card shows its title alone. */
+export const SUMMARY_ZOOM = 0.75
 
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
 

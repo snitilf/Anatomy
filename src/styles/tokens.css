@@ -12,32 +12,37 @@
 :root,
 :root[data-theme='light'] {
   /* Surfaces: the shell (panel) recedes, the canvas sits above it, cards and floating bars are the highest plane. */
-  --bg: #f3f4f9;
-  --panel: #ecedf5;
-  --raised: #fbfcfe;
+  --bg: #ebecf3;
+  --panel: #e3e4ed;
+  --raised: #fafaff;
   --hover: rgb(26 27 35 / 0.05);
   --active: rgb(26 27 35 / 0.08);
   --border: rgb(26 27 35 / 0.09);
   --border-strong: rgb(26 27 35 / 0.16);
   /* The outline of a card: a real edge against the canvas and the group wash. */
-  --card-edge: rgb(26 27 35 / 0.34);
+  --card-edge: rgb(26 27 35 / 0.52);
+  /* The hairline around a group area. */
+  --group-edge: color-mix(in srgb, var(--fg) 18%, transparent);
+  --card-shadow: 0 1px 2px rgb(26 27 50 / 0.06);
+  /* How much of the label color a faded label keeps. */
+  --faded-label: 80%;
   /* Connection ink: a share of the text color, never a hue. */
-  --line-strong: color-mix(in srgb, var(--fg) 56%, transparent);
-  --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
-  --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);
+  --line-strong: color-mix(in srgb, var(--fg) 66%, transparent);
+  --line-light: color-mix(in srgb, var(--fg) 58%, transparent);
+  --line-faint: color-mix(in srgb, var(--fg) 50%, transparent);
   /* The wash of a group area, and of two that overlap. */
-  --wash-share: 4.5%;
-  --wash-share-2: 8.8%;
+  --wash-share: 5.2%;
+  --wash-share-2: 10.1%;
   /* How much amber a sticky note takes from the card color. */
   --sticky-mix: 26%;
 
   /* Text. All three pass 4.5 to 1 on every surface they sit on, hover and tint fills included. */
   --fg: #1a1b23;
   --fg-2: #505361;
-  --fg-3: #5d5f6d;
+  --fg-3: #575968;
 
   /* The accent marks the agent's content in focus: selection, focus, the primary action. */
-  --accent: #5b5fd6;
+  --accent: #4d51cb;
   --accent-text: #4a4ec3;
   --accent-tint: rgb(91 95 214 / 0.1);
   --on-accent: #ffffff;
@@ -64,17 +69,20 @@
 :root[data-theme='dark'] {
   --bg: #181920;
   --panel: #12131a;
-  --raised: #262833;
+  --raised: #2b2d3a;
   --hover: rgb(232 233 239 / 0.05);
   --active: rgb(232 233 239 / 0.08);
   --border: rgb(232 233 239 / 0.08);
   --border-strong: rgb(232 233 239 / 0.14);
-  --card-edge: rgb(232 233 239 / 0.3);
-  --line-strong: color-mix(in srgb, var(--fg) 48%, transparent);
-  --line-light: color-mix(in srgb, var(--fg) 40%, transparent);
-  --line-faint: color-mix(in srgb, var(--fg) 33%, transparent);
-  --wash-share: 5%;
-  --wash-share-2: 9.8%;
+  --card-edge: rgb(232 233 239 / 0.4);
+  --group-edge: color-mix(in srgb, var(--fg) 14%, transparent);
+  --card-shadow: 0 1px 2px rgb(6 6 12 / 0.3);
+  --faded-label: 70%;
+  --line-strong: color-mix(in srgb, var(--fg) 58%, transparent);
+  --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
+  --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);
+  --wash-share: 6%;
+  --wash-share-2: 11.6%;
   --sticky-mix: 18%;
 
   --fg: #e8e9ef;
