@@ -209,6 +209,24 @@ export function computeGeometry(
   previous?: Geometry,
   reconnects: readonly Reconnect[] = [],
 ): Geometry {
+  const steps = geometrySteps(board, rects, links, previous, reconnects)
+  for (;;) {
+    const step = steps.next()
+    if (step.done) return step.value
+  }
+}
+
+/**
+ * The same solve as `computeGeometry`, in steps. It yields after each line is routed and after each label is placed,
+ * so a caller can spread the work over several frames. Run to the end it returns exactly what `computeGeometry` returns.
+ */
+export function* geometrySteps(
+  board: Board,
+  rects: Readonly<Record<string, Rect>>,
+  links: readonly Link[] = [],
+  previous?: Geometry,
+  reconnects: readonly Reconnect[] = [],
+): Generator<void, Geometry, void> {
   // The board's parts and the user's proposed parts. Both are cards the lines keep out of.
   const boxOf = new Map<string, Rect>(Object.entries(rects))
   const boxes = [...boxOf.values()]
@@ -295,7 +313,7 @@ export function computeGeometry(
   const lengths = new Map(fresh.map((i) => [i, reach(i)]))
   fresh.sort((i, j) => (lengths.get(i) as number) - (lengths.get(j) as number) || ((ends[i] as EdgeEnds).id < (ends[j] as EdgeEnds).id ? -1 : 1))
   /** Routes the lines that are not kept, in this order, around the ones that stay and the ones drawn before. */
-  const routeAll = (order: readonly number[]) => {
+  const routeAll = function* (order: readonly number[]): Generator<void, (Slot | undefined)[], void> {
     const drawn = new Drawn()
     const placed = [...stayed]
     for (const r of stayed) if (r?.route.runs) drawn.add(r.route.runs)
@@ -306,16 +324,17 @@ export function computeGeometry(
       const route = routeConnection(plan, boxes, drawn, obstacles, ownGroups(end))
       placed[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays: undefined }
       if (route.runs) drawn.add(route.runs)
+      yield
     }
     return placed
   }
-  let slots = routeAll(fresh)
+  let slots = yield* routeAll(fresh)
   // A line that found no room is routed again before the rest, which then work round it. This repeats while it helps.
   for (let pass = 0; pass < RIP_UP_PASSES; pass++) {
     const crowded = fresh.filter((i) => slots[i]?.route.crowded)
     if (crowded.length === 0) break
     const first = new Set(crowded)
-    const again = routeAll([...crowded, ...fresh.filter((i) => !first.has(i))])
+    const again = yield* routeAll([...crowded, ...fresh.filter((i) => !first.has(i))])
     if (again.filter((r, i) => r?.route.crowded && fresh.includes(i)).length >= crowded.length) break
     slots = again
   }
@@ -354,23 +373,24 @@ export function computeGeometry(
   // A label stays where it was while no moved card's text, no group name, no label placed before it, and no line is under it.
   const later: number[] = []
   // A label held back is tried again first, before the labels that stay take their places: room may have freed up.
-  routes.forEach((r, i) => {
+  for (const [i, r] of routes.entries()) {
     const old = r.stays
-    if (!old || !old.labelHidden || r.text === '') return
+    if (!old || !old.labelHidden || r.text === '') continue
     const label = placeLabel(r.route.runs ?? [], r.text, { ...context, own: i })
+    yield
     if (label.hidden) {
       edges.set(r.id, old)
-      return
+      continue
     }
     taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }, LABEL_GROWTH))
     edges.set(r.id, shapeOf(r, label))
-  })
-  routes.forEach((r, i) => {
-    if (edges.has(r.id)) return
+  }
+  for (const [i, r] of routes.entries()) {
+    if (edges.has(r.id)) continue
     const old = r.stays
     if (old && r.text === '') {
       edges.set(r.id, old)
-      return
+      continue
     }
     if (old && old.labelWidth > 0) {
       const box = pillBox(old)
@@ -378,12 +398,15 @@ export function computeGeometry(
       if (clear) {
         taken.push(pillBox(old, LABEL_GROWTH))
         edges.set(r.id, old)
-        return
+        continue
       }
     }
     later.push(i)
-  })
-  for (const i of later) place(routes[i] as (typeof routes)[number], i)
+  }
+  for (const i of later) {
+    place(routes[i] as (typeof routes)[number], i)
+    yield
+  }
   return { edges, groups, ends, solved: rects }
 }
 
