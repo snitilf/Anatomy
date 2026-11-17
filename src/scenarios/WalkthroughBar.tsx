@@ -7,10 +7,10 @@ import { useCommand, type CommandView } from '../commands/context'
 import { currentStep } from './step'
 import styles from './WalkthroughBar.module.css'
 
-function StepButton({ view, label, disabled, buttonRef }: { view: CommandView; label: string; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> }) {
+function StepButton({ view, label, disabled, buttonRef, quietFocus }: { view: CommandView; label: string; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; quietFocus?: () => boolean }) {
   const Icon = view.command.icon
   return (
-    <Tip label={label} keys={view.shortcut} side="top">
+    <Tip label={label} keys={view.shortcut} side="top" {...(quietFocus ? { consumeReturnFocus: quietFocus } : {})}>
       <button ref={buttonRef} type="button" className={styles.button} aria-label={label} aria-disabled={disabled || undefined} onClick={() => !disabled && view.run()}>
         <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
       </button>
@@ -30,12 +30,16 @@ export function WalkthroughBar() {
   const close = useCommand('walkthrough.close')
   const nextButton = useRef<HTMLButtonElement>(null)
   const [instant] = useState(lastInputWasKeyboard)
+  const startedFocus = useRef(false)
   const step = currentStep({ board, scenario })
   const running = step !== undefined
 
   // Focus moves to Next, so the arrow keys and Enter work at once.
   useEffect(() => {
-    if (running) nextButton.current?.focus({ preventScroll: true })
+    if (!running) return
+    // The focus that starts the walkthrough is not a request for the tooltip, which would cover the caption.
+    startedFocus.current = true
+    nextButton.current?.focus({ preventScroll: true })
   }, [running])
 
   if (!step) return null
@@ -56,7 +60,7 @@ export function WalkthroughBar() {
             Step {step.index + 1} of {total}
           </span>
         </p>
-        <StepButton view={next} label="Next" disabled={step.index === total - 1} buttonRef={nextButton} />
+        <StepButton view={next} label="Next" disabled={step.index === total - 1} buttonRef={nextButton} quietFocus={() => { const was = startedFocus.current; startedFocus.current = false; return was }} />
         <StepButton view={close} label="Close" />
       </div>
     </section>
