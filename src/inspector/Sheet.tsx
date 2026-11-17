@@ -71,12 +71,14 @@ export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
     return () => observer.disconnect()
   }, [])
 
-  const place = (offset: number, settle: boolean) => {
+  const place = (offset: number, settle: boolean, rest = true) => {
     const el = sheet.current
     if (!el) return
     if (settle && !prefersStillness()) el.dataset.settling = ''
     else delete el.dataset.settling
     el.style.transform = `translate3d(0, ${offset}px, 0)`
+    // The part below the screen is padding, so the list and the composer end at the bottom edge of the screen.
+    if (rest) el.style.setProperty('--hidden', `${offset}px`)
   }
 
   useLayoutEffect(() => {
@@ -103,7 +105,7 @@ export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
     if (!d) return
     d.samples.push({ y: event.clientY, t: event.timeStamp })
     if (d.samples.length > 6) d.samples.shift()
-    place(rubber(d.start + event.clientY - d.y, offsets(height)[0]), false)
+    place(rubber(d.start + event.clientY - d.y, offsets(height)[0]), false, false)
   }
   const onPointerUp = (event: PointerEvent<HTMLElement>) => {
     const d = drag.current
