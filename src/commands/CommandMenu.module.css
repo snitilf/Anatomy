@@ -64,6 +64,14 @@
   font-weight: var(--weight-medium);
 }
 
+/* The name of the selection heads the first group, in the ink of a name, and never wraps. */
+.group[data-selection] [cmdk-group-heading] {
+  overflow: hidden;
+  color: var(--fg-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .item {
   display: flex;
   align-items: center;

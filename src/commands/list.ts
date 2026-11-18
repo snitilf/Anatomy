@@ -43,10 +43,13 @@ import {
 } from 'lucide-react'
 import { EXAMPLES } from '../app/examples'
 import type { Selection } from '../app/state'
+import { copyText } from '../app/clipboard'
 import { trailOf } from '../app/crumbs'
 import { showView } from '../app/viewActions'
+import { revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
+import { toast } from 'sonner'
 import { currentTrail, rememberTrail, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
 import type { Rect } from '../layout/geometry'
@@ -372,6 +375,36 @@ export const COMMANDS: readonly Command[] = [
       c.uiApi.askLinkPicker()
     },
   },
+  {
+    id: 'selection.overview',
+    group: 'Selection',
+    label: 'Show on Overview',
+    icon: LayoutList,
+    keywords: ['list', 'page', 'parts'],
+    visible: (c) => onMap(c) && !playing(c) && onTrail(c),
+    run: (c) => {
+      const { board, selection } = c.state
+      if (!board || !selection || selection.type === 'board') return
+      if (selection.type === 'component' || selection.type === 'proposal') {
+        const group = selection.type === 'proposal' ? 'yours' : (board.components.find((p) => p.id === selection.id)?.group ?? 'other')
+        revealRow(board.id, `part:${selection.id}`, group)
+      } else if (selection.type === 'relationship' || selection.type === 'link') revealRow(board.id, `conn:${selection.id}`)
+      showView(c.uiApi, board.id, 'overview')
+    },
+  },
+  {
+    id: 'selection.copyName',
+    group: 'Selection',
+    label: 'Copy name',
+    icon: Copy,
+    keywords: ['label', 'title'],
+    visible: (c) => onMap(c) && !playing(c) && onTrail(c),
+    run: (c) => {
+      const name = c.state.board && trailOf(c.state.board, c.state.layer, c.state.selection)?.last.label
+      if (name === undefined) return
+      void copyText(name).then((ok) => (ok ? toast('Name copied') : toast.error('Could not copy the name')))
+    },
+  },
   walk('target', 'target', 'Go to target', ArrowRight, 'Alt+ArrowRight', ['next', 'outgoing', 'forward']),
   walk('source', 'source', 'Go to source', ArrowLeft, 'Alt+ArrowLeft', ['previous', 'incoming', 'back']),
   walk('next', 'next', 'Next sibling', ArrowDown, 'Alt+ArrowDown', ['sideways', 'same source']),
@@ -415,6 +448,7 @@ export const COMMANDS: readonly Command[] = [
     id: 'zoom.selection',
     group: 'View',
     label: 'Zoom to selection',
+    contextLabel: 'Zoom to',
     icon: Scan,
     keys: ['Shift+Digit2'],
     visible: (c) => onMap(c) && selected(c) !== undefined,

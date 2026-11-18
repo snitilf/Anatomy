@@ -36,6 +36,8 @@ export interface Command {
   id: string
   group: Group
   label: string
+  /** The label under the heading that names the selection, where the selection is already said. */
+  contextLabel?: string
   icon: LucideIcon
   /** The first is shown in tooltips and in the menu. Every one of them runs the command. */
   keys?: readonly Keys[]

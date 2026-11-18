@@ -83,8 +83,11 @@ export function OverviewPage() {
     const memory = overviewMemory(boardId)
     el.scrollTop = memory.scroll
     const row = memory.row && [...el.querySelectorAll<HTMLElement>('[data-row]')].find((r) => r.dataset.row === memory.row)
-    if (row) row.focus({ preventScroll: true })
-    else el.focus({ preventScroll: true })
+    if (row) {
+      row.focus({ preventScroll: true })
+      if (memory.reveal) row.scrollIntoView({ block: 'center' })
+    } else el.focus({ preventScroll: true })
+    memory.reveal = false
     // Only when the page opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

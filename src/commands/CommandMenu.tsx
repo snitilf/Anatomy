@@ -3,12 +3,22 @@ import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useUi, useUiApi } from '../app/ui'
 import { formatKeys } from './keys'
+import { trailOf } from '../app/crumbs'
 import { boardCommands, COMMANDS, isEnabled, isVisible } from './list'
 import { useCommands } from './context'
 import styles from './CommandMenu.module.css'
 import { GROUP_ORDER, type Command, type CommandContext } from './types'
 
-function Row({ command, ctx, onRun }: { command: Command; ctx: CommandContext; onRun: (c: Command) => void }) {
+/** The commands about the selected part or line, in the order the menu lists them under its name. */
+export const SELECTION_COMMANDS = ['note.add', 'link.add', 'zoom.selection', 'selection.overview', 'selection.copyName', 'walk.target', 'walk.source', 'walk.next', 'walk.previous'] as const
+
+/** The name of the selected part or line while the map is in front, which heads the menu's first group. */
+export function selectionName(ctx: CommandContext): string | undefined {
+  const { board, layer, selection } = ctx.state
+  return board && ctx.ui.view === 'map' && !ctx.state.scenario ? trailOf(board, layer, selection)?.last.label : undefined
+}
+
+function Row({ command, ctx, onRun, inContext = false }: { command: Command; ctx: CommandContext; onRun: (c: Command) => void; inContext?: boolean }) {
   const Icon = command.icon
   const keys = command.keys?.[0]
   const checked = command.checked?.(ctx) ?? false
@@ -16,12 +26,12 @@ function Row({ command, ctx, onRun }: { command: Command; ctx: CommandContext; o
     <Cmdk.Item
       className={styles.item}
       value={command.id}
-      keywords={[command.label, ...(command.keywords ?? [])]}
+      keywords={[command.label, command.contextLabel ?? '', ...(command.keywords ?? [])]}
       disabled={!isEnabled(command, ctx)}
       onSelect={() => onRun(command)}
     >
       <Icon className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
-      <span className={styles.label}>{command.label}</span>
+      <span className={styles.label}>{inContext ? (command.contextLabel ?? command.label) : command.label}</span>
       {checked && (
         <>
           <Check className={styles.check} size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -48,7 +58,10 @@ function MenuBody({ onClose }: { onClose: () => void }) {
   const ctx = useMemo(() => context(), [context])
   const all = useMemo(() => [...COMMANDS.filter((c) => !c.unlisted), ...boardCommands(ctx)], [ctx])
   const typing = search.trim() !== ''
-  const shown = all.filter((c) => isVisible(c, ctx) && (typing || !c.searchOnly))
+  const name = selectionName(ctx)
+  // What can be done with the selection comes first, once. The rest of the menu leaves those commands out.
+  const here = name === undefined ? [] : SELECTION_COMMANDS.flatMap((id) => all.filter((c) => c.id === id && isEnabled(c, ctx)))
+  const shown = all.filter((c) => isVisible(c, ctx) && (typing || !c.searchOnly) && !here.includes(c))
   const go = (command: Command) => {
     onClose()
     // After the dialog has given focus back, so a command that moves focus keeps it.
@@ -59,6 +72,13 @@ function MenuBody({ onClose }: { onClose: () => void }) {
       <Cmdk.Input className={styles.input} name="command-search" value={search} onValueChange={setSearch} placeholder="Type a command or search parts" />
       <Cmdk.List className={styles.list}>
         <Cmdk.Empty className={styles.empty}>Nothing matches "{search.trim()}".</Cmdk.Empty>
+        {name !== undefined && here.length > 0 && (
+          <Cmdk.Group heading={name} className={styles.group} data-selection="">
+            {here.map((c) => (
+              <Row key={c.id} command={c} ctx={ctx} onRun={go} inContext />
+            ))}
+          </Cmdk.Group>
+        )}
         {GROUP_ORDER.map((group) => {
           const rows = shown.filter((c) => c.group === group)
           if (rows.length === 0) return null
