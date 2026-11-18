@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyLayer, type Layer, type Note } from '../layer/model'
 import { fingerprintTarget, fingerprintValue } from '../layer/fingerprint'
 import { clone, nordetBoard } from '../layer/testBoards'
-import { itemState, partStates, topState } from './state'
+import { itemState, noteBadgeLabel, partStates, topState } from './state'
 
 const board = nordetBoard()
 const part = board.components[0]!
@@ -34,10 +34,11 @@ describe('item state', () => {
     }
   })
 
-  it('puts a problem with the target before the answer', () => {
+  it('puts an agent answer before a part that changed, and a removed target before everything', () => {
     const answers = (id: string) => [{ id, response: { respondsTo: 'feedback-aaaaaa', status: 'answered' as const, text: 'ok', changed: [] } }]
     const stale = note('note-aaaaaa', { targetFingerprint: 'old' })
-    expect(itemState(board, layerWith([stale], { answers: answers(stale.id) }), { type: 'note', item: stale })).toBe('outdated')
+    expect(itemState(board, layerWith([stale]), { type: 'note', item: stale })).toBe('outdated')
+    expect(itemState(board, layerWith([stale], { answers: answers(stale.id) }), { type: 'note', item: stale })).toBe('answered')
     const gone = note('note-bbbbbb', { target: { type: 'component', id: 'no-such-part' } })
     expect(itemState(board, layerWith([gone], { answers: answers(gone.id) }), { type: 'note', item: gone })).toBe('relinking')
   })
@@ -48,9 +49,19 @@ describe('item state', () => {
   })
 
   it('names the winning state of a part from its notes', () => {
-    expect(topState(['sent', 'unsent', 'outdated'])).toBe('outdated')
+    expect(topState(['sent', 'unsent'])).toBe('unsent')
+    expect(topState(['outdated', 'answered'])).toBe('answered')
+    expect(topState(['outdated', 'adopted'])).toBe('adopted')
+    expect(topState(['unsent', 'outdated'])).toBe('outdated')
+    expect(topState(['answered', 'relinking'])).toBe('relinking')
     expect(topState([])).toBeUndefined()
-    const layer = layerWith([note('note-aaaaaa'), note('note-bbbbbb', { targetFingerprint: 'old' })])
-    expect(partStates(clone(board), layer).get(part.id)).toBe('outdated')
+    const layer = layerWith([note('note-aaaaaa'), note('note-bbbbbb', { targetFingerprint: 'old' }), note('note-cccccc', { targetFingerprint: 'old' })])
+    expect(partStates(clone(board), layer).get(part.id)).toEqual({ state: 'outdated', count: 2 })
+  })
+
+  it('names the badge with the count in the winning state when it differs from the total', () => {
+    expect(noteBadgeLabel(1, 'unsent', 1)).toBe('1 note or question from you, not sent')
+    expect(noteBadgeLabel(3, 'answered', 1)).toBe('3 notes or questions from you, 1 answered')
+    expect(noteBadgeLabel(2, 'sent', 2)).toBe('2 notes or questions from you, sent')
   })
 })

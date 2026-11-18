@@ -7,7 +7,7 @@ import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
 import { nameLines } from '../canvas/far'
 import { StatusGlyph } from '../status/StatusGlyph'
-import { STATE_WORD } from '../status/state'
+import { noteBadgeLabel } from '../status/state'
 
 /** Whether the words run past the box they sit in, so the box can fade them out instead of cutting a line in half. */
 function useClipped(text: string) {
@@ -63,7 +63,7 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
         )}
         {data.noteCount > 0 && (
           <div className={cards.foot}>
-            <span className={cards.mine} role="img" aria-label={`${data.noteCount} ${data.noteCount === 1 ? 'note or question' : 'notes or questions'} from you, ${STATE_WORD[data.noteState].toLowerCase()}`}>
+            <span className={cards.mine} data-state={data.noteState} role="img" aria-label={noteBadgeLabel(data.noteCount, data.noteState, data.noteStateCount)}>
               <StatusGlyph state={data.noteState} withWord />
               <span aria-hidden="true">{data.noteCount}</span>
             </span>

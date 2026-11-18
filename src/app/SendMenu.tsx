@@ -235,10 +235,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
         <ul className={styles.rows} aria-label="What goes">
           {rows.map((r) => (
             <li key={r.label} className={styles.row}>
-              <span className={styles.kind}>
-                <StatusGlyph state="unsent" />
-                {r.label}
-              </span>
+              <span>{r.label}</span>
               <span className={styles.count}>{r.count}</span>
             </li>
           ))}

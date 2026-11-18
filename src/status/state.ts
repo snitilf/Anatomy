@@ -20,10 +20,11 @@ export const STATE_WORD: Record<ItemState, string> = {
 }
 
 /**
- * Which state wins when an item has more than one. A problem the user must fix comes first, then the agent's answer,
- * then the send state. The first in this list wins.
+ * Which state wins when an item, or the notes on one part, have more than one. An item that cannot be acted on comes first.
+ * Then the agent's answer, which is new and which resolves the item. Then a part that changed, then what still has to be
+ * sent, then what was sent. The first in this list wins.
  */
-const PRIORITY: readonly ItemState[] = ['relinking', 'outdated', 'answered', 'declined', 'adopted', 'sent', 'unsent']
+const PRIORITY: readonly ItemState[] = ['relinking', 'answered', 'declined', 'adopted', 'outdated', 'unsent', 'sent']
 
 type StateLayer = Pick<Layer, 'answers' | 'sent'> & Partial<Pick<Layer, 'proposals' | 'notes' | 'links'>>
 
@@ -34,13 +35,12 @@ function answerState(layer: Pick<Layer, 'answers'>, id: string): ItemState | und
 
 /** The state of one item that is on the map. */
 export function itemState(board: Board, layer: StateLayer, entry: Item): ItemState {
-  if (entry.type === 'note') {
-    const status = noteStatus(board, entry.item)
-    if (status === 'needs-relinking') return 'relinking'
-    if (status === 'possibly-outdated') return 'outdated'
-  }
+  if (entry.type === 'note' && noteStatus(board, entry.item) === 'needs-relinking') return 'relinking'
   if (entry.type === 'link' && linkStatus(board, { proposals: layer.proposals ?? [] }, entry.item) === 'needs-relinking') return 'relinking'
-  return answerState(layer, entry.item.id) ?? (wasSent(layer, entry.item) ? 'sent' : 'unsent')
+  const answer = answerState(layer, entry.item.id)
+  if (answer) return answer
+  if (entry.type === 'note' && noteStatus(board, entry.item) === 'possibly-outdated') return 'outdated'
+  return wasSent(layer, entry.item) ? 'sent' : 'unsent'
 }
 
 /** The state of a note. */
@@ -55,8 +55,8 @@ export function topState(states: Iterable<ItemState>): ItemState | undefined {
   return best
 }
 
-/** For each part, the state that wins among the notes and questions attached to it. */
-export function partStates(board: Board, layer: StateLayer & Pick<Layer, 'notes'>): Map<string, ItemState> {
+/** For each part, the state that wins among the notes and questions attached to it, and how many of them are in it. */
+export function partStates(board: Board, layer: StateLayer & Pick<Layer, 'notes'>): Map<string, { state: ItemState; count: number }> {
   const found = new Map<string, ItemState[]>()
   for (const note of layer.notes) {
     if (note.target.type !== 'component') continue
@@ -64,7 +64,17 @@ export function partStates(board: Board, layer: StateLayer & Pick<Layer, 'notes'
     list.push(noteState(board, layer, note))
     found.set(note.target.id, list)
   }
-  const out = new Map<string, ItemState>()
-  for (const [id, states] of found) out.set(id, topState(states)!)
+  const out = new Map<string, { state: ItemState; count: number }>()
+  for (const [id, states] of found) {
+    const state = topState(states)!
+    out.set(id, { state, count: states.filter((s) => s === state).length })
+  }
   return out
+}
+
+/** The name of the badge on a part: how many notes and questions are on it, and the state that wins among them. */
+export function noteBadgeLabel(total: number, state: ItemState, inState: number): string {
+  const what = total === 1 ? 'note or question' : 'notes or questions'
+  const word = STATE_WORD[state].toLowerCase()
+  return inState === total ? `${total} ${what} from you, ${word}` : `${total} ${what} from you, ${inState} ${word}`
 }

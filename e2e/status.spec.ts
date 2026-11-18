@@ -18,19 +18,20 @@ test('an item shows the same glyph on the map, in the sidebar, in Send, and on t
   const showAll = sidebar.getByRole('button', { name: /^Show all/ })
   if (await showAll.count()) await showAll.click()
 
-  // Not sent: the part's badge on the map, the Yours row, and a row in Send.
-  const badge = page.locator('.react-flow__node-card[data-id="web-form"]').getByRole('img', { name: /from you/ })
-  await expect(glyphOf(badge)).toHaveAttribute('data-state', 'unsent')
-  await expect(glyphOf(sidebar.getByRole('button', { name: /Note that has not been sent/ }))).toHaveAttribute('data-state', 'unsent')
+  // Sent: the part's badge on the map, the Yours row, the line in Send about items sent before, and the Overview part row.
+  const badge = page.locator('.react-flow__node-card[data-id="visitor-browser"]').getByRole('img', { name: /from you/ })
+  await expect(glyphOf(badge)).toHaveAttribute('data-state', 'sent')
+  await expect(glyphOf(sidebar.getByRole('button', { name: /Note that was sent/ }))).toHaveAttribute('data-state', 'sent')
   await page.getByRole('banner').getByRole('button', { name: /^Send to agent/ }).click()
   const popover = page.getByRole('dialog', { name: 'Send to agent' })
-  await expect(glyphOf(popover.getByRole('listitem').filter({ hasText: /^Notes/ }))).toHaveAttribute('data-state', 'unsent')
+  await expect(glyphOf(popover.getByText(/sent before that has no answer yet/))).toHaveAttribute('data-state', 'sent')
   await page.keyboard.press('Escape')
-
-  // The Overview: the line in Needs you and the part's row.
   await page.getByRole('tab', { name: 'Overview' }).click()
   const overview = page.getByTestId('overview')
-  await expect(glyphOf(overview.getByRole('button', { name: /^Web form/ }))).toHaveAttribute('data-state', 'unsent')
+  await expect(glyphOf(overview.locator('[data-row="part:visitor-browser"]'))).toHaveAttribute('data-state', 'sent')
+
+  // Not sent: the same on the map, in the sidebar, and on the Overview in the part row and in Needs you.
+  await expect(glyphOf(overview.locator('[data-row="part:web-form"]'))).toHaveAttribute('data-state', 'unsent')
   await expect(glyphOf(overview.getByRole('listitem').filter({ hasText: /not sent/ }))).toHaveAttribute('data-state', 'unsent')
 })
 

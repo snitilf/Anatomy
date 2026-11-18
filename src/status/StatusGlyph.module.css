@@ -14,7 +14,7 @@
 
 /* Each state has one tone, and the tone is the same on every surface the glyph sits on. */
 .glyph[data-state='unsent'] {
-  color: var(--yours);
+  color: var(--yours-ink);
 }
 
 .glyph[data-state='sent'],

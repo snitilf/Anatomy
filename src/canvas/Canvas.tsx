@@ -473,7 +473,7 @@ export function Canvas() {
     }
     return counts
   }, [notes])
-  const noteStates = useMemo(() => (board && notes && answers ? partStates(board, { notes, answers, sent, proposals: proposals ?? [] }) : new Map<string, ItemState>()), [board, notes, answers, sent, proposals])
+  const noteStates = useMemo(() => (board && notes && answers ? partStates(board, { notes, answers, sent, proposals: proposals ?? [] }) : new Map<string, { state: ItemState; count: number }>()), [board, notes, answers, sent, proposals])
   /** A text or sticky note being dragged or resized, until it is dropped. */
   const [moving, setMoving] = useState<UserParts['moving']>(undefined)
   const movingRef = useRef(moving)

@@ -3,7 +3,7 @@ import { GraduationCap } from 'lucide-react'
 import { memo } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { StatusGlyph } from '../status/StatusGlyph'
-import { STATE_WORD } from '../status/state'
+import { noteBadgeLabel } from '../status/state'
 import { nameLines } from './far'
 import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
@@ -54,7 +54,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
               </span>
             )}
             {mine > 0 && (
-              <span className={styles.mine} role="img" aria-label={`${mine} ${mine === 1 ? 'note or question' : 'notes or questions'} from you, ${STATE_WORD[data.noteState].toLowerCase()}`}>
+              <span className={styles.mine} data-state={data.noteState} role="img" aria-label={noteBadgeLabel(mine, data.noteState, data.noteStateCount)}>
                 <StatusGlyph state={data.noteState} withWord />
                 <span aria-hidden="true">{mine}</span>
               </span>

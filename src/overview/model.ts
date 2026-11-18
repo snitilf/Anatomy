@@ -68,7 +68,7 @@ export function partGroups(board: Board, layer: Layer, lessons: ReadonlySet<stri
     lesson: c.lesson !== undefined && lessons.has(c.lesson),
     open: open.get(c.id) ?? 0,
     notes: notes.get(c.id) ?? 0,
-    ...(states.has(c.id) ? { state: states.get(c.id)! } : {}),
+    ...(states.has(c.id) ? { state: states.get(c.id)!.state } : {}),
     in: flow.get(c.id)?.in ?? 0,
     out: flow.get(c.id)?.out ?? 0,
     source: c.source.kind,

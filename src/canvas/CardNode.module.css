@@ -258,6 +258,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The count takes the tone of the glyph beside it. */
+.mine[data-state='sent'],
+.mine[data-state='declined'] {
+  color: var(--fg-3);
+}
+
+.mine[data-state='outdated'] {
+  color: var(--fg-2);
+}
+
+.mine[data-state='answered'],
+.mine[data-state='adopted'] {
+  color: var(--accent-text);
+}
+
+.mine[data-state='relinking'] {
+  color: var(--danger);
+}
+
 .handle {
   opacity: 0;
   width: 1px;
