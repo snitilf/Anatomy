@@ -1,0 +1,68 @@
+import { expect, test } from '@playwright/test'
+import { open, pickConnection, pickPart, viewport } from './helpers.ts'
+
+const NORDET = 'src/examples/nordet.board.json'
+const SIXTY = 'e2e/fixtures/sixty-parts.board.json'
+
+const crumb = (page: import('@playwright/test').Page) => page.getByRole('navigation', { name: 'Breadcrumb' })
+
+test('the crumb follows the selection: board, group, part', async ({ page }) => {
+  await open(page, NORDET)
+  await expect(crumb(page).getByRole('heading', { name: /Nordet/ })).toBeVisible()
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveCount(0)
+  await pickPart(page, 'rule-check')
+  const here = crumb(page).locator('[aria-current="location"]')
+  await expect(here).toHaveText('Rule check')
+  await expect(crumb(page).getByRole('button', { name: 'Follow-up logic' })).toBeVisible()
+  await expect(crumb(page).getByRole('button', { name: /Nordet/ })).toBeVisible()
+  // The sidebar has no back row of its own: the board segment is the way back.
+  await expect(page.getByTestId('inspector').getByRole('button', { name: 'Board' })).toHaveCount(0)
+})
+
+test('a connection has no group segment, and a link is named by its label', async ({ page }) => {
+  await open(page, NORDET)
+  await pickConnection(page, 'proposes an action')
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveText('proposes an action')
+  await expect(crumb(page).getByRole('button')).toHaveCount(3)
+})
+
+test('the board segment clears the selection, and Escape still does', async ({ page }) => {
+  await open(page, NORDET)
+  await pickPart(page, 'rule-check')
+  await crumb(page).getByRole('button', { name: /Nordet/ }).click()
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveCount(0)
+  await expect(page.getByTestId('inspector').getByRole('heading', { level: 2, name: /Nordet/ })).toBeVisible()
+  await pickPart(page, 'rule-check')
+  await page.locator('.react-flow__node-card[data-id="rule-check"]').focus()
+  await page.keyboard.press('Escape')
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveCount(0)
+})
+
+test('the group segment frames the group and keeps the selection', async ({ page }) => {
+  await open(page, SIXTY)
+  await pickPart(page, 'c-2')
+  const part = await crumb(page).locator('[aria-current="location"]').textContent()
+  expect(part).toBeTruthy()
+  await page.keyboard.press('Shift+1')
+  await page.waitForTimeout(400)
+  const before = await viewport(page)
+  const group = crumb(page).getByRole('button', { name: 'Backend' })
+  await group.click()
+  await expect.poll(() => viewport(page)).not.toBe(before)
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveText(part!)
+})
+
+test('long names shrink the middle segments first and the part stays readable', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 700 })
+  await open(page, 'e2e/fixtures/worst-text.board.json')
+  const id = await page.locator('.react-flow__node-card').first().getAttribute('data-id')
+  await pickPart(page, id!)
+  const widths = await crumb(page).evaluate((nav) => {
+    const box = nav.getBoundingClientRect()
+    const last = nav.querySelector('[aria-current="location"]')!.getBoundingClientRect()
+    return { navRight: box.right, lastRight: last.right, lastWidth: last.width, scrolls: nav.scrollWidth > nav.clientWidth + 1 }
+  })
+  expect(widths.lastRight).toBeLessThanOrEqual(widths.navRight + 1)
+  expect(widths.lastWidth).toBeGreaterThanOrEqual(72)
+  expect(widths.scrolls).toBe(false)
+})

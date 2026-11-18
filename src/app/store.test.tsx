@@ -35,14 +35,16 @@ function counted(node: React.ReactNode, api: ReturnType<typeof createAppStore>) 
 }
 
 describe('the app store', () => {
-  it('does not render the top bar again when only the selection changes', () => {
+  it('renders the top bar once for a selection, for its crumb, and not at all for a selection with no crumb', () => {
     const { api, board } = opened()
     const commits = counted(null, api)
     const before = commits.toolbar
     const id = board.components[0]!.id
     act(() => api.dispatch({ type: 'select', selection: { type: 'component', id } }))
     act(() => api.dispatch({ type: 'select', selection: { type: 'board' } }))
-    expect(commits.toolbar).toBe(before)
+    expect(commits.toolbar).toBe(before + 2)
+    act(() => api.dispatch({ type: 'select', selection: { type: 'board' } }))
+    expect(commits.toolbar).toBe(before + 2)
   })
 
   it('does not render the top bar or the notes again when a card moves', () => {

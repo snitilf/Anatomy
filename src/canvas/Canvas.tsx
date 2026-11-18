@@ -46,7 +46,7 @@ import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Came
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { bundleGroups } from './bundles'
 import { computeBundles } from './bundleRoutes'
-import { GROUP_FRAME_ZOOM } from './far'
+import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup } from './FarLayer'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
@@ -545,7 +545,7 @@ export function Canvas() {
       const area = current ? groupAreas(current.board, current.rects)[id] : undefined
       const first = current?.board.components.find((c) => c.group === id)
       if (first && farRef.current) focusAfterPick.current = first.id
-      if (area) camera.frame({ box: area, padding: 0.06, maxZoom: 1, floorZoom: GROUP_FRAME_ZOOM }, prefersStillness() ? 0 : GLIDE_MS * 1.5)
+      if (area) frameArea(camera, area)
     },
     [camera],
   )

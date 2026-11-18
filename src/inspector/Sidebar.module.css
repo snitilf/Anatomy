@@ -49,7 +49,7 @@
 /* The pinned header: where you are, and the switch between Details and Review. It is always there, so nothing shifts when a revision arrives. */
 .top {
   flex: none;
-  padding: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 
@@ -93,20 +93,6 @@
 .here {
   color: var(--fg-3);
   font-weight: var(--weight-medium);
-}
-
-.esc {
-  margin-left: auto;
-  font: inherit;
-  font-size: var(--text-xs);
-  line-height: var(--leading-xs);
-  color: var(--fg-3);
-  opacity: 0;
-}
-
-.where:hover .esc,
-.where:focus-within .esc {
-  opacity: 1;
 }
 
 /* Two segments, 28px high. */
@@ -188,10 +174,6 @@
 
   .back {
     height: 44px;
-  }
-
-  .esc {
-    display: none;
   }
 
   .switch {
