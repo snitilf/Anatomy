@@ -254,7 +254,15 @@
   }
 
   .view {
+    position: relative;
     height: 36px;
+  }
+
+  /* A finger gets 44px: the tab keeps its look and owns the room around it. */
+  .view::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
   }
 }
 

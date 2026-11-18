@@ -150,6 +150,11 @@ export function OverviewPage() {
           <Prop label="Revision">
             <span className={styles.num}>{board.revision}</span>
             {changed && change.parts > 0 && previous && (
+              <span className={styles.dot} aria-hidden="true">
+                ·
+              </span>
+            )}
+            {changed && change.parts > 0 && previous && (
               <Link row="prop:changes" onClick={() => actions.openReview(`Changed in revision ${board.revision}`, 'prop:changes')}>
                 {plural(change.parts, 'part', 'parts')} changed since {previous.revision}
               </Link>
