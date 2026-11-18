@@ -268,6 +268,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
               type="button"
               className={clsx(buttons.button, count > 0 && buttons.primary, styles.trigger, className)}
               aria-label={label}
+              data-new={count > 0 ? '' : undefined}
               aria-keyshortcuts={ariaShortcut('Mod+Enter')}
             >
               <span className={styles.long}>{view.label}</span>

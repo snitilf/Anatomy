@@ -1,10 +1,38 @@
+/* With nothing new to send the button is quiet: a hairline and no fill. New items fill it with the accent (buttons.primary). */
 .trigger {
   gap: 6px;
+  padding: 0 var(--space-2);
 }
 
+.trigger:not([data-new]) {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--fg-2);
+}
+
+.trigger:not([data-new])[data-popup-open] {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+@media (hover: hover) {
+  .trigger:not([data-new]):hover {
+    background: var(--hover);
+    color: var(--fg);
+  }
+}
+
+/* The count: a small chip, darker than the accent so the white digit keeps its contrast. */
 .badge {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  background: rgb(0 0 0 / 0.2);
+  font-size: var(--text-xs);
+  line-height: 16px;
+  font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
-  opacity: 0.7;
+  text-align: center;
 }
 
 .short {
