@@ -1,6 +1,8 @@
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -41,15 +43,19 @@ import {
 } from 'lucide-react'
 import { EXAMPLES } from '../app/examples'
 import type { Selection } from '../app/state'
+import { trailOf } from '../app/crumbs'
 import { showView } from '../app/viewActions'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
+import { currentTrail, rememberTrail, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
 import type { Rect } from '../layout/geometry'
 import type { Tool } from '../whiteboard/tools'
 import type { Command, CommandContext } from './types'
 
 const hasBoard = (c: CommandContext) => c.state.board !== undefined
+/** A part or a line is selected, so it has a name and a place on the map. */
+const onTrail = (c: CommandContext) => c.state.board !== undefined && trailOf(c.state.board, c.state.layer, c.state.selection) !== undefined
 const playing = (c: CommandContext) => c.state.scenario !== undefined
 /** The map is the view in front: the Overview page covers it and takes its own keys. */
 const onMap = (c: CommandContext) => c.ui.view === 'map'
@@ -97,6 +103,25 @@ function overviewRow(): Selection | undefined {
   const { type, id } = row?.dataset ?? {}
   return id && (type === 'component' || type === 'proposal') ? { type, id } : undefined
 }
+
+
+/** A step along the graph from the selected part or line, as a command. It is on when there is somewhere to go. */
+const walk = (move: Walk, id: string, label: string, icon: Command['icon'], key: string, keywords: readonly string[]): Command => ({
+  id: `walk.${id}`,
+  group: 'Selection',
+  label,
+  icon,
+  keys: [key],
+  keywords: ['walk', 'follow', ...keywords],
+  visible: (c) => onMap(c) && !playing(c) && onTrail(c),
+  enabled: (c) => !!c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move) !== undefined,
+  run: (c) => {
+    const step = c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move)
+    if (!step) return
+    c.dispatch({ type: 'select', selection: step.selection })
+    rememberTrail(step.trail)
+  },
+})
 
 const theme = (mode: ThemeMode, label: string, icon: Command['icon']): Command => ({
   id: `theme.${mode}`,
@@ -347,6 +372,10 @@ export const COMMANDS: readonly Command[] = [
       c.uiApi.askLinkPicker()
     },
   },
+  walk('target', 'target', 'Go to target', ArrowRight, 'Alt+ArrowRight', ['next', 'outgoing', 'forward']),
+  walk('source', 'source', 'Go to source', ArrowLeft, 'Alt+ArrowLeft', ['previous', 'incoming', 'back']),
+  walk('next', 'next', 'Next sibling', ArrowDown, 'Alt+ArrowDown', ['sideways', 'same source']),
+  walk('previous', 'previous', 'Previous sibling', ArrowUp, 'Alt+ArrowUp', ['sideways', 'same source']),
   {
     id: 'selection.delete',
     group: 'Selection',

@@ -20,6 +20,8 @@ interface Combo {
   mod: boolean
   ctrl: boolean
   shift: boolean
+  /** Alt, which is Option on a Mac. */
+  alt: boolean
   /** A `KeyboardEvent.code` such as `Digit1`, or a lowercase `KeyboardEvent.key`. */
   code?: string
   key?: string
@@ -37,6 +39,7 @@ function parse(keys: Keys): Combo {
     mod: mods.has('Mod'),
     ctrl: mods.has('Ctrl'),
     shift: mods.has('Shift'),
+    alt: mods.has('Alt'),
     ...(code ? { code } : { key: last.toLowerCase() }),
     loose,
   }
@@ -49,8 +52,10 @@ const twin = (key: string) => (key === '=' ? '+' : key === '_' ? '-' : key)
 
 /** True when the event is this shortcut. */
 export function matches(keys: Keys, event: KeyEvent): boolean {
-  if (event.altKey || sequenceOf(keys)) return false
+  if (sequenceOf(keys)) return false
   const combo = parse(keys)
+  // Alt is never ignored: a shortcut without it does not fire with it held, and one with it needs it.
+  if (combo.alt !== event.altKey) return false
   if (combo.ctrl) {
     if (!event.ctrlKey || event.metaKey) return false
   } else if (combo.mod !== (event.metaKey || event.ctrlKey)) return false
