@@ -9,6 +9,7 @@ import { groupBand } from './bands'
 import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { TONE_COLOR } from './kinds'
+import type { ItemState } from '../status/state'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
@@ -49,6 +50,10 @@ export interface CardData extends Record<string, unknown> {
   far: boolean
   /** How many of the user's notes and questions are attached to this part. */
   noteCount: number
+  /** Where those notes stand in the round trip: the state that wins among them. */
+  noteState: ItemState
+  /** How many of those notes are in that state. */
+  noteStateCount: number
   label: string
   summary: string
   sourceKind: SourceKind
@@ -115,6 +120,8 @@ export interface ProposalData extends Record<string, unknown> {
   summary: string
   summaryLines: number
   noteCount: number
+  noteState: ItemState
+  noteStateCount: number
 }
 
 export interface MarkNodeData extends Record<string, unknown> {
@@ -503,6 +510,8 @@ export function assembleGraph(
   user: UserParts = NO_USER_PARTS,
   /** The far view: the lines are out of the picture, so they leave the tab order. They stay in the page. */
   far = false,
+  /** The state of the notes on each part, for the badge. A part with notes and no entry shows as not sent. */
+  noteStates: ReadonlyMap<string, { state: ItemState; count: number }> = new Map(),
 ): { nodes: Node[]; edges: Edge[] } {
   const playing = highlight !== undefined && highlight.size > 0
   const names = new Map([...board.components.map((c) => [c.id, c.label] as const), ...user.proposals.map((p) => [p.id, p.label] as const)])
@@ -584,6 +593,8 @@ export function assembleGraph(
         height: rect.height,
         far,
         noteCount: noteCounts.get(c.id) ?? 0,
+        noteState: noteStates.get(c.id)?.state ?? 'unsent',
+        noteStateCount: noteStates.get(c.id)?.count ?? noteCounts.get(c.id) ?? 0,
         label: c.label,
         summary: c.summary,
         sourceKind: c.source.kind,
@@ -614,7 +625,7 @@ export function assembleGraph(
         width: rect.width,
         height: rect.height,
         measured: { width: rect.width, height: rect.height },
-        data: { proposalId: p.id, width: rect.width, height: rect.height, far, label: p.label, summary: p.summary, summaryLines: summaryLinesFor({ label: p.label }, rect, noteCounts.get(p.id) ?? 0), noteCount: noteCounts.get(p.id) ?? 0 },
+        data: { proposalId: p.id, width: rect.width, height: rect.height, far, label: p.label, summary: p.summary, summaryLines: summaryLinesFor({ label: p.label }, rect, noteCounts.get(p.id) ?? 0), noteCount: noteCounts.get(p.id) ?? 0, noteState: noteStates.get(p.id)?.state ?? 'unsent', noteStateCount: noteStates.get(p.id)?.count ?? noteCounts.get(p.id) ?? 0 },
         selected: p.id === selectedProposal,
         ...(p.id === user.editing ? { className: 'editing' } : p.id === held ? { className: 'held' } : pushed?.has(p.id) ? { className: 'pushed' } : {}),
         connectable: true,

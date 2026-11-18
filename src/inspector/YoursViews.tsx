@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Trash2, Type, Unlink, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Trash2, Type, type LucideIcon } from 'lucide-react'
 import { Fragment, useContext, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore } from '../app/store'
@@ -6,8 +6,10 @@ import type { Board } from '../board/schema'
 import { CameraSlotContext } from '../canvas/cameraContext'
 import { describeMarkFor } from '../feedback/build'
 import type { MissingRef, Pointed, Ref } from '../feedback/types'
-import { LAYER_LIMITS, type Link, type Mark, type Proposal } from '../layer/model'
-import { linkStatus, wasSent } from '../layer/status'
+import { LAYER_LIMITS, type Item, type Link, type Mark, type Proposal } from '../layer/model'
+import { linkStatus } from '../layer/status'
+import { StatusGlyph, StatusWord } from '../status/StatusGlyph'
+import { itemState } from '../status/state'
 import { deletedToast } from '../notes/undoToast'
 import { DangerButton, Group, Heading, PartLink, PickerValue, Prop, Props } from './bits'
 import { FlowBlock } from './Flow'
@@ -108,18 +110,11 @@ function Answer({ board, id }: { board: Board; id: string }) {
 }
 
 /** Whether the item went to the agent. */
-function Status({ item }: { item: { id: string } }) {
-  const sent = useAppStore((s) => (s.layer ? wasSent(s.layer, item) : false))
+function Status({ board, entry }: { board: Board; entry: Item }) {
+  const state = useAppStore((s) => (s.layer ? itemState(board, s.layer, entry) : 'unsent'))
   return (
     <Prop label="Status">
-      {sent ? (
-        <>
-          <Check size={14} strokeWidth={1.5} aria-hidden="true" />
-          Sent
-        </>
-      ) : (
-        'Not sent'
-      )}
+      <StatusWord state={state} />
     </Prop>
   )
 }
@@ -169,11 +164,11 @@ export function LinkView({ board, link }: { board: Board; link: Link }) {
         </Prop>
         {end('from')}
         {end('to')}
-        <Status item={link} />
+        <Status board={board} entry={{ type: 'link', item: link }} />
       </Props>
       {broken && (
         <p className={styles.notice} data-tone="danger">
-          <Unlink size={14} strokeWidth={1.5} aria-hidden="true" />
+          <StatusGlyph state="relinking" withWord />
           {link[missing]} was removed.
         </p>
       )}
@@ -248,7 +243,7 @@ export function MarkView({ board, mark }: { board: Board; mark: Mark }) {
         {sentence.length > 0 && <p className={styles.route}>{sentence.flatMap((s, i) => (i > 0 ? [' ', s] : [s]))}</p>}
       </div>
       <Props>
-        <Status item={mark} />
+        <Status board={board} entry={{ type: 'mark', item: mark }} />
       </Props>
       {(mark.kind === 'text' || mark.kind === 'sticky') && (
         <Group name="mark-text" title="Text">
@@ -293,7 +288,7 @@ export function ProposalView({ board, proposal }: { board: Board; proposal: Prop
         <Prop label="Name">
           <SavedField label="Name" bare inline value={proposal.label} max={LAYER_LIMITS.partLabel} onSave={(label) => label && dispatch({ type: 'proposalChanged', id: proposal.id, change: { label } })} />
         </Prop>
-        <Status item={proposal} />
+        <Status board={board} entry={{ type: 'proposal', item: proposal }} />
       </Props>
       <Group name="summary" title="Summary">
         <SavedField label="Summary" bare value={proposal.summary} max={LAYER_LIMITS.partSummary} multiline onSave={(summary) => dispatch({ type: 'proposalChanged', id: proposal.id, change: { summary } })} />

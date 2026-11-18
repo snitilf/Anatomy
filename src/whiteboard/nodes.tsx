@@ -1,5 +1,4 @@
 import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProps } from '@xyflow/react'
-import { StickyNote } from 'lucide-react'
 import { memo, useLayoutEffect, useRef, useState } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type MarkNodeData, type ProposalData, type Side } from '../canvas/buildGraph'
@@ -7,6 +6,8 @@ import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
 import { nameLines } from '../canvas/far'
+import { StatusGlyph } from '../status/StatusGlyph'
+import { noteBadgeLabel } from '../status/state'
 
 /** Whether the words run past the box they sit in, so the box can fade them out instead of cutting a line in half. */
 function useClipped(text: string) {
@@ -62,8 +63,8 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
         )}
         {data.noteCount > 0 && (
           <div className={cards.foot}>
-            <span className={cards.mine} role="img" aria-label={`${data.noteCount} ${data.noteCount === 1 ? 'note or question' : 'notes or questions'} from you`}>
-              <StickyNote size={14} strokeWidth={1.5} aria-hidden="true" />
+            <span className={cards.mine} data-state={data.noteState} role="img" aria-label={noteBadgeLabel(data.noteCount, data.noteState, data.noteStateCount)}>
+              <StatusGlyph state={data.noteState} withWord />
               <span aria-hidden="true">{data.noteCount}</span>
             </span>
           </div>

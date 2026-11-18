@@ -162,11 +162,6 @@
 .stateLine svg {
   flex: none;
   margin-top: 1px;
-  color: var(--fg-3);
-}
-
-.stateLine[data-tone='danger'] svg {
-  color: var(--danger);
 }
 
 /* The agent's answer: neutral and flat, indented under the item it answers. */

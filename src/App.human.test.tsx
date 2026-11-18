@@ -185,7 +185,7 @@ describe('your notes', () => {
 
     selectPart('approval')
     addNote('One more')
-    expect(screen.getByRole('img', { name: '1 note or question from you' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '1 note or question from you, not sent' })).toBeInTheDocument()
   })
 
   it('keeps the composer to one row until it is used', async () => {

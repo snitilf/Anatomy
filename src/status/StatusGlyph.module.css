@@ -1,0 +1,36 @@
+.glyph {
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.word {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Each state has one tone, and the tone is the same on every surface the glyph sits on. */
+.glyph[data-state='unsent'] {
+  color: var(--yours-ink);
+}
+
+.glyph[data-state='sent'],
+.glyph[data-state='declined'] {
+  color: var(--fg-3);
+}
+
+.glyph[data-state='outdated'] {
+  color: var(--fg-2);
+}
+
+.glyph[data-state='answered'],
+.glyph[data-state='adopted'] {
+  color: var(--accent-text);
+}
+
+.glyph[data-state='relinking'] {
+  color: var(--danger);
+}

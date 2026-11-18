@@ -58,6 +58,7 @@ import { inView, SNAP_PX, SnapTargets } from './snap'
 import { SnapGuides, type GuideLines } from './SnapGuides'
 import { stepBackRules } from './emphasis'
 import { ZoomBar } from './ZoomBar'
+import { partStates, type ItemState } from '../status/state'
 
 const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode, proposal: ProposalNode, 'mark-text': TextNode, 'mark-sticky': StickyNode }
 const edgeTypes: EdgeTypes = { relationship: RelationshipEdge, 'manual-link': ManualEdge }
@@ -239,13 +240,15 @@ const CROWDED_LINES = 20
 const CROWDED_RATIO = 1.5
 
 export function Canvas() {
-  const { board, positions, sizes, links, notes, marks, proposals, reconnects, selection, scenario } = useAppStore(
+  const { board, positions, sizes, links, notes, answers, sent, marks, proposals, reconnects, selection, scenario } = useAppStore(
     useShallow((s) => ({
       board: s.board,
       positions: s.layer?.positions,
       sizes: s.layer?.sizes,
       links: s.layer?.links,
       notes: s.layer?.notes,
+      answers: s.layer?.answers,
+      sent: s.layer?.sent,
       marks: s.layer?.marks,
       proposals: s.layer?.proposals,
       reconnects: s.layer?.reconnects,
@@ -470,6 +473,7 @@ export function Canvas() {
     }
     return counts
   }, [notes])
+  const noteStates = useMemo(() => (board && notes && answers ? partStates(board, { notes, answers, sent, proposals: proposals ?? [] }) : new Map<string, { state: ItemState; count: number }>()), [board, notes, answers, sent, proposals])
   /** A text or sticky note being dragged or resized, until it is dropped. */
   const [moving, setMoving] = useState<UserParts['moving']>(undefined)
   const movingRef = useRef(moving)
@@ -486,9 +490,9 @@ export function Canvas() {
   const graph = useMemo(
     () =>
       board && rectsNow && geometryNow
-        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user, far)
+        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user, far, noteStates)
         : undefined,
-    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, cache, pushed, user, far],
+    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, noteStates, cache, pushed, user, far],
   )
 
   // What arrow ends attach to: every card, and every connection's drawn line, where the user's moved line wins.
