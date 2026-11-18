@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyLayer } from '../layer/model'
 import { allBoards, urlShortenerBoard } from '../layer/testBoards'
 import { bundleGroups } from './betweenGroups'
+import { innerConnections } from './innerConnections'
 import { changeCounts, changeLine, filterGroups, partGroups, responseLine } from './model'
 
 const none: ReadonlySet<string> = new Set()
@@ -85,5 +86,26 @@ describe('bundleGroups', () => {
       expect(bundles.reduce((n, b) => n + b.count, 0)).toBe(between.length)
       expect(bundles.map((b) => b.count)).toEqual([...bundles.map((b) => b.count)].sort((a, b) => b - a))
     }
+  })
+})
+
+describe('innerConnections', () => {
+  it('counts what stays inside a group, so the rows add up to every connection', () => {
+    for (const board of allBoards()) {
+      const inner = innerConnections(board, [], [])
+      const between = bundleGroups(board, [], [])
+      const group = new Map(board.components.map((c) => [c.id, c.group]))
+      const selfLoops = board.relationships.filter((r) => r.from === r.to && group.get(r.from) === undefined).length
+      expect([...inner, ...between].reduce((n, b) => n + b.count, 0)).toBe(board.relationships.length - selfLoops)
+      for (const b of inner) expect(b.a).toBe(b.b)
+    }
+  })
+
+  it('names the group and lists the connection IDs', () => {
+    const board = urlShortenerBoard()
+    const group = board.groups[1]!.id
+    const inside = board.relationships.filter((r) => board.components.find((c) => c.id === r.from)?.group === group && board.components.find((c) => c.id === r.to)?.group === group)
+    const found = innerConnections(board, [], []).find((b) => b.a === `group:${group}`)
+    expect(found?.connectionIds.sort()).toEqual(inside.map((r) => r.id).sort())
   })
 })

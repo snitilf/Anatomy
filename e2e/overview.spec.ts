@@ -211,3 +211,15 @@ test('the Parts count is the number of rows, with the new parts the user propose
   await overview.getByRole('searchbox', { name: 'Filter parts' }).fill('cache')
   await expect(overview.getByRole('heading', { name: /^Parts 1 of 9$/ })).toBeVisible()
 })
+
+test('Connections lists the pairs and the inside of each group, and the rows add up to the property', async ({ page }) => {
+  await open(page, SHORTENER)
+  await tab(page, 'Overview').click()
+  const overview = page.getByTestId('overview')
+  const total = Number(await overview.getByRole('button', { name: /^\d+$/ }).first().textContent())
+  const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
+  expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
+  await expect(overview.getByRole('button', { name: /^Inside Backend/ })).toBeVisible()
+  await overview.getByRole('button', { name: /^Inside Backend/ }).click()
+  await expect(overview.locator('[data-row^="conn:"]').first()).toBeVisible()
+}) 

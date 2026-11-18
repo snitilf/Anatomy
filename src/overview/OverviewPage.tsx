@@ -164,7 +164,7 @@ export function OverviewPage() {
           {board.relationships.length + layer.links.length > 0 && (
             <Prop label="Connections">
               <Link row="prop:connections" onClick={() => scrollTo('between')}>
-                {board.relationships.length}
+                {board.relationships.length + layer.links.length}
               </Link>
             </Prop>
           )}

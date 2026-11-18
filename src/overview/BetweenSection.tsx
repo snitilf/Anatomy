@@ -7,6 +7,7 @@ import { partName } from '../inspector/names'
 import type { Layer } from '../layer/model'
 import type { OverviewActions } from './actions'
 import { bundleGroups, type Bundle } from './betweenGroups'
+import { innerConnections } from './innerConnections'
 import { overviewMemory } from './memory'
 import styles from './Overview.module.css'
 
@@ -68,12 +69,18 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
   const memory = overviewMemory(board.id)
   const [, redraw] = useState(0)
   const bundles = useMemo(() => bundleGroups(board, layer.links, layer.reconnects), [board, layer.links, layer.reconnects])
-  if (bundles.length === 0) return null
-  const title = board.groups.length > 0 ? 'Between groups' : 'Connections'
+  const inner = useMemo(() => innerConnections(board, layer.links, layer.reconnects), [board, layer.links, layer.reconnects])
+  if (bundles.length + inner.length === 0) return null
+  const total = [...bundles, ...inner].reduce((n, b) => n + b.count, 0)
+  const toggle = (key: string, open: boolean) => {
+    if (open) memory.expanded.delete(key)
+    else memory.expanded.add(key)
+    redraw((n) => n + 1)
+  }
   return (
     <section className={styles.section} aria-labelledby="ov-between" data-section="between">
       <h3 id="ov-between" className={styles.heading}>
-        {title} <span className={styles.count}>{bundles.length}</span>
+        Connections <span className={styles.count}>{total}</span>
       </h3>
       <ul className={styles.list}>
         {bundles.map((b) => {
@@ -92,17 +99,40 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
                 data-yours={b.mine || undefined}
                 aria-expanded={open}
                 aria-label={`${a} and ${z}, ${b.count} ${b.count === 1 ? 'connection' : 'connections'}`}
-                onClick={() => {
-                  if (open) memory.expanded.delete(key)
-                  else memory.expanded.add(key)
-                  redraw((n) => n + 1)
-                }}
+                onClick={() => toggle(key, open)}
               >
                 <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
                 <span className={styles.pairEnds}>
                   <span>{a}</span>
                   <ArrowLeftRight className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
                   <span>{z}</span>
+                </span>
+                <span className={styles.end}>
+                  <span className={styles.count}>{b.count}</span>
+                </span>
+              </button>
+              {open && <Connections board={board} layer={layer} bundle={b} actions={actions} />}
+            </li>
+          )
+        })}
+        {inner.map((b) => {
+          const key = `inside:${b.a}`
+          const open = memory.expanded.has(key)
+          const name = endName(board, layer, b.a)
+          return (
+            <li key={key}>
+              <button
+                type="button"
+                className={styles.pair}
+                data-row={`between:${key}`}
+                data-yours={b.mine || undefined}
+                aria-expanded={open}
+                aria-label={`Inside ${name}, ${b.count} ${b.count === 1 ? 'connection' : 'connections'}`}
+                onClick={() => toggle(key, open)}
+              >
+                <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
+                <span className={styles.pairEnds}>
+                  <span>Inside {name}</span>
                 </span>
                 <span className={styles.end}>
                   <span className={styles.count}>{b.count}</span>
