@@ -213,3 +213,39 @@ test.describe('on a phone', () => {
     await expect(header).toHaveCSS('box-shadow', 'none')
   })
 })
+
+test.describe('touch controls at the bottom of the map', () => {
+  test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } })
+
+  test('every control owns its edges, so a tap near an edge reaches that control', async ({ page }) => {
+    await open(page, NORDET)
+    await expect(page.getByRole('note')).toBeVisible()
+    const groups = [page.getByRole('toolbar', { name: 'Zoom' }), page.getByRole('toolbar', { name: 'Whiteboard tools' }), page.getByRole('note')]
+    for (const group of groups) {
+      const controls = group.getByRole('button')
+      expect(await controls.count()).toBeGreaterThan(0)
+      for (const control of await controls.all()) {
+        const owned = await control.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const at = (x: number, y: number) => el.contains(document.elementFromPoint(x, y))
+          const cx = r.left + r.width / 2
+          const cy = r.top + r.height / 2
+          return [at(r.left + 1, cy), at(r.right - 1, cy), at(cx, r.top + 1), at(cx, r.bottom - 1)].every(Boolean)
+        })
+        expect(owned, (await control.getAttribute('aria-label')) ?? 'control').toBe(true)
+      }
+    }
+    // The hint does not touch the tool bar.
+    const hint = (await page.getByRole('note').boundingBox())!
+    const dock = (await page.getByRole('toolbar', { name: 'Whiteboard tools' }).boundingBox())!
+    expect(hint.y + hint.height).toBeLessThanOrEqual(dock.y)
+  })
+
+  test('a tap at the edge of the zoom percentage resets the zoom and does not zoom in', async ({ page }) => {
+    await open(page, NORDET)
+    const level = page.getByRole('button', { name: /^Zoom \d+%/ })
+    const box = (await level.boundingBox())!
+    await page.touchscreen.tap(box.x + box.width - 2, box.y + box.height / 2)
+    await expect(level).toHaveAccessibleName('Zoom 100%, reset to 100%')
+  })
+})

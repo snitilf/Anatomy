@@ -90,4 +90,11 @@
   .bar .more::after {
     inset: 0;
   }
+
+  /* The zoom bar is 52px high here, so a narrow map's tool bar clears it. */
+  @container map (max-width: 860px) {
+    .bar {
+      bottom: 70px;
+    }
+  }
 }

@@ -71,3 +71,15 @@
   margin: 0 var(--space-1);
   background: var(--border);
 }
+
+/* A touch screen gets 44px controls that own their edges, so no tap lands on a neighbour. The bar grows with them. */
+@media (pointer: coarse) {
+  .control {
+    width: 44px;
+    height: 44px;
+  }
+
+  .control::after {
+    inset: 0;
+  }
+}

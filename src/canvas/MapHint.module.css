@@ -31,3 +31,16 @@
     bottom: 102px;
   }
 }
+
+/* Touch controls are 44px, so the dock is 52px high: the hint sits above it. */
+@media (pointer: coarse) {
+  .hint {
+    bottom: 72px;
+  }
+
+  @container map (max-width: 860px) {
+    .hint {
+      bottom: 130px;
+    }
+  }
+}
