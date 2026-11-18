@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { open, viewport } from './helpers.ts'
 
+const NORDET = 'src/examples/nordet.board.json'
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
 
 const tab = (page: import('@playwright/test').Page, name: 'Map' | 'Overview') => page.getByRole('tab', { name })
@@ -348,3 +349,25 @@ test('a part opened from the Overview is spotlit: the lines that do not touch it
   await page.getByTestId('overview').locator('[data-row="part:redirect-handler"]').click()
   await expect.poll(() => page.evaluate(() => document.querySelectorAll('.react-flow__edge g[data-faded]').length)).toBeGreaterThan(0)
 })
+
+for (const [width, height] of [[1440, 900], [1024, 768], [390, 844]] as const) {
+  test(`the walkthrough bar never covers the zoom surface or the tool dock at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height })
+    await open(page, NORDET)
+    await page.keyboard.press('ControlOrMeta+k')
+    const menu = page.getByRole('dialog', { name: 'Command menu' })
+    await menu.getByRole('combobox').fill('Play')
+    await menu.getByRole('option', { name: /^Play/ }).first().click()
+    const bar = page.getByRole('region', { name: /^Walkthrough: / })
+    await expect(bar).toBeVisible()
+    await page.waitForTimeout(400)
+    const box = async (locator: import('@playwright/test').Locator) => ((await locator.count()) > 0 && (await locator.first().isVisible()) ? await locator.first().boundingBox() : null)
+    const mine = (await bar.boundingBox())!
+    const others = [await box(page.getByRole('toolbar', { name: 'Zoom' })), await box(page.getByRole('toolbar', { name: 'Whiteboard tools' }))]
+    for (const other of others) {
+      if (!other) continue
+      const apart = mine.x + mine.width <= other.x || other.x + other.width <= mine.x || mine.y + mine.height <= other.y || other.y + other.height <= mine.y
+      expect(apart).toBe(true)
+    }
+  })
+}
