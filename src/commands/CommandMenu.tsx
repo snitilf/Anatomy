@@ -3,20 +3,11 @@ import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useUi, useUiApi } from '../app/ui'
 import { formatKeys } from './keys'
-import { trailOf } from '../app/crumbs'
 import { boardCommands, COMMANDS, isEnabled, isVisible } from './list'
 import { useCommands } from './context'
 import styles from './CommandMenu.module.css'
+import { SELECTION_COMMANDS, selectionName } from './selectionSection'
 import { GROUP_ORDER, type Command, type CommandContext } from './types'
-
-/** The commands about the selected part or line, in the order the menu lists them under its name. */
-export const SELECTION_COMMANDS = ['note.add', 'link.add', 'zoom.selection', 'selection.overview', 'selection.copyName', 'walk.target', 'walk.source', 'walk.next', 'walk.previous'] as const
-
-/** The name of the selected part or line while the map is in front, which heads the menu's first group. */
-export function selectionName(ctx: CommandContext): string | undefined {
-  const { board, layer, selection } = ctx.state
-  return board && ctx.ui.view === 'map' && !ctx.state.scenario ? trailOf(board, layer, selection)?.last.label : undefined
-}
 
 function Row({ command, ctx, onRun, inContext = false }: { command: Command; ctx: CommandContext; onRun: (c: Command) => void; inContext?: boolean }) {
   const Icon = command.icon
