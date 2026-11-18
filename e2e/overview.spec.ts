@@ -274,3 +274,15 @@ test('the map shows the same view when the Overview is left, even after the wind
   await expect.poll(() => viewport(page)).toBe(before)
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
 })
+
+test('Back and Forward never carry the view of one board onto another', async ({ page }) => {
+  await open(page, SHORTENER)
+  await tab(page, 'Overview').click()
+  await tab(page, 'Map').click()
+  await page.getByLabel('Board file').setInputFiles('src/examples/nordet.board.json')
+  await expect(page.getByRole('heading', { name: /Nordet/, level: 2 })).toBeVisible()
+  await page.goBack()
+  await expect(page.getByTestId('overview')).toHaveCount(0)
+  await expect(tab(page, 'Map')).toHaveAttribute('aria-selected', 'true')
+  expect(new URL(page.url()).hash).toBe('')
+})

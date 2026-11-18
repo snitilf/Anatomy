@@ -20,7 +20,7 @@ import { TipProvider } from './Tip'
 import { TopBar } from './TopBar'
 import { createUi, UiContext, useUi, useUiApi } from './ui'
 import { OverviewPage } from '../overview/OverviewPage'
-import { rememberedView, rememberView, viewFromHash, writeHash } from './view'
+import { entryBoard, rememberedView, rememberView, viewFromHash, writeHash } from './view'
 import { useWorkspace } from './workspaceContext'
 
 /** Elements on the map that can hold keyboard focus. */
@@ -65,9 +65,15 @@ function useViewSync(boardId: string | undefined) {
   const store = useAppStoreApi()
   useEffect(() => {
     const onPop = () => {
+      const id = store.getState().board?.id
+      const from = entryBoard(window.history.state)
+      // An entry made for another board says nothing about this one. The address goes back to the view in front.
+      if (id && from !== undefined && from !== id) {
+        writeHash(ui.store.getState().view, false, id)
+        return
+      }
       const view = viewFromHash(window.location.hash)
       ui.setViewState(view)
-      const id = store.getState().board?.id
       if (id) rememberView(id, view)
     }
     window.addEventListener('popstate', onPop)
@@ -76,7 +82,7 @@ function useViewSync(boardId: string | undefined) {
   useEffect(() => {
     if (!boardId) return
     const view = rememberedView(boardId)
-    writeHash(view, false)
+    writeHash(view, false, boardId)
     ui.setViewState(view)
   }, [boardId, ui])
 }

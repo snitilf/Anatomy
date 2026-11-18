@@ -35,10 +35,20 @@ export function rememberView(boardId: string, view: View): void {
   }
 }
 
-/** Puts the view in the address. `push` adds a history entry, so back returns to the other view. */
-export function writeHash(view: View, push: boolean): void {
+/** The board an entry of the history was made for, or undefined for one made before any board was open. */
+export function entryBoard(state: unknown): string | undefined {
+  const board = (state as { board?: unknown } | null)?.board
+  return typeof board === 'string' ? board : undefined
+}
+
+/**
+ * Puts the view in the address. `push` adds a history entry, so back returns to the other view.
+ * Every entry carries the board it was made for, so Back and Forward never act across boards.
+ */
+export function writeHash(view: View, push: boolean, boardId?: string): void {
   const url = `${window.location.pathname}${window.location.search}${view === 'overview' ? HASH : ''}`
-  if (viewFromHash(window.location.hash) === view) return
-  if (push) window.history.pushState(null, '', url)
-  else window.history.replaceState(null, '', url)
+  const state = boardId === undefined ? null : { board: boardId }
+  if (viewFromHash(window.location.hash) === view && entryBoard(window.history.state) === boardId) return
+  if (push) window.history.pushState(state, '', url)
+  else window.history.replaceState(state, '', url)
 }

@@ -5,6 +5,6 @@ import { rememberView, writeHash, type View } from './view'
 export function showView(ui: UiApi, boardId: string | undefined, view: View): void {
   if (ui.store.getState().view === view) return
   ui.setViewState(view)
-  writeHash(view, true)
+  writeHash(view, true, boardId)
   if (boardId) rememberView(boardId, view)
 }
