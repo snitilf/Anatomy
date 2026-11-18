@@ -141,6 +141,8 @@ export interface Frame {
   readable?: boolean
   /** With `readable`: fit the whole box even when the text gets small, as a board with many parts does on opening. */
   fitAll?: boolean
+  /** Never frame below this zoom: a box too big for it shows its top left corner, so text stays readable. */
+  floorZoom?: number
   /** The cards where the flow starts: the first column on the left. Shown when the whole board is not readable. */
   start?: Rect
 }
@@ -161,12 +163,16 @@ export function coveredTop(map: HTMLElement): number {
  * Content smaller than the map is centered and never shown larger than `maxZoom`.
  */
 export function frameViewport(limits: Limits, map: Size & { top: number }, options: Frame = {}): Viewport {
-  const { box = limits.bounds, padding = 0, maxZoom = FIT_MAX_ZOOM, readable = false, fitAll = false, start } = options
+  const { box = limits.bounds, padding = 0, maxZoom = FIT_MAX_ZOOM, readable = false, fitAll = false, start, floorZoom } = options
   const room = Math.max(120, map.height - map.top - CORNER_ROOM)
   const area = { width: map.width, height: room }
   const inflated = { x: box.x - box.width * padding, y: box.y - box.height * padding, width: box.width * (1 + padding * 2), height: box.height * (1 + padding * 2) }
   let zoom = Math.min(maxZoom, fitZoomFor(inflated, area))
   zoom = Math.min(limits.maxZoom, Math.max(limits.minZoom, zoom))
+  if (floorZoom !== undefined && zoom < floorZoom) {
+    zoom = Math.min(limits.maxZoom, Math.max(limits.minZoom, floorZoom))
+    return clampViewport({ x: EDGE_ROOM - inflated.x * zoom, y: map.top + EDGE_ROOM - inflated.y * zoom, zoom }, limits, map)
+  }
   if (readable && !fitAll && zoom < READABLE_ZOOM) {
     zoom = Math.max(limits.minZoom, START_ZOOM)
     // The left edge of the board, with the first column of cards in the middle of the height, or its top when taller.

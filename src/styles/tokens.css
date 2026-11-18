@@ -32,6 +32,10 @@
   --fade-strong: 0.56;
   --fade-light: 0.64;
   --fade-faint: 0.72;
+  /* A selection is a spotlight: what is not touching it steps much further back than the fade above. */
+  --spot-line: 0.16;
+  --spot-label: 0.32;
+  --spot-card: 0.5;
   /* Connection ink: a share of the text color, never a hue. */
   --line-strong: color-mix(in srgb, var(--fg) 66%, transparent);
   --line-light: color-mix(in srgb, var(--fg) 58%, transparent);
@@ -90,6 +94,9 @@
   --fade-strong: 0.5;
   --fade-light: 0.56;
   --fade-faint: 0.68;
+  --spot-line: 0.22;
+  --spot-label: 0.38;
+  --spot-card: 0.45;
   --line-strong: color-mix(in srgb, var(--fg) 58%, transparent);
   --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
   --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);
@@ -125,6 +132,8 @@
 }
 
 :root {
+  /* The far view: a part is a filled tile, and its group a named block. */
+  --tile: color-mix(in srgb, var(--fg) 17%, var(--bg));
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 

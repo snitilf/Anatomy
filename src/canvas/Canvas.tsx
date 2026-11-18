@@ -43,7 +43,12 @@ import { onTextMeasured } from './textMeasure'
 import { assembleGraph, computeGeometry, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
-import { Camera, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
+import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
+import { bundleGroups } from './bundles'
+import { computeBundles } from './bundleRoutes'
+import { GROUP_FRAME_ZOOM } from './far'
+import { FarLayer, type FarGroup } from './FarLayer'
+import type { NamedTile } from './farLabels'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -328,6 +333,13 @@ export function Canvas() {
   }, [])
   /** Labels give way on a crowded map below the full-label zoom. Only the selection's and the hovered card's show. */
   const [quiet, setQuiet] = useState(false)
+  /** Zoomed out past the point where a card title is readable: groups as named blocks, one bundled line per pair. */
+  const [far, setFar] = useState(false)
+  const farRef = useRef(far)
+  useLayoutEffect(() => {
+    farRef.current = far
+  })
+  const pressedAt = useRef({ x: 0, y: 0 })
   const takePicked = useCallback(() => {
     const id = pickedOnMap.current
     pickedOnMap.current = undefined
@@ -490,6 +502,41 @@ export function Canvas() {
     return out
   }, [geometryNow, held, board, marks])
   const getScene = useCallback(() => sceneRef.current, [])
+  // The bundled lines are solved once for each layout of the cards, and only while the far view shows. A card in hand
+  // leaves the last ones where they are until the build that follows the drop.
+  const solvedRects = geometryNow?.solved
+  const bundles = useMemo(
+    () => (far && board && solvedRects ? computeBundles(board, solvedRects, bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? [])) : []),
+    [far, board, solvedRects, links, reconnects, proposals],
+  )
+  const farGroups = useMemo<FarGroup[]>(
+    () =>
+      far && board && geometryNow
+        ? geometryNow.groups.map((g) => ({ id: g.id, label: g.label, count: board.components.filter((c) => c.group === g.id).length, area: g }))
+        : [],
+    [far, board, geometryNow],
+  )
+  // The parts with no group and the proposed parts, which the far view names under their tiles when there is room.
+  const farTiles = useMemo<NamedTile[]>(() => {
+    if (!far || !board || !rectsNow) return []
+    const grouped = new Set(board.groups.map((g) => g.id))
+    const loose = board.components.filter((c) => c.group === undefined || !grouped.has(c.group)).map((c) => ({ id: c.id, label: c.label }))
+    return [...loose, ...(proposals ?? []).map((p) => ({ id: p.id, label: p.label }))].flatMap((t) => {
+      const rect = rectsNow[t.id]
+      return rect ? [{ ...t, rect }] : []
+    })
+  }, [far, board, rectsNow, proposals])
+  const farObstacles = useMemo<Rect[]>(() => (far && rectsNow ? [...Object.values(rectsNow), ...(geometryNow?.groups ?? [])] : []), [far, rectsNow, geometryNow])
+  const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link')
+  /** Frames a group, at a zoom where its cards show their text. */
+  const pickGroup = useCallback(
+    (id: string) => {
+      const current = viewRef.current
+      const area = current ? groupAreas(current.board, current.rects)[id] : undefined
+      if (area) camera.frame({ box: area, padding: 0.06, maxZoom: 1, floorZoom: GROUP_FRAME_ZOOM }, prefersStillness() ? 0 : GLIDE_MS * 1.5)
+    },
+    [camera],
+  )
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
 
@@ -702,13 +749,19 @@ export function Canvas() {
 
   // During a walkthrough a click on a part still opens it. Picking a part up does not.
   const onNodeClick = useCallback(
-    (_: unknown, node: { id: string }) => {
-      if (!playing.current || node.id.startsWith('group:') || node.id.startsWith(MARK_PREFIX)) return
+    (event: unknown, node: { id: string }) => {
+      if (node.id.startsWith('group:')) {
+        // A drag that pans the map across a group ends in a click too. Only a press that stayed put picks the group.
+        const e = event as MouseEvent
+        if (farRef.current && Math.hypot(e.clientX - pressedAt.current.x, e.clientY - pressedAt.current.y) < 5) pickGroup(node.id.slice('group:'.length))
+        return
+      }
+      if (!playing.current || node.id.startsWith(MARK_PREFIX)) return
       pickedOnMap.current = node.id
       const proposal = store.getState().layer?.proposals.some((p) => p.id === node.id)
       dispatch({ type: 'select', selection: { type: proposal ? 'proposal' : 'component', id: node.id } })
     },
-    [dispatch, store],
+    [dispatch, store, pickGroup],
   )
 
   // A double click on text, a sticky note, or a proposed part types in place.
@@ -732,6 +785,13 @@ export function Canvas() {
     const style = hoverStyle.current
     if (!style || hold.current || node.id.startsWith('group:')) return
     const id = CSS.escape(node.id)
+    if (farRef.current) {
+      // The far view: the lines are out of the picture, so only the part's own come in, solid, and the bundles step back.
+      style.textContent = `[data-hover-scope][data-far] g[data-ends~="${id}"] { opacity: 1 !important; --line-ink: var(--fg-2); }
+[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: none !important; stroke-width: 2px !important; }
+[data-hover-scope] [data-bundle] { opacity: var(--spot-line); }`
+      return
+    }
     style.textContent = `${stepBackRules(`[data-ends~="${id}"]`)}
 [data-hover-scope] [data-ends~="${id}"] { opacity: 1; --line-ink: var(--fg-2); }
 [data-hover-scope][data-labels="quiet"] [data-label][data-ends~="${id}"] { visibility: visible !important; }`
@@ -916,7 +976,12 @@ export function Canvas() {
       ref={mapBox}
       className={styles.canvas}
       data-connecting={connecting || undefined}
-      data-labels={quiet ? 'quiet' : undefined}
+      data-labels={quiet || far ? 'quiet' : undefined}
+      data-far={far || undefined}
+      data-spot={spotlit || undefined}
+      onPointerDownCapture={(e) => {
+        pressedAt.current = { x: e.clientX, y: e.clientY }
+      }}
       data-tool={tool}
       data-hover-scope=""
     >
@@ -952,8 +1017,8 @@ export function Canvas() {
           onConnect={onConnect}
           onConnectStart={() => setConnecting(true)}
           onConnectEnd={onConnectEnd}
-          edgesFocusable={props.edgesFocusable}
-          nodesFocusable={props.nodesFocusable}
+          edgesFocusable={props.edgesFocusable && !far}
+          nodesFocusable={props.nodesFocusable && !far}
           deleteKeyCode={null}
           selectionKeyCode={null}
           multiSelectionKeyCode={null}
@@ -968,6 +1033,8 @@ export function Canvas() {
           <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={held !== undefined} rectOf={rectOf} />
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
+          <FarMode onChange={setFar} />
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} obstacles={farObstacles} onPick={pickGroup} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}
@@ -980,7 +1047,7 @@ export function Canvas() {
           <SpaceHand />
           <ZoomBar />
           <WheelZoom />
-          <LabelScale />
+          <LabelScale far={far} />
           <MapHint />
         </ReactFlow>
       </CameraContext.Provider>

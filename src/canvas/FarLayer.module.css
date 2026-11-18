@@ -1,0 +1,161 @@
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+}
+
+/* The width is in screen pixels at every zoom. */
+.bundle {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-linecap: butt;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.bundle[data-mine] {
+  stroke: var(--yours);
+}
+
+/* The arrowhead is the size of a screen arrowhead at every zoom, in the ink of its line. */
+.arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.arrow svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  transform: rotate(var(--angle)) scale(var(--label-scale, 1));
+  transform-origin: 0 0;
+  fill: var(--line-strong);
+}
+
+.arrow[data-mine] svg {
+  fill: var(--yours);
+}
+
+/* The count sits on a cutout in the color of the map, like the label of a line. */
+.count {
+  position: absolute;
+  transition: opacity 120ms var(--ease-out);
+  z-index: 1;
+}
+
+.count span {
+  display: block;
+  transform: translate(-50%, -50%) scale(var(--label-scale, 1));
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--fg-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.anchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* The name sits just above the top edge of its group, at a size that reads on screen. */
+.name {
+  position: absolute;
+  left: 0;
+  bottom: calc(5px * var(--label-scale, 1));
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  /* Natural size, before the scale: a long name is cut here, not at the edge of a narrow group. */
+  max-width: 260px;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: zoom-in;
+  pointer-events: auto;
+  transform: scale(var(--label-scale, 1));
+  transform-origin: 0 100%;
+}
+
+.name:hover .text {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.name:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.number {
+  flex: none;
+  color: var(--fg-3);
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A part with no group is named under its tile, smaller than a group, when the tile is wide enough to hold the name. */
+.tile {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.tile span {
+  position: absolute;
+  left: 0;
+  display: block;
+  width: max-content;
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--fg-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translateX(-50%) scale(var(--label-scale, 1));
+}
+
+.tile[data-below] span {
+  top: 0;
+  transform-origin: 50% 0;
+}
+
+.tile[data-above] span {
+  bottom: 0;
+  transform-origin: 50% 100%;
+}

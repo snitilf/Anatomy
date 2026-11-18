@@ -26,8 +26,10 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-selected={selected || undefined}
         data-highlighted={data.highlighted ? 'true' : undefined}
         data-dimmed={data.dimmed ? 'true' : undefined}
+        data-faded={data.faded ? 'true' : undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
       >
+        {mine > 0 && <span className={styles.dot} aria-hidden="true" />}
         <div className={styles.label}>{data.label}</div>
         <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }} data-small={small || undefined}>
           {data.summary}
@@ -47,6 +49,10 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
             )}
           </div>
         )}
+      </div>
+      {/* The name of the part in the far view, where the tile has no text. The card clips its own paint, so it sits beside it. */}
+      <div className={styles.tip} aria-hidden="true">
+        {data.label}
       </div>
       <NodeResizeControl
         position="bottom-right"

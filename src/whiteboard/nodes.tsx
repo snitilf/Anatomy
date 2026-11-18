@@ -46,6 +46,7 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
         <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
       ))}
       <div className={cards.card} data-yours="" data-selected={selected || undefined}>
+        {data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
         <div className={cards.label}>{data.label}</div>
         {data.summary && (
           <p className={cards.summary} style={{ WebkitLineClamp: data.summaryLines }}>
@@ -60,6 +61,9 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
             </span>
           </div>
         )}
+      </div>
+      <div className={cards.tip} aria-hidden="true">
+        {data.label}
       </div>
       <Grip min={CARD_MIN} max={CARD_MAX} />
     </>

@@ -40,6 +40,8 @@ export interface CardData extends Record<string, unknown> {
   highlighted: boolean
   /** A walkthrough is playing and this part is not in the step. */
   dimmed: boolean
+  /** A part or a line is selected and this part is not touching it: it steps far back. */
+  faded: boolean
   /** How many of the user's notes and questions are attached to this part. */
   noteCount: number
   label: string
@@ -497,7 +499,33 @@ export function assembleGraph(
   const editOf = new Map(user.reconnects.map((e) => [e.relationshipId, e]))
   const selectedPart = selection?.type === 'component' ? selection.id : undefined
   // Picking a part leaves its own lines strong and softens the rest. Not while a card is held, and not during a walkthrough.
-  const softening = selectedPart !== undefined && !playing && held === undefined
+  const selectedLine = selection?.type === 'relationship' || selection?.type === 'link' ? selection.id : undefined
+  // A part or a line selected is a spotlight: what it touches stays, the rest steps far back.
+  const softening = (selectedPart !== undefined || selectedLine !== undefined) && !playing && held === undefined
+  const touching = new Set<string>()
+  if (softening) {
+    if (selectedPart !== undefined) {
+      touching.add(selectedPart)
+      for (const r of board.relationships) {
+        const edit = editOf.get(r.id)
+        const from = edit?.from ?? r.from
+        const to = edit?.to ?? r.to
+        if (from === selectedPart) touching.add(to)
+        if (to === selectedPart) touching.add(from)
+      }
+      for (const l of links) {
+        if (l.from === selectedPart) touching.add(l.to)
+        if (l.to === selectedPart) touching.add(l.from)
+      }
+    } else if (selection?.type === 'relationship') {
+      const r = board.relationships.find((x) => x.id === selection.id)
+      const edit = r ? editOf.get(r.id) : undefined
+      if (r) touching.add(edit?.from ?? r.from).add(edit?.to ?? r.to)
+    } else if (selection?.type === 'link') {
+      const l = links.find((x) => x.id === selection.id)
+      if (l) touching.add(l.from).add(l.to)
+    }
+  }
 
   const movedGroups = new Set<string>()
   if (pushed && pushed.size > 0) {
@@ -541,6 +569,7 @@ export function assembleGraph(
         componentId: c.id,
         highlighted: playing && highlight.has(c.id),
         dimmed: playing && !highlight.has(c.id) && c.id !== selectedPart && c.id !== held,
+        faded: softening && !touching.has(c.id),
         noteCount: noteCounts.get(c.id) ?? 0,
         label: c.label,
         summary: c.summary,
@@ -552,6 +581,8 @@ export function assembleGraph(
       ...(c.id === held ? { className: 'held' } : pushed?.has(c.id) ? { className: 'pushed' } : {}),
       connectable: true,
       deletable: false,
+      // A part keeps its role when the map takes it out of the tab order, as the far view does.
+      ariaRole: 'group',
       // The name is the part and its group. The summary is the description, so a screen reader does not read it as the name.
       ariaLabel: groupLabel.get(c.group ?? '') ? `${c.label}, in ${groupLabel.get(c.group ?? '')}` : c.label,
       domAttributes: { 'aria-description': c.summary } as NonNullable<Node['domAttributes']>,
@@ -575,6 +606,7 @@ export function assembleGraph(
         ...(p.id === user.editing ? { className: 'editing' } : p.id === held ? { className: 'held' } : pushed?.has(p.id) ? { className: 'pushed' } : {}),
         connectable: true,
         deletable: false,
+        ariaRole: 'group',
         ariaLabel: p.label,
         domAttributes: { 'aria-description': p.summary } as NonNullable<Node['domAttributes']>,
       } satisfies Node<ProposalData>),
