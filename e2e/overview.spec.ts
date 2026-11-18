@@ -141,3 +141,18 @@ test('a group header collapses its rows, and a walkthrough row starts it on the 
   await expect(overview).toHaveCount(0)
   await expect(page.getByRole('button', { name: /close/i }).first()).toBeVisible()
 })
+
+test('Between groups lists each pair, opens to its connections, and a connection opens on the map', async ({ page }) => {
+  await open(page, SHORTENER)
+  await tab(page, 'Overview').click()
+  const overview = page.getByTestId('overview')
+  const pair = overview.getByRole('button', { name: /^Frontend and Backend/ })
+  await expect(pair).toHaveAttribute('aria-expanded', 'false')
+  await pair.click()
+  await expect(pair).toHaveAttribute('aria-expanded', 'true')
+  const connection = overview.locator('[data-row^="conn:"]').first()
+  const label = (await connection.locator('span').first().textContent())!
+  await connection.click()
+  await expect(overview).toHaveCount(0)
+  await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByRole('heading', { name: label, level: 2 })).toBeVisible()
+})

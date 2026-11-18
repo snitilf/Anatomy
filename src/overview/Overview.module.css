@@ -462,7 +462,8 @@
   transition: transform 120ms var(--ease-out);
 }
 
-.groupToggle[aria-expanded='true'] .chevron {
+.groupToggle[aria-expanded='true'] .chevron,
+.pair[aria-expanded='true'] .chevron {
   transform: rotate(90deg);
 }
 
@@ -574,6 +575,10 @@
 .connection {
   padding-left: var(--space-6);
   width: calc(100% + var(--space-4));
+}
+
+.meta {
+  flex: none;
 }
 
 .connection .meta {

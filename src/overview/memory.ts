@@ -7,11 +7,13 @@ interface Memory {
   scroll: number
   row: string | undefined
   closed: Set<string>
+  /** Rows of Between groups that are open. */
+  expanded: Set<string>
 }
 
-let memory: Memory = { boardId: '', scroll: 0, row: undefined, closed: new Set() }
+let memory: Memory = { boardId: '', scroll: 0, row: undefined, closed: new Set(), expanded: new Set() }
 
 export function overviewMemory(boardId: string): Memory {
-  if (memory.boardId !== boardId) memory = { boardId, scroll: 0, row: undefined, closed: new Set() }
+  if (memory.boardId !== boardId) memory = { boardId, scroll: 0, row: undefined, closed: new Set(), expanded: new Set() }
   return memory
 }

@@ -15,7 +15,7 @@ import { overviewMemory } from './memory'
 import { changeCounts, changeLine, partGroups, plural, responseLine, type PartFilter } from './model'
 import { PartsSection } from './PartsSection'
 import styles from './Overview.module.css'
-import { BetweenGroups } from './BetweenSection'
+import { BetweenSection } from './BetweenSection'
 
 type Section = 'parts' | 'between' | 'questions'
 
@@ -267,7 +267,7 @@ export function OverviewPage() {
           boardId={board.id}
         />
 
-        <BetweenGroups board={board} layer={layer} actions={actions} />
+        <BetweenSection board={board} layer={layer} actions={actions} />
 
         {(board.scope.includes.length > 0 || board.scope.excludes.length > 0) && (
           <section className={styles.section} aria-labelledby="ov-scope" data-section="scope">
