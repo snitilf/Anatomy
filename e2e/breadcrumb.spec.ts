@@ -29,8 +29,11 @@ test('a connection has no group segment, and a link is named by its label', asyn
 test('the board segment clears the selection, and Escape still does', async ({ page }) => {
   await open(page, NORDET)
   await pickPart(page, 'rule-check')
-  await crumb(page).getByRole('button', { name: /Nordet/ }).click()
+  await crumb(page).getByRole('button', { name: /Nordet/ }).focus()
+  await page.keyboard.press('Enter')
   await expect(crumb(page).locator('[aria-current="location"]')).toHaveCount(0)
+  // Focus is not lost with the button: it returns to the card that was selected.
+  await expect(page.locator('.react-flow__node-card[data-id="rule-check"]')).toBeFocused()
   await expect(page.getByTestId('inspector').getByRole('heading', { level: 2, name: /Nordet/ })).toBeVisible()
   await pickPart(page, 'rule-check')
   await page.locator('.react-flow__node-card[data-id="rule-check"]').focus()
@@ -65,4 +68,13 @@ test('long names shrink the middle segments first and the part stays readable', 
   expect(widths.lastRight).toBeLessThanOrEqual(widths.navRight + 1)
   expect(widths.lastWidth).toBeGreaterThanOrEqual(72)
   expect(widths.scrolls).toBe(false)
+})
+
+test('the board segment says what it does, and how to do it from the keyboard', async ({ page }) => {
+  await open(page, NORDET)
+  await pickPart(page, 'rule-check')
+  await crumb(page).getByRole('button', { name: /Nordet/ }).hover()
+  const tip = page.getByRole('tooltip')
+  await expect(tip).toContainText('Back to board')
+  await expect(tip).toContainText('Esc')
 })

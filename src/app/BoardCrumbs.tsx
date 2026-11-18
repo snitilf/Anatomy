@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { useCommand, useCommands } from '../commands/context'
 import { frameGroup } from '../canvas/groupFrame'
 import { trailOf, type Trail } from './crumbs'
+import { Tip } from './Tip'
 import { useAppStore, useAppStoreApi } from './store'
 import styles from './TopBar.module.css'
 import { useUi } from './ui'
@@ -27,6 +28,16 @@ export function BoardCrumbs({ title }: { title: string }) {
   const { context } = useCommands()
   const back = useCommand('goto.overview')
   const zoom = useCommand('zoom.selection')
+  /** Clears the selection and puts focus back on the map element that was selected, since this button is gone with the selection. */
+  const leave = () => {
+    const selected = store.getState().selection
+    back.run()
+    if (!selected || selected.type === 'board') return
+    requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(selected.id)}"], .react-flow__edge[data-id="${CSS.escape(selected.id)}"]`)
+      target?.focus({ preventScroll: true })
+    })
+  }
   const trail = useMemo(() => JSON.parse(words) as Trail | null, [words])
   if (!trail || !onMap) {
     return (
@@ -39,9 +50,11 @@ export function BoardCrumbs({ title }: { title: string }) {
   return (
     <>
       <h1 className={clsx(styles.title, styles.step)}>
-        <button type="button" className={clsx(styles.segment, styles.middle)} title={title} onClick={back.run}>
-          {title}
-        </button>
+        <Tip label="Back to board" keys={back.shortcut}>
+          <button type="button" className={clsx(styles.segment, styles.middle)} onClick={leave}>
+            {title}
+          </button>
+        </Tip>
       </h1>
       {group && (
         <>
