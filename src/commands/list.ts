@@ -117,7 +117,8 @@ const walk = (move: Walk, id: string, label: string, icon: Command['icon'], key:
   keys: [key],
   keywords: ['walk', 'follow', ...keywords],
   visible: (c) => onMap(c) && !playing(c) && onTrail(c),
-  enabled: (c) => !!c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move) !== undefined,
+  // The key is always taken while a part or line is selected, so a step with nowhere to go never reaches the browser (Alt+arrow is Back and Forward on Windows and Linux). It does nothing, in silence.
+  available: (c) => !!c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move) !== undefined,
   run: (c) => {
     const step = c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move)
     if (!step) return

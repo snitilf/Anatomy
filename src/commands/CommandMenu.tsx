@@ -27,7 +27,7 @@ function Row({ command, ctx, onRun, inContext = false }: { command: Command; ctx
       className={styles.item}
       value={command.id}
       keywords={[command.label, command.contextLabel ?? '', ...(command.keywords ?? [])]}
-      disabled={!isEnabled(command, ctx)}
+      disabled={!isEnabled(command, ctx) || command.available?.(ctx) === false}
       onSelect={() => onRun(command)}
     >
       <Icon className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -60,8 +60,8 @@ function MenuBody({ onClose }: { onClose: () => void }) {
   const typing = search.trim() !== ''
   const name = selectionName(ctx)
   // What can be done with the selection comes first, once. The rest of the menu leaves those commands out.
-  const here = name === undefined ? [] : SELECTION_COMMANDS.flatMap((id) => all.filter((c) => c.id === id && isEnabled(c, ctx)))
-  const shown = all.filter((c) => isVisible(c, ctx) && (typing || !c.searchOnly) && !here.includes(c))
+  const here = name === undefined ? [] : SELECTION_COMMANDS.flatMap((id) => all.filter((c) => c.id === id && isEnabled(c, ctx) && (c.available?.(ctx) ?? true)))
+  const shown = all.filter((c) => isVisible(c, ctx) && (typing || !c.searchOnly) && !(name !== undefined && (SELECTION_COMMANDS as readonly string[]).includes(c.id)))
   const go = (command: Command) => {
     onClose()
     // After the dialog has given focus back, so a command that moves focus keeps it.

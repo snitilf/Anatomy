@@ -119,3 +119,22 @@ test('Alt with the arrows never navigates the browser history', async ({ page })
   )
   expect(prevented).toBe(true)
 })
+
+test('Alt+ArrowRight on a part with no outgoing line is still taken, and the selection stays', async ({ page }) => {
+  await open(page, NORDET)
+  await pickPart(page, 'saved-record')
+  await expect(here(page)).toHaveText('Saved record')
+  const prevented = await page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const event = new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true })
+        document.body.dispatchEvent(event)
+        resolve(event.defaultPrevented)
+      }),
+  )
+  expect(prevented).toBe(true)
+  await expect(here(page)).toHaveText('Saved record')
+  // The menu does not offer a step there.
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(page.getByRole('dialog', { name: 'Command menu' }).getByRole('option', { name: /^Go to target/ })).toHaveCount(0)
+})
