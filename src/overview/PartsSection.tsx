@@ -1,5 +1,5 @@
 import { ChevronRight, CircleHelp, GraduationCap, MessageSquareReply, Search } from 'lucide-react'
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { SourceNote } from '../app/SourceNote'
 import { overviewMemory } from './memory'
 import { filterGroups, type PartFilter, type PartGroup, type PartRow } from './model'
@@ -23,18 +23,26 @@ const MODE_WORD = { undecided: 'Undecided', questions: 'With open items' } as co
 export function PartsSection({ groups, filter, setFilter, total, boardId, open }: Props) {
   const memory = overviewMemory(boardId)
   const [, redraw] = useState(0)
+  // The row that has focus is the one a Tab or Shift+Tab lands on, so it follows focus.
+  const [focused, setFocused] = useState<string | undefined>(undefined)
   const root = useRef<HTMLElement>(null)
   const shown = useMemo(() => filterGroups(groups, filter), [groups, filter])
   const filtering = filter.query.trim() !== '' || filter.mode !== 'all'
   const count = shown.reduce((n, g) => n + g.rows.length, 0)
   // The one row a Tab lands on: the row last used, or the first.
   const keys = shown.flatMap((g) => (memory.closed.has(g.key) ? [] : g.rows.map((r) => `part:${r.id}`)))
-  const stop = memory.row && keys.includes(memory.row) ? memory.row : keys[0]
+  const current = focused ?? memory.row
+  const stop = current && keys.includes(current) ? current : keys[0]
 
   const toggle = (key: string) => {
     if (memory.closed.has(key)) memory.closed.delete(key)
     else memory.closed.add(key)
     redraw((n) => n + 1)
+  }
+
+  function onFocus(event: FocusEvent<HTMLElement>) {
+    const key = (event.target as HTMLElement).closest<HTMLElement>('[data-row^="part:"]')?.dataset.row
+    if (key) setFocused(key)
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -50,7 +58,7 @@ export function PartsSection({ groups, filter, setFilter, total, boardId, open }
   }
 
   return (
-    <section ref={root} className={styles.section} aria-labelledby="ov-parts" data-section="parts" onKeyDown={onKeyDown}>
+    <section ref={root} className={styles.section} aria-labelledby="ov-parts" data-section="parts" onKeyDown={onKeyDown} onFocus={onFocus}>
       <div className={styles.headRow}>
         <h3 id="ov-parts" className={styles.heading}>
           Parts <span className={styles.count}>{filtering ? `${count} of ${total}` : total}</span>
