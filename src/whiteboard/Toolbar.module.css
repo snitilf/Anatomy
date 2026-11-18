@@ -46,7 +46,6 @@
 .more {
   composes: control from '../app/float.module.css';
   width: 16px;
-  margin-left: -4px;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--fg-3);
 }
@@ -75,19 +74,20 @@
   }
 }
 
+/* A touch screen gets 44px tools that own their edges. The selectors are doubled to outrank the shared control. */
 @media (pointer: coarse) {
-  .button {
+  .bar .button {
     width: 44px;
     height: 44px;
   }
 
-  .more {
+  .bar .more {
     width: 28px;
     height: 44px;
   }
 
-  .button::after,
-  .more::after {
+  .bar .button::after,
+  .bar .more::after {
     inset: 0;
   }
 }
