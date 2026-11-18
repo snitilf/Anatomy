@@ -68,6 +68,64 @@
   box-shadow: var(--ring);
 }
 
+/* The crumb, the board, the group, and the part. Under pressure the middle ones give up room first, then the folder, then the part. */
+.trail {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.trail > .crumb {
+  flex: 0 2 auto;
+  max-width: 180px;
+}
+
+.segment {
+  appearance: none;
+  position: relative;
+  height: 28px;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+
+.middle {
+  flex: 0 4 auto;
+}
+
+.last {
+  flex: 0 1 auto;
+  color: var(--fg);
+}
+
+.fold {
+  flex: none;
+  padding: 0 var(--space-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .segment:hover {
+    background: var(--hover);
+    color: var(--fg);
+  }
+}
+
+.segment:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
 .slash {
   flex: none;
   margin: 0 2px;
@@ -90,9 +148,29 @@
   color: var(--fg);
 }
 
+/* The board segment sits in the heading. It keeps the heading's place and the crumb's look. */
+.title.step {
+  display: flex;
+  flex: 0 4 auto;
+  padding: 0;
+}
+
+/* A rule keeps the tabs apart from the crumb, so the view you are in never reads as one more segment of where you are. */
 .viewsRoot {
+  position: relative;
   flex: none;
-  margin-left: var(--space-1);
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+}
+
+.viewsRoot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--border-strong);
 }
 
 .views {
@@ -214,6 +292,7 @@
     gap: var(--space-2);
   }
 
+  .trail,
   .crumb,
   .slash,
   .toggle,
@@ -232,6 +311,11 @@
 
   .viewsRoot {
     margin-inline: auto;
+    padding-left: 0;
+  }
+
+  .viewsRoot::before {
+    display: none;
   }
 
   .bar:has(.viewsRoot) .end {

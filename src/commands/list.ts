@@ -1,6 +1,8 @@
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -41,15 +43,22 @@ import {
 } from 'lucide-react'
 import { EXAMPLES } from '../app/examples'
 import type { Selection } from '../app/state'
+import { copyText } from '../app/clipboard'
+import { trailOf } from '../app/crumbs'
 import { showView } from '../app/viewActions'
+import { revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
+import { toast } from 'sonner'
+import { currentTrail, rememberStep, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
 import type { Rect } from '../layout/geometry'
 import type { Tool } from '../whiteboard/tools'
 import type { Command, CommandContext } from './types'
 
 const hasBoard = (c: CommandContext) => c.state.board !== undefined
+/** A part or a line is selected, so it has a name and a place on the map. */
+const onTrail = (c: CommandContext) => c.state.board !== undefined && trailOf(c.state.board, c.state.layer, c.state.selection) !== undefined
 const playing = (c: CommandContext) => c.state.scenario !== undefined
 /** The map is the view in front: the Overview page covers it and takes its own keys. */
 const onMap = (c: CommandContext) => c.ui.view === 'map'
@@ -97,6 +106,26 @@ function overviewRow(): Selection | undefined {
   const { type, id } = row?.dataset ?? {}
   return id && (type === 'component' || type === 'proposal') ? { type, id } : undefined
 }
+
+
+/** A step along the graph from the selected part or line, as a command. It is on when there is somewhere to go. */
+const walk = (move: Walk, id: string, label: string, icon: Command['icon'], key: string, keywords: readonly string[]): Command => ({
+  id: `walk.${id}`,
+  group: 'Selection',
+  label,
+  icon,
+  keys: [key],
+  keywords: ['walk', 'follow', ...keywords],
+  visible: (c) => onMap(c) && !playing(c) && onTrail(c),
+  // The key is always taken while a part or line is selected, so a step with nowhere to go never reaches the browser (Alt+arrow is Back and Forward on Windows and Linux). It does nothing, in silence.
+  available: (c) => !!c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move) !== undefined,
+  run: (c) => {
+    const step = c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move)
+    if (!step) return
+    rememberStep(step)
+    c.dispatch({ type: 'select', selection: step.selection })
+  },
+})
 
 const theme = (mode: ThemeMode, label: string, icon: Command['icon']): Command => ({
   id: `theme.${mode}`,
@@ -348,6 +377,40 @@ export const COMMANDS: readonly Command[] = [
     },
   },
   {
+    id: 'selection.overview',
+    group: 'Selection',
+    label: 'Show on Overview',
+    icon: LayoutList,
+    keywords: ['list', 'page', 'parts'],
+    visible: (c) => onMap(c) && !playing(c) && onTrail(c),
+    run: (c) => {
+      const { board, selection } = c.state
+      if (!board || !selection || selection.type === 'board') return
+      if (selection.type === 'component' || selection.type === 'proposal') {
+        const group = selection.type === 'proposal' ? 'yours' : (board.components.find((p) => p.id === selection.id)?.group ?? 'other')
+        revealRow(board.id, `part:${selection.id}`, group)
+      } else if (selection.type === 'relationship' || selection.type === 'link') revealRow(board.id, `conn:${selection.id}`)
+      showView(c.uiApi, board.id, 'overview')
+    },
+  },
+  {
+    id: 'selection.copyName',
+    group: 'Selection',
+    label: 'Copy name',
+    icon: Copy,
+    keywords: ['label', 'title'],
+    visible: (c) => onMap(c) && !playing(c) && onTrail(c),
+    run: (c) => {
+      const name = c.state.board && trailOf(c.state.board, c.state.layer, c.state.selection)?.last.label
+      if (name === undefined) return
+      void copyText(name).then((ok) => (ok ? toast('Name copied') : toast.error('Could not copy the name')))
+    },
+  },
+  walk('target', 'target', 'Go to target', ArrowRight, 'Alt+ArrowRight', ['next', 'outgoing', 'forward']),
+  walk('source', 'source', 'Go to source', ArrowLeft, 'Alt+ArrowLeft', ['previous', 'incoming', 'back']),
+  walk('next', 'next', 'Next sibling', ArrowDown, 'Alt+ArrowDown', ['sideways', 'same source']),
+  walk('previous', 'previous', 'Previous sibling', ArrowUp, 'Alt+ArrowUp', ['sideways', 'same source']),
+  {
     id: 'selection.delete',
     group: 'Selection',
     label: 'Delete',
@@ -386,6 +449,7 @@ export const COMMANDS: readonly Command[] = [
     id: 'zoom.selection',
     group: 'View',
     label: 'Zoom to selection',
+    contextLabel: 'Zoom to',
     icon: Scan,
     keys: ['Shift+Digit2'],
     visible: (c) => onMap(c) && selected(c) !== undefined,
@@ -494,4 +558,6 @@ export function boardCommands(c: CommandContext): Command[] {
 }
 
 export const isVisible = (command: Command, c: CommandContext) => command.visible?.(c) ?? true
+/** Whether the menu lists the command: it is visible, and it would do something. Its keys work either way. */
+export const isListed = (command: Command, c: CommandContext) => isVisible(command, c) && (command.available?.(c) ?? true)
 export const isEnabled = (command: Command, c: CommandContext) => isVisible(command, c) && (command.enabled?.(c) ?? true)

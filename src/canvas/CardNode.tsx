@@ -30,6 +30,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
       ))}
       <div
         className={styles.card}
+        data-card=""
         data-selected={selected || undefined}
         data-highlighted={data.highlighted ? 'true' : undefined}
         data-dimmed={data.dimmed ? 'true' : undefined}

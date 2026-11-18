@@ -19,6 +19,7 @@ import { PartView } from './PartView'
 import { Composer } from './notes'
 import { Review, ReviewFooter } from './Review'
 import { Sheet } from './Sheet'
+import { useSpotlightReset } from './spotlight'
 import styles from './Sidebar.module.css'
 import { LinkView, MarkView, ProposalView } from './YoursViews'
 
@@ -72,6 +73,9 @@ function Body({ header }: { header?: ReactNode }) {
   const focusNext = useRef(false)
   const fromReview = useRef(false)
   const key = selectionKey(selection)
+  const phone = usePhone()
+  // A row that goes away takes its spotlight with it.
+  useSpotlightReset(key, tab, layer, board)
 
   // A choice made inside the panel replaces its content, so focus moves to the new heading.
   // A choice made in Review selects on the map and stays in Review.
@@ -145,21 +149,18 @@ function Body({ header }: { header?: ReactNode }) {
     <PanelContext.Provider value={panel}>
       {header}
       <Tabs.Root className={styles.top} value={reviewing ? 'review' : 'details'} onValueChange={(value) => ui.setTab(value as 'details' | 'review')}>
-        <div className={styles.where}>
-          {canBack ? (
-            <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
-              <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
-              Board
-            </button>
-          ) : (
-            <span className={styles.here}>{reviewing ? 'Review' : 'Board'}</span>
-          )}
-          {canBack && (
-            <kbd className={styles.esc} aria-hidden="true">
-              Esc
-            </kbd>
-          )}
-        </div>
+        {phone && (
+          <div className={styles.where}>
+            {canBack ? (
+              <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
+                <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
+                Board
+              </button>
+            ) : (
+              <span className={styles.here}>{reviewing ? 'Review' : 'Board'}</span>
+            )}
+          </div>
+        )}
         <Tabs.List className={styles.switch} aria-label="Sidebar">
           <Tabs.Tab className={styles.tab} value="details">
             Details

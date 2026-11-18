@@ -1,8 +1,11 @@
 import clsx from 'clsx'
 import { ChevronDown, PanelRight, Search } from 'lucide-react'
+import { useRef } from 'react'
 import { useCommand } from '../commands/context'
 import { ariaShortcut } from '../commands/keys'
 import buttons from './buttons.module.css'
+import { BoardCrumbs } from './BoardCrumbs'
+import { useCrumbRoom } from './crumbRoom'
 import { OpenMenu } from './OpenMenu'
 import { SaveStatus } from './SaveStatus'
 import { SendMenu } from './SendMenu'
@@ -37,17 +40,19 @@ export function TopBar() {
   const menu = useCommand('menu')
   const sidebar = useCommand('sidebar.toggle')
   const hasBoard = title !== undefined
+  const nav = useRef<HTMLElement>(null)
+  const room = useCrumbRoom(nav)
   return (
     <header className={styles.bar}>
       {hasBoard ? (
         <>
-          <Crumb />
-          <span className={styles.slash} aria-hidden="true">
-            /
-          </span>
-          <h1 className={styles.title} title={title}>
-            {title}
-          </h1>
+          <nav ref={nav} className={styles.trail} aria-label="Breadcrumb">
+            <Crumb />
+            <span className={styles.slash} aria-hidden="true">
+              /
+            </span>
+            <BoardCrumbs title={title} room={room} />
+          </nav>
           <ViewTabs />
           <div className={styles.save}>
             <SaveStatus />

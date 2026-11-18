@@ -6,7 +6,6 @@ import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import type { Board } from '../board/schema'
-import { emphasizeConnection } from '../canvas/emphasis'
 import { newId } from '../layer/edits'
 import { LAYER_LIMITS } from '../layer/model'
 import { flowRows, type FlowRow, type Side } from './flowRows'
@@ -16,6 +15,7 @@ import { usePanel } from './panelContext'
 import { Picker } from './Picker'
 import { partItems, useRequestedOpen } from './pickerItems'
 import { Group } from './bits'
+import { spotProps } from './spotlight'
 
 /** One connection at a part: the part at the other end is the name, and the connection's label is the quiet text at the right. */
 function Row({ row, side, names }: { row: FlowRow & { part: string }; side: Side; names: (id: string) => string | undefined }) {
@@ -28,10 +28,7 @@ function Row({ row, side, names }: { row: FlowRow & { part: string }; side: Side
     <li
       className={styles.row}
       data-yours={row.yours}
-      onPointerEnter={() => emphasizeConnection(row.edge)}
-      onPointerLeave={() => emphasizeConnection(undefined)}
-      onFocus={() => emphasizeConnection(row.edge)}
-      onBlur={() => emphasizeConnection(undefined)}
+      {...spotProps({ parts: [row.part], ...(row.edge ? { edges: [row.edge] } : {}) })}
     >
       {name === undefined ? (
         <span className={clsx(styles.part, styles.gone)}>

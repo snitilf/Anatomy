@@ -21,11 +21,16 @@ describe('shortcuts', () => {
     expect(matches('Ctrl+Y', press('y', { meta: true }))).toBe(false)
   })
 
-  it('ignores Alt, and a plain letter never matches a Cmd shortcut', () => {
+  it('needs Alt only for the shortcuts that name it, and a plain letter never matches a Cmd shortcut', () => {
     expect(matches('Mod+Z', press('z'))).toBe(false)
     expect(matches('Mod+Z', press('z', { meta: true, alt: true }))).toBe(false)
     expect(matches('C', press('c', { meta: true }))).toBe(false)
     expect(matches('C', press('c'))).toBe(true)
+    expect(matches('Alt+ArrowRight', press('ArrowRight', { alt: true }))).toBe(true)
+    expect(matches('Alt+ArrowRight', press('ArrowRight'))).toBe(false)
+    expect(matches('Alt+ArrowRight', press('ArrowRight', { alt: true, shift: true }))).toBe(false)
+    expect(matches('Alt+ArrowRight', press('ArrowRight', { alt: true, meta: true }))).toBe(false)
+    expect(matches('ArrowRight', press('ArrowRight', { alt: true }))).toBe(false)
   })
 
   it('reads Shift with a digit from the key code, and punctuation whatever Shift does', () => {
@@ -43,6 +48,8 @@ describe('shortcuts', () => {
     expect(formatKeys('Shift+Digit1', true)).toBe('⇧1')
     expect(formatKeys('Escape', false)).toBe('Esc')
     expect(formatKeys('ArrowRight', true)).toBe('→')
+    expect(formatKeys('Alt+ArrowRight', true)).toBe('⌥→')
+    expect(formatKeys('Alt+ArrowRight', false)).toBe('Alt →')
   })
 
   it('leaves keys to a text field, but not to a button or a checkbox', () => {
@@ -57,6 +64,18 @@ describe('the command list', () => {
   it('has one entry per ID', () => {
     const ids = COMMANDS.map((c) => c.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('gives no key to two commands that can be on at once', () => {
+    const seen = new Map<string, string>()
+    for (const c of COMMANDS) {
+      for (const k of c.keys ?? []) {
+        const other = seen.get(k)
+        // Escape and the arrows are shared by commands that are never on together: a tool, the selection, a walkthrough.
+        if (other !== undefined && !['Escape', 'ArrowRight', 'ArrowLeft'].includes(k)) throw new Error(`${k} is used by ${other} and ${c.id}`)
+        seen.set(k, c.id)
+      }
+    }
   })
 
   it('leaves the whiteboard tool keys to the tools', () => {

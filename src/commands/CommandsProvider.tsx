@@ -6,6 +6,7 @@ import { CameraSlotContext } from '../canvas/cameraContext'
 import { CommandsContext } from './context'
 import { editsText, isSingleKey, matches, sequenceOf, stepSequence, type Keys } from './keys'
 import { COMMANDS, isEnabled } from './list'
+import { noteSelection } from './walk'
 import type { Command, CommandContext, ShellActions } from './types'
 
 /** Focus in one of these keeps its own keys: Escape closes it, and letters type. */
@@ -56,6 +57,9 @@ export function CommandsProvider({ shell, children }: { shell: ShellActions; chi
     },
     [context],
   )
+
+  // A walk step keeps its trail. A selection made any other way starts the walk over.
+  useEffect(() => store.subscribe((state, before) => (state.selection !== before.selection ? noteSelection(state.selection) : undefined)), [store])
 
   // The first key of a sequence such as G then O, and when it was typed.
   const armed = useRef<{ key: string; at: number } | undefined>(undefined)
