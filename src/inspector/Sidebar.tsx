@@ -7,6 +7,7 @@ import type { Selection } from '../app/state'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { SIDEBAR, useUi, useUiApi } from '../app/ui'
 import { usePhone } from '../app/usePhone'
+import { showView } from '../app/viewActions'
 import { findItem } from '../layer/edits'
 import type { Layer, Target } from '../layer/model'
 import type { Board } from '../board/schema'
@@ -21,6 +22,9 @@ import { Sheet } from './Sheet'
 import styles from './Sidebar.module.css'
 import { LinkView, MarkView, ProposalView } from './YoursViews'
 
+/** One toast at a time says a revision is open, and the Overview can dismiss it by this name. */
+const REVISION_TOAST = 'revision-open'
+
 const selectionKey = (s: Selection | undefined) => (s && s.type !== 'board' ? `${s.type}:${s.id}` : 'board')
 
 /** What a note written in the panel is about: the part or connection shown, or the board. A user's own item has its own note field. */
@@ -32,7 +36,7 @@ function composerTarget(board: Board | undefined, layer: Layer | undefined, s: S
   return { type: 'board' }
 }
 
-const KIND_WORD = { board: 'Overview', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part' } as const
+const KIND_WORD = { board: 'Board', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part' } as const
 
 /** The view for the selection: the overview, a part, a connection, or something the user made. */
 function Details() {
@@ -96,6 +100,11 @@ function Body({ header }: { header?: ReactNode }) {
   }, [key, board?.id, reviewing])
 
   // A new revision does not switch tabs. A toast says it is open and offers the review.
+  // The Overview says the same in Needs you, so the toast stays away from it and goes when it opens.
+  const view = useUi((u) => u.view)
+  useEffect(() => {
+    if (view === 'overview') toast.dismiss(REVISION_TOAST)
+  }, [view])
   const revision = useRef(board ? `${board.id}:${board.revision}` : '')
   useEffect(() => {
     const now = board ? `${board.id}:${board.revision}` : ''
@@ -103,11 +112,13 @@ function Body({ header }: { header?: ReactNode }) {
     const sameBoard = revision.current.split(':')[0] === board?.id
     revision.current = now
     // Answers count too: a revision can answer the user without changing a part.
-    if (board && sameBoard && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
+    if (board && sameBoard && ui.store.getState().view === 'map' && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
       toast(`Revision ${board.revision} is open`, {
+        id: REVISION_TOAST,
         action: {
           label: 'Review',
           onClick: () => {
+            showView(ui, board.id, 'map')
             ui.setSidebarOpen(true)
             ui.setTab('review')
           },
@@ -138,10 +149,10 @@ function Body({ header }: { header?: ReactNode }) {
           {canBack ? (
             <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
               <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
-              Overview
+              Board
             </button>
           ) : (
-            <span className={styles.here}>{reviewing ? 'Review' : 'Overview'}</span>
+            <span className={styles.here}>{reviewing ? 'Review' : 'Board'}</span>
           )}
           {canBack && (
             <kbd className={styles.esc} aria-hidden="true">
@@ -234,10 +245,12 @@ function ResizeHandle() {
 export function Sidebar() {
   const open = useUi((u) => u.sidebar.open)
   const phone = usePhone()
-  if (phone) return <Sheet body={(header) => <Body header={header} />} />
+  // The Overview page covers the map, so the sidebar stays mounted but out of reach.
+  const behind = useUi((u) => u.view === 'overview')
+  if (phone) return <Sheet body={(header) => <Body header={header} />} inert={behind} />
   if (!open) return null
   return (
-    <aside className={styles.panel} aria-label="Sidebar" data-testid="inspector">
+    <aside className={styles.panel} aria-label="Sidebar" data-testid="inspector" inert={behind}>
       <ResizeHandle />
       <Body />
     </aside>

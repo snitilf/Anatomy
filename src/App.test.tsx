@@ -5,6 +5,7 @@ import { SOURCE_LABEL } from './app/labels'
 import type { SourceKind } from './board/schema'
 import shortenerRaw from './examples/external/url-shortener.board.json?raw'
 import nordetRaw from './examples/nordet.board.json?raw'
+import { openConnection, openPart } from './test/openOnMap'
 import { press } from './test/press'
 
 async function loadNordet() {
@@ -44,8 +45,10 @@ describe('App', () => {
     const panel = within(screen.getByTestId('inspector'))
     expect(panel.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
     expect(panel.getByText('Revision').closest('div')).toHaveTextContent('Revision1')
-    expect(panel.getByText('Covers')).toBeInTheDocument()
-    expect(panel.getByText('Does not cover')).toBeInTheDocument()
+    // Scope and open items live on the Overview page, not in the sidebar.
+    expect(panel.queryByText('Covers')).not.toBeInTheDocument()
+    expect(panel.queryByText('Open items')).not.toBeInTheDocument()
+    expect(panel.getByRole('region', { name: 'Walkthroughs' })).toBeInTheDocument()
     // The crumb names where the board came from.
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' })).toBeInTheDocument()
   })
@@ -55,7 +58,7 @@ describe('App', () => {
     await loadNordet()
     const part = nordet.components.find((c) => c.explanation && c.source.kind !== 'agent-explanation')!
     const panel = screen.getByTestId('inspector')
-    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${part.label}`) })[0]!)
+    openPart(part.label)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
     expect(within(panel).getByText(SOURCE_LABEL[part.source.kind])).toBeInTheDocument()
     expect(within(panel).getByText('Explanation')).toBeInTheDocument()
@@ -67,7 +70,7 @@ describe('App', () => {
     await loadNordet()
     const part = nordet.components.find((c) => c.source.kind === 'agent-explanation')!
     const panel = screen.getByTestId('inspector')
-    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${part.label}`) })[0]!)
+    openPart(part.label)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
     expect(within(panel).queryByText(SOURCE_LABEL['agent-explanation'])).not.toBeInTheDocument()
   })
@@ -77,9 +80,7 @@ describe('App', () => {
     await loadNordet()
     const rel = nordet.relationships.find((r) => r.kind === 'sends-data-to')!
     const panel = screen.getByTestId('inspector')
-    // Connections start closed. Opening the group lists them.
-    fireEvent.click(within(panel).getByRole('button', { name: /^Connections/ }))
-    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${rel.label}`) })[0]!)
+    await openConnection(rel.label)
     expect(within(panel).getByRole('heading', { name: rel.label })).toBeInTheDocument()
     expect(within(panel).getByText(/sends data to/)).toBeInTheDocument()
   })
@@ -89,7 +90,7 @@ describe('App', () => {
     await loadNordet()
     const panel = screen.getByTestId('inspector')
     const first = nordet.components[0]!
-    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${first.label}`) })[0]!)
+    openPart(first.label)
     expect(within(panel).getByRole('heading', { name: first.label })).toBeInTheDocument()
     key('Escape', {}, panel)
     expect(within(panel).getByRole('heading', { name: nordet.title })).toBeInTheDocument()

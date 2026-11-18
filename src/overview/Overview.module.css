@@ -1,0 +1,675 @@
+/*
+ * The Overview page. Linear's project page, in Anatomy's tokens: one centered column, property rows, plain lists,
+ * a hairline between sections. No cards and no tinted tiles. Color is amber for what is yours and indigo for focus.
+ */
+.page {
+  --row: 32px;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+}
+
+.page:focus,
+.page:focus-visible {
+  outline: none;
+}
+
+.column {
+  box-sizing: border-box;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px var(--space-6) 96px;
+  /* A long word wraps instead of widening the page. */
+  overflow-wrap: anywhere;
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .page {
+    --row: 44px;
+  }
+}
+
+/* Header: the title at 20/26, the goal at 15/22 held to two lines. */
+.head {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  line-height: var(--leading-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.goal {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: var(--text-lg);
+  line-height: var(--leading-lg);
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.goal[data-open] {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+/* Property rows: a 112px label in the quiet color, the value beside it. */
+.props {
+  display: grid;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+}
+
+.prop {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: var(--row);
+}
+
+.prop dt {
+  color: var(--fg-3);
+}
+
+.prop dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+  min-width: 0;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  margin-inline: calc(var(--space-2) * -1 + 2px);
+  color: var(--fg-3);
+}
+
+.quiet {
+  color: var(--fg-3);
+}
+
+@media (max-width: 760px) {
+  .column {
+    padding: var(--space-6) var(--space-4) 96px;
+  }
+}
+
+/* A value that opens something. It reads as text and fills on hover. */
+.link,
+.action,
+.more {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin: 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+
+.prop dd .link + .link {
+  margin-left: 0;
+}
+
+.action,
+.more {
+  color: var(--fg-2);
+  font-weight: var(--weight-medium);
+}
+
+.more {
+  margin-top: var(--space-1);
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .link,
+  .action,
+  .more {
+    min-height: 36px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .link:hover,
+  .action:hover,
+  .more:hover {
+    background: var(--hover);
+    color: var(--fg);
+  }
+}
+
+/* Sections: a hairline above each, 24px of air. */
+.section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  scroll-margin-top: var(--space-4);
+}
+
+.heading {
+  margin: 0 0 var(--space-2);
+  color: var(--fg-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-medium);
+}
+
+.count {
+  color: var(--fg-3);
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.sub {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+}
+
+/* A track that can shrink, so a long name ends in an ellipsis. */
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A row that opens something: 32px, 14px glyph, a hover fill with an indigo edge. */
+.line,
+.part,
+.groupToggle,
+.pair,
+.connection {
+  appearance: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: calc(100% + var(--space-4));
+  min-height: var(--row);
+  margin: 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .line:hover,
+  .part:hover,
+  .groupToggle:hover,
+  .pair:hover,
+  .connection:hover {
+    background: var(--hover);
+  }
+
+  .line:hover::before,
+  .part:hover::before,
+  .pair:hover::before,
+  .connection:hover::before {
+    background: var(--accent-line);
+  }
+}
+
+.line::before,
+.part::before,
+.pair::before,
+.connection::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+}
+
+.line:focus-visible,
+.part:focus-visible,
+.groupToggle:focus-visible,
+.pair:focus-visible,
+.connection:focus-visible,
+.link:focus-visible,
+.action:focus-visible,
+.more:focus-visible,
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.line:active,
+.part:active,
+.groupToggle:active,
+.pair:active,
+.connection:active {
+  background: var(--active);
+}
+
+.icon {
+  flex: none;
+  color: var(--fg-3);
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.end {
+  flex: none;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.lineStatic {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--row);
+}
+
+.unsent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.unsent .action {
+  margin-right: calc(var(--space-2) * -1);
+}
+
+.yoursIcon {
+  flex: none;
+  color: var(--yours);
+}
+
+.yoursText {
+  color: var(--yours-text);
+}
+
+.note {
+  margin: var(--space-2) 0 0;
+  color: var(--fg-3);
+  text-wrap: pretty;
+}
+
+/* Parts: the heading row holds the filter. */
+.headRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.headRow .heading {
+  flex: 1;
+  margin: 0;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 1 200px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--fg-3);
+}
+
+.filter:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.filter input {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+.filter input::placeholder {
+  color: var(--fg-3);
+}
+
+.filter input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.kbd {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+@media (hover: none), (max-width: 760px) {
+  .kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .filter {
+    height: 36px;
+  }
+
+  .filter input {
+    font-size: 16px;
+  }
+}
+
+.chip {
+  appearance: none;
+  flex: none;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.empty {
+  margin: 0;
+  color: var(--fg-3);
+}
+
+/* A group: its header sticks to the top of the page while its rows scroll under it. */
+.group {
+  position: relative;
+}
+
+.groupHead {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  margin: 0;
+  background: var(--bg);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.groupToggle {
+  gap: 6px;
+  color: var(--fg-2);
+}
+
+.groupToggle[data-yours] {
+  color: var(--yours-text);
+}
+
+.group[data-yours] .groupToggle {
+  color: var(--yours-text);
+}
+
+.groupLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupToggle .count {
+  flex: none;
+}
+
+.chevron {
+  flex: none;
+  color: var(--fg-3);
+  transition: transform 120ms var(--ease-out);
+}
+
+.groupToggle[aria-expanded='true'] .chevron,
+.pair[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+/* A part row: name, a line of summary, then fixed slots so the figures line up down the list. */
+.part {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 14px 34px 24px 14px 76px 14px;
+  column-gap: var(--space-2);
+}
+
+.part[data-yours]::before {
+  background: var(--yours);
+}
+
+.partTitle,
+.partSummary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.partSummary {
+  color: var(--fg-3);
+}
+
+.slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.slot[data-yours] {
+  color: var(--yours-text);
+}
+
+.slot[data-slot='source'] > span {
+  display: inline-flex;
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a phone the summary drops under the name, and only the notes and the flow stay on the right. */
+@media (max-width: 760px) {
+  .part {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'title notes flow'
+      'summary summary summary';
+    align-content: center;
+    row-gap: 0;
+    padding-block: var(--space-2);
+  }
+
+  .partTitle {
+    grid-area: title;
+  }
+
+  .partSummary {
+    grid-area: summary;
+    font-size: var(--text-sm);
+    line-height: var(--leading-sm);
+  }
+
+  .slot[data-slot='notes'] {
+    grid-area: notes;
+  }
+
+  .slot[data-slot='flow'] {
+    grid-area: flow;
+  }
+
+  .slot[data-slot='lesson'],
+  .slot[data-slot='open'],
+  .slot[data-slot='answer'],
+  .slot[data-slot='source'] {
+    display: none;
+  }
+}
+
+/* Between groups. */
+.pair {
+  gap: var(--space-2);
+}
+
+.pairEnds {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.pairEnds > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection {
+  padding-left: var(--space-6);
+  width: calc(100% + var(--space-4));
+}
+
+.meta {
+  flex: none;
+}
+
+.connection .meta {
+  flex: none;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-3);
+}
+
+.connection[data-yours] .icon {
+  color: var(--yours);
+}
+
+.pair[data-yours] .count {
+  color: var(--yours-text);
+}
+
+/* Scope and open questions. */
+.scope {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+@media (max-width: 760px) {
+  .scope {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+.scope .sub:first-child {
+  margin-top: 0;
+}
+
+.bullets {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+
+.bullets li::marker {
+  color: var(--fg-3);
+}
+
+/* The row that unfolds the rest of a long list, in place. */
+.showMore {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  width: calc(100% + var(--space-4));
+  min-height: var(--row);
+  margin: 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2) 0 calc(var(--space-2) + 22px);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .showMore:hover {
+    background: var(--hover);
+    color: var(--fg);
+  }
+}
+
+.showMore:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}

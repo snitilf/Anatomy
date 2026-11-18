@@ -114,8 +114,8 @@
   }
 }
 
-/* A narrow map has no room beside the zoom bar, so the bar sits above it. */
-@container map (max-width: 1040px) {
+/* Centered at 560px wide, the bar clears the zoom bar only on a map this wide. Narrower, it sits above it. */
+@container map (max-width: 1240px) {
   .bar {
     bottom: 60px;
   }

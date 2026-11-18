@@ -3,6 +3,7 @@ import { GraduationCap, StickyNote } from 'lucide-react'
 import { memo } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { nameLines } from './far'
+import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
@@ -16,6 +17,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
   const small = useStore((s) => s.transform[2] < SUMMARY_ZOOM)
   // A tile wide enough on screen carries the part's name in the far view. It renders on the crossing, not on every zoom.
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
+  const tip = useTipClamp(data.far, selected === true || data.highlighted)
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
     <>
@@ -60,7 +62,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
       </div>
       {/* The name of the part in the far view, where the tile has no text. The card clips its own paint, so it sits beside it. */}
       {data.far && (
-        <div className={styles.tip} aria-hidden="true">
+        <div ref={tip} className={styles.tip} aria-hidden="true">
           {data.label}
         </div>
       )}

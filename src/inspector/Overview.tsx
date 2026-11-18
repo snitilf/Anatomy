@@ -1,23 +1,20 @@
-import { ArrowRight, Check, CircleHelp, Link2, Play, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
+import { Check, CircleHelp, Link2, Play, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { SourceNote } from '../app/SourceNote'
 import { useAppStore } from '../app/store'
 import { Tip } from '../app/Tip'
-import { LIMITS, type Board, type BoardComponent } from '../board/schema'
+import type { Board } from '../board/schema'
 import { useCommands } from '../commands/context'
 import type { Layer } from '../layer/model'
 import { wasSent } from '../layer/status'
 import { targetName } from '../notes/targets'
-import { Group, Heading, OpenItems, Prop, Props, ShortList, SubHead } from './bits'
+import { Group, Heading, Prop, Props } from './bits'
 import { partName } from './names'
 import { NotesSection } from './notes'
 import { usePanel } from './panelContext'
 import type { Selection } from '../app/state'
 import styles from './view.module.css'
 
-/** More parts than this, and the lists get a filter field. */
-const FILTER_FROM = 8
 const YOURS_SHOWN = 5
 const WALKTHROUGHS_SHOWN = 5
 
@@ -98,14 +95,14 @@ function Yours({ board, layer }: { board: Board; layer: Layer }) {
   )
 }
 
-function Walkthroughs({ board, query }: { board: Board; query: string }) {
+function Walkthroughs({ board }: { board: Board }) {
   const { context } = useCommands()
   const [all, setAll] = useState(false)
-  const found = board.scenarios.filter((s) => query === '' || s.title.toLowerCase().includes(query))
+  const found = board.scenarios
   if (found.length === 0) return null
   const shown = all ? found : found.slice(0, WALKTHROUGHS_SHOWN)
   return (
-    <Group name="walkthroughs" title="Walkthroughs" count={found.length} forceOpen={query !== ''}>
+    <Group name="walkthroughs" title="Walkthroughs" count={found.length}>
       <ul className={styles.rows}>
         {shown.map((s) => (
           <li key={s.id}>
@@ -130,86 +127,10 @@ function Walkthroughs({ board, query }: { board: Board; query: string }) {
   )
 }
 
-/** The parts under their group's name, in the order of the board's groups. Parts with no group come last. */
-function byGroup(board: Board, parts: readonly BoardComponent[]): { key: string; label: string | undefined; parts: BoardComponent[] }[] {
-  if (board.groups.length === 0) return [{ key: '', label: undefined, parts: [...parts] }]
-  const sections = board.groups.map((g) => ({ key: g.id, label: g.label as string | undefined, parts: parts.filter((c) => c.group === g.id) }))
-  const known = new Set(board.groups.map((g) => g.id))
-  const other = parts.filter((c) => c.group === undefined || !known.has(c.group))
-  if (other.length > 0) sections.push({ key: '', label: 'Other', parts: other })
-  return sections.filter((s) => s.parts.length > 0)
-}
-
-function PartRows({ board, parts }: { board: Board; parts: readonly BoardComponent[] }) {
-  const { choose } = usePanel()
-  return (
-    <>
-      {byGroup(board, parts).map((section) => (
-        <div key={section.key || 'other'}>
-          {section.label !== undefined && <SubHead>{section.label}</SubHead>}
-          <ul className={styles.rows}>
-            {section.parts.map((c) => (
-              <li key={c.id}>
-                <button type="button" className={styles.row} onClick={() => choose({ type: 'component', id: c.id })}>
-                  <span className={styles.rowMain}>
-                    <span className={styles.rowTitle}>{c.label}</span>
-                  </span>
-                  {c.source.kind !== 'agent-explanation' && <SourceNote kind={c.source.kind} className={styles.rowEnd} iconOnly />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </>
-  )
-}
-
-/** Parts and connections, under one filter field once the board is large. */
-function PartsAndConnections({ board, query }: { board: Board; query: string }) {
-  const { choose } = usePanel()
-  const names = new Map(board.components.map((c) => [c.id, c.label]))
-  const q = query.trim().toLowerCase()
-  const parts = board.components.filter((c) => q === '' || c.label.toLowerCase().includes(q) || c.summary.toLowerCase().includes(q))
-  const lines = board.relationships.filter((r) => q === '' || [r.label, names.get(r.from) ?? '', names.get(r.to) ?? ''].some((t) => t.toLowerCase().includes(q)))
-  return (
-    <>
-      {parts.length + lines.length === 0 && <p className={styles.empty}>No parts or connections match "{query.trim()}".</p>}
-      {parts.length > 0 && (
-        <Group name="parts" title="Parts" count={parts.length} forceOpen={q !== ''}>
-          <PartRows board={board} parts={parts} />
-        </Group>
-      )}
-      {lines.length > 0 && (
-        <Group name="connections" title="Connections" count={lines.length} defaultOpen={false} forceOpen={q !== ''}>
-          <ul className={styles.rows}>
-            {lines.map((r) => (
-              <li key={r.id}>
-                <button type="button" className={styles.row} onClick={() => choose({ type: 'relationship', id: r.id })}>
-                  <span className={styles.rowMain}>
-                    <span className={styles.rowTitle}>{r.label}</span>
-                    <span className={styles.rowMeta}>
-                      {names.get(r.from) ?? r.from}
-                      <ArrowRight className={styles.inlineArrow} size={12} strokeWidth={1.5} aria-hidden="true" />
-                      <span className="sr-only"> to </span>
-                      {names.get(r.to) ?? r.to}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Group>
-      )}
-    </>
-  )
-}
-
+/** What the sidebar shows with nothing selected. The parts and connections are on the Overview page. */
 export function Overview({ board }: { board: Board }) {
   const { layer } = useAppStore(useShallow((s) => ({ layer: s.layer })))
-  const [query, setQuery] = useState('')
-  const boardItems = board.items.filter((i) => i.about === undefined)
-  const q = query.trim().toLowerCase()
+  const groups = board.groups.filter((g) => board.components.some((c) => c.group === g.id)).length
   return (
     <div className={styles.view}>
       <div className={styles.head}>
@@ -218,31 +139,14 @@ export function Overview({ board }: { board: Board }) {
       </div>
       <Props>
         <Prop label="Revision">{board.revision}</Prop>
+        <Prop label="Parts">
+          {board.components.length}
+          {groups > 0 && ` in ${groups} ${groups === 1 ? 'group' : 'groups'}`}
+        </Prop>
+        {board.relationships.length > 0 && <Prop label="Connections">{board.relationships.length}</Prop>}
       </Props>
-      {board.components.length > LIMITS.componentsWarn && (
-        <p className={styles.crowded}>
-          {board.components.length} parts. Boards over {LIMITS.componentsWarn} are hard to read.
-        </p>
-      )}
-      {board.components.length > FILTER_FROM && (
-        <div className={styles.filterBar}>
-          <input className={styles.filter} type="search" name="filter" placeholder="Filter" aria-label="Filter parts and connections" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-      )}
-      <Walkthroughs board={board} query={q} />
+      <Walkthroughs board={board} />
       {layer && <Yours board={board} layer={layer} />}
-      <PartsAndConnections board={board} query={query} />
-      {board.scope.includes.length > 0 && (
-        <Group name="covers" title="Covers" defaultOpen={false}>
-          <ShortList items={board.scope.includes} />
-        </Group>
-      )}
-      {board.scope.excludes.length > 0 && (
-        <Group name="does-not-cover" title="Does not cover" defaultOpen={false}>
-          <ShortList items={board.scope.excludes} />
-        </Group>
-      )}
-      <OpenItems items={boardItems} />
       <NotesSection target={{ type: 'board' }} />
     </div>
   )
