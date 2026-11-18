@@ -62,14 +62,8 @@
   container: map / inline-size;
 }
 
-.canvas[inert],
-.side[inert] {
+.canvas[inert] {
   visibility: hidden;
-}
-
-/* The sidebar's own box is the grid item; this wrapper adds none. */
-.side {
-  display: contents;
 }
 
 .drop {

@@ -234,10 +234,12 @@ function ResizeHandle() {
 export function Sidebar() {
   const open = useUi((u) => u.sidebar.open)
   const phone = usePhone()
-  if (phone) return <Sheet body={(header) => <Body header={header} />} />
+  // The Overview page covers the map, so the sidebar stays mounted but out of reach.
+  const behind = useUi((u) => u.view === 'overview')
+  if (phone) return <Sheet body={(header) => <Body header={header} />} inert={behind} />
   if (!open) return null
   return (
-    <aside className={styles.panel} aria-label="Sidebar" data-testid="inspector">
+    <aside className={styles.panel} aria-label="Sidebar" data-testid="inspector" inert={behind}>
       <ResizeHandle />
       <Body />
     </aside>

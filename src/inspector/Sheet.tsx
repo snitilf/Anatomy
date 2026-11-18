@@ -49,7 +49,7 @@ function useSidebarTitle(): string {
  * While the finger is down the sheet follows it exactly. On release it settles on a stop, or goes on to the next one
  * after a flick. It moves by transform only.
  */
-export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
+export function Sheet({ body, inert = false }: { body: (header: ReactNode) => ReactNode; inert?: boolean }) {
   const ui = useUiApi()
   const stop = useUi((u) => u.sheet)
   const title = useSidebarTitle()
@@ -161,7 +161,7 @@ export function Sheet({ body }: { body: (header: ReactNode) => ReactNode }) {
   )
 
   return (
-    <section ref={sheet} className={styles.sheet} aria-label="Sidebar" data-testid="inspector" data-stop={stop}>
+    <section ref={sheet} className={styles.sheet} aria-label="Sidebar" data-testid="inspector" data-stop={stop} inert={inert}>
       {body(header)}
     </section>
   )

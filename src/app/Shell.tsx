@@ -242,9 +242,7 @@ function ShellBody() {
                   <Canvas />
                   {scenario && <WalkthroughBar />}
                 </div>
-                <div className={styles.side} inert={overview}>
-                  <Sidebar />
-                </div>
+                <Sidebar />
                 {overview && <OverviewPage />}
               </>
             ) : (
