@@ -64,6 +64,8 @@
 
 .canvas[inert] {
   visibility: hidden;
+  /* Behind the Overview the map keeps its state and draws nothing. */
+  content-visibility: hidden;
 }
 
 .drop {

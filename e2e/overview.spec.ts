@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { open } from './helpers.ts'
+import { open, viewport } from './helpers.ts'
 
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
 
@@ -254,4 +254,23 @@ test('after G the next key is taken: G then R keeps Select, G G O still goes to 
   await page.keyboard.press('g')
   await page.keyboard.press('o')
   await expect(page.getByTestId('overview')).toBeVisible()
+})
+
+test('the map shows the same view when the Overview is left, even after the window changed size', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await open(page, SHORTENER)
+  await page.getByRole('button', { name: 'Zoom in' }).click()
+  let before = ''
+  await expect
+    .poll(async () => {
+      const now = await viewport(page)
+      const same = now === before
+      before = now
+      return same
+    }, { intervals: [150] })
+    .toBe(true)
+  await tab(page, 'Overview').click()
+  await tab(page, 'Map').click()
+  await expect.poll(() => viewport(page)).toBe(before)
+  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
 })
