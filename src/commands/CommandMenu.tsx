@@ -46,10 +46,9 @@ function filter(_value: string, search: string, keywords?: string[]): number {
 function MenuBody({ onClose }: { onClose: () => void }) {
   const { context, run } = useCommands()
   const [search, setSearch] = useState('')
-  // The menu reads the state as it opens, and again when the selection or the layer changes under it, such as a command that was run a frame ago.
-  const selection = useAppStore((s) => s.selection)
-  const layer = useAppStore((s) => s.layer)
-  const ctx = useMemo(() => context(), [context, selection, layer])
+  // The menu reads the state as it opens, and again when it changes under it, such as a command that was run a frame ago.
+  const state = useAppStore((s) => s)
+  const ctx = useMemo(() => ({ ...context(), state }), [context, state])
   const all = useMemo(() => [...COMMANDS.filter((c) => !c.unlisted), ...boardCommands(ctx)], [ctx])
   const typing = search.trim() !== ''
   const name = selectionName(ctx)

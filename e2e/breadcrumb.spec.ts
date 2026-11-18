@@ -78,3 +78,23 @@ test('the board segment says what it does, and how to do it from the keyboard', 
   await expect(tip).toContainText('Back to board')
   await expect(tip).toContainText('Esc')
 })
+
+test('with too little room the board and the group fold into one menu, and the way back stays', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 700 })
+  await open(page, 'e2e/fixtures/worst-text.board.json')
+  await pickPart(page, 'long-words')
+  const fold = crumb(page).getByRole('button', { name: 'Board and group' })
+  await expect(fold).toBeVisible()
+  await fold.click()
+  const items = page.getByRole('menuitem')
+  await expect(items).toHaveCount(2)
+  await items.first().click()
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveCount(0)
+})
+
+test('a one-letter part is as wide as its letter, not a padded pill', async ({ page }) => {
+  await open(page, 'e2e/fixtures/worst-text.board.json')
+  await pickPart(page, 'a')
+  const width = await crumb(page).locator('[aria-current="location"]').evaluate((el) => el.getBoundingClientRect().width)
+  expect(width).toBeLessThan(48)
+})

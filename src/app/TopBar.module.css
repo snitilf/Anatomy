@@ -78,7 +78,6 @@
 
 .trail > .crumb {
   flex: 0 2 auto;
-  min-width: 48px;
   max-width: 180px;
 }
 
@@ -103,13 +102,16 @@
 
 .middle {
   flex: 0 4 auto;
-  min-width: 32px;
 }
 
 .last {
   flex: 0 1 auto;
-  min-width: 72px;
   color: var(--fg);
+}
+
+.fold {
+  flex: none;
+  padding: 0 var(--space-2);
 }
 
 @media (hover: hover) and (pointer: fine) {
