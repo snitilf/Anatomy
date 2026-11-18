@@ -12,7 +12,13 @@ export interface Spot {
 export async function open(page: Page, file: string) {
   await page.goto('/')
   await page.getByLabel('Board file').setInputFiles(file)
-  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  // A crowded board opens on the Overview on a phone. These tests are about the map, so they go there.
+  const overview = page.getByTestId('overview')
+  const card = page.locator('.react-flow__node-card').first()
+  await expect(page.getByRole('tab', { name: 'Map' }).or(page.getByRole('region', { name: 'Sidebar' })).first()).toBeVisible()
+  await page.waitForTimeout(300)
+  if (await overview.isVisible()) await page.getByRole('tab', { name: 'Map' }).click()
+  await expect(card).toBeVisible()
   // Let the first fit and the first save settle.
   await page.waitForTimeout(400)
 }
