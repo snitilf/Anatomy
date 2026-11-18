@@ -97,6 +97,15 @@ function Body({ header }: { header?: ReactNode }) {
   }, [key, board?.id, reviewing])
 
   // A new revision does not switch tabs. A toast says it is open and offers the review.
+  // The Overview says the same in Needs you, so the toast stays away from it and goes when it opens.
+  const revisionToast = useRef<string | number | undefined>(undefined)
+  const view = useUi((u) => u.view)
+  useEffect(() => {
+    if (view === 'overview' && revisionToast.current !== undefined) {
+      toast.dismiss(revisionToast.current)
+      revisionToast.current = undefined
+    }
+  }, [view])
   const revision = useRef(board ? `${board.id}:${board.revision}` : '')
   useEffect(() => {
     const now = board ? `${board.id}:${board.revision}` : ''
@@ -104,8 +113,8 @@ function Body({ header }: { header?: ReactNode }) {
     const sameBoard = revision.current.split(':')[0] === board?.id
     revision.current = now
     // Answers count too: a revision can answer the user without changing a part.
-    if (board && sameBoard && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
-      toast(`Revision ${board.revision} is open`, {
+    if (board && sameBoard && ui.store.getState().view === 'map' && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
+      revisionToast.current = toast(`Revision ${board.revision} is open`, {
         action: {
           label: 'Review',
           onClick: () => {

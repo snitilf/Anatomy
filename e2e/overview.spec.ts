@@ -1,3 +1,4 @@
+import { readFile, writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { open, viewport } from './helpers.ts'
 
@@ -301,4 +302,26 @@ test('after J moves down the list, Shift+Tab leaves from the row that has focus'
   await expect(page.locator('[data-head]').first()).not.toBeFocused()
   const after = await page.evaluate(() => document.activeElement?.getAttribute('data-row') ?? document.activeElement?.getAttribute('data-head'))
   expect(after).not.toBe('part:web-form')
+})
+
+test('the revision toast shows on the map, goes when the Overview opens, and stays away while it is in front', async ({ page }, testInfo) => {
+  const board = JSON.parse(await readFile(SHORTENER, 'utf8')) as { revision: number; components: { summary: string }[] }
+  const revise = async (revision: number) => {
+    const next = structuredClone(board)
+    next.revision = revision
+    next.components[0]!.summary = `Changed in revision ${revision}`
+    const path = testInfo.outputPath(`revision-${revision}.board.json`)
+    await writeFile(path, JSON.stringify(next))
+    await page.getByLabel('Board file').setInputFiles(path)
+  }
+  await open(page, SHORTENER)
+  await revise(2)
+  const toast = page.getByText('Revision 2 is open')
+  await expect(toast).toBeVisible()
+  await tab(page, 'Overview').click()
+  await expect(toast).toBeHidden()
+  await expect(page.getByTestId('overview').getByRole('button', { name: /changed in revision 2/ })).toBeVisible()
+  await revise(3)
+  await page.waitForTimeout(500)
+  await expect(page.getByText('Revision 3 is open')).toHaveCount(0)
 })
