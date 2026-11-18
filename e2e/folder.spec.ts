@@ -32,7 +32,7 @@ test('folder mode: open the repository, move a card, reload, the place is kept, 
   await drag(page, spot, 120, 60)
   const moved = await cardTransform(page, spot.id)
   expect(moved).not.toBe(start)
-  await expect(page.locator('[role="status"][data-state="saved"]')).toBeVisible()
+  await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
   // The crumb names the folder the board came from.
   await expect(page.getByRole('banner').getByRole('button', { name: 'shortener' })).toBeVisible()
   // A card the drop covered steps aside and is saved with it.

@@ -4,11 +4,10 @@
   display: flex;
   align-items: center;
   gap: 0;
-  height: 44px;
+  height: 40px;
   flex: none;
   padding: 0 var(--space-3);
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
+  background: var(--frame);
 }
 
 .wordmark {
@@ -28,7 +27,7 @@
   flex: 0 1 auto;
   min-width: 0;
   max-width: 220px;
-  height: 32px;
+  height: 28px;
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
@@ -95,6 +94,10 @@
   flex: none;
   display: flex;
   align-items: center;
+}
+
+/* Saved says nothing, so the slot takes no room until a slow or failed save has something to say. */
+.save > :not([hidden], :empty) {
   margin-left: var(--space-3);
 }
 
@@ -113,22 +116,22 @@
   gap: var(--space-1);
 }
 
-/* Controls are 32px high, and the icon-only ones 32px wide. */
+/* Controls are 28px high, and the icon-only ones 28px wide. */
 .bar .control {
-  min-height: 32px;
+  min-height: 28px;
 }
 
 .bar .square {
-  width: 32px;
+  width: 28px;
 }
 
 /* The pointer answers a little outside the look of the control. */
 .bar .control::after {
-  inset-block: min(-2px, calc((32px - var(--hit)) / 2));
+  inset-block: min(-2px, calc((28px - var(--hit)) / 2));
 }
 
 .bar .square::after {
-  inset-inline: min(-2px, calc((32px - var(--hit)) / 2));
+  inset-inline: min(-2px, calc((28px - var(--hit)) / 2));
 }
 
 .search {
@@ -206,6 +209,6 @@
 .crumb::after {
   content: '';
   position: absolute;
-  inset-block: min(0px, calc((32px - var(--hit)) / 2));
+  inset-block: min(0px, calc((28px - var(--hit)) / 2));
   inset-inline: 0;
 }

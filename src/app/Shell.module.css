@@ -4,16 +4,32 @@
   flex-direction: column;
 }
 
+.shell {
+  background: var(--frame);
+}
+
+/* The frame: the top bar and an 8px margin sit on it, and the panel inside holds the map and the sidebar. */
 .main {
-  position: relative;
   flex: 1;
+  min-height: 0;
+  padding: 0 var(--space-2) var(--space-2);
+  background: var(--frame);
+}
+
+.panel {
+  position: relative;
+  height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
 }
 
-.main[data-sidebar] {
+.main[data-sidebar] .panel {
   grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
 }
 
@@ -64,7 +80,16 @@
 
 /* Phone: the map takes the screen and the sidebar becomes a sheet over it. */
 @media (max-width: 760px) {
-  .main[data-sidebar] {
+  .main {
+    padding: 0;
+  }
+
+  .panel {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .main[data-sidebar] .panel {
     grid-template-columns: minmax(0, 1fr);
   }
 

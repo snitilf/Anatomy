@@ -106,11 +106,11 @@ test('the walkthrough bar steps with the arrow keys and closes with Escape', asy
   await expect(bar).toBeHidden()
 })
 
-test('the top bar is 44px high with 32px controls in four groups: 4px inside a group, 16px between', async ({ page }) => {
+test('the top bar is 40px high with 28px controls in four groups: 4px inside a group, 16px between', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, NORDET)
   const bar = page.getByRole('banner')
-  expect((await bar.boundingBox())!.height).toBe(44)
+  expect((await bar.boundingBox())!.height).toBe(40)
   const box = async (name: string | RegExp) => (await bar.getByRole('button', { name }).boundingBox())!
   const undo = await box('Undo')
   const redo = await box('Redo')
@@ -118,8 +118,8 @@ test('the top bar is 44px high with 32px controls in four groups: 4px inside a g
   const send = await box(/^Send to agent/)
   const toggle = await box(/sidebar$/)
   const settings = await box('Settings')
-  for (const control of [undo, redo, search, send, toggle, settings]) expect(control.height).toBe(32)
-  expect(undo.width).toBe(32)
+  for (const control of [undo, redo, search, send, toggle, settings]) expect(control.height).toBe(28)
+  expect(undo.width).toBe(28)
   const gap = (a: { x: number; width: number }, b: { x: number }) => Math.round(b.x - (a.x + a.width))
   expect(gap(undo, redo)).toBe(4)
   expect(gap(redo, search)).toBe(16)
@@ -191,7 +191,7 @@ test.describe('on a phone', () => {
     // A long connection: its ends are far apart.
     await sheet.getByRole('button', { name: /^GET short code/ }).click()
     // Half of the map: the sheet has settled there.
-    const top = 44 + (844 - 44) / 2
+    const top = 40 + (844 - 40) / 2
     await expect
       .poll(async () => {
         const path = (await page.locator('.react-flow__edge.selected .react-flow__edge-path').first().boundingBox())!
@@ -211,5 +211,41 @@ test.describe('on a phone', () => {
     for (let i = 1; i <= 20; i++) await page.mouse.move(x, box.y + 20 - i * 18)
     await page.mouse.up()
     await expect(header).toHaveCSS('box-shadow', 'none')
+  })
+})
+
+test.describe('touch controls at the bottom of the map', () => {
+  test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } })
+
+  test('every control owns its edges, so a tap near an edge reaches that control', async ({ page }) => {
+    await open(page, NORDET)
+    await expect(page.getByRole('note')).toBeVisible()
+    const groups = [page.getByRole('toolbar', { name: 'Zoom' }), page.getByRole('toolbar', { name: 'Whiteboard tools' }), page.getByRole('note')]
+    for (const group of groups) {
+      const controls = group.getByRole('button')
+      expect(await controls.count()).toBeGreaterThan(0)
+      for (const control of await controls.all()) {
+        const owned = await control.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const at = (x: number, y: number) => el.contains(document.elementFromPoint(x, y))
+          const cx = r.left + r.width / 2
+          const cy = r.top + r.height / 2
+          return [at(r.left + 1, cy), at(r.right - 1, cy), at(cx, r.top + 1), at(cx, r.bottom - 1)].every(Boolean)
+        })
+        expect(owned, (await control.getAttribute('aria-label')) ?? 'control').toBe(true)
+      }
+    }
+    // The hint does not touch the tool bar.
+    const hint = (await page.getByRole('note').boundingBox())!
+    const dock = (await page.getByRole('toolbar', { name: 'Whiteboard tools' }).boundingBox())!
+    expect(hint.y + hint.height).toBeLessThanOrEqual(dock.y)
+  })
+
+  test('a tap at the edge of the zoom percentage resets the zoom and does not zoom in', async ({ page }) => {
+    await open(page, NORDET)
+    const level = page.getByRole('button', { name: /^Zoom \d+%/ })
+    const box = (await level.boundingBox())!
+    await page.touchscreen.tap(box.x + box.width - 2, box.y + box.height / 2)
+    await expect(level).toHaveAccessibleName('Zoom 100%, reset to 100%')
   })
 })

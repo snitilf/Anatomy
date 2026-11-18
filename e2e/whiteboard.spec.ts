@@ -164,7 +164,7 @@ test('the whiteboard: draw, write, propose, re-point, undo, and everything comes
   const arrow = layer?.marks.find((m) => m.kind === 'arrow')
   expect(arrow?.from?.type).toBe('part')
   expect(arrow?.to?.type).toBe('relationship')
-  await expect(page.locator('[role="status"][data-state="saved"]')).toBeVisible()
+  await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
   await page.reload()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await expect(page.locator('[data-mark]')).toHaveCount(3)

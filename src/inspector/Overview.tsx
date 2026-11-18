@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { SourceNote } from '../app/SourceNote'
 import { useAppStore } from '../app/store'
 import { Tip } from '../app/Tip'
-import type { Board, BoardComponent } from '../board/schema'
+import { LIMITS, type Board, type BoardComponent } from '../board/schema'
 import { useCommands } from '../commands/context'
 import type { Layer } from '../layer/model'
 import { wasSent } from '../layer/status'
@@ -219,6 +219,11 @@ export function Overview({ board }: { board: Board }) {
       <Props>
         <Prop label="Revision">{board.revision}</Prop>
       </Props>
+      {board.components.length > LIMITS.componentsWarn && (
+        <p className={styles.crowded}>
+          {board.components.length} parts. Boards over {LIMITS.componentsWarn} are hard to read.
+        </p>
+      )}
       {board.components.length > FILTER_FROM && (
         <div className={styles.filterBar}>
           <input className={styles.filter} type="search" name="filter" placeholder="Filter" aria-label="Filter parts and connections" value={query} onChange={(e) => setQuery(e.target.value)} />

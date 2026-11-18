@@ -2,14 +2,13 @@ import clsx from 'clsx'
 import { useEffect, useState } from 'react'
 import { useAppStore } from './store'
 import buttons from './buttons.module.css'
-import { Tip } from './Tip'
 import { storageProblem, useWorkspace } from './workspaceContext'
 import styles from './SaveStatus.module.css'
 
-/** A write shorter than this never says "Saving", so the status does not flicker on every change. */
-const SLOW_MS = 300
+/** A write shorter than this never says "Saving". A save is not news until it is slow or has failed. */
+const SLOW_MS = 1000
 
-/** Whether the work is saved, and a way out when it is not. Shown while a board is open. */
+/** Says nothing while the work is saved. It speaks for a slow save and for a failed one, with a way out. */
 export function SaveStatus() {
   const hasBoard = useAppStore((s) => s.board !== undefined)
   const { save, retrySave, exportNow } = useWorkspace()
@@ -43,12 +42,10 @@ export function SaveStatus() {
       </div>
     )
   }
-  const where = save.kind === 'saved' && save.where === 'folder' ? 'Saved to .anatomy/layer.json' : 'Saved in this browser'
+  // One live region that stays mounted, so a screen reader hears the text arrive. It is empty, and takes no room, until a save is slow.
   return (
-    <Tip label={where}>
-      <p className={styles.line} role="status" data-state={save.kind}>
-        {saving && slow ? 'Saving' : 'Saved'}
-      </p>
-    </Tip>
+    <p className={styles.line} role="status" data-save-state={save.kind}>
+      {saving && slow ? 'Saving' : ''}
+    </p>
   )
 }

@@ -201,20 +201,22 @@ function ShellBody() {
           style={{ '--sidebar-width': `${sidebar.width}px` } as CSSProperties}
           onFocus={onFocus}
         >
-          <div className={styles.notices} data-notices="">
-            <Notices />
+          <div className={styles.panel}>
+            <div className={styles.notices} data-notices="">
+              <Notices />
+            </div>
+            {hasBoard ? (
+              <>
+                <div className={styles.canvas}>
+                  <Canvas />
+                  {scenario && <WalkthroughBar />}
+                </div>
+                <Sidebar />
+              </>
+            ) : (
+              <EmptyState />
+            )}
           </div>
-          {hasBoard ? (
-            <>
-              <div className={styles.canvas}>
-                <Canvas />
-                {scenario && <WalkthroughBar />}
-              </div>
-              <Sidebar />
-            </>
-          ) : (
-            <EmptyState />
-          )}
         </main>
         <input ref={input} type="file" name="board-file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
         <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />

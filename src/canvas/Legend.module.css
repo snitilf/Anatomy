@@ -1,38 +1,6 @@
+/* The line key is the last control of the zoom bar and shares its look. */
 .button {
-  appearance: none;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--raised);
-  box-shadow: var(--shadow-float);
-  color: var(--fg-2);
-  cursor: pointer;
-  transition:
-    background-color 120ms var(--ease-out),
-    color 120ms var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .button:hover {
-    background: color-mix(in srgb, var(--raised), var(--fg) 5%);
-    color: var(--fg);
-  }
-}
-
-.button[data-popup-open] {
-  background: color-mix(in srgb, var(--raised), var(--fg) 5%);
-  color: var(--fg);
-}
-
-.button:focus-visible {
-  outline: none;
-  box-shadow:
-    var(--ring),
-    var(--shadow-float);
+  composes: control from '../app/float.module.css';
 }
 
 .positioner {
