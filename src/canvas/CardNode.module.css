@@ -94,6 +94,17 @@
   text-overflow: ellipsis;
 }
 
+/* A tile tall and wide enough on screen wraps its name to two lines, at word breaks. */
+:global([data-far]) .tileName[data-lines='2'] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-align: center;
+}
+
 :global([data-far]) .card[data-yours] .tileName {
   color: var(--yours-text);
 }

@@ -42,8 +42,11 @@ export interface CardData extends Record<string, unknown> {
   dimmed: boolean
   /** A part or a line is selected and this part is not touching it: it steps far back. */
   faded: boolean
-  /** The width of the card on the board, which decides whether its tile carries a name in the far view. */
+  /** The size of the card on the board, which decides whether its tile carries a name in the far view, and on how many lines. */
   width: number
+  height: number
+  /** The map is in the far view: the card is a tile, which carries a name and a hover name. */
+  far: boolean
   /** How many of the user's notes and questions are attached to this part. */
   noteCount: number
   label: string
@@ -106,6 +109,8 @@ export interface EdgeData extends Record<string, unknown> {
 export interface ProposalData extends Record<string, unknown> {
   proposalId: string
   width: number
+  height: number
+  far: boolean
   label: string
   summary: string
   summaryLines: number
@@ -576,6 +581,8 @@ export function assembleGraph(
         dimmed: playing && !highlight.has(c.id) && c.id !== selectedPart && c.id !== held,
         faded: softening && !touching.has(c.id),
         width: rect.width,
+        height: rect.height,
+        far,
         noteCount: noteCounts.get(c.id) ?? 0,
         label: c.label,
         summary: c.summary,
@@ -607,7 +614,7 @@ export function assembleGraph(
         width: rect.width,
         height: rect.height,
         measured: { width: rect.width, height: rect.height },
-        data: { proposalId: p.id, width: rect.width, label: p.label, summary: p.summary, summaryLines: summaryLinesFor({ label: p.label }, rect, noteCounts.get(p.id) ?? 0), noteCount: noteCounts.get(p.id) ?? 0 },
+        data: { proposalId: p.id, width: rect.width, height: rect.height, far, label: p.label, summary: p.summary, summaryLines: summaryLinesFor({ label: p.label }, rect, noteCounts.get(p.id) ?? 0), noteCount: noteCounts.get(p.id) ?? 0 },
         selected: p.id === selectedProposal,
         ...(p.id === user.editing ? { className: 'editing' } : p.id === held ? { className: 'held' } : pushed?.has(p.id) ? { className: 'pushed' } : {}),
         connectable: true,

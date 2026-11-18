@@ -8,7 +8,7 @@ import { usePhone } from '../app/usePhone'
 import type { Rect } from '../layout/geometry'
 import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
-import { farLabelScale, GROUP_FRAME_ZOOM, nextFar } from './far'
+import { farLabelScale, nextFar } from './far'
 
 const STEP_MS = 220
 const RESIZE_MS = 150
@@ -136,8 +136,11 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
       const { stepKey: key, focus: parts } = latest.current
       const duration = animate && !prefersStillness() ? STEP_MS : 0
       const focusBox = key !== undefined ? box(parts.map(rectOf).filter((r): r is Rect => r !== undefined)) : undefined
-      // A step frames its parts at a zoom where their names show, so a walkthrough never plays in the far view.
-      if (focusBox) camera.frame({ box: focusBox, padding: 0.25, maxZoom: 1, floorZoom: GROUP_FRAME_ZOOM }, duration)
+      // The parts of a step are always fully in frame. They show at the zoom that fits them, which is 0.8 or more when
+      // they fit there, and names show. When they do not fit at 0.8, they are fitted anyway and may land in the far view,
+      // where the spotlight accents the highlighted tiles. A step that names no parts is the whole board, and fitting
+      // the whole board in the far view is deliberate: it is the overview.
+      if (focusBox) camera.frame({ box: focusBox, padding: 0.25, maxZoom: 1 }, duration)
       else camera.frame({ readable: true }, duration)
       framed.current = map ? map.getBoundingClientRect() : undefined
     },

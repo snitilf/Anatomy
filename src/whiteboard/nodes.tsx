@@ -6,7 +6,7 @@ import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type MarkNodeData, type
 import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
-import { NAMED_TILE_PX } from '../canvas/far'
+import { nameLines } from '../canvas/far'
 
 /** Whether the words run past the box they sit in, so the box can fade them out instead of cutting a line in half. */
 function useClipped(text: string) {
@@ -39,7 +39,7 @@ function Grip({ min, max }: { min: { width: number; height: number }; max: { wid
 
 /** A part the user proposed: a card in the user's color, linked and moved like any part. */
 export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeProps<Node<ProposalData>>) {
-  const named = useStore((s) => s.transform[2] * data.width >= NAMED_TILE_PX)
+  const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   return (
     <>
       <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={cards.handle} />
@@ -48,9 +48,9 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
         <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
       ))}
       <div className={cards.card} data-yours="" data-selected={selected || undefined}>
-        {data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
-        {named && (
-          <div className={cards.tileName} aria-hidden="true">
+        {data.far && data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
+        {lines > 0 && (
+          <div className={cards.tileName} data-lines={lines} aria-hidden="true">
             {data.label}
           </div>
         )}
@@ -69,9 +69,11 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
           </div>
         )}
       </div>
-      <div className={cards.tip} aria-hidden="true">
-        {data.label}
-      </div>
+      {data.far && (
+        <div className={cards.tip} aria-hidden="true">
+          {data.label}
+        </div>
+      )}
       <Grip min={CARD_MIN} max={CARD_MAX} />
     </>
   )

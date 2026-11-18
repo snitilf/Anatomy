@@ -339,6 +339,23 @@ export function Canvas() {
     farRef.current = far
   })
   const pressedAt = useRef({ x: 0, y: 0 })
+  /** The card that takes focus once a group picked from the far view is in view, so a keyboard user is not dropped to the page. */
+  const focusAfterPick = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    // The hover rule was written for the other view. It is cleared when the view changes.
+    if (hoverStyle.current) hoverStyle.current.textContent = ''
+    if (far || !focusAfterPick.current) return
+    const id = focusAfterPick.current
+    focusAfterPick.current = undefined
+    // The cards join the tab order a moment after the view changes, so focus is tried for a few frames.
+    let tries = 0
+    const focus = () => {
+      const card = mapBox.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`)
+      card?.focus({ preventScroll: true })
+      if (card && document.activeElement !== card && tries++ < 20) window.requestAnimationFrame(focus)
+    }
+    window.requestAnimationFrame(focus)
+  }, [far])
   const takePicked = useCallback(() => {
     const id = pickedOnMap.current
     pickedOnMap.current = undefined
@@ -522,6 +539,8 @@ export function Canvas() {
     (id: string) => {
       const current = viewRef.current
       const area = current ? groupAreas(current.board, current.rects)[id] : undefined
+      const first = current?.board.components.find((c) => c.group === id)
+      if (first && farRef.current) focusAfterPick.current = first.id
       if (area) camera.frame({ box: area, padding: 0.06, maxZoom: 1, floorZoom: GROUP_FRAME_ZOOM }, prefersStillness() ? 0 : GLIDE_MS * 1.5)
     },
     [camera],

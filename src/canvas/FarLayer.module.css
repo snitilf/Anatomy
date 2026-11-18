@@ -43,7 +43,8 @@
   left: 0;
   top: 0;
   overflow: visible;
-  transform: rotate(var(--angle)) scale(var(--label-scale, 1));
+  /* At very low zoom the head shrinks with the tiles, to no less than 55% of its size, so heads do not pile up at a group's edge. */
+  transform: rotate(var(--angle)) scale(calc(var(--label-scale, 1) * clamp(0.55, calc(1 / (var(--label-scale, 1) * 0.3)), 1)));
   transform-origin: 0 0;
   fill: var(--line-strong);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FAR_ENTER, FAR_EXIT, farLabelScale, nextFar } from './far'
+import { FAR_ENTER, FAR_EXIT, farLabelScale, nameLines, NAMED_TILE_PX, nextFar } from './far'
 
 describe('the far view threshold', () => {
   it('starts where a 13px title would draw under 9px', () => {
@@ -30,5 +30,20 @@ describe('the far view threshold', () => {
       expect(onScreen).toBeGreaterThanOrEqual(1)
       expect(onScreen).toBeLessThan(1.3)
     }
+  })
+})
+
+describe('names on tiles', () => {
+  it('derives the width from the font, enough for eight letters before the ellipsis', () => {
+    expect(NAMED_TILE_PX).toBeGreaterThanOrEqual(76)
+    expect(NAMED_TILE_PX).toBeLessThanOrEqual(95)
+  })
+
+  it('names nothing on a narrow tile, one line on a short one, and two on a tall wide one', () => {
+    expect(nameLines(0.18, 240, 112)).toBe(0)
+    expect(nameLines(0.3, 240, 80)).toBe(0)
+    expect(nameLines(0.45, 240, 40)).toBe(1)
+    expect(nameLines(0.45, 240, 112)).toBe(2)
+    expect(nameLines(0.36, 240, 112)).toBe(1)
   })
 })

@@ -145,7 +145,8 @@ test.describe('the far view of a crowded board', () => {
     expect(color).not.toBe('rgba(0, 0, 0, 0)')
   })
 
-  test('a tile that is 64px or wider on screen names its part inside it, at about 11px, and a narrower one does not', async ({ page }) => {
+  test('a tile wide enough on screen names its part inside it, at about 11px, on one or two lines, and a narrower one does not', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
     await open(page, 'e2e/fixtures/sixteen-parts.board.json')
     await expect(farOn(page)).toHaveCount(1)
     const names = page.locator('.react-flow__node-card [class*="tileName"]')
@@ -162,14 +163,45 @@ test.describe('the far view of a crowded board', () => {
       expect(n.inside).toBe(true)
       expect(n.px).toBeGreaterThan(9.5)
       expect(n.px).toBeLessThan(13)
-      expect(n.lines).toBe(1)
-      expect(n.width).toBeGreaterThanOrEqual(64)
+      expect(n.lines).toBeLessThanOrEqual(2)
+      expect(n.width).toBeGreaterThanOrEqual(88)
     }
     // Nothing sits outside a tile.
     await expect(page.locator('[data-far-label]:not(button)').filter({ hasText: /Component/ })).toHaveCount(0)
-    await open(page, SIXTY)
-    await expect(farOn(page)).toHaveCount(1)
+    // Sixty (43px tiles) and forty (70px tiles) are too narrow to hold eight letters, so they carry no names.
+    for (const file of [SIXTY, FORTY]) {
+      await open(page, file)
+      await expect(farOn(page)).toHaveCount(1)
+      await expect(page.locator('.react-flow__node-card [class*="tileName"]')).toHaveCount(0)
+    }
+  })
+
+  test('the name on a tile and the hover name exist only in the far view', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, 'e2e/fixtures/sixteen-parts.board.json')
+    await expect(page.locator('.react-flow__node-card [class*="tileName"]')).toHaveCount(16)
+    await expect(page.locator('.react-flow__node [class*="tip"]')).toHaveCount(16)
+    await page.keyboard.press('Shift+Digit0')
+    await expect(farOn(page)).toHaveCount(0)
     await expect(page.locator('.react-flow__node-card [class*="tileName"]')).toHaveCount(0)
+    await expect(page.locator('.react-flow__node [class*="tip"]')).toHaveCount(0)
+  })
+
+  test('after a group is picked, focus is on its first card', async ({ page }) => {
+    await open(page, SIXTY)
+    await page.getByRole('button', { name: /^Data, 15 parts/ }).focus()
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(800)
+    const label = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName)
+    expect(label).toMatch(/, in Data$/)
+  })
+
+  test('a hover on a tile does not leave its lines behind when the view changes', async ({ page }) => {
+    await open(page, SIXTY)
+    await page.locator('.react-flow__node-card').nth(20).hover({ force: true })
+    await page.keyboard.press('Shift+Digit0')
+    await expect(farOn(page)).toHaveCount(0)
+    expect(await page.locator('[data-hover-scope] style').first().evaluate((el) => el.textContent)).not.toContain('data-far')
   })
 })
 
@@ -261,3 +293,41 @@ test.describe('the spotlight on a selection', () => {
     }
   })
 })
+
+const WALK = 'e2e/fixtures/sixty-parts-walkthrough.board.json'
+const STEPS: { text: string; parts: string[] }[] = [
+  { text: '2 / 4', parts: ['c-1', 'c-7', 'c-10', 'c-13', 'c-19', 'c-22', 'c-25', 'c-31', 'c-34', 'c-37', 'c-41', 'c-45', 'c-49', 'c-53', 'c-57'] },
+  { text: '3 / 4', parts: ['c-1', 'c-60'] },
+  { text: '4 / 4', parts: ['c-4'] },
+]
+
+for (const size of [
+  { width: 1440, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`every part a walkthrough step names is fully in view after the step: ${size.width}px`, async ({ page }) => {
+    await page.setViewportSize(size)
+    await open(page, WALK)
+    const inside = () =>
+      page.evaluate((ids) => {
+        const map = document.querySelector('.react-flow')!.getBoundingClientRect()
+        return ids.map((id) => {
+          const r = document.querySelector(`.react-flow__node-card[data-id="${id}"]`)!.getBoundingClientRect()
+          return { id, ok: r.left >= map.left - 1 && r.right <= map.right + 1 && r.top >= map.top - 1 && r.bottom <= map.bottom + 1 }
+        })
+      }, STEPS.flatMap((s) => s.parts))
+    const play = page.getByRole('button', { name: 'Play Whole board walk' })
+    // On a phone the list is in the sheet, which a tap on its header raises.
+    if (size.width < 500) await page.getByRole('region', { name: 'Sidebar' }).getByRole('button').first().click()
+    await play.click()
+    const player = page.getByRole('region', { name: 'Walkthrough: Whole board walk' })
+    await expect(player.getByText('1 / 4')).toBeVisible()
+    for (const step of STEPS) {
+      await player.getByRole('button', { name: 'Next' }).click()
+      await expect(player.getByText(step.text)).toBeVisible()
+      await page.waitForTimeout(700)
+      const found = await inside()
+      for (const part of step.parts) expect(found.find((f) => f.id === part)?.ok, `${part} in view at step ${step.text}`).toBe(true)
+    }
+  })
+}
