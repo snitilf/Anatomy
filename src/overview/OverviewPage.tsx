@@ -262,7 +262,7 @@ export function OverviewPage() {
           groups={groups}
           filter={filter}
           setFilter={setFilter}
-          total={board.components.length}
+          total={groups.reduce((n, g) => n + g.rows.length, 0)}
           open={(row, key) => actions.openOnMap({ type: row.type, id: row.id }, key)}
           boardId={board.id}
         />

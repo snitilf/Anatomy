@@ -195,3 +195,19 @@ test.describe('on a phone', () => {
     await expect(page.getByTestId('overview').getByRole('button', { name: /^Redirect handler/ })).toBeVisible()
   })
 })
+
+test('the Parts count is the number of rows, with the new parts the user proposed', async ({ page }) => {
+  await open(page, SHORTENER)
+  await page.keyboard.press('n')
+  const map = (await page.locator('.react-flow').boundingBox())!
+  await page.mouse.click(map.x + map.width - 200, map.y + map.height - 120)
+  await page.keyboard.type('Rate limiter')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.react-flow__node-proposal')).toContainText('Rate limiter')
+  await tab(page, 'Overview').click()
+  const overview = page.getByTestId('overview')
+  await expect(overview.locator('[data-row^="part:"]')).toHaveCount(9)
+  await expect(overview.getByRole('heading', { name: /^Parts 9$/ })).toBeVisible()
+  await overview.getByRole('searchbox', { name: 'Filter parts' }).fill('cache')
+  await expect(overview.getByRole('heading', { name: /^Parts 1 of 9$/ })).toBeVisible()
+})
