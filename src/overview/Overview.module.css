@@ -642,3 +642,34 @@
 .bullets li::marker {
   color: var(--fg-3);
 }
+
+/* The row that unfolds the rest of a long list, in place. */
+.showMore {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  width: calc(100% + var(--space-4));
+  min-height: var(--row);
+  margin: 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2) 0 calc(var(--space-2) + 22px);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .showMore:hover {
+    background: var(--hover);
+    color: var(--fg);
+  }
+}
+
+.showMore:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}

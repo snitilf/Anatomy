@@ -27,6 +27,9 @@ interface Row {
   selection: Selection
 }
 
+/** How many pair rows show before the rest are folded away. */
+const PAIRS_SHOWN = 8
+
 /** Where an end sits in the board's order: its group's place, or after every group for a part. */
 function rank(board: Board, end: string): number {
   const at = board.groups.findIndex((g) => `group:${g.id}` === end)
@@ -76,6 +79,10 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
   const inner = useMemo(() => innerConnections(board, layer.links, layer.reconnects), [board, layer.links, layer.reconnects])
   if (bundles.length + inner.length === 0) return null
   const total = [...bundles, ...inner].reduce((n, b) => n + b.count, 0)
+  // The busiest rows show first. The rest wait behind one row, and the inside-a-group rows stay in view.
+  const all = memory.expanded.has('more')
+  const shownPairs = all ? bundles : bundles.slice(0, PAIRS_SHOWN)
+  const hidden = bundles.length - PAIRS_SHOWN
   const toggle = (key: string, open: boolean) => {
     if (open) memory.expanded.delete(key)
     else memory.expanded.add(key)
@@ -87,7 +94,7 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
         Connections <span className={styles.count}>{total}</span>
       </h3>
       <ul className={styles.list}>
-        {bundles.map((b) => {
+        {shownPairs.map((b) => {
           const key = `${b.a}|${b.b}`
           const open = memory.expanded.has(key)
           // The ends read in the order of the board's groups.
@@ -119,6 +126,13 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
             </li>
           )
         })}
+        {hidden > 0 && (
+          <li>
+            <button type="button" className={styles.showMore} data-row="between:more" aria-expanded={all} onClick={() => toggle('more', all)}>
+              {all ? 'Show fewer' : `Show ${hidden} more`}
+            </button>
+          </li>
+        )}
         {inner.map((b) => {
           const key = `inside:${b.a}`
           const open = memory.expanded.has(key)

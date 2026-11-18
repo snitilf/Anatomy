@@ -380,3 +380,19 @@ for (const [width, height] of [[1440, 900], [1024, 768], [390, 844]] as const) {
     }
   })
 }
+
+test('Connections shows the busiest 8 rows, folds the rest behind Show more, and counts still add up', async ({ page }) => {
+  await open(page, 'e2e/fixtures/sixty-parts.board.json')
+  await tab(page, 'Overview').click()
+  const overview = page.getByTestId('overview')
+  const pairs = overview.locator('[data-row^="between:"]:not([data-row="between:more"]):not([data-row^="between:inside:"])')
+  await expect(pairs).toHaveCount(8)
+  const more = overview.getByRole('button', { name: /^Show \d+ more$/ })
+  await more.focus()
+  await page.keyboard.press('Enter')
+  expect(await pairs.count()).toBeGreaterThan(8)
+  await expect(overview.getByRole('button', { name: 'Show fewer' })).toBeFocused()
+  const total = Number(await overview.getByRole('button', { name: /^\d+$/ }).nth(0).textContent())
+  const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
+  expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
+})
