@@ -134,9 +134,41 @@ describe('softening the lines while a part is selected', () => {
 
   it('softens nothing without a selected part, while a card is held, or during a walkthrough', () => {
     expect([...faded(build(undefined)).values()].every((f) => !f)).toBe(true)
-    expect([...faded(build({ type: 'relationship', id: board.relationships[0]!.id })).values()].every((f) => !f)).toBe(true)
     expect([...faded(build({ type: 'component', id: part.id }, part.id)).values()].every((f) => !f)).toBe(true)
     expect([...faded(build({ type: 'component', id: part.id }, undefined, new Set([part.id]))).values()].every((f) => !f)).toBe(true)
+  })
+})
+
+describe('the spotlight on a selection', () => {
+  const board = nordetBoard()
+  const positions = placeCards(board, { positions: {}, sizes: {} })
+  const geometry = computeGeometry(board, positions)
+  const build = (selection: Parameters<typeof assembleGraph>[3]) =>
+    assembleGraph(board, positions, geometry, selection, undefined, [], new Map(), new GraphCache())
+  const fadedCards = (graph: ReturnType<typeof build>) => graph.nodes.filter((n) => n.type === 'card' && (n.data as { faded: boolean }).faded).map((n) => n.id)
+
+  it('keeps a selected part and its neighbors, and steps every other card back', () => {
+    const part = board.relationships[0]!.from
+    const near = new Set([part, ...board.relationships.flatMap((r) => (r.from === part ? [r.to] : r.to === part ? [r.from] : []))])
+    const faded = fadedCards(build({ type: 'component', id: part }))
+    expect(faded.some((id) => near.has(id))).toBe(false)
+    expect(faded.length).toBe(board.components.length - near.size)
+  })
+
+  it('keeps the two ends of a selected line and fades the other lines and cards', () => {
+    const r = board.relationships[0]!
+    const graph = build({ type: 'relationship', id: r.id })
+    const lines = new Map(graph.edges.map((e) => [e.id, (e.data as { faded: boolean }).faded]))
+    expect(lines.get(r.id)).toBe(false)
+    expect(board.relationships.filter((x) => x.id !== r.id).every((x) => lines.get(x.id) === true)).toBe(true)
+    const faded = fadedCards(graph)
+    expect(faded).not.toContain(r.from)
+    expect(faded).not.toContain(r.to)
+    expect(faded.length).toBe(board.components.length - 2)
+  })
+
+  it('fades nothing with no selection', () => {
+    expect(fadedCards(build(undefined))).toEqual([])
   })
 })
 

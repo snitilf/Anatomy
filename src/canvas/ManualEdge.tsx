@@ -16,7 +16,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
   const emphasized = selected || data.active
   return (
     <>
-      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-faded={data.faded || undefined} data-ends={ends} data-edge={id}>
+      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-faded={data.faded || undefined} data-active={emphasized || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}

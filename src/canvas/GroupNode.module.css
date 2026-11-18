@@ -30,3 +30,21 @@
 :global(.react-flow__node-group-area) {
   contain: layout paint;
 }
+
+/*
+ * In the far view the name and the count are drawn by the far layer, at a readable size, and the area takes the pointer:
+ * a click on it frames the group.
+ */
+:global([data-far]) .label {
+  visibility: hidden;
+}
+
+:global([data-far]) .area {
+  pointer-events: auto;
+  cursor: zoom-in;
+  transition: background-color 120ms var(--ease-out);
+}
+
+:global([data-far]) .area:hover {
+  background: color-mix(in srgb, var(--fg) var(--wash-share-2), transparent);
+}

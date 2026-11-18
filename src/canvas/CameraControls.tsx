@@ -8,6 +8,7 @@ import { usePhone } from '../app/usePhone'
 import type { Rect } from '../layout/geometry'
 import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
+import { farLabelScale, nextFar } from './far'
 
 const STEP_MS = 220
 const RESIZE_MS = 150
@@ -135,6 +136,10 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
       const { stepKey: key, focus: parts } = latest.current
       const duration = animate && !prefersStillness() ? STEP_MS : 0
       const focusBox = key !== undefined ? box(parts.map(rectOf).filter((r): r is Rect => r !== undefined)) : undefined
+      // The parts of a step are always fully in frame. They show at the zoom that fits them, which is 0.8 or more when
+      // they fit there, and names show. When they do not fit at 0.8, they are fitted anyway and may land in the far view,
+      // where the spotlight accents the highlighted tiles. A step that names no parts is the whole board, and fitting
+      // the whole board in the far view is deliberate: it is the overview.
       if (focusBox) camera.frame({ box: focusBox, padding: 0.25, maxZoom: 1 }, duration)
       else camera.frame({ readable: true }, duration)
       framed.current = map ? map.getBoundingClientRect() : undefined
@@ -270,13 +275,18 @@ const LABEL_MAX_SCALE = LABEL_GROWTH
  * Sets `--label-scale` on the map: how much line and group labels grow so they never render under 9px on screen.
  * It is 1 from about 0.82 zoom up, so zooming in the normal range writes nothing, and it never passes 1.3.
  */
-export function LabelScale() {
+export function LabelScale({ far }: { far: boolean }) {
   const map = useStore((s) => s.domNode)
   const store = useStoreApi()
   useLayoutEffect(() => {
     if (!map) return
     const apply = (zoom: number) => {
       // Steps of a tenth, rounded up so the floor holds. Placement of labels is worked out at 1x, so the growth stays small.
+      // The far view draws labels as large as it takes to hold their base size on screen.
+      if (far) {
+        map.style.setProperty('--label-scale', farLabelScale(zoom).toFixed(2))
+        return
+      }
       const scale = Math.min(LABEL_MAX_SCALE, Math.max(1, Math.ceil((LABEL_FLOOR_PX / (LABEL_BASE_PX * zoom)) * 10 - 1e-6) / 10))
       map.style.setProperty('--label-scale', scale.toFixed(1))
     }
@@ -284,7 +294,31 @@ export function LabelScale() {
     return store.subscribe((state, prev) => {
       if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
     })
-  }, [map, store])
+  }, [map, store, far])
+  return null
+}
+
+/**
+ * Reports whether the map is in the far view. The two crossings differ (see `FAR_ENTER` and `FAR_EXIT`), so a zoom at
+ * rest near the threshold does not flip it. Only a crossing renders.
+ */
+export function FarMode({ onChange }: { onChange: (far: boolean) => void }) {
+  const store = useStoreApi()
+  useLayoutEffect(() => {
+    let far = false
+    const apply = (zoom: number) => {
+      const next = nextFar(far, zoom)
+      if (next === far) return
+      far = next
+      onChange(far)
+    }
+    // A new start is never far: what the map showed before this effect ran is not known here.
+    onChange(false)
+    apply(store.getState().transform[2])
+    return store.subscribe((state, prev) => {
+      if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
+    })
+  }, [store, onChange])
   return null
 }
 

@@ -59,16 +59,15 @@ test('a label with no free place shows in full when its line is hovered, and not
 
 for (const board of BOARDS) {
   test(`labels grown to stay readable at low zoom cover no card and no other label: ${board.name}`, async ({ page }) => {
-    // A small window, so that every board can zoom out to about 0.65.
+    // A small window, so that every board can zoom out to about 0.8.
     await page.setViewportSize({ width: 1100, height: 640 })
     await open(page, board.file)
     await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
     await page.keyboard.press('Shift+Digit0')
     await page.keyboard.press('ControlOrMeta+Minus')
-    await page.keyboard.press('ControlOrMeta+Minus')
     const zoom = () => page.evaluate(() => Number(/scale\(([\d.]+)\)/.exec(document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')?.[1]))
-    // Between 0.6, where labels go quiet, and 0.85, where they are not grown, so they are grown and still shown.
-    await expect.poll(async () => { const z = await zoom(); return z > 0.55 && z < 0.85 }).toBe(true)
+    // Between 0.69, where the far view starts, and 0.85, where labels are not grown, so they are grown and still shown.
+    await expect.poll(async () => { const z = await zoom(); return z > 0.7 && z < 0.85 }).toBe(true)
     await page.waitForTimeout(300)
     const found = await page.evaluate(() => {
       const box = (el: Element) => {

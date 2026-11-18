@@ -146,3 +146,19 @@ describe('viewportFor', () => {
     expect(viewportFor({ x: 0, y: 0, zoom: 1.5 }, area, { x: -900, y: 100, ...card })!.zoom).toBe(1.5)
   })
 })
+
+describe('framing with a floor zoom', () => {
+  const limits = zoomLimits(board, map)
+
+  it('keeps a box that fits at its own zoom', () => {
+    const view = frameViewport(limits, { ...map, top: 0 }, { box: { x: 100, y: 100, width: 400, height: 300 }, padding: 0.1, floorZoom: 0.8 })
+    expect(view.zoom).toBeGreaterThanOrEqual(0.8)
+  })
+
+  it('shows the top left of a box that is too big, at the floor zoom', () => {
+    const view = frameViewport(limits, { ...map, top: 0 }, { box: { x: 200, y: 100, width: 1800, height: 900 }, floorZoom: 0.8 })
+    expect(view.zoom).toBeCloseTo(0.8, 6)
+    expect(200 * view.zoom + view.x).toBeGreaterThanOrEqual(0)
+    expect(200 * view.zoom + view.x).toBeLessThan(map.width / 2)
+  })
+})

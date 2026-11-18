@@ -12,18 +12,20 @@
   stroke-width: 1.75px !important;
 }
 
-/* A part is selected, or a walkthrough plays: the lines that are not in focus step back, each ink by its own share. */
-.line[data-faded],
+/* A part or a line is selected: everything not touching it steps far back. */
+.line[data-faded] {
+  opacity: var(--spot-line);
+}
+
+/* A walkthrough plays: the lines that are not in focus step back, each ink by its own share. */
 .line[data-dimmed] {
   opacity: var(--fade-light);
 }
 
-.line[data-faded][data-tone='strong'],
 .line[data-dimmed][data-tone='strong'] {
   opacity: var(--fade-strong);
 }
 
-.line[data-faded][data-tone='faint'],
 .line[data-dimmed][data-tone='faint'] {
   opacity: var(--fade-faint);
 }
@@ -124,9 +126,17 @@
 }
 
 /* A faded label keeps its cutout. Only the words step back, so the line never shows through them. */
-.pill[data-dimmed],
-.pill[data-faded] {
+.pill[data-dimmed] {
   color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent);
+}
+
+/* In the spotlight the words of every other label step far back, cutout and all, so no patch is left on the faded lines. */
+.pill[data-faded]:not([data-hidden]) {
+  opacity: var(--spot-label);
+}
+
+.pill[data-faded]:not([data-hidden]):hover {
+  opacity: 1;
 }
 
 .pill[data-dimmed]:hover,
@@ -151,9 +161,6 @@
   color: var(--accent-line);
 }
 
-.pill.mine[data-faded] {
-  color: color-mix(in srgb, var(--yours-text) var(--faded-label), transparent);
-}
 
 /* Where a connection ran before the user moved its end: the agent's line, dimmed, under the user's. */
 .ghost {

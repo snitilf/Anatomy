@@ -78,3 +78,40 @@
 .canvas :global(.react-flow__node.editing) {
   visibility: hidden;
 }
+
+/*
+ * The far view: one bundled line per pair of groups stands in for the lines between parts. The real lines of the
+ * selection and of the part under the pointer show through. They are drawn at no opacity, not removed, so they stay in the page.
+ */
+.canvas[data-far] g[data-ends]:not([data-active], [data-selected]),
+.canvas[data-far] [data-label]:not([data-selected]) {
+  opacity: 0;
+}
+
+.canvas[data-far] g[data-ends]:not([data-active], [data-selected]) * {
+  pointer-events: none;
+}
+
+.canvas[data-far] [data-label] {
+  pointer-events: none;
+}
+
+.canvas[data-far] :global(.react-flow__edge:focus-visible) g[data-ends] {
+  opacity: 1;
+}
+
+.canvas[data-far] path[class*='ghost'] {
+  display: none;
+}
+
+/* A selection is a spotlight, on the bundles too. */
+.canvas[data-spot] [data-bundle] {
+  opacity: var(--spot-line);
+}
+
+/* A dash is drawn at the zoom of the map, so it is a speck in the far view. The lines of the selection are solid there. */
+.canvas[data-far] g[data-active] :global(.react-flow__edge-path),
+.canvas[data-far] g[data-selected] :global(.react-flow__edge-path) {
+  stroke-dasharray: none !important;
+  stroke-width: 2.5px !important;
+}
