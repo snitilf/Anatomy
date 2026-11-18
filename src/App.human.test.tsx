@@ -82,6 +82,8 @@ function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: n
 }
 const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Outgoing' })
 const panel = () => within(screen.getByTestId('inspector'))
+/** The board segment of the top bar's crumb, which clears the selection. */
+const backToBoard = () => fireEvent.click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Nordet/ }))
 
 /** Picks a row in an open picker or the command menu. */
 async function pick(name: RegExp | string) {
@@ -284,7 +286,7 @@ describe('saving', () => {
     addNote('Survives a reload')
     await addLink('Saved record')
     // Adding a link shows the link. The card must be selected again for the arrow keys to move it.
-    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
+    backToBoard()
     selectPart('approval')
 
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
@@ -354,7 +356,7 @@ describe('export and open', () => {
     selectPart('approval')
     addNote('Travels with the file')
     await addLink('Saved record')
-    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
+    backToBoard()
     selectPart('approval')
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
@@ -414,10 +416,10 @@ describe('a new version of a board you already have', () => {
     await loadNordet()
     selectPart('preview')
     addNote('Check the wording')
-    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
+    backToBoard()
     selectPart('fictional-clock')
     addNote('Where does the date come from?', 'Question')
-    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
+    backToBoard()
     await saved()
 
     await openFile(first.container, modifiedNordet(), 'nordet.json')
@@ -459,7 +461,7 @@ describe('a new version of a board you already have', () => {
     await loadNordet()
     selectPart('fictional-clock')
     addNote('Orphan')
-    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
+    backToBoard()
     await openFile(first.container, modifiedNordet(), 'nordet.json')
     fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
     fireEvent.click(await panel().findByRole('button', { name: 'Mark reviewed' }))

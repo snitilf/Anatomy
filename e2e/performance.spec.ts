@@ -198,3 +198,48 @@ test('a pen stroke of 300 moves on forty parts stays smooth, and is saved as one
   })
   await expect(page.locator('[data-mark]')).toHaveCount(1)
 })
+
+// A row in the sidebar spotlights its part and line on the map with one style rule, so the map does not render again.
+test('hovering the rows of a part on forty parts stays smooth, and the map renders nothing', async ({ page }) => {
+  await open(page, BOARDS[3]!.file)
+  const id = await page.evaluate(() => {
+    const counts = new Map<string, number>()
+    for (const g of document.querySelectorAll('g[data-ends]')) for (const end of (g.getAttribute('data-ends') ?? '').split(' ')) counts.set(end, (counts.get(end) ?? 0) + 1)
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+  })
+  await page.getByRole('tab', { name: 'Overview' }).click()
+  await page.getByTestId('overview').locator(`[data-row="part:${id}"]`).click()
+  const rows = page.getByTestId('inspector').locator('li[class*="row"]')
+  const count = await rows.count()
+  expect(count).toBeGreaterThan(0)
+  const boxes = await Promise.all(Array.from({ length: count }, (_, i) => rows.nth(i).boundingBox()))
+  // A render of the map would change its DOM. Hovering changes one style rule in the head and nothing inside the map.
+  await page.evaluate(() => {
+    const w = window as unknown as { __mutations: number; __rules: Set<string>; __watch: MutationObserver }
+    w.__mutations = 0
+    w.__rules = new Set()
+    w.__watch = new MutationObserver((records) => (w.__mutations += records.length))
+    w.__watch.observe(document.querySelector('.react-flow')!, { attributes: true, childList: true, characterData: true, subtree: true })
+    const sample = () => {
+      for (const sheet of document.querySelectorAll('style')) if (sheet.textContent?.includes('[data-card]')) w.__rules.add(sheet.textContent)
+      requestAnimationFrame(sample)
+    }
+    sample()
+  })
+  await budget(page, 'hover rows, forty parts', async () => {
+    for (let pass = 0; pass < 12; pass++) {
+      for (const box of boxes) {
+        if (!box) continue
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 4 })
+        await nextFrame(page)
+      }
+    }
+  })
+  const seen = await page.evaluate(() => {
+    const w = window as unknown as { __mutations: number; __rules: Set<string>; __watch: MutationObserver }
+    w.__mutations += w.__watch.takeRecords().length
+    return { mutations: w.__mutations, rules: w.__rules.size }
+  })
+  expect(seen.rules, 'a different spotlight rule for each row').toBeGreaterThan(1)
+  expect(seen.mutations, 'changes inside the map while hovering').toBe(0)
+})
