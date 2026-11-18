@@ -88,3 +88,34 @@ test('the command menu lists the walk keys', async ({ page }) => {
   await expect(menu.getByRole('option', { name: /^Go to target/ })).toContainText(/(⌥|Alt ?)→/)
   await expect(menu.getByRole('option', { name: /^Go to source/ })).toContainText(/(⌥|Alt ?)←/)
 })
+
+test('Alt with the arrows never navigates the browser history', async ({ page }) => {
+  await open(page, NORDET)
+  // Two history entries: the Overview, and back on the map.
+  await pickPart(page, 'rule-check')
+  const entries = await page.evaluate(() => window.history.length)
+  expect(entries).toBeGreaterThan(1)
+  const url = page.url()
+  await page.keyboard.press('Alt+ArrowLeft')
+  await page.keyboard.press('Alt+ArrowRight')
+  await page.waitForTimeout(300)
+  expect(page.url()).toBe(url)
+  expect(new URL(page.url()).hash).toBe('')
+  await expect(page.getByRole('tab', { name: 'Map' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('overview')).toHaveCount(0)
+  // The keys were taken by the walk, not left to the browser: the selection moved there and back.
+  await expect(here(page)).toHaveText('Rule check')
+  await page.keyboard.press('Alt+ArrowRight')
+  await expect(here(page)).toHaveText('Preview')
+  expect(page.url()).toBe(url)
+  // The default of the key is prevented, which is what stops Back on Windows and Linux.
+  const prevented = await page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true })
+        document.body.dispatchEvent(event)
+        resolve(event.defaultPrevented)
+      }),
+  )
+  expect(prevented).toBe(true)
+})
