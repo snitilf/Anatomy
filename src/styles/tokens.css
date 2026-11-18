@@ -65,6 +65,8 @@
   /* Yours: everything the user made. Amber is used for nothing else. */
   --yours: #b4690a;
   --yours-text: #814a02;
+  /* The amber of a thin line (the not-sent glyph): darker than --yours so a 1.5px ring holds 3.5 to 1 on the shell and the cards. */
+  --yours-ink: #a35f08;
   --yours-tint: rgb(232 160 40 / 0.12);
 
   --danger: #a82028;
@@ -118,6 +120,7 @@
 
   --yours: #e8a33d;
   --yours-text: #f0b45a;
+  --yours-ink: #e8a33d;
   --yours-tint: rgb(232 163 61 / 0.13);
 
   --danger: #fe9fa2;

@@ -1,4 +1,4 @@
-import { CircleDashed, GraduationCap, History, MessageSquareReply, Play, Unlink, Diff } from 'lucide-react'
+import { GraduationCap, Play, Diff } from 'lucide-react'
 import { useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../app/store'
@@ -7,6 +7,8 @@ import { ITEM_LABEL } from '../app/labels'
 import { CameraSlotContext, prefersStillness } from '../canvas/cameraContext'
 import { buildFeedback, unsentCount } from '../feedback/build'
 import { shortDate } from '../inspector/names'
+import { StatusGlyph } from '../status/StatusGlyph'
+import type { ItemState } from '../status/state'
 import { findLesson, LESSON_IDS } from '../lessons/catalog'
 import { LessonDialog } from '../lessons/LessonDialog'
 import { hasChanges, reviewCounts } from '../notes/review'
@@ -16,6 +18,14 @@ import { changeCounts, changeLine, partGroups, plural, responseLine, type PartFi
 import { PartsSection } from './PartsSection'
 import styles from './Overview.module.css'
 import { BetweenSection } from './BetweenSection'
+
+/** One line of Needs you. A line with no state is not about the user's own items. */
+interface Need {
+  key: string
+  state?: ItemState
+  text: string
+  group: string
+}
 
 type Section = 'parts' | 'between' | 'questions'
 
@@ -102,12 +112,13 @@ export function OverviewPage() {
   const lastSent = layer.sent
   const groupCount = board.groups.filter((g) => board.components.some((c) => c.group === g.id)).length
   const response = responseLine(board, layer)
-  const needs = [
-    counts.answers > 0 ? { key: 'answers', Icon: MessageSquareReply, text: plural(counts.answers, 'answer', 'answers') + ' to read', group: 'Answers' } : undefined,
-    counts.relinking > 0 ? { key: 'relinking', Icon: Unlink, text: `${counts.relinking} ${counts.relinking === 1 ? 'needs' : 'need'} relinking`, group: 'Needs relinking' } : undefined,
-    counts.outdated > 0 ? { key: 'outdated', Icon: History, text: `${counts.outdated} possibly outdated`, group: 'Possibly outdated' } : undefined,
-    changed && line ? { key: 'changes', Icon: Diff, text: line, group: `Changed in revision ${board.revision}` } : undefined,
-  ].filter((n) => n !== undefined)
+  const wanted: (Need | undefined)[] = [
+    counts.answers > 0 ? { key: 'answers', state: 'answered', text: plural(counts.answers, 'answer', 'answers') + ' to read', group: 'Answers' } : undefined,
+    counts.relinking > 0 ? { key: 'relinking', state: 'relinking', text: `${counts.relinking} ${counts.relinking === 1 ? 'needs' : 'need'} relinking`, group: 'Needs relinking' } : undefined,
+    counts.outdated > 0 ? { key: 'outdated', state: 'outdated', text: `${counts.outdated} possibly outdated`, group: 'Possibly outdated' } : undefined,
+    changed && line ? { key: 'changes', text: line, group: `Changed in revision ${board.revision}` } : undefined,
+  ]
+  const needs = wanted.filter((n): n is Need => n !== undefined)
   const showNeeds = needs.length > 0 || unsent > 0
   const questionTotal = board.items.length
 
@@ -211,10 +222,10 @@ export function OverviewPage() {
               Needs you
             </h3>
             <ul className={styles.list}>
-              {needs.map(({ key, Icon, text, group }) => (
+              {needs.map(({ key, state, text, group }) => (
                 <li key={key}>
                   <button type="button" className={styles.line} data-row={`needs:${key}`} onClick={() => actions.openReview(group, `needs:${key}`)}>
-                    <Icon className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                    {state ? <StatusGlyph state={state} withWord /> : <Diff className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />}
                     {text}
                   </button>
                 </li>
@@ -222,7 +233,7 @@ export function OverviewPage() {
               {unsent > 0 && (
                 <li className={styles.unsent}>
                   <span className={styles.lineStatic}>
-                    <CircleDashed className={styles.yoursIcon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                    <StatusGlyph state="unsent" withWord />
                     <span className={styles.yoursText}>{plural(unsent, 'item', 'items')} not sent</span>
                   </span>
                   <button type="button" className={styles.action} data-row="needs:send" onClick={() => ui.setSendOpen(true)}>

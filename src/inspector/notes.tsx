@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { CircleHelp, History, Pencil, StickyNote, Trash2, Unlink } from 'lucide-react'
+import { CircleHelp, Pencil, StickyNote, Trash2 } from 'lucide-react'
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
@@ -10,10 +10,12 @@ import type { Board } from '../board/schema'
 import { changedFields } from '../layer/diff'
 import { newId } from '../layer/edits'
 import { LAYER_LIMITS, type Note, type NoteStatus, type Response, type Target } from '../layer/model'
-import { noteStatus, wasSent } from '../layer/status'
+import { noteStatus } from '../layer/status'
 import { sameTarget, targetName } from '../notes/targets'
 import { deletedToast } from '../notes/undoToast'
-import { ANSWER, answerFor, targetItems } from './answers'
+import { StatusGlyph, StatusWord } from '../status/StatusGlyph'
+import { noteState } from '../status/state'
+import { answerFor, targetItems } from './answers'
 import { formatKeys } from '../commands/keys'
 import { Group, PartLink } from './bits'
 import { partName, shortDate } from './names'
@@ -27,13 +29,11 @@ import { Picker } from './Picker'
  * `onDismiss` puts the item and its answer in the archive. `bare` leaves out the status line, for a row that shows the status itself.
  */
 export function AgentAnswer({ board, answer, onDismiss, bare = false }: { board: Board; answer: Response; onDismiss?: (() => void) | undefined; bare?: boolean }) {
-  const { label, icon: Icon } = ANSWER[answer.status]
   return (
     <div className={styles.answer}>
       {!bare && (
         <p className={styles.answerHead}>
-          <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
-          {label}
+          <StatusWord state={answer.status} />
         </p>
       )}
       {answer.text !== '' && <p className={styles.answerText}>{answer.text}</p>}
@@ -84,7 +84,7 @@ function StatusLine({ note, status, board, onEdit }: { note: Note; status: Exclu
     return (
       <div className={styles.state}>
         <p className={styles.stateLine}>
-          <History size={14} strokeWidth={1.5} aria-hidden="true" />
+          <StatusGlyph state="outdated" withWord />
           <span>
             {targetName(board, note.target)} changed after you wrote this{fields.length > 0 ? `: ${fields.join(', ')}` : ''}.
           </span>
@@ -103,7 +103,7 @@ function StatusLine({ note, status, board, onEdit }: { note: Note; status: Exclu
   return (
     <div className={styles.state}>
       <p className={styles.stateLine} data-tone="danger">
-        <Unlink size={14} strokeWidth={1.5} aria-hidden="true" />
+        <StatusGlyph state="relinking" withWord />
         <span>{targetName(was, note.target)} was removed.</span>
       </p>
       <div className={styles.stateActions}>
@@ -161,7 +161,7 @@ function NoteText({ text }: { text: string }) {
 export function NoteBlock({ note, board, showTarget = false }: { note: Note; board: Board; showTarget?: boolean }) {
   const dispatch = useAppDispatch()
   const store = useAppStoreApi()
-  const sent = useAppStore((s) => (s.layer ? wasSent(s.layer, note) : false))
+  const state = useAppStore((s) => (s.layer ? noteState(board, s.layer, note) : 'unsent'))
   const { choose } = usePanel()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.text)
@@ -225,10 +225,10 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
               </>
             )}
             <span>{shortDate(note.updatedAt)}</span>
-            {sent && (
+            {(state === 'unsent' || state === 'sent') && (
               <>
                 <span aria-hidden="true">·</span>
-                <span>Sent</span>
+                <StatusWord state={state} />
               </>
             )}
             {!editing && (

@@ -1,4 +1,4 @@
-import { Check, CircleHelp, Link2, Play, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
+import { CircleHelp, Link2, Play, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../app/store'
@@ -6,7 +6,8 @@ import { Tip } from '../app/Tip'
 import type { Board } from '../board/schema'
 import { useCommands } from '../commands/context'
 import type { Layer } from '../layer/model'
-import { wasSent } from '../layer/status'
+import { StatusGlyph } from '../status/StatusGlyph'
+import { itemState, STATE_WORD, type ItemState } from '../status/state'
 import { targetName } from '../notes/targets'
 import { Group, Heading, Prop, Props } from './bits'
 import { partName } from './names'
@@ -25,7 +26,7 @@ interface YoursRow {
   icon: LucideIcon
   text: string
   where: string
-  sent: boolean
+  state: ItemState
   select: Selection
 }
 
@@ -35,21 +36,21 @@ function yoursRows(board: Board, layer: Layer): YoursRow[] {
   const rows: YoursRow[] = []
   for (const n of layer.notes) {
     const select: Selection = n.target.type === 'board' ? { type: 'board' } : { type: n.target.type, id: n.target.id }
-    rows.push({ key: n.id, icon: n.kind === 'note' ? StickyNote : CircleHelp, text: n.text, where: targetName(board, n.target), sent: wasSent(layer, n), select })
+    rows.push({ key: n.id, icon: n.kind === 'note' ? StickyNote : CircleHelp, text: n.text, where: targetName(board, n.target), state: itemState(board, layer, { type: 'note', item: n }), select })
   }
   for (const l of layer.links) {
-    rows.push({ key: l.id, icon: Link2, text: l.label || 'Link', where: `${name(l.from)} to ${name(l.to)}`, sent: wasSent(layer, l), select: { type: 'link', id: l.id } })
+    rows.push({ key: l.id, icon: Link2, text: l.label || 'Link', where: `${name(l.from)} to ${name(l.to)}`, state: itemState(board, layer, { type: 'link', item: l }), select: { type: 'link', id: l.id } })
   }
   for (const p of layer.proposals) {
-    rows.push({ key: p.id, icon: SquarePlus, text: p.label, where: 'New part', sent: wasSent(layer, p), select: { type: 'proposal', id: p.id } })
+    rows.push({ key: p.id, icon: SquarePlus, text: p.label, where: 'New part', state: itemState(board, layer, { type: 'proposal', item: p }), select: { type: 'proposal', id: p.id } })
   }
   for (const m of layer.marks) {
     const text = m.kind === 'text' || m.kind === 'sticky' ? m.text || MARK_WORD[m.kind] : (m.note ?? MARK_WORD[m.kind])
-    rows.push({ key: m.id, icon: Shapes, text, where: MARK_WORD[m.kind], sent: wasSent(layer, m), select: { type: 'mark', id: m.id } })
+    rows.push({ key: m.id, icon: Shapes, text, where: MARK_WORD[m.kind], state: itemState(board, layer, { type: 'mark', item: m }), select: { type: 'mark', id: m.id } })
   }
   for (const e of layer.reconnects) {
     const r = board.relationships.find((x) => x.id === e.relationshipId)
-    if (r) rows.push({ key: e.id, icon: Spline, text: r.label, where: 'Moved connection', sent: wasSent(layer, e), select: { type: 'relationship', id: r.id } })
+    if (r) rows.push({ key: e.id, icon: Spline, text: r.label, where: 'Moved connection', state: itemState(board, layer, { type: 'reconnect', item: e }), select: { type: 'relationship', id: r.id } })
   }
   return rows
 }
@@ -73,14 +74,11 @@ function Yours({ board, layer }: { board: Board; layer: Layer }) {
                   <span className={styles.rowTitle}>{row.text}</span>
                   {row.where !== row.text && <span className={styles.rowMeta}>{row.where}</span>}
                 </span>
-                {row.sent && (
-                  <Tip label="Sent">
-                    <span className={styles.rowEnd}>
-                      <Check size={14} strokeWidth={1.5} aria-hidden="true" />
-                      <span className="sr-only">Sent</span>
-                    </span>
-                  </Tip>
-                )}
+                <Tip label={STATE_WORD[row.state]}>
+                  <span className={styles.rowEnd}>
+                    <StatusGlyph state={row.state} />
+                  </span>
+                </Tip>
               </button>
             </li>
           )
