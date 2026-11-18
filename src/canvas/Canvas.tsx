@@ -470,9 +470,9 @@ export function Canvas() {
   const graph = useMemo(
     () =>
       board && rectsNow && geometryNow
-        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user)
+        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user, far)
         : undefined,
-    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, cache, pushed, user],
+    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, cache, pushed, user, far],
   )
 
   // What arrow ends attach to: every card, and every connection's drawn line, where the user's moved line wins.

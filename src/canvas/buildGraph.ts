@@ -493,6 +493,8 @@ export function assembleGraph(
   /** Cards a drop just pushed aside. They glide to their new place. */
   pushed?: ReadonlySet<string>,
   user: UserParts = NO_USER_PARTS,
+  /** The far view: the lines are out of the picture, so they leave the tab order. They stay in the page. */
+  far = false,
 ): { nodes: Node[]; edges: Edge[] } {
   const playing = highlight !== undefined && highlight.size > 0
   const names = new Map([...board.components.map((c) => [c.id, c.label] as const), ...user.proposals.map((p) => [p.id, p.label] as const)])
@@ -658,7 +660,7 @@ export function assembleGraph(
         sourceHandle: EDGE_OUT_HANDLE,
         targetHandle: EDGE_IN_HANDLE,
         selected,
-        focusable: true,
+        focusable: !far,
         deletable: false,
         hidden: shape.cheap === true,
         interactionWidth: 28,
@@ -700,7 +702,7 @@ export function assembleGraph(
         sourceHandle: EDGE_OUT_HANDLE,
         targetHandle: EDGE_IN_HANDLE,
         selected,
-        focusable: true,
+        focusable: !far,
         deletable: false,
         hidden: shape.cheap === true,
         interactionWidth: 28,

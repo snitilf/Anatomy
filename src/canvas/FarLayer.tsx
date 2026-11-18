@@ -38,7 +38,7 @@ export const FarLayer = memo(function FarLayer({
   const placed = useMemo(() => {
     const groupNames = groups.map((g) => groupNameRect(g.area, g.label, g.count, scale))
     const names = placeNames(tiles, [...obstacles, ...groupNames], scale)
-    const counts = placeCounts(bundles, [...groupNames, ...names.map((n) => n.box)], scale)
+    const counts = placeCounts(bundles, [...obstacles, ...groupNames, ...names.map((n) => n.box)], scale)
     return { names, counts }
   }, [groups, bundles, tiles, obstacles, scale])
   return (
