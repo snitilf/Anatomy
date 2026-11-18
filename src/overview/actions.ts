@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { Selection } from '../app/state'
 import { useAppDispatch, useAppStoreApi } from '../app/store'
 import { useUiApi } from '../app/ui'
+import { usePhone } from '../app/usePhone'
 import { showView } from '../app/viewActions'
 import { commandById } from '../commands/list'
 import { useCommands } from '../commands/context'
@@ -22,6 +23,7 @@ export function useOverviewActions(boardId: string): OverviewActions {
   const store = useAppStoreApi()
   const ui = useUiApi()
   const { run, context } = useCommands()
+  const phone = usePhone()
   return useMemo(() => {
     const leave = (row: string) => {
       overviewMemory(boardId).row = row
@@ -33,6 +35,8 @@ export function useOverviewActions(boardId: string): OverviewActions {
         dispatch({ type: 'select', selection })
         ui.setSidebarOpen(true)
         ui.setTab('details')
+        // On a phone the map's own framing keeps the selection above the sheet, so it is left to do that.
+        if (phone) return
         // After the map is in front and has drawn the selection.
         requestAnimationFrame(() => {
           if (store.getState().selection) run(commandById('zoom.selection'))
@@ -53,5 +57,5 @@ export function useOverviewActions(boardId: string): OverviewActions {
         context().shell.playWalkthrough(id)
       },
     }
-  }, [boardId, dispatch, store, ui, run, context])
+  }, [boardId, dispatch, store, ui, run, context, phone])
 }

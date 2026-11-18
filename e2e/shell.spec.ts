@@ -166,13 +166,20 @@ test.describe('on a phone', () => {
     // A part chosen from the list is shown on the map above the half-height sheet.
     await row.tap()
     await expect(sheet).toHaveAttribute('data-stop', '1')
-    const top = (await sheet.boundingBox())!.y
+    // Read until two reads in a row agree, so the settled view is judged and not a frame on the way.
+    let last = ''
+    let settled = { bottom: 0, top: 0 }
     await expect
       .poll(async () => {
         const card = (await page.locator('.react-flow__node-card.selected').first().boundingBox())!
-        return card.y + card.height <= top + 1
-      })
+        const now = { bottom: card.y + card.height, top: (await sheet.boundingBox())!.y }
+        const same = JSON.stringify(now) === last
+        last = JSON.stringify(now)
+        settled = now
+        return same
+      }, { intervals: [150] })
       .toBe(true)
+    expect(settled.bottom).toBeLessThanOrEqual(settled.top + 1)
   })
 
   test('a connection chosen from the command menu fits both ends above the sheet', async ({ page }) => {
