@@ -1,42 +1,20 @@
-/* Bottom center of the map, floating: the one surface on the map with a shadow. */
+/* Bottom center of the map, floating on the same surface as the zoom bar. */
 .bar {
+  composes: surface from '../app/float.module.css';
+  display: flex;
   position: absolute;
   z-index: 6;
   left: 50%;
-  bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  background: var(--raised);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  box-shadow: var(--shadow-float);
+  bottom: 12px;
   transform: translateX(-50%);
 }
 
 .button {
-  appearance: none;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg-2);
-  cursor: pointer;
+  composes: control from '../app/float.module.css';
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .button:hover {
-    background: var(--hover);
-    color: var(--fg);
-    transition:
-      background-color 120ms var(--ease-out),
-      color 120ms var(--ease-out);
-  }
+.button:active {
+  scale: 0.97;
 }
 
 /* The tool in use: the hover fill and full ink. It changes at once, with no transition. */
@@ -46,21 +24,40 @@
   transition: none;
 }
 
-.button:active {
-  scale: 0.97;
-}
-
-.button:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--focus);
-}
-
 .divider {
-  flex: none;
-  width: 1px;
-  height: 16px;
-  margin: 0 3px;
-  background: var(--border);
+  composes: divider from '../app/float.module.css';
+}
+
+/* The Shape button and its chevron: one control with two parts. */
+.split {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.split[data-active] {
+  background: var(--hover);
+}
+
+.split .button[aria-pressed='true'] {
+  background: transparent;
+}
+
+.more {
+  composes: control from '../app/float.module.css';
+  width: 16px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--fg-3);
+}
+
+.more::after {
+  inset-inline: 0;
+}
+
+.menuKey {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
 }
 
 /* A narrow map: the bar sits above the zoom bar, so neither covers the other. */
@@ -77,23 +74,27 @@
   }
 }
 
-.button {
-  position: relative;
-}
-
-.button::after {
-  content: '';
-  position: absolute;
-  inset: min(0px, calc((32px - var(--hit)) / 2));
-}
-
+/* A touch screen gets 44px tools that own their edges. The selectors are doubled to outrank the shared control. */
 @media (pointer: coarse) {
-  .button {
+  .bar .button {
     width: 44px;
     height: 44px;
   }
 
-  .button::after {
+  .bar .more {
+    width: 28px;
+    height: 44px;
+  }
+
+  .bar .button::after,
+  .bar .more::after {
     inset: 0;
+  }
+
+  /* The zoom bar is 52px high here, so a narrow map's tool bar clears it. */
+  @container map (max-width: 860px) {
+    .bar {
+      bottom: 70px;
+    }
   }
 }

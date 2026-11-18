@@ -168,12 +168,6 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
       }
     })
   })
-  if (board.components.length > LIMITS.componentsWarn) {
-    warnings.push({
-      path: 'components',
-      message: `This board has ${board.components.length} components. Maps over ${LIMITS.componentsWarn} are hard to read; consider splitting it.`,
-    })
-  }
   return warnings
 }
 

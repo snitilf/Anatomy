@@ -1,22 +1,17 @@
+/* The first-run hint floats on the same surface as the zoom bar and the tool dock. */
 .hint {
+  composes: surface from '../app/float.module.css';
+  display: flex;
   position: absolute;
   left: 50%;
-  /* Above the whiteboard tool bar, which holds the bottom middle of the map. */
-  bottom: 68px;
+  /* Above the whiteboard tool bar (12px up, 38px high, 8px gap), which holds the bottom middle of the map. */
+  bottom: 58px;
   z-index: 6;
-  display: flex;
-  align-items: center;
   gap: var(--space-1);
-  box-sizing: border-box;
   /* As wide as the words, up to the room between the line key and the zoom buttons. */
   width: max-content;
   max-width: calc(100% - 300px);
-  min-height: 32px;
-  padding: 0 4px 0 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--raised);
-  box-shadow: var(--shadow-float);
+  padding-left: var(--space-3);
   color: var(--fg-2);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
@@ -25,37 +20,27 @@
 }
 
 .close {
-  appearance: none;
+  composes: control from '../app/float.module.css';
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: var(--radius-xs);
-  background: none;
   color: var(--fg-3);
-  cursor: pointer;
-}
-
-.close:hover {
-  background: var(--hover);
-  color: var(--fg);
 }
 
 /* A narrow map lifts the tool bar above the zoom bar, so the hint goes higher too. */
 @container map (max-width: 860px) {
   .hint {
-    bottom: 108px;
+    bottom: 102px;
   }
 }
 
-.close {
-  position: relative;
-}
+/* Touch controls are 44px, so the dock is 52px high: the hint sits above it. */
+@media (pointer: coarse) {
+  .hint {
+    bottom: 72px;
+  }
 
-.close::after {
-  content: '';
-  position: absolute;
-  inset: min(0px, calc((24px - var(--hit)) / 2));
+  @container map (max-width: 860px) {
+    .hint {
+      bottom: 130px;
+    }
+  }
 }

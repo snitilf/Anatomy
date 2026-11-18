@@ -54,7 +54,7 @@ for (const board of BOARDS) {
     // The new place is saved and comes back after a reload.
     const moved = await cardTransform(page, first.id)
     expect(moved).not.toBe(before)
-    await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
+    await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
     await page.reload()
     await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
     expect(await cardTransform(page, first.id)).toBe(moved)

@@ -9,6 +9,10 @@
   cursor: default;
 }
 
+.line:empty {
+  padding: 0;
+}
+
 .failed {
   display: flex;
   align-items: center;

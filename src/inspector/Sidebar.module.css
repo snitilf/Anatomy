@@ -57,7 +57,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  height: 44px;
+  height: 40px;
 }
 
 .back {
@@ -66,7 +66,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: 32px;
+  height: 28px;
   margin-left: calc(var(--space-2) * -1);
   padding: 0 var(--space-2) 0 var(--space-1);
   border: 0;
@@ -81,7 +81,7 @@
 .back::after {
   content: '';
   position: absolute;
-  inset-block: min(0px, calc((32px - var(--hit)) / 2));
+  inset-block: min(0px, calc((28px - var(--hit)) / 2));
   inset-inline: 0;
 }
 

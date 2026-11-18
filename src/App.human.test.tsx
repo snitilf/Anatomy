@@ -121,9 +121,9 @@ function addNote(text: string, kind: 'Note' | 'Question' = 'Note') {
   fireEvent.click(panel().getByRole('button', { name: 'Add' }))
 }
 
-/** Waits for a confirmed write. The status reads Saved during a short write too, so the state is read, not the text. */
+/** Waits for a confirmed write. The status says nothing when saved, so the state is read, not the text. */
 async function saved() {
-  await waitFor(() => expect(document.querySelector('[role="status"][data-state="saved"]')).not.toBeNull(), { timeout: 3000 })
+  await waitFor(() => expect(document.querySelector('[data-save-state="saved"]')).not.toBeNull(), { timeout: 3000 })
 }
 
 async function openFile(container: HTMLElement, text: string, name = 'board.json') {

@@ -19,7 +19,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.getByText('Open a repository to see its anatomy.')).toBeVisible()
   await page.getByLabel('Board file').setInputFiles(BOARD_FILE)
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await expect(page.locator('[role="status"][data-state="saved"]')).toBeVisible()
+  await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
 
   // Inspect a part: its explanation and its source label.
   await inspector.getByRole('button', { name: partRow('Rule check') }).click()
@@ -68,7 +68,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await inspector.getByRole('textbox', { name: 'Add a note' }).fill(noteText)
   await inspector.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
-  await expect(page.locator('[role="status"][data-state="saved"]')).toBeVisible()
+  await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
 
   // Reload: the board and the note come back from this browser.
   await page.reload()
