@@ -248,7 +248,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
         )}
         {skippedLine}
         <div className={styles.foot}>
-          <p className={styles.line}>{inFolder ? 'Writes .anatomy/feedback.json and copies a prompt.' : 'Downloads feedback.json and copies a prompt.'}</p>
+          <p className={styles.line}>{inFolder ? 'Writes .anatomy/feedback.json and copies a prompt.' : 'Downloads feedback.json.'}</p>
           <button ref={sendRef} type="button" className={clsx(buttons.button, buttons.primary)} disabled={busy} onClick={() => send()}>
             {inFolder ? 'Send' : 'Download and copy'}
           </button>
