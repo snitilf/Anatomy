@@ -46,7 +46,7 @@ export interface Command {
   /** Hidden commands still answer their keys, but the menu does not list them. */
   visible?(ctx: CommandContext): boolean
   enabled?(ctx: CommandContext): boolean
-  /** Whether the command would do something now. The menu greys out a command that would not, while its keys are still taken. */
+  /** Whether the command would do anything now. The menu does not list one that would not, but its keys are still taken. */
   available?(ctx: CommandContext): boolean
   /** A check in the menu, such as the theme in use. */
   checked?(ctx: CommandContext): boolean

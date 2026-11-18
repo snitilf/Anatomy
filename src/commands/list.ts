@@ -558,4 +558,6 @@ export function boardCommands(c: CommandContext): Command[] {
 }
 
 export const isVisible = (command: Command, c: CommandContext) => command.visible?.(c) ?? true
+/** Whether the menu lists the command: it is visible, and it would do something. Its keys work either way. */
+export const isListed = (command: Command, c: CommandContext) => isVisible(command, c) && (command.available?.(c) ?? true)
 export const isEnabled = (command: Command, c: CommandContext) => isVisible(command, c) && (command.enabled?.(c) ?? true)

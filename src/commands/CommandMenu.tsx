@@ -1,9 +1,10 @@
 import { Command as Cmdk } from 'cmdk'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useAppStore } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import { formatKeys } from './keys'
-import { boardCommands, COMMANDS, isEnabled, isVisible } from './list'
+import { boardCommands, COMMANDS, isEnabled, isListed } from './list'
 import { useCommands } from './context'
 import styles from './CommandMenu.module.css'
 import { SELECTION_COMMANDS, selectionName } from './selectionSection'
@@ -18,7 +19,7 @@ function Row({ command, ctx, onRun, inContext = false }: { command: Command; ctx
       className={styles.item}
       value={command.id}
       keywords={[command.label, command.contextLabel ?? '', ...(command.keywords ?? [])]}
-      disabled={!isEnabled(command, ctx) || command.available?.(ctx) === false}
+      disabled={!isEnabled(command, ctx)}
       onSelect={() => onRun(command)}
     >
       <Icon className={styles.icon} size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -45,14 +46,16 @@ function filter(_value: string, search: string, keywords?: string[]): number {
 function MenuBody({ onClose }: { onClose: () => void }) {
   const { context, run } = useCommands()
   const [search, setSearch] = useState('')
-  // The menu reads the state once as it opens. What it runs reads it again.
-  const ctx = useMemo(() => context(), [context])
+  // The menu reads the state as it opens, and again when the selection or the layer changes under it, such as a command that was run a frame ago.
+  const selection = useAppStore((s) => s.selection)
+  const layer = useAppStore((s) => s.layer)
+  const ctx = useMemo(() => context(), [context, selection, layer])
   const all = useMemo(() => [...COMMANDS.filter((c) => !c.unlisted), ...boardCommands(ctx)], [ctx])
   const typing = search.trim() !== ''
   const name = selectionName(ctx)
   // What can be done with the selection comes first, once. The rest of the menu leaves those commands out.
-  const here = name === undefined ? [] : SELECTION_COMMANDS.flatMap((id) => all.filter((c) => c.id === id && isEnabled(c, ctx) && (c.available?.(ctx) ?? true)))
-  const shown = all.filter((c) => isVisible(c, ctx) && (typing || !c.searchOnly) && !(name !== undefined && (SELECTION_COMMANDS as readonly string[]).includes(c.id)))
+  const here = name === undefined ? [] : SELECTION_COMMANDS.flatMap((id) => all.filter((c) => c.id === id && isEnabled(c, ctx) && isListed(c, ctx)))
+  const shown = all.filter((c) => isListed(c, ctx) && (typing || !c.searchOnly) && !(name !== undefined && (SELECTION_COMMANDS as readonly string[]).includes(c.id)))
   const go = (command: Command) => {
     onClose()
     // After the dialog has given focus back, so a command that moves focus keeps it.
