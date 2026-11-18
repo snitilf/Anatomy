@@ -3,12 +3,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { LABEL_GROWTH } from './buildGraph'
 import { useAppStore } from '../app/store'
-import { useUi } from '../app/ui'
+import { useUi, useUiApi } from '../app/ui'
+import { hasRememberedView, writeHash } from '../app/view'
 import { usePhone } from '../app/usePhone'
 import type { Rect } from '../layout/geometry'
 import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
-import { farLabelScale, nextFar } from './far'
+import { FAR_ENTER, farLabelScale, nextFar } from './far'
 
 const STEP_MS = 220
 const RESIZE_MS = 150
@@ -100,6 +101,9 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
 export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean; rectOf: (id: string) => Rect | undefined }) {
   const camera = useCamera()
   const flow = useReactFlow()
+  const ui = useUiApi()
+  const phone = usePhone()
+  const boardId = useAppStore((s) => s.board?.id)
   const map = useStore((s) => s.domNode)
   const width = useStore((s) => s.width)
   const height = useStore((s) => s.height)
@@ -152,6 +156,14 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
     if (started.current || !map || width === 0 || height === 0) return
     started.current = true
     fit(false)
+    // On a phone, a board opened for the first time whose whole is in the far view opens on the Overview, which lists
+    // everything grouped. A view the reader has chosen before wins, and the Map tab still shows the far view.
+    if (phone && boardId !== undefined && stepKey === undefined && !hasRememberedView(boardId) && flow.getViewport().zoom < FAR_ENTER) {
+      ui.setViewState('overview')
+      writeHash('overview', false, boardId)
+    }
+    // Only the first frame decides.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, width, height, fit])
 
   useEffect(() => {

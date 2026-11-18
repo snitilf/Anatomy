@@ -76,6 +76,41 @@ export function arrowOf(pair: Pick<Pair, 'ab' | 'ba'>, points: readonly Point[])
   return { at: tip, angle: (Math.atan2(tip.y - from.y, tip.x - from.x) * 180) / Math.PI }
 }
 
+/** Arrowheads closer than this on screen, at the same side of the same block, read as a ladder. */
+export const ARROW_GAP_PX = 6
+
+/**
+ * The bundles whose arrowhead is drawn at this scale of the label (the board pixels one screen pixel takes). Where several
+ * bundles arrive at the same side of the same block and their heads would sit closer than `ARROW_GAP_PX` on screen,
+ * only the first of each run keeps its head, from the top or left; the others show their line and count without a
+ * direction. A bundle that is yours keeps its head. The result is worked out once per layout and per scale, not per frame.
+ */
+export function visibleArrows(bundles: readonly Bundle[], pixel: number): Set<string> {
+  const gap = ARROW_GAP_PX * pixel
+  const sides = new Map<string, { id: string; along: number; mine: boolean }[]>()
+  const shown = new Set<string>()
+  for (const b of bundles) {
+    if (!b.arrow) continue
+    const horizontal = Math.abs(Math.cos((b.arrow.angle * Math.PI) / 180)) > 0.5
+    const block = b.ab > 0 ? b.b : b.a
+    const key = `${block}:${Math.round(b.arrow.angle / 90) % 4}`
+    const list = sides.get(key) ?? []
+    list.push({ id: b.id, along: horizontal ? b.arrow.at.y : b.arrow.at.x, mine: Boolean(b.mine) })
+    sides.set(key, list)
+  }
+  for (const list of sides.values()) {
+    list.sort((p, q) => p.along - q.along)
+    let last = -Infinity
+    for (const item of list) {
+      if (item.mine || item.along - last >= gap) {
+        shown.add(item.id)
+        last = item.along
+      }
+    }
+  }
+  return shown
+}
+
 /**
  * The second step of bundling, after `bundleGroups`: one orthogonal line for each pair of blocks, drawn in the gaps
  * between them with the router of the map: the blocks are what the lines keep out of. Pairs go shortest first, then by

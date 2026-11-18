@@ -4,7 +4,7 @@ import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
 import { placeCards } from '../layout/cards'
 import { bundleGroups, clusterOf, connectionsOf, countPairs } from './bundles'
-import { arrowOf, blocksOf, bundleWidth, BUNDLE_MAX_WIDTH, computeBundles, roundedPath } from './bundleRoutes'
+import { arrowOf, type Bundle, visibleArrows, blocksOf, bundleWidth, BUNDLE_MAX_WIDTH, computeBundles, roundedPath } from './bundleRoutes'
 
 const sixty = (): Board => {
   const r = parseBoard(sixtyText)
@@ -148,5 +148,34 @@ describe('direction', () => {
 
   it('rounds corners without leaving the points', () => {
     expect(roundedPath(points)).toMatch(/^M0 0 L.* Q100 0 .* L100 50$/)
+  })
+})
+
+describe('arrowheads at a crowded edge', () => {
+  const bundle = (id: string, to: string, y: number, mine = false): Bundle => ({
+    id,
+    a: 'x',
+    b: to,
+    ab: 1,
+    ba: 0,
+    count: 1,
+    connectionIds: [],
+    mine,
+    d: '',
+    points: [],
+    width: 1.5,
+    arrow: { at: { x: 0, y }, angle: 0 },
+  })
+
+  it('keeps every head when they are far apart on screen, and one per run when they are not', () => {
+    const list = [bundle('a', 'g', 0), bundle('b', 'g', 10), bundle('c', 'g', 20), bundle('d', 'h', 5)]
+    expect([...visibleArrows(list, 1)].sort()).toEqual(['a', 'b', 'c', 'd'])
+    // At 12 board pixels per screen pixel, heads need 72 apart.
+    expect([...visibleArrows(list, 12)].sort()).toEqual(['a', 'd'])
+  })
+
+  it('keeps the head of a bundle that is yours', () => {
+    const list = [bundle('a', 'g', 0), bundle('b', 'g', 10, true)]
+    expect([...visibleArrows(list, 12)].sort()).toEqual(['a', 'b'])
   })
 })
