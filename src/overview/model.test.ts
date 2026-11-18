@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyLayer } from '../layer/model'
 import { allBoards, urlShortenerBoard } from '../layer/testBoards'
-import { bundleGroups } from './betweenGroups'
+import { bundleGroups } from '../canvas/bundles'
 import { innerConnections } from './innerConnections'
 import { changeCounts, changeLine, filterGroups, partGroups, responseLine } from './model'
 
@@ -77,15 +77,14 @@ describe('the Needs you lines', () => {
   })
 })
 
-describe('bundleGroups', () => {
-  it('counts the connections between two groups whichever way they run, busiest first, and leaves out those inside a group', () => {
-    for (const board of allBoards()) {
-      const bundles = bundleGroups(board, [], [])
-      const group = new Map(board.components.map((c) => [c.id, c.group]))
-      const between = board.relationships.filter((r) => group.get(r.from) !== group.get(r.to) || group.get(r.from) === undefined)
-      expect(bundles.reduce((n, b) => n + b.count, 0)).toBe(between.length)
-      expect(bundles.map((b) => b.count)).toEqual([...bundles.map((b) => b.count)].sort((a, b) => b - a))
-    }
+describe('the Connections rows', () => {
+  it('count a link to a part the user proposed as one more connection, between that part and its neighbour', () => {
+    const board = urlShortenerBoard()
+    const link = { id: 'link-abc123', from: 'part-abc123', to: board.components[0]!.id, label: '', createdAt: '2026-11-01T00:00:00.000Z' }
+    const proposals = [{ id: 'part-abc123' }]
+    const rows = [...innerConnections(board, [link], []), ...bundleGroups(board, [link], [], proposals)]
+    expect(rows.reduce((n, b) => n + b.count, 0)).toBe(board.relationships.length + 1)
+    expect(bundleGroups(board, [link], [], proposals).some((b) => b.a === 'part-abc123' || b.b === 'part-abc123')).toBe(true)
   })
 })
 

@@ -1,7 +1,15 @@
 import type { Board } from '../board/schema'
 import { endsOf } from '../inspector/flowRows'
 import type { Link, Reconnect } from '../layer/model'
-import type { Bundle } from './betweenGroups'
+
+/** A row of the Connections list: two ends, how many connections between them, and their IDs. */
+export interface Bundle {
+  a: string
+  b: string
+  count: number
+  connectionIds: string[]
+  mine: boolean
+}
 
 /**
  * The connections and links that stay inside one group, one entry per group that has any, in the order of the board's groups.

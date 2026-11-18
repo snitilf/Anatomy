@@ -6,8 +6,8 @@ import { endsOf } from '../inspector/flowRows'
 import { partName } from '../inspector/names'
 import type { Layer } from '../layer/model'
 import type { OverviewActions } from './actions'
-import { bundleGroups, type Bundle } from './betweenGroups'
-import { innerConnections } from './innerConnections'
+import { bundleGroups } from '../canvas/bundles'
+import { innerConnections, type Bundle } from './innerConnections'
 import { overviewMemory } from './memory'
 import styles from './Overview.module.css'
 
@@ -68,7 +68,11 @@ function Connections({ board, layer, bundle, actions }: { board: Board; layer: L
 export function BetweenSection({ board, layer, actions }: { board: Board; layer: Layer; actions: OverviewActions }) {
   const memory = overviewMemory(board.id)
   const [, redraw] = useState(0)
-  const bundles = useMemo(() => bundleGroups(board, layer.links, layer.reconnects), [board, layer.links, layer.reconnects])
+  // The busiest first. A part the user proposed is an end of its own.
+  const bundles = useMemo(
+    () => bundleGroups(board, layer.links, layer.reconnects, layer.proposals).sort((p, q) => q.count - p.count),
+    [board, layer.links, layer.reconnects, layer.proposals],
+  )
   const inner = useMemo(() => innerConnections(board, layer.links, layer.reconnects), [board, layer.links, layer.reconnects])
   if (bundles.length + inner.length === 0) return null
   const total = [...bundles, ...inner].reduce((n, b) => n + b.count, 0)
