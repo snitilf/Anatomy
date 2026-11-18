@@ -213,8 +213,19 @@ test('hovering the rows of a part on forty parts stays smooth, and the map rende
   const count = await rows.count()
   expect(count).toBeGreaterThan(0)
   const boxes = await Promise.all(Array.from({ length: count }, (_, i) => rows.nth(i).boundingBox()))
-  // Mark a card: a render of the map would replace it.
-  await page.evaluate(() => ((document.querySelector('.react-flow__node [data-card]') as unknown as { __kept?: boolean }).__kept = true))
+  // A render of the map would change its DOM. Hovering changes one style rule in the head and nothing inside the map.
+  await page.evaluate(() => {
+    const w = window as unknown as { __mutations: number; __rules: Set<string>; __watch: MutationObserver }
+    w.__mutations = 0
+    w.__rules = new Set()
+    w.__watch = new MutationObserver((records) => (w.__mutations += records.length))
+    w.__watch.observe(document.querySelector('.react-flow')!, { attributes: true, childList: true, characterData: true, subtree: true })
+    const sample = () => {
+      for (const sheet of document.querySelectorAll('style')) if (sheet.textContent?.includes('[data-card]')) w.__rules.add(sheet.textContent)
+      requestAnimationFrame(sample)
+    }
+    sample()
+  })
   await budget(page, 'hover rows, forty parts', async () => {
     for (let pass = 0; pass < 12; pass++) {
       for (const box of boxes) {
@@ -224,5 +235,11 @@ test('hovering the rows of a part on forty parts stays smooth, and the map rende
       }
     }
   })
-  expect(await page.evaluate(() => (document.querySelector('.react-flow__node [data-card]') as unknown as { __kept?: boolean }).__kept)).toBe(true)
+  const seen = await page.evaluate(() => {
+    const w = window as unknown as { __mutations: number; __rules: Set<string>; __watch: MutationObserver }
+    w.__mutations += w.__watch.takeRecords().length
+    return { mutations: w.__mutations, rules: w.__rules.size }
+  })
+  expect(seen.rules, 'a different spotlight rule for each row').toBeGreaterThan(1)
+  expect(seen.mutations, 'changes inside the map while hovering').toBe(0)
 })
