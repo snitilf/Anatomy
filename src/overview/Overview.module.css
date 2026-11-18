@@ -458,6 +458,17 @@
   color: var(--yours-text);
 }
 
+.groupLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupToggle .count {
+  flex: none;
+}
+
 .chevron {
   flex: none;
   color: var(--fg-3);

@@ -91,7 +91,7 @@ export function PartsSection({ groups, filter, setFilter, total, boardId, open }
             <h4 className={styles.groupHead}>
               <button type="button" className={styles.groupToggle} data-head={g.key} aria-expanded={!closed} onClick={() => toggle(g.key)}>
                 <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" />
-                <span>{g.label}</span>
+                <span className={styles.groupLabel}>{g.label}</span>
                 <span className={styles.count}>{g.rows.length}</span>
               </button>
             </h4>

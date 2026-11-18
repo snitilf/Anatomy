@@ -7,6 +7,7 @@ import type { Selection } from '../app/state'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { SIDEBAR, useUi, useUiApi } from '../app/ui'
 import { usePhone } from '../app/usePhone'
+import { showView } from '../app/viewActions'
 import { findItem } from '../layer/edits'
 import type { Layer, Target } from '../layer/model'
 import type { Board } from '../board/schema'
@@ -108,6 +109,7 @@ function Body({ header }: { header?: ReactNode }) {
         action: {
           label: 'Review',
           onClick: () => {
+            showView(ui, board.id, 'map')
             ui.setSidebarOpen(true)
             ui.setTab('review')
           },

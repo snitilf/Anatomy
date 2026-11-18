@@ -276,6 +276,7 @@ export const COMMANDS: readonly Command[] = [
     icon: Inbox,
     visible: (c) => reviewCounts(c.state.board, c.state.layer, c.state.changes).total > 0,
     run: (c) => {
+      showView(c.uiApi, c.state.board?.id, 'map')
       c.uiApi.setSidebarOpen(true)
       c.uiApi.setTab('review')
     },
