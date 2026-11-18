@@ -53,7 +53,7 @@ export const FarLayer = memo(function FarLayer({
           b.arrow ? (
             <div key={`arrow:${b.id}`} className={styles.arrow} data-bundle="" data-mine={b.mine || undefined} aria-hidden="true" style={{ left: b.arrow.at.x, top: b.arrow.at.y, '--angle': `${b.arrow.angle}deg` } as CSSProperties}>
               <svg width="10" height="10" viewBox="0 0 10 10">
-                <path d="M0 0 L-9 -4.5 L-9 4.5 Z" />
+                <path d="M0 0 L-7 -3.5 L-7 3.5 Z" />
               </svg>
             </div>
           ) : null,
