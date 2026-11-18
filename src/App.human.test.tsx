@@ -7,6 +7,7 @@ import { StorageError, openStore } from './workspace/db'
 import { placeCards } from './layout/cards'
 import { nordetBoard } from './layer/testBoards'
 import nordetRaw from './examples/nordet.board.json?raw'
+import { openConnection, openPart } from './test/openOnMap'
 import { press } from './test/press'
 
 // A test can make saving fail by setting this. The store itself stays the real one.
@@ -108,7 +109,7 @@ async function runCommand(name: string) {
 }
 
 function selectPart(id: string) {
-  fireEvent.click(panel().getAllByRole('button', { name: new RegExp(`^${part(id).label}`) })[0]!)
+  openPart(part(id).label)
   expect(panel().getByRole('heading', { name: part(id).label })).toBeInTheDocument()
 }
 
@@ -177,8 +178,7 @@ describe('your notes', () => {
     render(<App />)
     await loadNordet()
     const rel = nordet.relationships.find((r) => r.id === 'approval-to-send')!
-    fireEvent.click(panel().getByRole('button', { name: /^Connections/ }))
-    fireEvent.click(panel().getAllByRole('button', { name: new RegExp(rel.label) })[0]!)
+    await openConnection(rel.label)
     addNote('What if the version is stale?', 'Question')
     const item = panel().getByText('What if the version is stale?').closest('li')!
     expect(within(item).getByText(/^Question/)).toBeInTheDocument()
