@@ -45,8 +45,10 @@ describe('App', () => {
     const panel = within(screen.getByTestId('inspector'))
     expect(panel.getByRole('heading', { name: nordet.title })).toBeInTheDocument()
     expect(panel.getByText('Revision').closest('div')).toHaveTextContent('Revision1')
-    expect(panel.getByText('Covers')).toBeInTheDocument()
-    expect(panel.getByText('Does not cover')).toBeInTheDocument()
+    // Scope and open items live on the Overview page, not in the sidebar.
+    expect(panel.queryByText('Covers')).not.toBeInTheDocument()
+    expect(panel.queryByText('Open items')).not.toBeInTheDocument()
+    expect(panel.getByRole('region', { name: 'Walkthroughs' })).toBeInTheDocument()
     // The crumb names where the board came from.
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' })).toBeInTheDocument()
   })

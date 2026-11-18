@@ -8,7 +8,7 @@ import { useCommands } from '../commands/context'
 import type { Layer } from '../layer/model'
 import { wasSent } from '../layer/status'
 import { targetName } from '../notes/targets'
-import { Group, Heading, OpenItems, Prop, Props, ShortList } from './bits'
+import { Group, Heading, Prop, Props } from './bits'
 import { partName } from './names'
 import { NotesSection } from './notes'
 import { usePanel } from './panelContext'
@@ -130,7 +130,6 @@ function Walkthroughs({ board }: { board: Board }) {
 /** What the sidebar shows with nothing selected. The parts and connections are on the Overview page. */
 export function Overview({ board }: { board: Board }) {
   const { layer } = useAppStore(useShallow((s) => ({ layer: s.layer })))
-  const boardItems = board.items.filter((i) => i.about === undefined)
   const groups = board.groups.filter((g) => board.components.some((c) => c.group === g.id)).length
   return (
     <div className={styles.view}>
@@ -148,17 +147,6 @@ export function Overview({ board }: { board: Board }) {
       </Props>
       <Walkthroughs board={board} />
       {layer && <Yours board={board} layer={layer} />}
-      {board.scope.includes.length > 0 && (
-        <Group name="covers" title="Covers" defaultOpen={false}>
-          <ShortList items={board.scope.includes} />
-        </Group>
-      )}
-      {board.scope.excludes.length > 0 && (
-        <Group name="does-not-cover" title="Does not cover" defaultOpen={false}>
-          <ShortList items={board.scope.excludes} />
-        </Group>
-      )}
-      <OpenItems items={boardItems} />
       <NotesSection target={{ type: 'board' }} />
     </div>
   )

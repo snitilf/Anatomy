@@ -213,9 +213,9 @@ describe('your notes', () => {
   it('keeps C working after a group was opened with the keyboard', async () => {
     render(<App />)
     await loadNordet()
-    const toggle = panel().getByRole('button', { name: /^Covers/ })
+    const toggle = panel().getByRole('button', { name: /^Walkthroughs/ })
     fireEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
     toggle.focus()
     fireEvent.keyDown(toggle, { key: 'c' })
     await waitFor(() => expect(panel().getByRole('textbox', { name: 'Add a note' })).toHaveFocus())
