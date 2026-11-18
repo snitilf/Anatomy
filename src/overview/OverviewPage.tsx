@@ -85,7 +85,8 @@ export function OverviewPage() {
     const row = memory.row && [...el.querySelectorAll<HTMLElement>('[data-row]')].find((r) => r.dataset.row === memory.row)
     if (row) {
       row.focus({ preventScroll: true })
-      if (memory.reveal) row.scrollIntoView({ block: 'center' })
+      // Once the page has its final height, the sections and the fonts have settled, so the middle is the real middle.
+      if (memory.reveal) requestAnimationFrame(() => requestAnimationFrame(() => row.isConnected && row.scrollIntoView({ block: 'center' })))
     } else el.focus({ preventScroll: true })
     memory.reveal = false
     // Only when the page opens.

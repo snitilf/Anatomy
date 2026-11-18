@@ -67,6 +67,16 @@ test('Show on Overview opens the page at the part', async ({ page }) => {
   await menu(page).getByRole('option', { name: /^Show on Overview/ }).click()
   await expect(page.getByTestId('overview')).toBeVisible()
   await expect(page.getByTestId('overview').locator('[data-row="part:c-2"]')).toBeFocused()
+  // And it sits in the middle of the page, not at its edge.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const row = document.querySelector('[data-testid="overview"] [data-row="part:c-2"]')!.getBoundingClientRect()
+        const page = document.querySelector('[data-testid="overview"]')!.getBoundingClientRect()
+        return Math.abs(row.top + row.height / 2 - (page.top + page.height / 2))
+      }),
+    )
+    .toBeLessThan(80)
 })
 
 test('Copy name says it copied', async ({ page, context }) => {
