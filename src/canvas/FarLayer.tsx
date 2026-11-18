@@ -1,7 +1,7 @@
 import { useStore, ViewportPortal } from '@xyflow/react'
 import { memo, useMemo, type CSSProperties } from 'react'
 import type { Rect } from '../layout/geometry'
-import type { Bundle } from './bundleRoutes'
+import { visibleArrows, type Bundle } from './bundleRoutes'
 import { farLabelScale } from './far'
 import { groupNameRect, placeCounts } from './farLabels'
 import styles from './FarLayer.module.css'
@@ -35,6 +35,9 @@ export const FarLayer = memo(function FarLayer({
     const groupNames = groups.map((g) => groupNameRect(g.area, g.label, g.count, scale))
     return placeCounts(bundles, [...tiles, ...groupNames], scale)
   }, [groups, bundles, tiles, scale])
+  // Heads that would pile into a ladder at a block's edge are dropped. This follows the quantized scale, so it runs on a
+  // threshold crossing and never per frame.
+  const heads = useMemo(() => visibleArrows(bundles, scale), [bundles, scale])
   return (
     <ViewportPortal>
       <div className={styles.layer}>
@@ -44,7 +47,7 @@ export const FarLayer = memo(function FarLayer({
           ))}
         </svg>
         {bundles.map((b) =>
-          b.arrow ? (
+          b.arrow && heads.has(b.id) ? (
             <div key={`arrow:${b.id}`} className={styles.arrow} data-bundle="" data-mine={b.mine || undefined} aria-hidden="true" style={{ left: b.arrow.at.x, top: b.arrow.at.y, '--angle': `${b.arrow.angle}deg` } as CSSProperties}>
               <svg width="10" height="10" viewBox="0 0 10 10">
                 <path d="M0 0 L-7 -3.5 L-7 3.5 Z" />

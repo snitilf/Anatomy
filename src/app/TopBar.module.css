@@ -79,6 +79,8 @@
 .trail > .crumb {
   flex: 0 2 auto;
   max-width: 180px;
+  /* The folder never shows fewer than about seven letters: padding, the gap, the chevron, and seven letters of the name. The board and the group fold into the menu before the folder gives up more. */
+  min-width: 88px;
 }
 
 .segment {

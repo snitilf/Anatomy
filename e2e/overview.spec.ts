@@ -396,3 +396,24 @@ test('Connections shows the busiest 8 rows, folds the rest behind Show more, and
   const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
   expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
 })
+
+test.describe('first open on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
+
+  test('a board whose whole is in the far view opens on the Overview, one that is not opens on the Map', async ({ page }) => {
+    await page.goto('/')
+    await page.getByLabel('Board file').setInputFiles('e2e/fixtures/sixty-parts.board.json')
+    await expect(page.getByTestId('overview')).toBeVisible()
+    await expect(tab(page, 'Overview')).toHaveAttribute('aria-selected', 'true')
+    // The Map tab still shows the far view.
+    await tab(page, 'Map').click()
+    await expect(page.getByTestId('overview')).toHaveCount(0)
+    await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  })
+
+  test('a board that reads whole on the map opens on the Map', async ({ page }) => {
+    await open(page, NORDET)
+    await expect(tab(page, 'Map')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByTestId('overview')).toHaveCount(0)
+  })
+})

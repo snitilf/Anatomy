@@ -27,6 +27,11 @@ export function rememberedView(boardId: string): View {
   return readAll()[boardId] ?? 'map'
 }
 
+/** Whether this browser has a view on record for the board, which is so once the reader has chosen one. */
+export function hasRememberedView(boardId: string): boolean {
+  return boardId in readAll()
+}
+
 export function rememberView(boardId: string, view: View): void {
   try {
     window.localStorage.setItem(KEY, JSON.stringify({ ...readAll(), [boardId]: view }))
