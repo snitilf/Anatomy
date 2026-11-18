@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { editsText, formatKeys, isSingleKey, matches, TOOL_KEYS } from './keys'
+import { editsText, formatKeys, isSingleKey, matches, sequenceOf, TOOL_KEYS } from './keys'
 import { COMMANDS } from './list'
 
 const press = (key: string, mods: { meta?: boolean; ctrl?: boolean; shift?: boolean; alt?: boolean } = {}, code = '') => ({
@@ -65,5 +65,17 @@ describe('the command list', () => {
       expect(used.filter((k) => isSingleKey(k) && matches(k, press(key.toLowerCase())))).toEqual([])
       expect(COMMANDS.filter((c) => c.id.startsWith('tool.') && c.keys?.includes(key))).toHaveLength(1)
     }
+  })
+})
+
+describe('sequences', () => {
+  it('reads two keys typed one after the other', () => {
+    expect(sequenceOf('G O')).toEqual(['G', 'O'])
+    expect(sequenceOf('Mod+K')).toBeUndefined()
+    expect(sequenceOf(']')).toBeUndefined()
+  })
+
+  it('never matches a single key event, so the second key stays free for tools', () => {
+    expect(matches('G O', { key: 'o', code: 'KeyO', metaKey: false, ctrlKey: false, shiftKey: false, altKey: false })).toBe(false)
   })
 })

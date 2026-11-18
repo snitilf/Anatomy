@@ -11,7 +11,9 @@ import {
   FolderOpen,
   Hand,
   Inbox,
+  LayoutList,
   Link2,
+  Map as MapIcon,
   Maximize,
   Minus,
   Monitor,
@@ -37,6 +39,7 @@ import {
   X,
 } from 'lucide-react'
 import { EXAMPLES } from '../app/examples'
+import { showView } from '../app/viewActions'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
@@ -46,6 +49,8 @@ import type { Command, CommandContext } from './types'
 
 const hasBoard = (c: CommandContext) => c.state.board !== undefined
 const playing = (c: CommandContext) => c.state.scenario !== undefined
+/** The map is the view in front: the Overview page covers it and takes its own keys. */
+const onMap = (c: CommandContext) => c.ui.view === 'map'
 const selected = (c: CommandContext) => (c.state.selection && c.state.selection.type !== 'board' ? c.state.selection : undefined)
 
 /** Selected things the user made, which the user may delete. The agent's parts and connections are not among them. */
@@ -101,7 +106,7 @@ const tool = (id: Tool, label: string, icon: Command['icon'], key: string, keywo
   icon,
   keys: [key],
   keywords: ['whiteboard', 'draw', ...keywords],
-  visible: (c) => hasBoard(c) && !playing(c),
+  visible: (c) => hasBoard(c) && !playing(c) && onMap(c),
   checked: (c) => c.ui.tool === id,
   run: (c) => {
     c.uiApi.setEditing(undefined)
@@ -219,12 +224,32 @@ export const COMMANDS: readonly Command[] = [
   {
     id: 'goto.overview',
     group: 'Go to',
-    label: 'Overview',
+    label: 'Board',
     icon: ArrowLeft,
     keys: ['Escape'],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     enabled: (c) => !playing(c) && selected(c) !== undefined,
     run: (c) => c.shell.toOverview(),
+  },
+  {
+    id: 'view.overview',
+    group: 'Go to',
+    label: 'Go to Overview',
+    icon: LayoutList,
+    keys: ['G O'],
+    keywords: ['parts', 'list', 'page'],
+    visible: (c) => hasBoard(c) && !playing(c) && c.ui.view !== 'overview',
+    run: (c) => showView(c.uiApi, c.state.board?.id, 'overview'),
+  },
+  {
+    id: 'view.map',
+    group: 'Go to',
+    label: 'Go to Map',
+    icon: MapIcon,
+    keys: ['G M'],
+    keywords: ['canvas', 'board'],
+    visible: (c) => hasBoard(c) && c.ui.view !== 'map',
+    run: (c) => showView(c.uiApi, c.state.board?.id, 'map'),
   },
   {
     id: 'goto.review',
@@ -286,7 +311,7 @@ export const COMMANDS: readonly Command[] = [
     keys: ['L'],
     visible: (c) => {
       const s = selected(c)
-      return s?.type === 'component' || s?.type === 'proposal'
+      return onMap(c) && (s?.type === 'component' || s?.type === 'proposal')
     },
     run: (c) => {
       c.uiApi.setSidebarOpen(true)
@@ -300,7 +325,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Delete',
     icon: Trash2,
     keys: ['Backspace', 'Delete'],
-    visible: (c) => deletable(c) !== undefined,
+    visible: (c) => onMap(c) && deletable(c) !== undefined,
     run: (c) => {
       const s = deletable(c)
       if (!s) return
@@ -317,7 +342,7 @@ export const COMMANDS: readonly Command[] = [
     icon: PanelRight,
     keys: [']'],
     keywords: ['panel', 'details'],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     run: (c) => c.uiApi.toggleSidebar(),
   },
   {
@@ -326,7 +351,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Fit board',
     icon: Maximize,
     keys: ['Shift+Digit1'],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     run: (c) => c.camera?.zoom('fit'),
   },
   {
@@ -335,7 +360,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom to selection',
     icon: Scan,
     keys: ['Shift+Digit2'],
-    visible: (c) => selected(c) !== undefined,
+    visible: (c) => onMap(c) && selected(c) !== undefined,
     run: (c) => {
       const box = selectionBox(c)
       if (box) c.camera?.frame({ box, padding: 0.25, maxZoom: 1 })
@@ -347,7 +372,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom to 100%',
     icon: Search,
     keys: ['Shift+Digit0', 'Mod+0'],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     run: (c) => c.camera?.zoom('reset'),
   },
   {
@@ -356,7 +381,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom in',
     icon: Plus,
     keys: ['+', 'Mod+='],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     run: (c) => c.camera?.zoom('in'),
   },
   {
@@ -365,7 +390,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom out',
     icon: Minus,
     keys: ['-', 'Mod+-'],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     run: (c) => c.camera?.zoom('out'),
   },
   {
@@ -374,7 +399,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Line key',
     icon: Spline,
     keywords: ['legend'],
-    visible: hasBoard,
+    visible: (c) => hasBoard(c) && onMap(c),
     run: (c) => c.uiApi.setLineKeyOpen(true),
   },
   ...TOOLS,

@@ -49,7 +49,7 @@ const twin = (key: string) => (key === '=' ? '+' : key === '_' ? '-' : key)
 
 /** True when the event is this shortcut. */
 export function matches(keys: Keys, event: KeyEvent): boolean {
-  if (event.altKey) return false
+  if (event.altKey || sequenceOf(keys)) return false
   const combo = parse(keys)
   if (combo.ctrl) {
     if (!event.ctrlKey || event.metaKey) return false
@@ -60,8 +60,18 @@ export function matches(keys: Keys, event: KeyEvent): boolean {
   return twin(key) === twin(combo.key ?? '')
 }
 
+/**
+ * A sequence is two single keys typed one after the other, written with a space: `G O`.
+ * Returns the keys, or undefined for an ordinary shortcut.
+ */
+export function sequenceOf(keys: Keys): readonly [Keys, Keys] | undefined {
+  const parts = keys.split(' ')
+  return parts.length === 2 && parts[0] !== '' && parts[1] !== '' ? [parts[0] as Keys, parts[1] as Keys] : undefined
+}
+
 /** True for a shortcut with no Cmd or Ctrl, which must not fire while a field, a dialog, or a menu has focus. */
 export function isSingleKey(keys: Keys): boolean {
+  if (sequenceOf(keys)) return true
   const combo = parse(keys)
   return !combo.mod && !combo.ctrl
 }

@@ -32,7 +32,7 @@ function composerTarget(board: Board | undefined, layer: Layer | undefined, s: S
   return { type: 'board' }
 }
 
-const KIND_WORD = { board: 'Overview', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part' } as const
+const KIND_WORD = { board: 'Board', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part' } as const
 
 /** The view for the selection: the overview, a part, a connection, or something the user made. */
 function Details() {
@@ -138,10 +138,10 @@ function Body({ header }: { header?: ReactNode }) {
           {canBack ? (
             <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
               <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
-              Overview
+              Board
             </button>
           ) : (
-            <span className={styles.here}>{reviewing ? 'Review' : 'Overview'}</span>
+            <span className={styles.here}>{reviewing ? 'Review' : 'Board'}</span>
           )}
           {canBack && (
             <kbd className={styles.esc} aria-hidden="true">

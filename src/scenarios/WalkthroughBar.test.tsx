@@ -184,7 +184,7 @@ describe('Escape on the map', () => {
     const row = within(panel).getAllByRole('button', { name: /^Approval/ })[0]!
     row.focus()
     fireEvent.click(row)
-    const back = within(panel).getByRole('button', { name: 'Overview' })
+    const back = within(panel).getByRole('button', { name: 'Board' })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
     await waitFor(() => expect(within(panel).getByRole('heading', { name: /Nordet/ })).toBeInTheDocument())
@@ -199,7 +199,7 @@ describe('Escape on the map', () => {
     const row = within(panel).getAllByRole('button', { name: /^Approval/ })[0]!
     row.focus()
     fireEvent.click(row)
-    const back = within(panel).getByRole('button', { name: 'Overview' })
+    const back = within(panel).getByRole('button', { name: 'Board' })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
     await waitFor(() => expect(within(panel).getByRole('heading', { name: /Nordet/ })).toHaveFocus())

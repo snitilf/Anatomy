@@ -37,7 +37,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(inspector.getByText(/Rule check triggers Preview/)).toBeVisible()
 
   // Play a walkthrough.
-  await inspector.getByRole('button', { name: 'Overview' }).click()
+  await inspector.getByRole('button', { name: 'Board' }).click()
   await inspector.getByRole('button', { name: 'Play Approve and simulate' }).click()
   const player = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
   await expect(player.getByText('1 / 5')).toBeVisible()

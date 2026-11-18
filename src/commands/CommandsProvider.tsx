@@ -4,11 +4,14 @@ import { useUiApi } from '../app/ui'
 import { useWorkspace } from '../app/workspaceContext'
 import { CameraSlotContext } from '../canvas/cameraContext'
 import { CommandsContext } from './context'
-import { editsText, isSingleKey, matches } from './keys'
+import { editsText, isSingleKey, matches, sequenceOf } from './keys'
 import { COMMANDS, isEnabled } from './list'
 import type { Command, CommandContext, ShellActions } from './types'
 
 /** Focus in one of these keeps its own keys: Escape closes it, and letters type. */
+/** How long the first key of a sequence waits for the second. */
+const SEQUENCE_MS = 1200
+
 const OWN_KEYS = 'dialog, [role="dialog"], [role="menu"], [role="listbox"], [data-dismissible], [aria-expanded="true"][aria-haspopup]'
 
 /**
@@ -48,6 +51,9 @@ export function CommandsProvider({ shell, children }: { shell: ShellActions; chi
     [context],
   )
 
+  // The first key of a sequence such as G then O, and when it was typed.
+  const armed = useRef<{ key: string; at: number } | undefined>(undefined)
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return
@@ -55,6 +61,24 @@ export function CommandsProvider({ shell, children }: { shell: ShellActions; chi
       const inField = editsText(target)
       const inOwn = target instanceof Element && target.closest(OWN_KEYS) !== null
       const ctx = context()
+      const waiting = armed.current
+      armed.current = undefined
+      const plain = !event.metaKey && !event.ctrlKey && !event.altKey
+      if (plain && !inField && !inOwn && event.key.length === 1) {
+        const typed = event.key.toLowerCase()
+        if (waiting && Date.now() - waiting.at < SEQUENCE_MS) {
+          const second = COMMANDS.find((c) => c.keys?.some((k) => sequenceOf(k)?.[0].toLowerCase() === waiting.key && sequenceOf(k)?.[1].toLowerCase() === typed) && isEnabled(c, ctx))
+          if (second) {
+            event.preventDefault()
+            event.stopPropagation()
+            second.run(ctx)
+            return
+          }
+        } else if (!event.shiftKey && COMMANDS.some((c) => c.keys?.some((k) => sequenceOf(k)?.[0].toLowerCase() === typed) && isEnabled(c, ctx))) {
+          armed.current = { key: typed, at: Date.now() }
+          return
+        }
+      }
       for (const command of COMMANDS) {
         const keys = command.keys?.find((k) => matches(k, event))
         if (!keys) continue

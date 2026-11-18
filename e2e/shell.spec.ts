@@ -167,7 +167,7 @@ test.describe('on a phone', () => {
     await page.locator('.react-flow__node-card').first().click()
     await expect(sheet).toHaveAttribute('data-stop', '1')
     // Return to the overview, whose parts are rows.
-    await sheet.getByRole('button', { name: 'Overview' }).click()
+    await sheet.getByRole('button', { name: 'Board' }).click()
     const row = sheet.getByRole('button', { name: /^Approval/ }).first()
     expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     // A part chosen from the list is shown on the map above the half-height sheet.

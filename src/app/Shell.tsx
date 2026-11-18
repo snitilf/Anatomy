@@ -19,6 +19,8 @@ import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
 import { TipProvider } from './Tip'
 import { TopBar } from './TopBar'
 import { createUi, UiContext, useUi, useUiApi } from './ui'
+import { OverviewPage } from '../overview/OverviewPage'
+import { rememberedView, rememberView, viewFromHash, writeHash } from './view'
 import { useWorkspace } from './workspaceContext'
 
 /** Elements on the map that can hold keyboard focus. */
@@ -54,8 +56,36 @@ export function Shell() {
   )
 }
 
+/**
+ * Keeps the view and the address together. Back and forward change the view. A board opens on the view last used on it,
+ * or on the map the first time.
+ */
+function useViewSync(boardId: string | undefined) {
+  const ui = useUiApi()
+  const store = useAppStoreApi()
+  useEffect(() => {
+    const onPop = () => {
+      const view = viewFromHash(window.location.hash)
+      ui.setViewState(view)
+      const id = store.getState().board?.id
+      if (id) rememberView(id, view)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [ui, store])
+  useEffect(() => {
+    if (!boardId) return
+    const view = rememberedView(boardId)
+    writeHash(view, false)
+    ui.setViewState(view)
+  }, [boardId, ui])
+}
+
 function ShellBody() {
   const hasBoard = useAppStore((s) => s.board !== undefined)
+  const boardId = useAppStore((s) => s.board?.id)
+  const overview = useUi((u) => u.view) === 'overview' && hasBoard
+  useViewSync(boardId)
   const store = useAppStoreApi()
   const scenario = useAppStore((s) => s.scenario !== undefined)
   const dispatch = useAppDispatch()
@@ -198,6 +228,7 @@ function ShellBody() {
           data-empty={hasBoard ? undefined : ''}
           data-sidebar={hasBoard && sidebar.open ? '' : undefined}
           data-playing={scenario ? '' : undefined}
+          data-view={hasBoard ? (overview ? 'overview' : 'map') : undefined}
           style={{ '--sidebar-width': `${sidebar.width}px` } as CSSProperties}
           onFocus={onFocus}
         >
@@ -207,11 +238,14 @@ function ShellBody() {
             </div>
             {hasBoard ? (
               <>
-                <div className={styles.canvas}>
+                <div className={styles.canvas} inert={overview}>
                   <Canvas />
                   {scenario && <WalkthroughBar />}
                 </div>
-                <Sidebar />
+                <div className={styles.side} inert={overview}>
+                  <Sidebar />
+                </div>
+                {overview && <OverviewPage />}
               </>
             ) : (
               <EmptyState />

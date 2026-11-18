@@ -284,7 +284,7 @@ describe('saving', () => {
     addNote('Survives a reload')
     await addLink('Saved record')
     // Adding a link shows the link. The card must be selected again for the arrow keys to move it.
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     selectPart('approval')
 
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
@@ -354,7 +354,7 @@ describe('export and open', () => {
     selectPart('approval')
     addNote('Travels with the file')
     await addLink('Saved record')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     selectPart('approval')
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
@@ -414,10 +414,10 @@ describe('a new version of a board you already have', () => {
     await loadNordet()
     selectPart('preview')
     addNote('Check the wording')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     selectPart('fictional-clock')
     addNote('Where does the date come from?', 'Question')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     await saved()
 
     await openFile(first.container, modifiedNordet(), 'nordet.json')
@@ -459,7 +459,7 @@ describe('a new version of a board you already have', () => {
     await loadNordet()
     selectPart('fictional-clock')
     addNote('Orphan')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     await openFile(first.container, modifiedNordet(), 'nordet.json')
     fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
     fireEvent.click(await panel().findByRole('button', { name: 'Mark reviewed' }))

@@ -9,6 +9,7 @@ import { SendMenu } from './SendMenu'
 import { SettingsMenu } from './SettingsMenu'
 import { useAppStore } from './store'
 import { Tip } from './Tip'
+import { ViewTabs } from './ViewTabs'
 import styles from './TopBar.module.css'
 import { useUi } from './ui'
 import { useWorkspace } from './workspaceContext'
@@ -51,6 +52,7 @@ function Crumb() {
 export function TopBar() {
   const title = useAppStore((s) => s.board?.title)
   const open = useUi((u) => u.sidebar.open)
+  const view = useUi((u) => u.view)
   const undo = useCommand('undo')
   const redo = useCommand('redo')
   const menu = useCommand('menu')
@@ -67,6 +69,7 @@ export function TopBar() {
           <h1 className={styles.title} title={title}>
             {title}
           </h1>
+          <ViewTabs />
           <div className={styles.save}>
             <SaveStatus />
           </div>
@@ -94,7 +97,7 @@ export function TopBar() {
           <SendMenu className={styles.control} />
         </div>
         <div className={styles.group}>
-          {hasBoard && (
+          {hasBoard && view === 'map' && (
             <Tip label={open ? 'Hide sidebar' : 'Show sidebar'} keys={sidebar.shortcut}>
               <button
                 type="button"

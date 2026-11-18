@@ -33,6 +33,11 @@
   grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
 }
 
+/* The Overview page covers the panel, so the notices that float over the map reach across it too. */
+.main[data-view='overview'] .notices {
+  right: 12px;
+}
+
 /* Notices float over the top of the map. They never move the top bar or the map. */
 .notices {
   position: absolute;
@@ -55,6 +60,16 @@
   min-width: 0;
   min-height: 0;
   container: map / inline-size;
+}
+
+.canvas[inert],
+.side[inert] {
+  visibility: hidden;
+}
+
+/* The sidebar's own box is the grid item; this wrapper adds none. */
+.side {
+  display: contents;
 }
 
 .drop {
