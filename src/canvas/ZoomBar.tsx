@@ -42,10 +42,10 @@ export function ZoomBar() {
           <span className={styles.divider} aria-hidden="true" />
         </span>
         <ZoomButton view={fit} zoom="fit" />
+        <span className={styles.key}>
+          <LineKey />
+        </span>
       </div>
-      <span className={styles.key}>
-        <LineKey />
-      </span>
     </div>
   )
 }
