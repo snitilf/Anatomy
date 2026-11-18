@@ -341,6 +341,15 @@ test('a walkthrough step in the far view names the tiles it highlights', async (
   const tip = page.locator(`.react-flow__node[data-id="${ids[0]}"] [class*="tip"]`)
   await expect(tip).toBeVisible()
   await expect(page.locator(`.react-flow__node[data-id="${board.components[10]!.id}"] [class*="tip"]`)).toBeHidden()
+  // Every name stays inside the map, including the tile at its left edge.
+  await page.waitForTimeout(900)
+  const map = (await page.locator('.react-flow').boundingBox())!
+  for (const id of ids) {
+    const box = (await page.locator(`.react-flow__node[data-id="${id}"] [class*="tip"]`).boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(map.x - 1)
+    expect(box.x + box.width).toBeLessThanOrEqual(map.x + map.width + 1)
+    expect(box.y).toBeGreaterThanOrEqual(map.y - 1)
+  }
 })
 
 test('a part opened from the Overview is spotlit: the lines that do not touch it step back', async ({ page }) => {
