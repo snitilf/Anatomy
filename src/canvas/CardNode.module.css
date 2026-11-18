@@ -50,6 +50,138 @@
   opacity: 1;
 }
 
+/* A part is selected: the cards that do not touch it step far back. */
+.card[data-faded] {
+  opacity: var(--spot-card);
+}
+
+.card[data-faded]:hover {
+  opacity: 1;
+}
+
+/*
+ * The far view. A card is a quiet tile: no text, a filled surface, so the shape and density of a group read at a glance.
+ * The text stays in the page, only drawn at no opacity, so a screen reader and the node's own name are unchanged.
+ */
+:global([data-far]) .card {
+  background: var(--tile);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:global([data-far]) .card > *:not(.dot, .tileName) {
+  opacity: 0;
+}
+
+/* A tile wide enough on screen names its part, in one line at about 11px on screen, 6px in from the edge of the tile. */
+.tileName {
+  display: none;
+}
+
+:global([data-far]) .tileName {
+  display: block;
+  position: absolute;
+  left: calc(6px * var(--label-scale, 1));
+  right: calc(6px * var(--label-scale, 1));
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: calc(var(--text-xs) * var(--label-scale, 1));
+  line-height: calc(var(--leading-xs) * var(--label-scale, 1));
+  font-weight: var(--weight-medium);
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A tile tall and wide enough on screen wraps its name to two lines, at word breaks. */
+:global([data-far]) .tileName[data-lines='2'] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-align: center;
+}
+
+:global([data-far]) .card[data-yours] .tileName {
+  color: var(--yours-text);
+}
+
+:global([data-far]) .card[data-highlighted] .tileName,
+:global([data-far]) .card[data-selected] .tileName {
+  color: var(--on-accent);
+}
+
+:global([data-far]) .card:hover {
+  border-color: var(--fg-3);
+}
+
+:global([data-far]) .card[data-yours] {
+  background: color-mix(in srgb, var(--yours) 32%, var(--bg));
+}
+
+:global([data-far]) .card[data-highlighted],
+:global([data-far]) .card[data-selected] {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+/* The user's own work stays in view from far away: a part with notes or questions carries an amber dot. */
+.dot {
+  display: none;
+}
+
+:global([data-far]) .dot {
+  display: block;
+  position: absolute;
+  top: calc(5px * var(--label-scale, 1));
+  right: calc(5px * var(--label-scale, 1));
+  width: calc(8px * var(--label-scale, 1));
+  height: calc(8px * var(--label-scale, 1));
+  border-radius: 50%;
+  background: var(--yours);
+  box-shadow: 0 0 0 calc(1.5px * var(--label-scale, 1)) var(--raised);
+}
+
+/* The name of a part in the far view: on the tile under the pointer, and on the selected one. */
+.tip {
+  display: none;
+}
+
+:global([data-far]) :global(.react-flow__node:hover),
+:global([data-far]) :global(.react-flow__node.selected) {
+  z-index: 1300 !important;
+}
+
+:global([data-far]) :global(.react-flow__node:hover) .tip,
+:global([data-far]) :global(.react-flow__node.selected) .tip {
+  display: block;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px * var(--label-scale, 1));
+  transform: translateX(-50%) scale(var(--label-scale, 1));
+  transform-origin: 50% 100%;
+  width: max-content;
+  max-width: 240px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 :global(.react-flow__node:focus-visible) .card {
   border-color: var(--accent);
   box-shadow: var(--ring);

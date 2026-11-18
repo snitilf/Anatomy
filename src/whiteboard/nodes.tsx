@@ -1,4 +1,4 @@
-import { Handle, NodeResizeControl, Position, type Node, type NodeProps } from '@xyflow/react'
+import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProps } from '@xyflow/react'
 import { StickyNote } from 'lucide-react'
 import { memo, useLayoutEffect, useRef, useState } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
@@ -6,6 +6,7 @@ import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type MarkNodeData, type
 import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
+import { nameLines } from '../canvas/far'
 
 /** Whether the words run past the box they sit in, so the box can fade them out instead of cutting a line in half. */
 function useClipped(text: string) {
@@ -38,6 +39,7 @@ function Grip({ min, max }: { min: { width: number; height: number }; max: { wid
 
 /** A part the user proposed: a card in the user's color, linked and moved like any part. */
 export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeProps<Node<ProposalData>>) {
+  const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   return (
     <>
       <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={cards.handle} />
@@ -46,6 +48,12 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
         <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
       ))}
       <div className={cards.card} data-yours="" data-selected={selected || undefined}>
+        {data.far && data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
+        {lines > 0 && (
+          <div className={cards.tileName} data-lines={lines} aria-hidden="true">
+            {data.label}
+          </div>
+        )}
         <div className={cards.label}>{data.label}</div>
         {data.summary && (
           <p className={cards.summary} style={{ WebkitLineClamp: data.summaryLines }}>
@@ -61,6 +69,11 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
           </div>
         )}
       </div>
+      {data.far && (
+        <div className={cards.tip} aria-hidden="true">
+          {data.label}
+        </div>
+      )}
       <Grip min={CARD_MIN} max={CARD_MAX} />
     </>
   )
