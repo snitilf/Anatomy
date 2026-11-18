@@ -96,9 +96,29 @@ function firstOrigin(board: Board, layer: Parts, at: string): { part: string; vi
 }
 
 let trail: Trail | undefined
+/** The selection the last step is about to make, so the change that carries it is not mistaken for another one. */
+let expected: string | undefined
 
-/** The trail of the last step, for the commands. A step made some other way leaves it behind, because it names the part it ended at. */
+const keyOf = (selection: Selection | undefined) => (selection && selection.type !== 'board' ? `${selection.type}:${selection.id}` : '')
+
+/** The trail of the last step, for the commands. */
 export const currentTrail = (): Trail | undefined => trail
-export const rememberTrail = (next: Trail | undefined): void => {
-  trail = next
+
+/** Remembers a step. Call it just before the step's selection is made. */
+export function rememberStep(step: Step): void {
+  trail = step.trail
+  expected = keyOf(step.selection)
+}
+
+/**
+ * Tells the walk that the selection changed. The step that was just made keeps its trail.
+ * Any other change, a click, the menu, the Overview, an undo, clears it, so the next step starts fresh.
+ */
+export function noteSelection(selection: Selection | undefined): void {
+  if (expected !== undefined && keyOf(selection) === expected) {
+    expected = undefined
+    return
+  }
+  expected = undefined
+  trail = undefined
 }

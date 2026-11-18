@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Board } from '../board/schema'
 import { allBoards, clone, nordetBoard } from '../layer/testBoards'
 import { emptyLayer } from '../layer/model'
-import { neighbors, walkStep, type Trail } from './walk'
+import { currentTrail, neighbors, noteSelection, rememberStep, walkStep, type Trail } from './walk'
 
 /** A small board by hand: a feeds b and c, b feeds d, c feeds d, and d feeds nothing. */
 function diamond(): Board {
@@ -106,5 +106,27 @@ describe('walkStep', () => {
         }
       }
     }
+  })
+})
+
+describe('the trail', () => {
+  it('is kept for the step that made it, and cleared by any other change of selection', () => {
+    const board = diamond()
+    const step = walkStep(board, undefined, at('a'), undefined, 'target')!
+    rememberStep(step)
+    noteSelection(step.selection)
+    expect(currentTrail()).toEqual(step.trail)
+    noteSelection(at('c'))
+    expect(currentTrail()).toBeUndefined()
+  })
+
+  it('does not survive a click on another part and back to the same one', () => {
+    const board = diamond()
+    const step = walkStep(board, undefined, at('a'), undefined, 'target')!
+    rememberStep(step)
+    noteSelection(step.selection)
+    noteSelection(at('d'))
+    noteSelection(step.selection)
+    expect(currentTrail()).toBeUndefined()
   })
 })

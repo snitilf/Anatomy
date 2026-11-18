@@ -50,7 +50,7 @@ import { revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
 import { toast } from 'sonner'
-import { currentTrail, rememberTrail, walkStep, type Walk } from './walk'
+import { currentTrail, rememberStep, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
 import type { Rect } from '../layout/geometry'
 import type { Tool } from '../whiteboard/tools'
@@ -122,8 +122,8 @@ const walk = (move: Walk, id: string, label: string, icon: Command['icon'], key:
   run: (c) => {
     const step = c.state.board && walkStep(c.state.board, c.state.layer, c.state.selection, currentTrail(), move)
     if (!step) return
+    rememberStep(step)
     c.dispatch({ type: 'select', selection: step.selection })
-    rememberTrail(step.trail)
   },
 })
 
