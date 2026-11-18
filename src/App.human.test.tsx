@@ -7,6 +7,7 @@ import { StorageError, openStore } from './workspace/db'
 import { placeCards } from './layout/cards'
 import { exampleBoard } from './layer/testBoards'
 import exampleRaw from './examples/example.board.json?raw'
+import { openConnection, openPart } from './test/openOnMap'
 import { press } from './test/press'
 
 // A test can make saving fail by setting this. The store itself stays the real one.
@@ -108,7 +109,7 @@ async function runCommand(name: string) {
 }
 
 function selectPart(id: string) {
-  fireEvent.click(panel().getAllByRole('button', { name: new RegExp(`^${part(id).label}`) })[0]!)
+  openPart(part(id).label)
   expect(panel().getByRole('heading', { name: part(id).label })).toBeInTheDocument()
 }
 
@@ -177,8 +178,7 @@ describe('your notes', () => {
     render(<App />)
     await loadExample()
     const rel = example.relationships.find((r) => r.id === 'approval-to-send')!
-    fireEvent.click(panel().getByRole('button', { name: /^Connections/ }))
-    fireEvent.click(panel().getAllByRole('button', { name: new RegExp(rel.label) })[0]!)
+    await openConnection(rel.label)
     addNote('What if the version is stale?', 'Question')
     const item = panel().getByText('What if the version is stale?').closest('li')!
     expect(within(item).getByText(/^Question/)).toBeInTheDocument()
@@ -213,9 +213,9 @@ describe('your notes', () => {
   it('keeps C working after a group was opened with the keyboard', async () => {
     render(<App />)
     await loadExample()
-    const toggle = panel().getByRole('button', { name: /^Covers/ })
+    const toggle = panel().getByRole('button', { name: /^Walkthroughs/ })
     fireEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
     toggle.focus()
     fireEvent.keyDown(toggle, { key: 'c' })
     await waitFor(() => expect(panel().getByRole('textbox', { name: 'Add a note' })).toHaveFocus())
@@ -284,7 +284,7 @@ describe('saving', () => {
     addNote('Survives a reload')
     await addLink('Saved record')
     // Adding a link shows the link. The card must be selected again for the arrow keys to move it.
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     selectPart('approval')
 
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
@@ -354,7 +354,7 @@ describe('export and open', () => {
     selectPart('approval')
     addNote('Travels with the file')
     await addLink('Saved record')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     selectPart('approval')
     const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
@@ -414,10 +414,10 @@ describe('a new version of a board you already have', () => {
     await loadExample()
     selectPart('preview')
     addNote('Check the wording')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     selectPart('sample-clock')
     addNote('Where does the date come from?', 'Question')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     await saved()
 
     await openFile(first.container, modifiedExample(), 'example.json')
@@ -459,7 +459,7 @@ describe('a new version of a board you already have', () => {
     await loadExample()
     selectPart('sample-clock')
     addNote('Orphan')
-    fireEvent.click(panel().getByRole('button', { name: 'Overview' }))
+    fireEvent.click(panel().getByRole('button', { name: 'Board' }))
     await openFile(first.container, modifiedExample(), 'example.json')
     fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
     fireEvent.click(await panel().findByRole('button', { name: 'Mark reviewed' }))

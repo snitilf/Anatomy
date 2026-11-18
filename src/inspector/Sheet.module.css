@@ -82,3 +82,8 @@
   min-height: 24px;
   padding-bottom: 4px;
 }
+
+/* The Overview page covers the map and takes the sheet's place. */
+.sheet[inert] {
+  visibility: hidden;
+}

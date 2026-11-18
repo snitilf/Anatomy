@@ -36,12 +36,13 @@
   composes: divider from '../app/float.module.css';
 }
 
+.history,
 .steps,
 .key {
   display: contents;
 }
 
-/* Phone: the sheet covers the bottom of the map, so the bar sits above its lowest stop and shows only fit. */
+/* Phone: the sheet covers the bottom of the map, so the bar sits above its lowest stop and shows undo, redo, and fit. */
 @media (max-width: 760px) {
   .dock {
     left: 8px;

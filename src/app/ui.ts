@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 import { useStore, type StoreApi } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 import type { Editing, Tool } from '../whiteboard/tools'
+import { viewFromHash, type View } from './view'
 
 /**
  * The state of the screen around the board: the sidebar, the open menus and dialogs.
@@ -11,6 +12,8 @@ export interface UiState {
   sidebar: { open: boolean; width: number }
   /** Which sidebar groups the user opened or closed, by group name. A group that is not here follows its default. */
   groups: Record<string, boolean>
+  /** The map or the Overview page. The URL hash is its source; `useViewSync` keeps the two together. */
+  view: View
   tab: 'details' | 'review'
   menuOpen: boolean
   /** The Send to agent popover. */
@@ -77,6 +80,8 @@ export interface UiApi {
   setSidebarWidth(width: number, persist?: boolean): void
   setGroup(name: string, open: boolean): void
   setTab(tab: UiState['tab']): void
+  /** Only the state. The address is written by the shell. */
+  setViewState(view: View): void
   setMenuOpen(open: boolean): void
   setSendOpen(open: boolean): void
   setHowToOpen(open: boolean): void
@@ -93,6 +98,7 @@ export function createUi(): UiApi {
   const store = createStore<UiState>(() => ({
     sidebar: typeof window === 'undefined' ? { open: true, width: SIDEBAR.width } : readSidebar(),
     groups: typeof window === 'undefined' ? {} : readGroups(),
+    view: typeof window === 'undefined' ? 'map' : viewFromHash(window.location.hash),
     tab: 'details',
     menuOpen: false,
     sendOpen: false,
@@ -121,6 +127,7 @@ export function createUi(): UiApi {
       writeSidebar(store.getState().sidebar, store.getState().groups)
     },
     setTab: (tab) => store.setState({ tab }),
+    setViewState: (view) => store.setState({ view }),
     setMenuOpen: (menuOpen) => store.setState({ menuOpen }),
     setSendOpen: (sendOpen) => store.setState({ sendOpen }),
     setHowToOpen: (howToOpen) => store.setState({ howToOpen }),

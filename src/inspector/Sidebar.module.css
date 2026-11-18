@@ -221,3 +221,8 @@
 .scroll:has(+ div > form[data-active]) > .content {
   padding-bottom: calc(var(--space-6) + 72px);
 }
+
+/* The Overview page covers the map and takes the sidebar's place. */
+.panel[inert] {
+  visibility: hidden;
+}

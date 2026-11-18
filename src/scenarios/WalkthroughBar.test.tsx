@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import exampleRaw from '../examples/example.board.json?raw'
+import { openPart } from '../test/openOnMap'
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
@@ -144,7 +145,7 @@ describe('lessons in the sidebar', () => {
     await loadExample()
     const approval = example.components.find((c) => c.lesson)!
     const panel = screen.getByTestId('inspector')
-    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${approval.label}`) })[0]!)
+    openPart(approval.label)
     expect(within(panel).getByRole('heading', { name: 'Lesson' })).toBeInTheDocument()
     const open = within(panel).getByRole('button', { name: /^Approval gate/ })
     open.focus()
@@ -167,7 +168,7 @@ describe('lessons in the sidebar', () => {
     await loadExample()
     const plain = example.components.find((c) => !c.lesson)!
     const panel = screen.getByTestId('inspector')
-    fireEvent.click(within(panel).getAllByRole('button', { name: new RegExp(`^${plain.label}`) })[0]!)
+    openPart(plain.label)
     expect(within(panel).queryByRole('heading', { name: 'Lesson' })).not.toBeInTheDocument()
   })
 })
@@ -181,10 +182,8 @@ describe('Escape on the map', () => {
     card!.focus()
     fireEvent.focus(card!)
     const panel = screen.getByTestId('inspector')
-    const row = within(panel).getAllByRole('button', { name: /^Approval/ })[0]!
-    row.focus()
-    fireEvent.click(row)
-    const back = within(panel).getByRole('button', { name: 'Overview' })
+    openPart(/^Approval/)
+    const back = within(panel).getByRole('button', { name: 'Board' })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
     await waitFor(() => expect(within(panel).getByRole('heading', { name: /Example/ })).toBeInTheDocument())
@@ -196,10 +195,8 @@ describe('Escape on the map', () => {
     render(<App />)
     await loadExample()
     const panel = screen.getByTestId('inspector')
-    const row = within(panel).getAllByRole('button', { name: /^Approval/ })[0]!
-    row.focus()
-    fireEvent.click(row)
-    const back = within(panel).getByRole('button', { name: 'Overview' })
+    openPart(/^Approval/)
+    const back = within(panel).getByRole('button', { name: 'Board' })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
     await waitFor(() => expect(within(panel).getByRole('heading', { name: /Example/ })).toHaveFocus())

@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { open } from './helpers.ts'
+import { open, pickConnection } from './helpers.ts'
 
 const WORST = 'e2e/fixtures/worst-text.board.json'
 
@@ -34,20 +34,19 @@ for (const width of [1440, 390]) {
       expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
     })
 
-    test('rows of the overview end in an ellipsis instead of running past the sidebar', async ({ page }) => {
+    test('rows of the Overview page end in an ellipsis instead of running past the page', async ({ page }) => {
       await open(page, WORST)
-      if (width > 800) {
-        // Connections start closed. Opening them shows the longest names.
-        await page.getByTestId('inspector').getByRole('button', { name: /^Connections/ }).click()
-        await expect(page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first()).toBeVisible()
-      }
-      expect(await pastRight(page, '[data-testid="inspector"]')).toEqual([])
+      await page.getByRole('tab', { name: 'Overview' }).click()
+      const overview = page.getByTestId('overview')
+      // Open every pair under Between groups, so the longest names are on screen.
+      for (const pair of await overview.locator('[data-row^="between:"]').all()) await pair.click()
+      await expect(overview.locator('[data-row^="conn:"]').first()).toBeVisible()
+      expect(await pastRight(page, '[data-testid="overview"]')).toEqual([])
     })
 
     test('a connection between long-named parts keeps its Move end buttons inside the sidebar, with the full name on hover', async ({ page }) => {
       await open(page, WORST)
-      await page.locator('.react-flow__node-card[data-id="long-nospace"]').click({ force: true })
-      await page.getByTestId('inspector').getByRole('button', { name: /^approvedActionVersio/ }).first().click()
+      await pickConnection(page, 'approvedActionVersio')
       const from = page.getByTestId('inspector').getByRole('button', { name: 'From', exact: true })
       await expect(from).toBeVisible()
       await expect(from).toHaveAttribute('title', /^From: Authentication_/)

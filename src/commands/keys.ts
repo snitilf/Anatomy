@@ -49,7 +49,7 @@ const twin = (key: string) => (key === '=' ? '+' : key === '_' ? '-' : key)
 
 /** True when the event is this shortcut. */
 export function matches(keys: Keys, event: KeyEvent): boolean {
-  if (event.altKey) return false
+  if (event.altKey || sequenceOf(keys)) return false
   const combo = parse(keys)
   if (combo.ctrl) {
     if (!event.ctrlKey || event.metaKey) return false
@@ -60,8 +60,39 @@ export function matches(keys: Keys, event: KeyEvent): boolean {
   return twin(key) === twin(combo.key ?? '')
 }
 
+/**
+ * A sequence is two single keys typed one after the other, written with a space: `G O`.
+ * Returns the keys, or undefined for an ordinary shortcut.
+ */
+export function sequenceOf(keys: Keys): readonly [Keys, Keys] | undefined {
+  const parts = keys.split(' ')
+  return parts.length === 2 && parts[0] !== '' && parts[1] !== '' ? [parts[0] as Keys, parts[1] as Keys] : undefined
+}
+
+export type SequenceStep =
+  | { action: 'pass' }
+  | { action: 'arm'; key: string }
+  | { action: 'swallow' }
+  | { action: 'run'; sequence: readonly [Keys, Keys] }
+
+/**
+ * What a plain key does about key sequences. After the first key of one, the next key is always taken:
+ * it completes a sequence, or restarts one (G G), or does nothing. It never reaches a tool.
+ * `armed` is the first key while it still waits, lowercase. `typed` is the key now, lowercase.
+ */
+export function stepSequence(armed: string | undefined, typed: string, sequences: readonly (readonly [Keys, Keys])[]): SequenceStep {
+  const starts = (key: string) => sequences.some(([a]) => a.toLowerCase() === key)
+  if (armed !== undefined) {
+    const done = sequences.find(([a, b]) => a.toLowerCase() === armed && b.toLowerCase() === typed)
+    if (done) return { action: 'run', sequence: done }
+    return starts(typed) ? { action: 'arm', key: typed } : { action: 'swallow' }
+  }
+  return starts(typed) ? { action: 'arm', key: typed } : { action: 'pass' }
+}
+
 /** True for a shortcut with no Cmd or Ctrl, which must not fire while a field, a dialog, or a menu has focus. */
 export function isSingleKey(keys: Keys): boolean {
+  if (sequenceOf(keys)) return true
   const combo = parse(keys)
   return !combo.mod && !combo.ctrl
 }

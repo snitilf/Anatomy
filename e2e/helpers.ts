@@ -96,3 +96,23 @@ export const cardTransform = (page: Page, id: string) =>
   page.evaluate((cardId) => (document.querySelector<HTMLElement>(`.react-flow__node-card[data-id="${cardId}"]`)?.style.transform ?? ''), id)
 
 export const viewport = (page: Page) => page.evaluate(() => document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')
+
+/**
+ * Opens a part the way a person does now that the sidebar has no list: the Overview tab, then the part's row.
+ * The map comes back with the part selected and the sidebar on it.
+ */
+export async function pickPart(page: Page, id: string) {
+  const overview = page.getByTestId('overview')
+  if ((await overview.count()) === 0) await page.getByRole('tab', { name: 'Overview' }).click()
+  await overview.locator(`[data-row="part:${id}"]`).click()
+  await expect(overview).toHaveCount(0)
+}
+
+/** Opens a connection from the command menu, where it is listed as "label: from to to". */
+export async function pickConnection(page: Page, label: string) {
+  await page.keyboard.press('ControlOrMeta+k')
+  const menu = page.getByRole('dialog', { name: 'Command menu' })
+  await menu.getByRole('combobox').fill(label)
+  await menu.getByRole('option', { name: new RegExp(`^${label}`) }).first().click()
+  await expect(menu).toBeHidden()
+}

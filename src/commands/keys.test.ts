@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { editsText, formatKeys, isSingleKey, matches, TOOL_KEYS } from './keys'
+import { editsText, formatKeys, isSingleKey, matches, sequenceOf, stepSequence, TOOL_KEYS } from './keys'
 import { COMMANDS } from './list'
 
 const press = (key: string, mods: { meta?: boolean; ctrl?: boolean; shift?: boolean; alt?: boolean } = {}, code = '') => ({
@@ -65,5 +65,40 @@ describe('the command list', () => {
       expect(used.filter((k) => isSingleKey(k) && matches(k, press(key.toLowerCase())))).toEqual([])
       expect(COMMANDS.filter((c) => c.id.startsWith('tool.') && c.keys?.includes(key))).toHaveLength(1)
     }
+  })
+})
+
+describe('sequences', () => {
+  it('reads two keys typed one after the other', () => {
+    expect(sequenceOf('G O')).toEqual(['G', 'O'])
+    expect(sequenceOf('Mod+K')).toBeUndefined()
+    expect(sequenceOf(']')).toBeUndefined()
+  })
+
+  it('never matches a single key event, so the second key stays free for tools', () => {
+    expect(matches('G O', { key: 'o', code: 'KeyO', metaKey: false, ctrlKey: false, shiftKey: false, altKey: false })).toBe(false)
+  })
+})
+
+describe('stepSequence', () => {
+  const sequences = [['G', 'O'], ['G', 'M']] as const
+  it('arms on G and passes every other key by itself', () => {
+    expect(stepSequence(undefined, 'g', sequences)).toEqual({ action: 'arm', key: 'g' })
+    expect(stepSequence(undefined, 'r', sequences)).toEqual({ action: 'pass' })
+  })
+
+  it('runs the sequence that G then O or G then M completes', () => {
+    expect(stepSequence('g', 'o', sequences)).toEqual({ action: 'run', sequence: ['G', 'O'] })
+    expect(stepSequence('g', 'm', sequences)).toEqual({ action: 'run', sequence: ['G', 'M'] })
+  })
+
+  it('takes any other second key, so G then R never arms Rectangle and G then A never arms Arrow', () => {
+    expect(stepSequence('g', 'r', sequences)).toEqual({ action: 'swallow' })
+    expect(stepSequence('g', 'a', sequences)).toEqual({ action: 'swallow' })
+  })
+
+  it('lets a second G start the sequence again, so G G O works', () => {
+    expect(stepSequence('g', 'g', sequences)).toEqual({ action: 'arm', key: 'g' })
+    expect(stepSequence('g', 'o', sequences).action).toBe('run')
   })
 })
