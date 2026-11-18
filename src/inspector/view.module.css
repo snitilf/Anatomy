@@ -60,6 +60,15 @@
   text-wrap: pretty;
 }
 
+/* A quiet line under the property rows for a board with many parts. */
+.crowded {
+  margin: calc(var(--space-2) * -1) 0 var(--space-3);
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 .source {
   display: inline-flex;
   align-items: center;

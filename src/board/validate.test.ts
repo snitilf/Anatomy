@@ -238,10 +238,10 @@ describe('size', () => {
     return data
   }
 
-  it('accepts 16 components with a readability warning', () => {
+  it('accepts 16 components without a warning, because the sidebar says it', () => {
     const result = parse(withComponents(16))
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.warnings).toEqual([{ path: 'components', message: expect.stringMatching(/16 components/) }])
+    if (result.ok) expect(result.warnings).toEqual([])
   })
 
   it('rejects more than 60 components', () => {
