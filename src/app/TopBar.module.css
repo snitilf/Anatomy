@@ -309,6 +309,11 @@
 
   .viewsRoot {
     margin-inline: auto;
+    padding-left: 0;
+  }
+
+  .viewsRoot::before {
+    display: none;
   }
 
   .bar:has(.viewsRoot) .end {

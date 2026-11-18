@@ -34,7 +34,7 @@ test('folder mode: open the repository, move a card, reload, the place is kept, 
   expect(moved).not.toBe(start)
   await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
   // The crumb names the folder the board came from.
-  await expect(page.getByRole('banner').getByRole('button', { name: 'shortener' })).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('button', { name: 'shortener', exact: true })).toBeVisible()
   // A card the drop covered steps aside and is saved with it.
   await expect.poll(async () => Object.keys((await storedLayer(page))?.positions ?? {})).toContain(spot.id)
 
