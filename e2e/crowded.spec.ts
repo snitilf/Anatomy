@@ -145,14 +145,31 @@ test.describe('the far view of a crowded board', () => {
     expect(color).not.toBe('rgba(0, 0, 0, 0)')
   })
 
-  test('parts with no group are named under their tiles when there is room', async ({ page }) => {
-    await open(page, FORTY)
-    // The forty part board opens at about 0.3, where a tile is wide enough to hold a name.
-    const names = page.locator('[data-far-label]:not(button)').filter({ hasText: /Component/ })
-    expect(await names.count()).toBeGreaterThan(3)
-    const size = await names.first().evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize) * (el.getBoundingClientRect().height / (el as HTMLElement).offsetHeight))
-    expect(size).toBeGreaterThan(9)
-    expect(size).toBeLessThan(14)
+  test('a tile that is 64px or wider on screen names its part inside it, at about 11px, and a narrower one does not', async ({ page }) => {
+    await open(page, 'e2e/fixtures/sixteen-parts.board.json')
+    await expect(farOn(page)).toHaveCount(1)
+    const names = page.locator('.react-flow__node-card [class*="tileName"]')
+    expect(await names.count()).toBe(16)
+    const found = await names.evaluateAll((all) =>
+      all.map((el) => {
+        const card = el.closest('.react-flow__node-card')!.getBoundingClientRect()
+        const r = el.getBoundingClientRect()
+        const scale = r.height / (el as HTMLElement).offsetHeight
+        return { inside: r.left >= card.left && r.right <= card.right && r.top >= card.top && r.bottom <= card.bottom, px: Number.parseFloat(getComputedStyle(el).fontSize) * scale, lines: Math.round(r.height / (Number.parseFloat(getComputedStyle(el).lineHeight) * scale)), width: card.width }
+      }),
+    )
+    for (const n of found) {
+      expect(n.inside).toBe(true)
+      expect(n.px).toBeGreaterThan(9.5)
+      expect(n.px).toBeLessThan(13)
+      expect(n.lines).toBe(1)
+      expect(n.width).toBeGreaterThanOrEqual(64)
+    }
+    // Nothing sits outside a tile.
+    await expect(page.locator('[data-far-label]:not(button)').filter({ hasText: /Component/ })).toHaveCount(0)
+    await open(page, SIXTY)
+    await expect(farOn(page)).toHaveCount(1)
+    await expect(page.locator('.react-flow__node-card [class*="tileName"]')).toHaveCount(0)
   })
 })
 

@@ -2,6 +2,7 @@ import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProp
 import { GraduationCap, StickyNote } from 'lucide-react'
 import { memo } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
+import { NAMED_TILE_PX } from './far'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
@@ -13,6 +14,8 @@ const SIDES = Object.keys(SIDE_POSITION) as Side[]
 export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Node<CardData>>) {
   const mine = data.noteCount
   const small = useStore((s) => s.transform[2] < SUMMARY_ZOOM)
+  // A tile wide enough on screen carries the part's name in the far view. It renders on the crossing, not on every zoom.
+  const named = useStore((s) => s.transform[2] * data.width >= NAMED_TILE_PX)
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
     <>
@@ -30,6 +33,11 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
       >
         {mine > 0 && <span className={styles.dot} aria-hidden="true" />}
+        {named && (
+          <div className={styles.tileName} aria-hidden="true">
+            {data.label}
+          </div>
+        )}
         <div className={styles.label}>{data.label}</div>
         <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }} data-small={small || undefined}>
           {data.summary}

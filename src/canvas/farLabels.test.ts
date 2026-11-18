@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bundle } from './bundleRoutes'
-import { groupNameRect, placeCounts, placeNames } from './farLabels'
+import { groupNameRect, placeCounts } from './farLabels'
 
 const bundle = (id: string, count: number, points: { x: number; y: number }[]): Bundle => ({ id, a: 'a', b: 'b', count, ab: count, ba: 0, connectionIds: [], mine: false, d: '', points, width: 2 })
 const hit = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
@@ -32,26 +32,6 @@ describe('counts on bundled lines', () => {
   it('keeps two counts apart', () => {
     const at = placeCounts([bundle('x', 5, line), bundle('y', 5, line)], [], 4)
     expect(at.get('x')).not.toEqual(at.get('y'))
-  })
-})
-
-describe('names of tiles that have no group', () => {
-  const tile = { id: 't', label: 'Search', rect: { x: 0, y: 0, width: 240, height: 112 } }
-
-  it('names a tile wide enough on screen, under it', () => {
-    const [name] = placeNames([tile], [], 4)
-    expect(name?.box.y).toBeGreaterThan(112)
-  })
-
-  it('skips a tile under 48px wide on screen', () => {
-    expect(placeNames([tile], [], 6)).toEqual([])
-  })
-
-  it('goes over the tile when under it is taken, and is left out when both are', () => {
-    const under = { x: -50, y: 112, width: 400, height: 100 }
-    const over = { x: -50, y: -100, width: 400, height: 100 }
-    expect(placeNames([tile], [under], 4)[0]?.box.y).toBeLessThan(0)
-    expect(placeNames([tile], [under, over], 4)).toEqual([])
   })
 })
 

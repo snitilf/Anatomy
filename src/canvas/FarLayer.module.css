@@ -1,4 +1,6 @@
 .layer {
+  /* Above the real lines of a selection, so a line never runs across a name. */
+  z-index: 1250;
   position: absolute;
   top: 0;
   left: 0;
@@ -90,7 +92,8 @@
   padding: 0 2px;
   border: 0;
   border-radius: var(--radius-xs);
-  background: transparent;
+  /* A cutout in the color of the map, like the label of a line. */
+  background: var(--bg);
   color: var(--fg);
   font: inherit;
   font-size: var(--text-md);
@@ -124,38 +127,4 @@
   color: var(--fg-3);
   font-weight: var(--weight-regular);
   font-variant-numeric: tabular-nums;
-}
-
-/* A part with no group is named under its tile, smaller than a group, when the tile is wide enough to hold the name. */
-.tile {
-  position: absolute;
-  width: 0;
-  height: 0;
-}
-
-.tile span {
-  position: absolute;
-  left: 0;
-  display: block;
-  width: max-content;
-  padding: 0 4px;
-  border-radius: var(--radius-xs);
-  background: var(--bg);
-  color: var(--fg-2);
-  font-size: var(--text-xs);
-  line-height: var(--leading-sm);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transform: translateX(-50%) scale(var(--label-scale, 1));
-}
-
-.tile[data-below] span {
-  top: 0;
-  transform-origin: 50% 0;
-}
-
-.tile[data-above] span {
-  bottom: 0;
-  transform-origin: 50% 100%;
 }

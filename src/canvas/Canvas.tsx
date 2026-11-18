@@ -48,7 +48,6 @@ import { bundleGroups } from './bundles'
 import { computeBundles } from './bundleRoutes'
 import { GROUP_FRAME_ZOOM } from './far'
 import { FarLayer, type FarGroup } from './FarLayer'
-import type { NamedTile } from './farLabels'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -516,17 +515,7 @@ export function Canvas() {
         : [],
     [far, board, geometryNow],
   )
-  // The parts with no group and the proposed parts, which the far view names under their tiles when there is room.
-  const farTiles = useMemo<NamedTile[]>(() => {
-    if (!far || !board || !rectsNow) return []
-    const grouped = new Set(board.groups.map((g) => g.id))
-    const loose = board.components.filter((c) => c.group === undefined || !grouped.has(c.group)).map((c) => ({ id: c.id, label: c.label }))
-    return [...loose, ...(proposals ?? []).map((p) => ({ id: p.id, label: p.label }))].flatMap((t) => {
-      const rect = rectsNow[t.id]
-      return rect ? [{ ...t, rect }] : []
-    })
-  }, [far, board, rectsNow, proposals])
-  const farObstacles = useMemo<Rect[]>(() => (far && rectsNow ? [...Object.values(rectsNow), ...(geometryNow?.groups ?? [])] : []), [far, rectsNow, geometryNow])
+  const farTiles = useMemo<Rect[]>(() => (far && rectsNow ? Object.values(rectsNow) : []), [far, rectsNow])
   const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link')
   /** Frames a group, at a zoom where its cards show their text. */
   const pickGroup = useCallback(
@@ -1034,7 +1023,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <FarMode onChange={setFar} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} obstacles={farObstacles} onPick={pickGroup} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} onPick={pickGroup} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}

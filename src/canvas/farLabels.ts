@@ -1,5 +1,4 @@
 import type { Point, Rect } from '../layout/geometry'
-import { NAMED_TILE_PX } from './far'
 import type { Bundle } from './bundleRoutes'
 import { textWidth } from './textMeasure'
 
@@ -8,8 +7,6 @@ const NAME_LINE = 20
 const NAME_LIFT = 5
 const NAME_MAX = 260
 const CHIP_HEIGHT = 18
-const TILE_LINE = 16
-const TILE_GAP = 3
 
 const touches = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
@@ -17,48 +14,6 @@ const touches = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x
 export function groupNameRect(area: Rect, label: string, count: number, scale: number): Rect {
   const natural = Math.min(NAME_MAX, (textWidth(label, 'title') * 13) / 12 + 6 + String(count).length * 8 + 4)
   return { x: area.x, y: area.y - (NAME_LIFT + NAME_LINE) * scale, width: natural * scale, height: NAME_LINE * scale }
-}
-
-export interface NamedTile {
-  id: string
-  label: string
-  rect: Rect
-}
-
-export interface PlacedName {
-  id: string
-  /** The middle of the top edge of the name. */
-  at: Point
-  /** The most the name may take, in natural pixels. */
-  max: number
-  box: Rect
-}
-
-/**
- * Names for the parts that have no group, in the far view, where a tile has no text. A tile that is at least
- * `NAMED_TILE_PX` wide on screen is named under it, or over it when under is taken. A name with no free room is left out,
- * and the pointer shows it. `avoid` holds what a name keeps off: every other tile, the groups, and the group names.
- */
-export function placeNames(tiles: readonly NamedTile[], avoid: readonly Rect[], scale: number): PlacedName[] {
-  const taken: Rect[] = []
-  const out: PlacedName[] = []
-  for (const tile of [...tiles].sort((p, q) => (p.id < q.id ? -1 : 1))) {
-    if (tile.rect.width / scale < NAMED_TILE_PX) continue
-    const max = tile.rect.width / scale
-    const width = Math.min(max, textWidth(tile.label, 'label') + 8) * scale
-    const height = TILE_LINE * scale
-    const x = tile.rect.x + tile.rect.width / 2 - width / 2
-    const options = [tile.rect.y + tile.rect.height + TILE_GAP * scale, tile.rect.y - TILE_GAP * scale - height]
-    for (const y of options) {
-      const box = { x, y, width, height }
-      const free = !avoid.some((r) => r !== tile.rect && touches(box, r)) && !taken.some((r) => touches(box, r))
-      if (!free) continue
-      taken.push(box)
-      out.push({ id: tile.id, at: { x: tile.rect.x + tile.rect.width / 2, y: y === options[0] ? y : y + height }, max, box })
-      break
-    }
-  }
-  return out
 }
 
 /**

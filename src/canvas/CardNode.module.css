@@ -69,8 +69,38 @@
   box-shadow: none;
 }
 
-:global([data-far]) .card > *:not(.dot) {
+:global([data-far]) .card > *:not(.dot, .tileName) {
   opacity: 0;
+}
+
+/* A tile wide enough on screen names its part, in one line at about 11px on screen, 6px in from the edge of the tile. */
+.tileName {
+  display: none;
+}
+
+:global([data-far]) .tileName {
+  display: block;
+  position: absolute;
+  left: calc(6px * var(--label-scale, 1));
+  right: calc(6px * var(--label-scale, 1));
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: calc(var(--text-xs) * var(--label-scale, 1));
+  line-height: calc(var(--leading-xs) * var(--label-scale, 1));
+  font-weight: var(--weight-medium);
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:global([data-far]) .card[data-yours] .tileName {
+  color: var(--yours-text);
+}
+
+:global([data-far]) .card[data-highlighted] .tileName,
+:global([data-far]) .card[data-selected] .tileName {
+  color: var(--on-accent);
 }
 
 :global([data-far]) .card:hover {

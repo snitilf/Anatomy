@@ -27,5 +27,5 @@ export function farLabelScale(zoom: number): number {
 /** The zoom a group is framed at, at least, when it is picked in the far view: cards show their text there. */
 export const GROUP_FRAME_ZOOM = 0.8
 
-/** A tile at least this wide on screen is named under it in the far view. Narrower ones rely on the pointer. */
-export const NAMED_TILE_PX = 48
+/** A tile at least this wide on screen carries its part's name in the far view. Narrower ones rely on the pointer. */
+export const NAMED_TILE_PX = 64
