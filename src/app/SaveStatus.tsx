@@ -42,13 +42,10 @@ export function SaveStatus() {
       </div>
     )
   }
-  if (saving && slow) {
-    return (
-      <p className={styles.line} role="status" data-state="saving">
-        Saving
-      </p>
-    )
-  }
-  // Silent, but the state stays readable for tests and tools.
-  return <span hidden data-save-state={save.kind} />
+  // One live region that stays mounted, so a screen reader hears the text arrive. It is empty, and takes no room, until a save is slow.
+  return (
+    <p className={styles.line} role="status" data-save-state={save.kind}>
+      {saving && slow ? 'Saving' : ''}
+    </p>
+  )
 }

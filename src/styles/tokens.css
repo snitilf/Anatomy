@@ -42,7 +42,7 @@
   /* How much amber a sticky note takes from the card color. */
   --sticky-mix: 26%;
 
-  /* Text. Every text token passes 4.5 to 1 on every surface it sits on: canvas, shell and card, each with the hover or active fill and the accent, amber or danger tint, and the two together. */
+  /* Text. Every text token passes 4.5 to 1 on every surface it sits on: canvas, shell, frame and card, each with the hover or active fill and the accent, amber or danger tint, and the two together. */
   --fg: #1a1b23;
   --fg-2: #505361;
   --fg-3: #545665;

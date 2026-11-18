@@ -97,7 +97,7 @@
 }
 
 /* Saved says nothing, so the slot takes no room until a slow or failed save has something to say. */
-.save > :not([hidden]) {
+.save > :not([hidden], :empty) {
   margin-left: var(--space-3);
 }
 
