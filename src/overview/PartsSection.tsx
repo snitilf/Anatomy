@@ -1,6 +1,7 @@
-import { ChevronRight, CircleHelp, GraduationCap, MessageSquareReply, Search } from 'lucide-react'
+import { ChevronRight, CircleHelp, GraduationCap, Search } from 'lucide-react'
 import { useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { SourceNote } from '../app/SourceNote'
+import { StatusGlyph } from '../status/StatusGlyph'
 import { overviewMemory } from './memory'
 import { filterGroups, type PartFilter, type PartGroup, type PartRow } from './model'
 import styles from './Overview.module.css'
@@ -139,18 +140,11 @@ export function PartsSection({ groups, filter, setFilter, total, boardId, open }
                           )}
                         </span>
                         <span className={styles.slot} data-slot="notes" data-yours="">
-                          {r.notes > 0 && (
+                          {r.notes > 0 && r.state && (
                             <>
+                              <StatusGlyph state={r.state} />
                               <span className={styles.figure}>{r.notes}</span>
                               <span className="sr-only">{r.notes === 1 ? 'note of yours' : 'notes of yours'}</span>
-                            </>
-                          )}
-                        </span>
-                        <span className={styles.slot} data-slot="answer">
-                          {r.answered && (
-                            <>
-                              <MessageSquareReply size={14} strokeWidth={1.5} aria-hidden="true" />
-                              <span className="sr-only">Answered</span>
                             </>
                           )}
                         </span>

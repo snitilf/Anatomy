@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowRight, CircleCheck, CircleDashed, Unlink } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
@@ -10,7 +10,9 @@ import { itemsOf, type ArchiveEntry, type Item, type Layer, type Reconnect } fro
 import { summarizeLayer } from '../layer/status'
 import { adoptedNow, hasChanges, reviewCounts } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
-import { ANSWER, answerFor } from './answers'
+import { StatusGlyph, StatusWord } from '../status/StatusGlyph'
+import type { ItemState } from '../status/state'
+import { answerFor } from './answers'
 import { Group, SubHead } from './bits'
 import { partName } from './names'
 import { AgentAnswer, ItemAnswer, NoteBlock } from './notes'
@@ -48,17 +50,18 @@ function selectionOf(entry: Item): Selection {
   }
 }
 
-function ItemRow({ board, layer, entry, status, live = true }: { board: Board; layer: Layer; entry: Item; status?: keyof typeof ANSWER; live?: boolean }) {
+function ItemRow({ board, layer, entry, status, live = true }: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean }) {
   const { choose } = usePanel()
-  const answer = status ? ANSWER[status] : undefined
-  const Icon = answer?.icon
   const content = (
     <>
-      {Icon && <Icon className={styles.rowIcon} size={14} strokeWidth={1.5} aria-hidden="true" />}
       <span className={styles.rowMain}>
         <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
       </span>
-      {answer && <span className={styles.rowEnd}>{answer.label}</span>}
+      {status && (
+        <span className={styles.rowEnd}>
+          <StatusWord state={status} />
+        </span>
+      )}
     </>
   )
   if (!live) return <p className={styles.row}>{content}</p>
@@ -80,7 +83,6 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
   const from = reconnect.from ?? was.from
   const to = reconnect.to ?? was.to
   const landed = board.relationships.some((r) => r.from === from && r.to === to)
-  const Icon = landed ? CircleCheck : CircleDashed
   return (
     <div className={notes.state}>
       <p className={notes.route}>
@@ -92,7 +94,7 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
         {name(from)} to {name(to)}
       </p>
       <p className={notes.stateLine}>
-        <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+        {landed && <StatusGlyph state="adopted" withWord />}
         <span>{landed ? `On the board in revision ${board.revision}.` : 'Not on the board.'}</span>
       </p>
     </div>
@@ -201,7 +203,7 @@ function NeedsRelinking({ board, layer, previous }: { board: Board; layer: Layer
               </button>
               <div className={notes.state}>
                 <p className={notes.stateLine} data-tone="danger">
-                  <Unlink size={14} strokeWidth={1.5} aria-hidden="true" />
+                  <StatusGlyph state="relinking" withWord />
                   <span>{partName(was, link[missing]) ?? link[missing]} was removed.</span>
                 </p>
                 <div className={notes.stateActions}>

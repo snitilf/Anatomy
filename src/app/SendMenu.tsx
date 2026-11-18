@@ -8,6 +8,7 @@ import { useCommand } from '../commands/context'
 import { ariaShortcut } from '../commands/keys'
 import { buildFeedback, serializeFeedback, unsentCount, type FeedbackDraft } from '../feedback/build'
 import { summarize } from '../feedback/summary'
+import { StatusGlyph } from '../status/StatusGlyph'
 import { newId } from '../layer/edits'
 import { agentReadme, downloadedPrompt, keepReadme, SEND_PROMPT } from './agentReadme'
 import buttons from './buttons.module.css'
@@ -45,16 +46,6 @@ function PromptBox({ prompt }: { prompt: string }) {
         </button>
       </Tip>
     </div>
-  )
-}
-
-/** A check that draws itself once: the one moment of motion in the hand-off. */
-function DrawnCheck() {
-  return (
-    <svg className={styles.check} width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="8" cy="8" r="7" />
-      <path d="M5 8.2l2 2 4-4.4" />
-    </svg>
   )
 }
 
@@ -192,7 +183,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
     body = (
       <>
         <p ref={sentRef} className={styles.sentHead} role="status" tabIndex={-1}>
-          <DrawnCheck />
+          <StatusGlyph state="sent" size={16} withWord />
           {outcome.count === 1 ? 'Sent 1 item' : `Sent ${outcome.count} items`}
         </p>
         {outcome.downloaded ? <p className={styles.line}>Downloaded feedback.json.</p> : <p className={styles.path}>.anatomy/feedback.json</p>}
@@ -226,7 +217,10 @@ export function SendMenu({ className }: { className?: string | undefined }) {
         {lastSent && <PromptBox prompt={prompt} />}
         {again > 0 && (
           <div className={styles.foot}>
-            <p className={styles.line}>{again === 1 ? '1 item has no answer yet.' : `${again} items have no answer yet.`}</p>
+            <p className={styles.sentLine}>
+              <StatusGlyph state="sent" />
+              {again === 1 ? '1 item has no answer yet.' : `${again} items have no answer yet.`}
+            </p>
             <button type="button" className={clsx(buttons.button, buttons.small)} disabled={busy} onClick={() => send()}>
               {inFolder ? 'Send again' : 'Download again'}
             </button>
@@ -241,12 +235,20 @@ export function SendMenu({ className }: { className?: string | undefined }) {
         <ul className={styles.rows} aria-label="What goes">
           {rows.map((r) => (
             <li key={r.label} className={styles.row}>
-              <span>{r.label}</span>
+              <span className={styles.kind}>
+                <StatusGlyph state="unsent" />
+                {r.label}
+              </span>
               <span className={styles.count}>{r.count}</span>
             </li>
           ))}
         </ul>
-        {again > 0 && <p className={styles.line}>{again === 1 ? 'Includes 1 item sent before that has no answer yet.' : `Includes ${again} items sent before that have no answer yet.`}</p>}
+        {again > 0 && (
+          <p className={styles.sentLine}>
+            <StatusGlyph state="sent" />
+            {again === 1 ? 'Includes 1 item sent before that has no answer yet.' : `Includes ${again} items sent before that have no answer yet.`}
+          </p>
+        )}
         {skippedLine}
         <div className={styles.foot}>
           <p className={styles.line}>{inFolder ? 'Writes .anatomy/feedback.json and copies a prompt.' : 'Downloads feedback.json and copies a prompt.'}</p>

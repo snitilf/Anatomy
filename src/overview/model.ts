@@ -2,6 +2,7 @@ import type { Board, BoardComponent } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
 import { endsOf } from '../inspector/flowRows'
 import type { Layer } from '../layer/model'
+import { partStates, type ItemState } from '../status/state'
 
 export interface PartRow {
   id: string
@@ -13,8 +14,8 @@ export interface PartRow {
   open: number
   /** The user's notes on the part. */
   notes: number
-  /** The agent answered a note on the part. */
-  answered: boolean
+  /** Where the notes on the part stand in the round trip: the state that wins among them. Absent when it has none. */
+  state?: ItemState
   in: number
   out: number
   source: BoardComponent['source']['kind']
@@ -51,15 +52,13 @@ function degrees(board: Board, layer: Layer): Map<string, { in: number; out: num
 /** Every part as one row of the list, grouped in the board's order. Parts with no group come last under Other. */
 export function partGroups(board: Board, layer: Layer, lessons: ReadonlySet<string>): PartGroup[] {
   const flow = degrees(board, layer)
-  const answered = new Set(layer.answers.map((a) => a.id))
+  const states = partStates(board, layer)
   const open = new Map<string, number>()
   for (const i of board.items) if (i.about) open.set(i.about, (open.get(i.about) ?? 0) + 1)
   const notes = new Map<string, number>()
-  const answers = new Set<string>()
   for (const n of layer.notes) {
     if (n.target.type !== 'component') continue
     notes.set(n.target.id, (notes.get(n.target.id) ?? 0) + 1)
-    if (answered.has(n.id)) answers.add(n.target.id)
   }
   const row = (c: BoardComponent): PartRow => ({
     id: c.id,
@@ -69,7 +68,7 @@ export function partGroups(board: Board, layer: Layer, lessons: ReadonlySet<stri
     lesson: c.lesson !== undefined && lessons.has(c.lesson),
     open: open.get(c.id) ?? 0,
     notes: notes.get(c.id) ?? 0,
-    answered: answers.has(c.id),
+    ...(states.has(c.id) ? { state: states.get(c.id)! } : {}),
     in: flow.get(c.id)?.in ?? 0,
     out: flow.get(c.id)?.out ?? 0,
     source: c.source.kind,
@@ -86,7 +85,6 @@ export function partGroups(board: Board, layer: Layer, lessons: ReadonlySet<stri
     lesson: false,
     open: 0,
     notes: 0,
-    answered: false,
     in: flow.get(p.id)?.in ?? 0,
     out: flow.get(p.id)?.out ?? 0,
     source: 'user-stated',

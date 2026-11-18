@@ -322,11 +322,6 @@
   margin-right: calc(var(--space-2) * -1);
 }
 
-.yoursIcon {
-  flex: none;
-  color: var(--yours);
-}
-
 .yoursText {
   color: var(--yours-text);
 }
@@ -484,7 +479,7 @@
 /* A part row: name, a line of summary, then fixed slots so the figures line up down the list. */
 .part {
   display: grid;
-  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 14px 34px 24px 14px 76px 14px;
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 14px 34px 40px 76px 14px;
   column-gap: var(--space-2);
 }
 
@@ -560,7 +555,6 @@
 
   .slot[data-slot='lesson'],
   .slot[data-slot='open'],
-  .slot[data-slot='answer'],
   .slot[data-slot='source'] {
     display: none;
   }

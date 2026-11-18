@@ -258,10 +258,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.mine svg {
-  color: var(--yours);
-}
-
 .handle {
   opacity: 0;
   width: 1px;
