@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { ChevronDown, PanelRight, Search } from 'lucide-react'
-import { useCommand, type CommandView } from '../commands/context'
+import { useCommand } from '../commands/context'
 import { ariaShortcut } from '../commands/keys'
 import buttons from './buttons.module.css'
 import { OpenMenu } from './OpenMenu'
@@ -13,25 +13,6 @@ import { ViewTabs } from './ViewTabs'
 import styles from './TopBar.module.css'
 import { useUi } from './ui'
 import { useWorkspace } from './workspaceContext'
-
-/** An icon button that runs one command, with its name and shortcut as the tooltip. */
-function CommandIcon({ view, label = view.label, className }: { view: CommandView; label?: string; className?: string }) {
-  const Icon = view.command.icon
-  return (
-    <Tip label={label} keys={view.shortcut}>
-      <button
-        type="button"
-        className={clsx(buttons.button, buttons.quiet, buttons.icon, styles.control, styles.square, className)}
-        onClick={view.run}
-        disabled={!view.enabled}
-        aria-label={label}
-        aria-keyshortcuts={ariaShortcut(view.command.keys?.[0])}
-      >
-        <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
-      </button>
-    </Tip>
-  )
-}
 
 /** Where the board came from: the folder's name, a file, or an example. It opens the Open popover. */
 function Crumb() {
@@ -53,8 +34,6 @@ export function TopBar() {
   const title = useAppStore((s) => s.board?.title)
   const open = useUi((u) => u.sidebar.open)
   const view = useUi((u) => u.view)
-  const undo = useCommand('undo')
-  const redo = useCommand('redo')
   const menu = useCommand('menu')
   const sidebar = useCommand('sidebar.toggle')
   const hasBoard = title !== undefined
@@ -78,12 +57,6 @@ export function TopBar() {
         <h1 className={styles.wordmark}>Anatomy</h1>
       )}
       <div className={styles.end}>
-        {hasBoard && (
-          <div className={clsx(styles.group, styles.history)}>
-            <CommandIcon view={undo} />
-            <CommandIcon view={redo} />
-          </div>
-        )}
         <div className={styles.group}>
           <Tip label="Command menu" keys={menu.shortcut}>
             <button type="button" className={clsx(buttons.button, buttons.quiet, styles.control, styles.search)} onClick={menu.run} aria-label="Search" aria-description="Opens the command menu" aria-keyshortcuts={ariaShortcut(menu.command.keys?.[0])} aria-haspopup="dialog">

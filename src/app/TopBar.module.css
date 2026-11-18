@@ -145,7 +145,7 @@
   margin-left: var(--space-3);
 }
 
-/* Four groups, 16px apart: history, find, send, view. Inside a group the controls sit 4px apart. */
+/* Three groups, 16px apart: find, send, view. Inside a group the controls sit 4px apart. */
 .end {
   display: flex;
   align-items: center;
@@ -204,7 +204,7 @@
   color: var(--fg);
 }
 
-/* Phone: the title, search, and settings. Undo, redo, the crumb, Saved, and the sidebar toggle step aside. */
+/* Phone: the tabs, search, send, and settings. The crumb, Saved, and the sidebar toggle step aside. */
 @media (max-width: 760px) {
   .bar {
     padding: 0 var(--space-2);
@@ -216,7 +216,6 @@
 
   .crumb,
   .slash,
-  .history,
   .toggle,
   .keys {
     display: none;

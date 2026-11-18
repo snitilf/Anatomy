@@ -1,11 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
+import { pickConnection, pickPart } from './helpers.ts'
 
 const BOARD_FILE = 'src/examples/nordet.board.json'
 const BOARD_TITLE = 'Nordet: follow-up on an overdue invoice'
-
-// A part row in the overview reads "Label Group". Connection rows read "Label to Other".
-const partRow = (label: string) => new RegExp(`^${label}(?!\\w| to )`)
 
 test('open, inspect, walk through, learn, take a note, reload, export, and open the export in a fresh browser', async ({ page }, testInfo) => {
   const requests: string[] = []
@@ -22,7 +20,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
 
   // Inspect a part: its explanation and its source label.
-  await inspector.getByRole('button', { name: partRow('Rule check') }).click()
+  await pickPart(page, 'rule-check')
   await expect(inspector.getByRole('heading', { name: 'Rule check', level: 2 })).toBeVisible()
   // The explanation is open, held to a height with a button for the rest.
   const more = inspector.getByRole('button', { name: 'Show more' })
@@ -32,7 +30,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(inspector.locator('[data-source]')).toHaveCount(0)
 
   // Inspect a connection: its kind in plain English.
-  await inspector.getByRole('button', { name: 'proposes an action' }).click()
+  await pickConnection(page, 'proposes an action')
   await expect(inspector.getByRole('heading', { name: 'proposes an action', level: 2 })).toBeVisible()
   await expect(inspector.getByText(/Rule check triggers Preview/)).toBeVisible()
 
@@ -48,7 +46,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(player).toBeHidden()
 
   // Open the lesson from the Approval part. A second send of the same approved version is blocked.
-  await inspector.getByRole('button', { name: partRow('Approval') }).click()
+  await pickPart(page, 'approval')
   await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
   await expect(inspector.getByText('From a written plan')).toBeVisible()
   await inspector.getByRole('button', { name: /^Approval gate/ }).click()
@@ -73,7 +71,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   // Reload: the board and the note come back from this browser.
   await page.reload()
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await inspector.getByRole('button', { name: partRow('Approval') }).click()
+  await pickPart(page, 'approval')
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
 
   // Download a copy from the command menu.
@@ -95,7 +93,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.getByRole('heading', { name: BOARD_TITLE })).toHaveCount(0)
   await page.getByLabel('Board file').setInputFiles(exportPath)
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await inspector.getByRole('button', { name: partRow('Approval') }).click()
+  await pickPart(page, 'approval')
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
 
   // No request left this machine.

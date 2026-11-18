@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { grabbable, open, viewport } from './helpers.ts'
+import { grabbable, open, pickConnection, pickPart, viewport } from './helpers.ts'
 
 const NORDET = 'src/examples/nordet.board.json'
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
@@ -100,15 +100,14 @@ test('the map hint can be closed with its button', async ({ page }) => {
 test('selecting a part softens the other lines, and a selected connection is drawn at 1.75px', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await open(page, NORDET)
-  const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const opacities = () =>
     page.evaluate(() => [...document.querySelectorAll<SVGElement>('.react-flow__edge g[data-faded]')].length)
   expect(await opacities()).toBe(0)
 
-  await inspector.getByRole('button', { name: /^Approval(?!\w| to )/ }).click()
+  await pickPart(page, 'approval')
   expect(await opacities()).toBeGreaterThan(0)
 
-  await inspector.getByRole('button', { name: 'approved action version' }).click()
+  await pickConnection(page, 'approved action version')
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -124,9 +123,10 @@ test('the panel starts at the top for every new selection', async ({ page }) => 
   await open(page, NORDET)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const scroller = inspector.locator('[data-scroll]')
+  await pickPart(page, 'rule-check')
   await scroller.evaluate((el) => el.scrollTo({ top: 400 }))
   expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
-  await inspector.getByRole('button', { name: /^Approval(?!\w| to )/ }).click()
+  await page.locator('.react-flow__node-card[data-id="approval"]').click()
   await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
   expect(await scroller.evaluate((el) => el.scrollTop)).toBe(0)
 })
@@ -134,7 +134,7 @@ test('the panel starts at the top for every new selection', async ({ page }) => 
 test('a part opens on its summary and flow, with the citations closed', async ({ page }) => {
   await open(page, NORDET)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
-  await inspector.getByRole('button', { name: /^Approval(?!\w| to )/ }).click()
+  await pickPart(page, 'approval')
   await expect(inspector.getByRole('region', { name: 'Outgoing' })).toBeVisible()
   await expect(inspector.getByRole('button', { name: /^Cited, not checked/ })).toHaveAttribute('aria-expanded', 'false')
 })
