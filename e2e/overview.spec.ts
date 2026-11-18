@@ -325,3 +325,26 @@ test('the revision toast shows on the map, goes when the Overview opens, and sta
   await page.waitForTimeout(500)
   await expect(page.getByText('Revision 3 is open')).toHaveCount(0)
 })
+
+test('a walkthrough step in the far view names the tiles it highlights', async ({ page }, testInfo) => {
+  const board = JSON.parse(await readFile('e2e/fixtures/sixty-parts.board.json', 'utf8')) as { components: { id: string }[]; scenarios: unknown[] }
+  const ids = board.components.slice(0, 4).map((c) => c.id)
+  board.scenarios = [{ id: 'far-tour', title: 'A tour', steps: [{ caption: 'These four.', highlight: ids }] }]
+  const path = testInfo.outputPath('sixty-with-tour.board.json')
+  await writeFile(path, JSON.stringify(board))
+  await open(page, path)
+  await page.getByRole('tab', { name: 'Overview' }).click()
+  await page.getByRole('button', { name: 'Play A tour' }).click()
+  await expect(page.getByRole('region', { name: 'Walkthrough: A tour' })).toBeVisible()
+  await expect(page.locator('[data-far]')).toBeVisible()
+  const tip = page.locator(`.react-flow__node[data-id="${ids[0]}"] [class*="tip"]`)
+  await expect(tip).toBeVisible()
+  await expect(page.locator(`.react-flow__node[data-id="${board.components[10]!.id}"] [class*="tip"]`)).toBeHidden()
+})
+
+test('a part opened from the Overview is spotlit: the lines that do not touch it step back', async ({ page }) => {
+  await open(page, SHORTENER)
+  await tab(page, 'Overview').click()
+  await page.getByTestId('overview').locator('[data-row="part:redirect-handler"]').click()
+  await expect.poll(() => page.evaluate(() => document.querySelectorAll('.react-flow__edge g[data-faded]').length)).toBeGreaterThan(0)
+})

@@ -152,12 +152,15 @@
 }
 
 :global([data-far]) :global(.react-flow__node:hover),
-:global([data-far]) :global(.react-flow__node.selected) {
+:global([data-far]) :global(.react-flow__node.selected),
+:global([data-far]) :global(.react-flow__node):has(.card[data-highlighted]) {
   z-index: 1300 !important;
 }
 
 :global([data-far]) :global(.react-flow__node:hover) .tip,
-:global([data-far]) :global(.react-flow__node.selected) .tip {
+:global([data-far]) :global(.react-flow__node.selected) .tip,
+/* A walkthrough step names every tile it highlights, since the tiles have no text of their own. */
+:global([data-far]) :global(.react-flow__node):has(.card[data-highlighted]) .tip {
   display: block;
   position: absolute;
   left: 50%;
