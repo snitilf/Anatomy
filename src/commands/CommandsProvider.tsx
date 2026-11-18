@@ -4,13 +4,19 @@ import { useUiApi } from '../app/ui'
 import { useWorkspace } from '../app/workspaceContext'
 import { CameraSlotContext } from '../canvas/cameraContext'
 import { CommandsContext } from './context'
-import { editsText, isSingleKey, matches, sequenceOf } from './keys'
+import { editsText, isSingleKey, matches, sequenceOf, stepSequence, type Keys } from './keys'
 import { COMMANDS, isEnabled } from './list'
 import type { Command, CommandContext, ShellActions } from './types'
 
 /** Focus in one of these keeps its own keys: Escape closes it, and letters type. */
 /** How long the first key of a sequence waits for the second. */
 const SEQUENCE_MS = 1200
+
+/** Every sequence the commands answer to. */
+const SEQUENCES: readonly (readonly [Keys, Keys])[] = COMMANDS.flatMap((c) => (c.keys ?? []).flatMap((k) => {
+  const pair = sequenceOf(k)
+  return pair ? [pair] : []
+}))
 
 const OWN_KEYS = 'dialog, [role="dialog"], [role="menu"], [role="listbox"], [data-dismissible], [aria-expanded="true"][aria-haspopup]'
 
@@ -61,21 +67,22 @@ export function CommandsProvider({ shell, children }: { shell: ShellActions; chi
       const inField = editsText(target)
       const inOwn = target instanceof Element && target.closest(OWN_KEYS) !== null
       const ctx = context()
+      if (['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) return
       const waiting = armed.current
       armed.current = undefined
       const plain = !event.metaKey && !event.ctrlKey && !event.altKey
-      if (plain && !inField && !inOwn && event.key.length === 1) {
-        const typed = event.key.toLowerCase()
-        if (waiting && Date.now() - waiting.at < SEQUENCE_MS) {
-          const second = COMMANDS.find((c) => c.keys?.some((k) => sequenceOf(k)?.[0].toLowerCase() === waiting.key && sequenceOf(k)?.[1].toLowerCase() === typed) && isEnabled(c, ctx))
-          if (second) {
-            event.preventDefault()
-            event.stopPropagation()
-            second.run(ctx)
-            return
+      if (plain && !inField && !inOwn && event.key.length === 1 && ctx.state.board) {
+        const waited = waiting && Date.now() - waiting.at < SEQUENCE_MS ? waiting.key : undefined
+        const step = stepSequence(waited, event.key.toLowerCase(), SEQUENCES)
+        if (step.action !== 'pass') {
+          event.preventDefault()
+          event.stopPropagation()
+          if (step.action === 'arm') armed.current = { key: step.key, at: Date.now() }
+          else if (step.action === 'run') {
+            // A sequence whose view is already in front does nothing.
+            const command = COMMANDS.find((c) => c.keys?.includes(step.sequence.join(' ')) && isEnabled(c, ctx))
+            command?.run(ctx)
           }
-        } else if (!event.shiftKey && COMMANDS.some((c) => c.keys?.some((k) => sequenceOf(k)?.[0].toLowerCase() === typed) && isEnabled(c, ctx))) {
-          armed.current = { key: typed, at: Date.now() }
           return
         }
       }

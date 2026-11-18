@@ -241,3 +241,17 @@ test('undo does nothing on the Overview, and the sidebar no longer holds the sco
   await page.keyboard.press('Escape')
   await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByText('Covers')).toHaveCount(0)
 })
+
+test('after G the next key is taken: G then R keeps Select, G G O still goes to the Overview, and G then M on the map does nothing', async ({ page }) => {
+  await open(page, SHORTENER)
+  await page.keyboard.press('g')
+  await page.keyboard.press('r')
+  await expect(page.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press('g')
+  await page.keyboard.press('m')
+  await expect(page.getByTestId('overview')).toHaveCount(0)
+  await page.keyboard.press('g')
+  await page.keyboard.press('g')
+  await page.keyboard.press('o')
+  await expect(page.getByTestId('overview')).toBeVisible()
+})
