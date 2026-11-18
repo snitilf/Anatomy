@@ -22,6 +22,9 @@ import { Sheet } from './Sheet'
 import styles from './Sidebar.module.css'
 import { LinkView, MarkView, ProposalView } from './YoursViews'
 
+/** One toast at a time says a revision is open, and the Overview can dismiss it by this name. */
+const REVISION_TOAST = 'revision-open'
+
 const selectionKey = (s: Selection | undefined) => (s && s.type !== 'board' ? `${s.type}:${s.id}` : 'board')
 
 /** What a note written in the panel is about: the part or connection shown, or the board. A user's own item has its own note field. */
@@ -98,13 +101,9 @@ function Body({ header }: { header?: ReactNode }) {
 
   // A new revision does not switch tabs. A toast says it is open and offers the review.
   // The Overview says the same in Needs you, so the toast stays away from it and goes when it opens.
-  const revisionToast = useRef<string | number | undefined>(undefined)
   const view = useUi((u) => u.view)
   useEffect(() => {
-    if (view === 'overview' && revisionToast.current !== undefined) {
-      toast.dismiss(revisionToast.current)
-      revisionToast.current = undefined
-    }
+    if (view === 'overview') toast.dismiss(REVISION_TOAST)
   }, [view])
   const revision = useRef(board ? `${board.id}:${board.revision}` : '')
   useEffect(() => {
@@ -114,7 +113,8 @@ function Body({ header }: { header?: ReactNode }) {
     revision.current = now
     // Answers count too: a revision can answer the user without changing a part.
     if (board && sameBoard && ui.store.getState().view === 'map' && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
-      revisionToast.current = toast(`Revision ${board.revision} is open`, {
+      toast(`Revision ${board.revision} is open`, {
+        id: REVISION_TOAST,
         action: {
           label: 'Review',
           onClick: () => {
