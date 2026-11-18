@@ -19,6 +19,7 @@ import { PartView } from './PartView'
 import { Composer } from './notes'
 import { Review, ReviewFooter } from './Review'
 import { Sheet } from './Sheet'
+import { useSpotlightReset } from './spotlight'
 import styles from './Sidebar.module.css'
 import { LinkView, MarkView, ProposalView } from './YoursViews'
 
@@ -72,6 +73,8 @@ function Body({ header }: { header?: ReactNode }) {
   const focusNext = useRef(false)
   const fromReview = useRef(false)
   const key = selectionKey(selection)
+  // A row that goes away takes its spotlight with it.
+  useSpotlightReset(key, tab, layer, board)
 
   // A choice made inside the panel replaces its content, so focus moves to the new heading.
   // A choice made in Review selects on the map and stays in Review.

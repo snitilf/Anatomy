@@ -20,6 +20,7 @@ import notes from './notes.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
 import { partItems } from './pickerItems'
+import { spotOf, spotProps } from './spotlight'
 import styles from './view.module.css'
 
 function itemWords(board: Board, layer: Layer, entry: Item): string {
@@ -66,7 +67,7 @@ function ItemRow({ board, layer, entry, status, live = true }: { board: Board; l
   )
   if (!live) return <p className={styles.row}>{content}</p>
   return (
-    <button type="button" className={styles.row} onClick={() => choose(selectionOf(entry))}>
+    <button type="button" className={styles.row} onClick={() => choose(selectionOf(entry))} {...spotProps(spotOf(selectionOf(entry)))}>
       {content}
     </button>
   )
@@ -261,7 +262,7 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
                   {g.removed ? (
                     <span className={clsx(styles.row, styles.gone)}>{names(was, id)}</span>
                   ) : (
-                    <button type="button" className={styles.row} onClick={() => choose({ type: 'component', id })}>
+                    <button type="button" className={styles.row} onClick={() => choose({ type: 'component', id })} {...spotProps({ parts: [id] })}>
                       <span className={styles.rowTitle}>{names(board, id)}</span>
                     </button>
                   )}
@@ -276,7 +277,7 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
                     {g.removed ? (
                       <span className={clsx(styles.row, styles.gone)}>{line(was, id)}</span>
                     ) : (
-                      <button type="button" className={styles.row} onClick={() => choose({ type: 'relationship', id })}>
+                      <button type="button" className={styles.row} onClick={() => choose({ type: 'relationship', id })} {...spotProps({ edges: [id] })}>
                         <span className={styles.rowMain}>
                           <span className={styles.rowTitle}>{after?.label ?? id}</span>
                           {moved && before && after ? (

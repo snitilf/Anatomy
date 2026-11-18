@@ -12,6 +12,7 @@ import { targetName } from '../notes/targets'
 import { Group, Heading, Prop, Props } from './bits'
 import { partName } from './names'
 import { NotesSection } from './notes'
+import { spotOf, spotProps } from './spotlight'
 import { usePanel } from './panelContext'
 import type { Selection } from '../app/state'
 import styles from './view.module.css'
@@ -67,7 +68,7 @@ function Yours({ board, layer }: { board: Board; layer: Layer }) {
         {shown.map((row) => {
           const Icon = row.icon
           return (
-            <li key={row.key}>
+            <li key={row.key} {...spotProps(spotOf(row.select))}>
               <button type="button" className={`${styles.row} ${styles.yours}`} onClick={() => choose(row.select)}>
                 <Icon className={styles.yoursIcon} size={14} strokeWidth={1.5} aria-hidden="true" />
                 <span className={styles.rowMain}>
