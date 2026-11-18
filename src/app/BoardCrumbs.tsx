@@ -1,11 +1,11 @@
 import { Menu } from '@base-ui/react/menu'
 import clsx from 'clsx'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCommand, useCommands } from '../commands/context'
 import { frameGroup } from '../canvas/groupFrame'
 import { MIDDLE_MIN, UNFOLD_MARGIN } from './crumbRoom'
 import menu from './menu.module.css'
-import { trailOf, type Trail } from './crumbs'
+import { trailOf, type Trail as TrailWords } from './crumbs'
 import { Tip } from './Tip'
 import { useAppStore, useAppStoreApi } from './store'
 import styles from './TopBar.module.css'
@@ -24,10 +24,22 @@ function Slash() {
  * The board segment clears the selection, the group frames the group, and the last one zooms to the selection.
  */
 export function BoardCrumbs({ title, room }: { title: string; room?: number | undefined }) {
-  const store = useAppStoreApi()
   // Only the words of the trail are read, so a drawing or the Overview's selection never renders the bar.
   const words = useAppStore((s) => (s.board && s.scenario === undefined ? JSON.stringify(trailOf(s.board, s.layer, s.selection) ?? null) : 'null'))
   const onMap = useUi((u) => u.view === 'map')
+  if (words === 'null' || !onMap) {
+    return (
+      <h1 className={styles.title} title={title}>
+        {title}
+      </h1>
+    )
+  }
+  // A new selection has new names, so it starts with a fresh fold.
+  return <Trail key={words} trail={JSON.parse(words) as TrailWords} title={title} room={room} />
+}
+
+function Trail({ trail, title, room }: { trail: TrailWords; title: string; room?: number | undefined }) {
+  const store = useAppStoreApi()
   const { context } = useCommands()
   const back = useCommand('goto.overview')
   const zoom = useCommand('zoom.selection')
@@ -41,33 +53,22 @@ export function BoardCrumbs({ title, room }: { title: string; room?: number | un
       target?.focus({ preventScroll: true })
     })
   }
-  const [folded, setFolded] = useState(false)
-  const foldedAt = useRef(0)
+  // The board and the group fold into one segment when either would show only a few letters of its name.
+  // The room it had when it folded is kept, and it unfolds once the room has grown by a margin, so it does not flicker at the edge.
+  const [foldedAt, setFoldedAt] = useState<number | undefined>(undefined)
+  const folded = foldedAt !== undefined && !(room !== undefined && room >= foldedAt + UNFOLD_MARGIN)
   const boardEl = useRef<HTMLButtonElement>(null)
   const groupEl = useRef<HTMLButtonElement>(null)
-  // A new selection has new names, so it starts unfolded.
-  useLayoutEffect(() => setFolded(false), [words])
-  // The board and the group fold into one segment when either would show only a few letters of its name.
-  // It unfolds when the room has grown by a margin, so it does not flicker at the edge.
-  useLayoutEffect(() => {
-    if (folded) {
-      if (room !== undefined && room >= foldedAt.current + UNFOLD_MARGIN) setFolded(false)
-      return
+  useEffect(() => {
+    const els = [boardEl.current, groupEl.current].filter((el): el is HTMLButtonElement => el !== null)
+    if (els.length === 0 || typeof ResizeObserver === 'undefined') return
+    const check = () => {
+      if (els.some((el) => el.scrollWidth > el.clientWidth && el.clientWidth < MIDDLE_MIN)) setFoldedAt(room ?? 0)
     }
-    const squeezed = [boardEl.current, groupEl.current].some((el) => el && el.scrollWidth > el.clientWidth && el.clientWidth < MIDDLE_MIN)
-    if (squeezed) {
-      foldedAt.current = room ?? 0
-      setFolded(true)
-    }
-  })
-  const trail = useMemo(() => JSON.parse(words) as Trail | null, [words])
-  if (!trail || !onMap) {
-    return (
-      <h1 className={styles.title} title={title}>
-        {title}
-      </h1>
-    )
-  }
+    const watch = new ResizeObserver(check)
+    for (const el of els) watch.observe(el)
+    return () => watch.disconnect()
+  }, [folded, room])
   const { group, last } = trail
   const frame = () => {
     const camera = context().camera
