@@ -82,9 +82,8 @@ export const ARROW_GAP_PX = 6
 /**
  * The bundles whose arrowhead is drawn at this scale of the label (the board pixels one screen pixel takes). Where several
  * bundles arrive at the same side of the same block and their heads would sit closer than `ARROW_GAP_PX` on screen,
- * only the first of each run keeps its head, from the top or left. The line of a bundle still shows its direction at the
- * far end when it has one, and a bundle that is yours keeps its head. The result is worked out once per layout and per
- * scale, not per frame.
+ * only the first of each run keeps its head, from the top or left; the others show their line and count without a
+ * direction. A bundle that is yours keeps its head. The result is worked out once per layout and per scale, not per frame.
  */
 export function visibleArrows(bundles: readonly Bundle[], pixel: number): Set<string> {
   const gap = ARROW_GAP_PX * pixel
