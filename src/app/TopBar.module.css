@@ -90,12 +90,15 @@
   color: var(--fg);
 }
 
+.viewsRoot {
+  flex: none;
+  margin-left: var(--space-1);
+}
+
 .views {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex: none;
-  margin-left: var(--space-1);
 }
 
 /* Text tabs: 28px, no border, the active one on the active fill. */
@@ -228,11 +231,11 @@
     display: none;
   }
 
-  .views {
+  .viewsRoot {
     margin-inline: auto;
   }
 
-  .bar:has(.views) .end {
+  .bar:has(.viewsRoot) .end {
     margin-left: 0;
   }
 

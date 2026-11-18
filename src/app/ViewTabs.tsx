@@ -11,7 +11,7 @@ export function ViewTabs() {
   const view = useUi((u) => u.view)
   const boardId = useAppStore((s) => s.board?.id)
   return (
-    <Tabs.Root value={view} onValueChange={(value) => showView(ui, boardId, value as View)}>
+    <Tabs.Root className={styles.viewsRoot} value={view} onValueChange={(value) => showView(ui, boardId, value as View)}>
       <Tabs.List className={styles.views} aria-label="View">
         <Tabs.Tab className={styles.view} value="map">
           Map

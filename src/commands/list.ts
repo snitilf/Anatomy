@@ -12,6 +12,7 @@ import {
   Hand,
   Inbox,
   LayoutList,
+  ListFilter,
   Link2,
   Map as MapIcon,
   Maximize,
@@ -39,6 +40,7 @@ import {
   X,
 } from 'lucide-react'
 import { EXAMPLES } from '../app/examples'
+import type { Selection } from '../app/state'
 import { showView } from '../app/viewActions'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
@@ -87,6 +89,13 @@ function selectionBox(c: CommandContext): Rect | undefined {
     return p ? { x: p.x, y: p.y, width: p.width, height: p.height } : undefined
   }
   return undefined
+}
+
+/** The part that has focus in the Overview's list, as a selection. */
+function overviewRow(): Selection | undefined {
+  const row = document.activeElement?.closest<HTMLElement>('[data-row][data-type]')
+  const { type, id } = row?.dataset ?? {}
+  return id && (type === 'component' || type === 'proposal') ? { type, id } : undefined
 }
 
 const theme = (mode: ThemeMode, label: string, icon: Command['icon']): Command => ({
@@ -242,6 +251,15 @@ export const COMMANDS: readonly Command[] = [
     run: (c) => showView(c.uiApi, c.state.board?.id, 'overview'),
   },
   {
+    id: 'overview.filter',
+    group: 'View',
+    label: 'Filter parts',
+    icon: ListFilter,
+    keys: ['/'],
+    visible: (c) => hasBoard(c) && c.ui.view === 'overview',
+    run: () => document.querySelector<HTMLInputElement>('[data-overview-filter]')?.focus(),
+  },
+  {
     id: 'view.map',
     group: 'Go to',
     label: 'Go to Map',
@@ -297,10 +315,19 @@ export const COMMANDS: readonly Command[] = [
     keys: ['C'],
     keywords: ['question', 'comment'],
     visible: hasBoard,
+    // On the Overview a note belongs to the part under focus, so the key needs a part row.
+    enabled: (c) => onMap(c) || overviewRow() !== undefined,
     run: (c) => {
+      const row = c.ui.view === 'overview' ? overviewRow() : undefined
+      if (row) {
+        c.dispatch({ type: 'select', selection: row })
+        showView(c.uiApi, c.state.board?.id, 'map')
+      }
       c.uiApi.setSidebarOpen(true)
       c.uiApi.setTab('details')
-      c.uiApi.askComposer()
+      // After the map is in front and the note field is there for the part.
+      if (row) requestAnimationFrame(() => c.uiApi.askComposer())
+      else c.uiApi.askComposer()
     },
   },
   {
