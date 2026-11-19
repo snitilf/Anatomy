@@ -28,8 +28,9 @@
 }
 
 /*
- * A label sits on a cutout in the color of the map under it, so the line breaks around the words. No border, no pill.
- * Over a group area the cutout takes the area's tint, one layer for each area.
+ * A label sits on a cutout that shows the map under it, so the line breaks around the words. No border, no pill.
+ * The cutout is the map color, and each group area under the label is painted again on it (see LabelBackdrop),
+ * so it matches on both sides of a group edge, in a group inside a group, and in either theme.
  */
 .pill {
   position: absolute;
@@ -45,6 +46,7 @@
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+  isolation: isolate;
   pointer-events: all;
   cursor: pointer;
   transition:
@@ -52,21 +54,29 @@
     color 120ms var(--ease-out);
 }
 
-/* The cutout hugs the words, line by line. */
+/* The words sit above the cutout, which is one box for each line of them (see LabelCutout). */
 .cutout {
+  position: relative;
   padding: 2px 4px;
-  border-radius: var(--radius-xs);
-  background: var(--bg);
+  /* Every line gets its own padding, so the lines stay centered and each cutout is as wide as its line. */
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
 
-.pill[data-depth='1'] .cutout {
-  background: color-mix(in srgb, var(--fg) var(--wash-share), var(--bg));
+.backdrop {
+  position: absolute;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  pointer-events: none;
 }
 
-.pill[data-depth='2'] .cutout {
-  background: color-mix(in srgb, var(--fg) var(--wash-share-2), var(--bg));
+/* An area, as wide as it is on the map and placed from the middle of the label. The cutout of each line cuts it to the words. */
+.tint {
+  position: absolute;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
 }
 
 .pill:hover {
@@ -105,6 +115,7 @@
 /* A label with no free place beside its line waits until the line is hovered or selected, then shows whole. */
 .pill[data-hidden] {
   width: max-content;
+  /* The widest a held-back label gets. labelTint reads it as HELD_BACK_WIDTH. */
   max-width: 260px;
   opacity: 0;
   pointer-events: none;
