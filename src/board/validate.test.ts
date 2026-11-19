@@ -304,6 +304,14 @@ describe('codes and hints', () => {
     expect(only(parse(data))).toMatchObject({ code: 'too-few' })
   })
 
+  it('suggests a free valid ID when the plain one is taken', () => {
+    const data = minimalBoard()
+    data.groups.push({ id: 'Back End', label: 'Other' })
+    data.groups[0].id = 'back-end'
+    data.components[0].group = 'back-end'
+    expect(errorsOf(parse(data))).toContainEqual(expect.objectContaining({ path: 'groups[1].id', code: 'bad-id', hint: 'Try "back-end-2".' }))
+  })
+
   it('suggests a valid ID for a badly formed one', () => {
     const data = minimalBoard()
     data.groups[0].id = 'Back End'
@@ -345,7 +353,8 @@ describe('codes and hints', () => {
     const errors = errorsOf(parse(data))
     expect(errors).toEqual([
       expect.objectContaining({ path: 'components[1].group', code: 'unknown-group', hint: 'Did you mean "backend"?' }),
-      expect.objectContaining({ path: 'relationships[0].to', code: 'unknown-component', hint: 'Did you mean "db"?' }),
+      // "dbb" is too short for a suggestion: one edit apart is rarely a typo at that length.
+      { path: 'relationships[0].to', code: 'unknown-component', message: expect.any(String) },
       expect.objectContaining({ path: 'items[0].about', code: 'unknown-target', hint: 'Did you mean "api-to-db"?' }),
       { path: 'scenarios[0].steps[0].highlight[0]', code: 'unknown-target', message: expect.any(String) },
     ])

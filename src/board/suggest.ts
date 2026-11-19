@@ -16,17 +16,31 @@ export function editDistance(a: string, b: string): number {
   return previous[b.length] ?? 0
 }
 
+/** Shorter values get no suggestion: "api" and "app" are one edit apart, but that is rarely a typo. */
+const MIN_LENGTH = 4
+/** Longer values and candidates are skipped, so a huge ID cannot make the comparison slow. */
+const MAX_LENGTH = 200
+/** With more candidates than this, no suggestion is made, so the work stays small. */
+const MAX_CANDIDATES = 5000
+
 /**
  * The candidate closest to `value`, when it is close enough to be a likely typo: at most a third of the longer string
  * differs, with a floor of one edit. A tie between two candidates gives no suggestion, because a guess could mislead.
  */
 export function nearest(value: string, candidates: Iterable<string>): string | undefined {
+  if (value.length < MIN_LENGTH || value.length > MAX_LENGTH) return undefined
+  const lower = value.toLowerCase()
   let best: string | undefined
   let bestDistance = Infinity
   let tie = false
+  let seen = 0
   for (const candidate of candidates) {
-    if (candidate === value) continue
-    const distance = editDistance(value.toLowerCase(), candidate.toLowerCase())
+    if (++seen > MAX_CANDIDATES) return undefined
+    if (candidate === value || candidate.length > MAX_LENGTH) continue
+    const allowed = Math.max(1, Math.floor(Math.max(value.length, candidate.length) / 3))
+    if (Math.abs(candidate.length - value.length) > allowed) continue
+    const distance = editDistance(lower, candidate.toLowerCase())
+    if (distance > allowed) continue
     if (distance < bestDistance) {
       best = candidate
       bestDistance = distance
@@ -35,9 +49,7 @@ export function nearest(value: string, candidates: Iterable<string>): string | u
       tie = true
     }
   }
-  if (best === undefined || tie) return undefined
-  const allowed = Math.max(1, Math.floor(Math.max(value.length, best.length) / 3))
-  return bestDistance <= allowed ? best : undefined
+  return tie ? undefined : best
 }
 
 /** `id-2`, `id-3`, and so on: the first one that is not taken and fits in `maxLength`. */

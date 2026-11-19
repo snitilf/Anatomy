@@ -258,6 +258,23 @@ function valueAt(data: unknown, path: readonly PropertyKey[]): unknown {
   return current
 }
 
+/** The IDs a board file declares, read from the raw JSON, for hints given before the schema passes. */
+function idsIn(data: unknown): Set<string> {
+  const ids = new Set<string>()
+  if (data === null || typeof data !== 'object') return ids
+  const record = data as Record<string, unknown>
+  if (typeof record.id === 'string') ids.add(record.id)
+  for (const list of ['groups', 'components', 'relationships', 'items', 'scenarios']) {
+    const entries = Object.hasOwn(record, list) ? record[list] : undefined
+    if (!Array.isArray(entries)) continue
+    for (const entry of entries) {
+      const id = entry !== null && typeof entry === 'object' ? (entry as Record<string, unknown>).id : undefined
+      if (typeof id === 'string') ids.add(id)
+    }
+  }
+  return ids
+}
+
 function fromIssue(issue: z.core.$ZodIssue, data: unknown): BoardProblem {
   const problem = { path: formatPath(issue.path), message: issue.message }
   const value = valueAt(data, issue.path)
@@ -275,7 +292,9 @@ function fromIssue(issue: z.core.$ZodIssue, data: unknown): BoardProblem {
       return withHint('out-of-range')
     case 'invalid_format': {
       const slug = typeof value === 'string' ? slugify(value).slice(0, LIMITS.id).replace(/-+$/, '') : ''
-      return withHint('bad-id', slug === '' ? undefined : `Try "${slug}".`)
+      if (slug === '') return withHint('bad-id')
+      const taken = idsIn(data)
+      return withHint('bad-id', `Try "${taken.has(slug) ? freeId(slug, taken, LIMITS.id) : slug}".`)
     }
     case 'invalid_value': {
       const near = typeof value === 'string' ? nearest(value, issue.values.map(String)) : undefined

@@ -13,7 +13,22 @@ describe('editDistance', () => {
 describe('nearest', () => {
   it('finds a likely typo', () => {
     expect(nearest('paymnt', ['payment', 'cart', 'api'])).toBe('payment')
-    expect(nearest('API', ['api', 'cart'])).toBe('api')
+    expect(nearest('Payment', ['payment', 'cart'])).toBe('payment')
+  })
+
+  it('gives nothing for values under 4 characters, where one edit is rarely a typo', () => {
+    expect(nearest('api', ['app'])).toBeUndefined()
+    expect(nearest('cart', ['card'])).toBe('card')
+  })
+
+  it('skips huge values and candidates, and stays fast with many candidates', () => {
+    expect(nearest('a'.repeat(201), ['a'.repeat(200)])).toBeUndefined()
+    expect(nearest('note-1', ['n'.repeat(2_000_000), 'note-2x'])).toBe('note-2x')
+    const many = Array.from({ length: 4000 }, (_, i) => `item-${i}-${'x'.repeat(40)}`)
+    const start = performance.now()
+    for (let i = 0; i < 300; i++) nearest(`zz-${i}`, many)
+    expect(performance.now() - start).toBeLessThan(2000)
+    expect(nearest('note-1', Array.from({ length: 5001 }, (_, i) => `note-${i + 2}`))).toBeUndefined()
   })
 
   it('gives nothing when no candidate is close', () => {
