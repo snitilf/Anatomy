@@ -1,6 +1,8 @@
 import type { Board } from '../board/schema'
 import type { BoardProblem } from '../board/validate'
 import type { Size, Point } from '../layout/geometry'
+import { bundleGroups } from '../canvas/bundles'
+import { bundleKey } from '../canvas/bundleWords'
 import { diffBoards } from '../layer/diff'
 import {
   addLink,
@@ -32,7 +34,14 @@ import {
 import { emptyLayer, type Layer, type Mark, type Note, type Proposal, type Response, type Sent, type Target } from '../layer/model'
 import { emptyHistory, remember, stepBack, stepForward, type History } from './history'
 
-export type Selection = { type: 'board' } | { type: 'component' | 'relationship' | 'link' | 'mark' | 'proposal'; id: string }
+/**
+ * What is selected. A bundle is the set of connections between two blocks of the far view. It is keyed by its two ends
+ * (`id` is the key of the pair), never by an index, so it holds across layouts and reimports.
+ */
+export type Selection = { type: 'board' } | { type: 'component' | 'relationship' | 'link' | 'mark' | 'proposal'; id: string } | { type: 'bundle'; id: string; a: string; b: string }
+
+/** The selection of the bundle between two ends, as `bundleGroups` names them. */
+export const bundleSelection = (a: string, b: string): Selection => ({ type: 'bundle', id: bundleKey(a, b), a, b })
 
 export interface AppState {
   board?: Board
@@ -150,6 +159,8 @@ function selectionExists(board: Board, layer: Layer | undefined, selection: Sele
       return true
     case 'component':
       return board.components.some((c) => c.id === selection.id)
+    case 'bundle':
+      return bundleGroups(board, layer?.links ?? [], layer?.reconnects ?? [], layer?.proposals ?? []).some((p) => p.a === selection.a && p.b === selection.b)
     case 'relationship':
       return board.relationships.some((r) => r.id === selection.id)
     case 'link':

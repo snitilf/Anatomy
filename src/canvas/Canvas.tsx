@@ -44,8 +44,12 @@ import { assembleGraph, computeGeometry, editedId, geometrySteps, GraphCache, MA
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
-import { bundleGroups } from './bundles'
-import { computeBundles } from './bundleRoutes'
+import { bundleSelection } from '../app/state'
+import { usePhone } from '../app/usePhone'
+import { frameConnection } from './bundleFrame'
+import { bundleWords, type BundleWords } from './bundleWords'
+import { bundleGroups, connectionsOf } from './bundles'
+import { computeBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup } from './FarLayer'
 import { CardNode } from './CardNode'
@@ -56,7 +60,7 @@ import { ManualEdge } from './ManualEdge'
 import { RelationshipEdge } from './RelationshipEdge'
 import { inView, SNAP_PX, SnapTargets } from './snap'
 import { SnapGuides, type GuideLines } from './SnapGuides'
-import { stepBackRules } from './emphasis'
+import { partRules, stepBackRules } from './emphasis'
 import { ZoomBar } from './ZoomBar'
 import { partStates, type ItemState } from '../status/state'
 
@@ -344,9 +348,17 @@ export function Canvas() {
   const pressedAt = useRef({ x: 0, y: 0 })
   /** The card that takes focus once a group picked from the far view is in view, so a keyboard user is not dropped to the page. */
   const focusAfterPick = useRef<string | undefined>(undefined)
+  /** Focus is on a button of the far layer, which goes when the map zooms in. */
+  const focusInFar = useRef(false)
   useEffect(() => {
     // The hover rule was written for the other view. It is cleared when the view changes.
     if (hoverStyle.current) hoverStyle.current.textContent = ''
+    // A count or a name that had focus goes with the far view. Focus goes to a card, not to the page.
+    if (!far && focusInFar.current && !focusAfterPick.current && (!document.activeElement || document.activeElement === document.body)) {
+      const sel = viewRef.current?.board ? store.getState().selection : undefined
+      focusAfterPick.current = sel?.type === 'component' ? sel.id : viewRef.current?.board.components[0]?.id
+    }
+    focusInFar.current = false
     if (far || !focusAfterPick.current) return
     const id = focusAfterPick.current
     focusAfterPick.current = undefined
@@ -358,7 +370,7 @@ export function Canvas() {
       if (card && document.activeElement !== card && tries++ < 20) window.requestAnimationFrame(focus)
     }
     window.requestAnimationFrame(focus)
-  }, [far])
+  }, [far, store])
   const takePicked = useCallback(() => {
     const id = pickedOnMap.current
     pickedOnMap.current = undefined
@@ -537,7 +549,7 @@ export function Canvas() {
     [far, board, geometryNow],
   )
   const farTiles = useMemo<Rect[]>(() => (far && rectsNow ? Object.values(rectsNow) : []), [far, rectsNow])
-  const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link')
+  const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link' || selection?.type === 'bundle')
   /** Frames a group, at a zoom where its cards show their text. */
   const pickGroup = useCallback(
     (id: string) => {
@@ -548,6 +560,38 @@ export function Canvas() {
       if (area) frameArea(camera, area)
     },
     [camera],
+  )
+  /** The two ends of the selected bundle. One array for as long as the selection stands, so the far layer's memo holds. */
+  const selectedEnds = useMemo(() => (selection?.type === 'bundle' ? [selection.a, selection.b] : undefined), [selection])
+  /** The parts a selected bundle's connections touch, lifted like a spotlighted card. One rule, so the map does not render again. */
+  const bundleLift = useMemo(() => {
+    if (selection?.type !== 'bundle' || !board || step) return ''
+    const pair = bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? []).find((p) => p.a === selection.a && p.b === selection.b)
+    const ids = new Set(pair?.connectionIds)
+    const parts = new Set<string>()
+    for (const c of connectionsOf(board, links ?? [], reconnects ?? [])) if (ids.has(c.id)) parts.add(c.from).add(c.to)
+    return parts.size > 0 ? partRules([...parts]) : ''
+  }, [selection, board, links, reconnects, proposals, step])
+  /** How a bundle reads, for its tag and its button. */
+  const describeBundle = useCallback(
+    (b: Bundle): BundleWords => (board ? bundleWords(board, proposals ?? [], b) : { first: '', second: '', way: 'both', title: '', tag: '', spoken: '' }),
+    [board, proposals],
+  )
+  const phone = usePhone()
+  /** A bundle opens as a bundle, and one that holds a single connection opens that connection, at a zoom where it reads. */
+  const openBundle = useCallback(
+    (b: Bundle) => {
+      if (!board) return
+      const only = b.count === 1 ? connectionsOf(board, links ?? [], reconnects ?? []).find((c) => c.id === b.connectionIds[0]) : undefined
+      if (!only) {
+        dispatch({ type: 'select', selection: bundleSelection(b.a, b.b) })
+        return
+      }
+      dispatch({ type: 'select', selection: { type: only.mine ? 'link' : 'relationship', id: only.id } })
+      // The sheet of a phone covers the lower half of the map.
+      requestAnimationFrame(() => frameConnection(camera, camera.rectOf(only.from), camera.rectOf(only.to), phone ? 0.5 : 0))
+    },
+    [board, links, reconnects, dispatch, camera, phone],
   )
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
@@ -800,7 +844,7 @@ export function Canvas() {
     if (farRef.current) {
       // The far view: the lines are out of the picture, so only the part's own come in, solid, and the bundles step back.
       style.textContent = `[data-hover-scope][data-far] g[data-ends~="${id}"] { opacity: 1 !important; --line-ink: var(--fg-2); }
-[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: none !important; stroke-width: 2px !important; }
+[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: none !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
 [data-hover-scope] [data-bundle] { opacity: var(--spot-line); }`
       return
     }
@@ -991,6 +1035,9 @@ export function Canvas() {
       data-labels={quiet || far ? 'quiet' : undefined}
       data-far={far || undefined}
       data-spot={spotlit || undefined}
+      onFocusCapture={(e) => {
+        focusInFar.current = e.target instanceof Element && e.target.closest('[data-unit], [data-far-label]') !== null
+      }}
       onPointerDownCapture={(e) => {
         pressedAt.current = { x: e.clientX, y: e.clientY }
       }}
@@ -998,6 +1045,7 @@ export function Canvas() {
       data-hover-scope=""
     >
       <style ref={hoverStyle} />
+      {bundleLift && <style>{bundleLift}</style>}
       <CameraContext.Provider value={camera}>
         <ReactFlow
           key={board.id}
@@ -1046,7 +1094,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <FarMode onChange={setFar} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} onPick={pickGroup} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}

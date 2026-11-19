@@ -4,6 +4,25 @@ import { useEffect, useRef } from 'react'
 const MARGIN = 6
 
 /**
+ * Shifts a tag sideways, or flips it below its anchor when its top would be cut off, so it stays inside the map.
+ * `zoom` is the scale of the map: the shift is set in board pixels, in `--tip-dx`.
+ */
+export function clampTip(el: HTMLElement, map: DOMRect, zoom: number) {
+  el.style.removeProperty('--tip-dx')
+  delete el.dataset.flip
+  if (getComputedStyle(el).display === 'none') return
+  let rect = el.getBoundingClientRect()
+  if (rect.top < map.top + MARGIN) {
+    el.dataset.flip = ''
+    rect = el.getBoundingClientRect()
+  }
+  let dx = 0
+  if (rect.left < map.left + MARGIN) dx = map.left + MARGIN - rect.left
+  else if (rect.right > map.right - MARGIN) dx = map.right - MARGIN - rect.right
+  if (dx !== 0 && zoom > 0) el.style.setProperty('--tip-dx', `${dx / zoom}px`)
+}
+
+/**
  * Keeps a far-view name tag inside the map's visible box. It shifts the tag sideways, or flips it below its tile when
  * the top would be cut off. The tag is placed by CSS, so this only sets `--tip-dx` and `data-flip` after it has drawn.
  * `shown` is true while the tag shows without the pointer (selected, or highlighted by a walkthrough). The pointer case
@@ -17,21 +36,9 @@ export function useTipClamp(far: boolean, shown: boolean) {
     const node = el?.closest<HTMLElement>('.react-flow__node')
     if (!el || !node || !far) return
     const place = () => {
-      el.style.removeProperty('--tip-dx')
-      delete el.dataset.flip
-      if (getComputedStyle(el).display === 'none') return
       const map = node.closest('.react-flow')?.getBoundingClientRect()
       if (!map) return
-      let rect = el.getBoundingClientRect()
-      if (rect.top < map.top + MARGIN) {
-        el.dataset.flip = ''
-        rect = el.getBoundingClientRect()
-      }
-      const zoom = node.offsetWidth > 0 ? node.getBoundingClientRect().width / node.offsetWidth : 1
-      let dx = 0
-      if (rect.left < map.left + MARGIN) dx = map.left + MARGIN - rect.left
-      else if (rect.right > map.right - MARGIN) dx = map.right - MARGIN - rect.right
-      if (dx !== 0 && zoom > 0) el.style.setProperty('--tip-dx', `${dx / zoom}px`)
+      clampTip(el, map, node.offsetWidth > 0 ? node.getBoundingClientRect().width / node.offsetWidth : 1)
     }
     node.addEventListener('mouseenter', place)
     const timers = shown ? [0, 120, 320, 720].map((ms) => window.setTimeout(place, ms)) : []

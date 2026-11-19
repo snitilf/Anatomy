@@ -6,6 +6,7 @@ import { groupAreas, GROUP_PADDING, summaryLinesFor } from '../layout/cards'
 import { overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { groupBand } from './bands'
+import { clusterOf, connectionsOf, countPairs } from './bundles'
 import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { TONE_COLOR } from './kinds'
@@ -520,9 +521,19 @@ export function assembleGraph(
   // Picking a part leaves its own lines strong and softens the rest. Not while a card is held, and not during a walkthrough.
   const selectedLine = selection?.type === 'relationship' || selection?.type === 'link' ? selection.id : undefined
   // A part or a line selected is a spotlight: what it touches stays, the rest steps far back.
-  const softening = (selectedPart !== undefined || selectedLine !== undefined) && !playing && held === undefined
+  // A bundle selected keeps the parts of its two ends and its own connections.
+  const bundle = selection?.type === 'bundle' ? selection : undefined
+  const bundled = new Set<string>()
+  const softening = (selectedPart !== undefined || selectedLine !== undefined || bundle !== undefined) && !playing && held === undefined
   const touching = new Set<string>()
-  if (softening) {
+  if (softening && bundle) {
+    const clusters = clusterOf(board, user.proposals)
+    const all = connectionsOf(board, links, user.reconnects)
+    const pair = countPairs(clusters, all).find((p) => p.a === bundle.a && p.b === bundle.b)
+    for (const id of pair?.connectionIds ?? []) bundled.add(id)
+    // The parts the connections touch stay. The rest of the two groups steps back with everything else.
+    for (const c of all) if (bundled.has(c.id)) touching.add(c.from).add(c.to)
+  } else if (softening) {
     if (selectedPart !== undefined) {
       touching.add(selectedPart)
       for (const r of board.relationships) {
@@ -670,7 +681,7 @@ export function assembleGraph(
     const from = moved ? (edit?.from ?? r.from) : r.from
     const to = moved ? (edit?.to ?? r.to) : r.to
     const selected = selection?.type === 'relationship' && selection.id === r.id
-    const active = selected || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
+    const active = selected || bundled.has(r.id) || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
     const highlighted = playing && highlight.has(r.id)
     const color = active || highlighted ? 'var(--accent-line)' : moved ? 'var(--yours)' : TONE_COLOR.strong
     edges.push(
@@ -714,7 +725,7 @@ export function assembleGraph(
     const shape = geometry.edges.get(manualId(l.id))
     if (!shape) continue
     const selected = selection?.type === 'link' && selection.id === l.id
-    const active = selected || (selectedPart !== undefined && (l.from === selectedPart || l.to === selectedPart))
+    const active = selected || bundled.has(l.id) || (selectedPart !== undefined && (l.from === selectedPart || l.to === selectedPart))
     edges.push(
       stable(cache.edges, {
         id: manualId(l.id),

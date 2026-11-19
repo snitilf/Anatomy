@@ -691,3 +691,12 @@
   flex: 1;
   min-width: 0;
 }
+
+/* A route may take two lines before a name is cut, where the panel has the room. */
+.rowMetaWrap {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}

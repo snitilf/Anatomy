@@ -124,8 +124,10 @@ describe('routing the bundles', () => {
 
 describe('bundle width', () => {
   it('grows gently with the count and stops at a cap', () => {
-    expect(bundleWidth(1)).toBeCloseTo(1.5)
-    expect(bundleWidth(4)).toBeGreaterThan(bundleWidth(2))
+    expect(bundleWidth(1)).toBeCloseTo(1.25)
+    expect(bundleWidth(2)).toBeCloseTo(1.25)
+    expect(bundleWidth(4)).toBeCloseTo(1.75)
+    expect(bundleWidth(14)).toBeLessThanOrEqual(BUNDLE_MAX_WIDTH)
     expect(bundleWidth(10000)).toBe(BUNDLE_MAX_WIDTH)
   })
 })

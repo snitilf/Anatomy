@@ -4,6 +4,8 @@ import { useUi, useUiApi, type UiState } from '../app/ui'
 import { prefersStillness } from '../canvas/cameraContext'
 import styles from './Sheet.module.css'
 import { findItem } from '../layer/edits'
+import { bundleWords } from '../canvas/bundleWords'
+import { bundleGroups } from '../canvas/bundles'
 
 /** The header and handle, which is all the sheet shows at its lowest stop. */
 export const PEEK = 64
@@ -33,6 +35,11 @@ function useSidebarTitle(): string {
     const sel = s.selection
     if (!board) return ''
     if (sel?.type === 'component') return board.components.find((c) => c.id === sel.id)?.label ?? board.title
+    if (sel?.type === 'bundle') {
+      const proposals = s.layer?.proposals ?? []
+      const pair = bundleGroups(board, s.layer?.links ?? [], s.layer?.reconnects ?? [], proposals).find((p) => p.a === sel.a && p.b === sel.b)
+      return pair ? bundleWords(board, proposals, pair).title : board.title
+    }
     if (sel?.type === 'relationship') return board.relationships.find((r) => r.id === sel.id)?.label ?? board.title
     if (sel && s.layer && sel.type !== 'board') {
       const found = findItem(s.layer, sel.id)

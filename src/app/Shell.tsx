@@ -24,7 +24,7 @@ import { entryBoard, rememberedView, rememberView, viewFromHash, writeHash } fro
 import { useWorkspace } from './workspaceContext'
 
 /** Elements on the map that can hold keyboard focus. */
-const MAP_FOCUS = '.react-flow__node, .react-flow__edge'
+const MAP_FOCUS = '.react-flow__node, .react-flow__edge, [data-unit] button, button[data-far-label]'
 
 /**
  * After Escape clears the selection, focus must not fall to the page. It returns to the last map element, or the panel heading.

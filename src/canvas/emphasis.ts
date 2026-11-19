@@ -20,6 +20,8 @@ export function stepBackRules(keep: string): string {
 export interface Spot {
   parts?: readonly string[]
   edges?: readonly string[]
+  /** Group areas, by the id of their node (`group:<id>`), which take the wash of a hovered area in the far view. */
+  groups?: readonly string[]
 }
 
 /** A reconnected connection is drawn under its edited id, so a row for it names both. */
@@ -32,12 +34,18 @@ const edgeIds = (edges: readonly string[]) => edges.flatMap((id) => (id.startsWi
 const each = (ids: readonly string[], scope: string, tag: string, after = '') => ids.map((id) => `${scope} ${tag}[data-edge="${CSS.escape(id)}"]${after}`).join(',\n')
 
 /** The look of selection, lighter: an accent edge and a thin ring, where selection has a thicker one. A selected card keeps its own. */
-function partRules(parts: readonly string[]): string {
+export function partRules(parts: readonly string[]): string {
   const nodes = parts.map((id) => `[data-hover-scope] .react-flow__node[data-id="${CSS.escape(id)}"] [data-card]:not([data-selected])`)
   // A tile in the far view has no edge to speak of, so it takes a tint of the accent.
   const tiles = parts.map((id) => `[data-hover-scope][data-far] .react-flow__node[data-id="${CSS.escape(id)}"] [data-card]:not([data-selected])`)
   return `${tiles.join(',\n')} { background: color-mix(in srgb, var(--accent) 60%, var(--bg)); }
 ${nodes.join(',\n')} { border-color: color-mix(in srgb, var(--accent) 70%, transparent); border-style: solid; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent); opacity: 1; }`
+}
+
+/** An area in the far view, lifted the way the pointer on it lifts it, with a firmer edge. */
+function groupRules(groups: readonly string[]): string {
+  const areas = groups.map((id) => `[data-hover-scope][data-far] .react-flow__node[data-id="${CSS.escape(id)}"] > div`)
+  return `${areas.join(',\n')} { background: color-mix(in srgb, var(--fg) var(--wash-share-2), transparent); border-color: var(--border-strong); }`
 }
 
 function edgeRules(edges: readonly string[]): string {
@@ -49,7 +57,7 @@ function edgeRules(edges: readonly string[]): string {
 ${each(ids, '[data-hover-scope]', 'g')} { opacity: 1; }
 ${each(ids, '[data-hover-scope]', 'g', ' .react-flow__edge-path')} { stroke: var(--accent-line) !important; stroke-width: 1.75px !important; }
 ${each(ids, far, 'g')} { opacity: 1 !important; }
-${each(ids, far, 'g', ' .react-flow__edge-path')} { stroke-dasharray: none !important; stroke-width: 2px !important; }
+${each(ids, far, 'g', ' .react-flow__edge-path')} { stroke-dasharray: none !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
 ${each(ids, '[data-hover-scope]', '[data-label]')} { color: var(--accent-line); }
 ${each(ids, quiet, '[data-label]')} { visibility: visible !important; opacity: 1 !important; }`
 }
@@ -67,5 +75,6 @@ export function spotlight(spot: Spot | undefined) {
   }
   const parts = spot?.parts ?? []
   const edges = spot?.edges ?? []
-  sheet.textContent = [parts.length > 0 ? partRules(parts) : '', edges.length > 0 ? edgeRules(edges) : ''].filter(Boolean).join('\n')
+  const groups = spot?.groups ?? []
+  sheet.textContent = [parts.length > 0 ? partRules(parts) : '', groups.length > 0 ? groupRules(groups) : '', edges.length > 0 ? edgeRules(edges) : ''].filter(Boolean).join('\n')
 }

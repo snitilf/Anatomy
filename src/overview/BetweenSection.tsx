@@ -1,21 +1,21 @@
-import { ArrowLeftRight, ChevronRight, Link2, MoveRight } from 'lucide-react'
+import clsx from 'clsx'
+import { ArrowLeft, ArrowLeftRight, ArrowRight, ChevronRight, Link2, Map as MapIcon, MoveRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import type { Selection } from '../app/state'
+import { bundleSelection, type Selection } from '../app/state'
+import { Tip } from '../app/Tip'
 import type { Board } from '../board/schema'
 import { endsOf } from '../inspector/flowRows'
 import { partName } from '../inspector/names'
 import type { Layer } from '../layer/model'
 import type { OverviewActions } from './actions'
+import { bundleWords, endName as nameOf, endRank } from '../canvas/bundleWords'
 import { bundleGroups } from '../canvas/bundles'
 import { innerConnections, type Bundle } from './innerConnections'
 import { overviewMemory } from './memory'
 import styles from './Overview.module.css'
 
 /** The name of one end of a bundle: a group's label, or a part's name. */
-function endName(board: Board, layer: Layer, end: string): string {
-  if (end.startsWith('group:')) return board.groups.find((g) => g.id === end.slice(6))?.label ?? end.slice(6)
-  return partName(board, end, layer.proposals) ?? end
-}
+const endName = (board: Board, layer: Layer, end: string) => nameOf(board, layer.proposals, end)
 
 interface Row {
   id: string
@@ -27,14 +27,15 @@ interface Row {
   selection: Selection
 }
 
+/** What a pair opens on the map: the bundle, or the one connection it holds. */
+function pairSelection(board: Board, pair: Bundle): Selection {
+  const only = pair.count === 1 ? pair.connectionIds[0] : undefined
+  if (only === undefined) return bundleSelection(pair.a, pair.b)
+  return board.relationships.some((r) => r.id === only) ? { type: 'relationship', id: only } : { type: 'link', id: only }
+}
+
 /** How many pair rows show before the rest are folded away. */
 const PAIRS_SHOWN = 8
-
-/** Where an end sits in the board's order: its group's place, or after every group for a part. */
-function rank(board: Board, end: string): number {
-  const at = board.groups.findIndex((g) => `group:${g.id}` === end)
-  return at >= 0 ? at : board.groups.length
-}
 
 function Connections({ board, layer, bundle, actions }: { board: Board; layer: Layer; bundle: Bundle; actions: OverviewActions }) {
   const rows = bundle.connectionIds.flatMap((id): Row[] => {
@@ -98,30 +99,38 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
           const key = `${b.a}|${b.b}`
           const open = memory.expanded.has(key)
           // The ends read in the order of the board's groups.
-          const first = rank(board, b.a) <= rank(board, b.b)
+          const first = endRank(board, b.a) <= endRank(board, b.b)
           const a = endName(board, layer, first ? b.a : b.b)
           const z = endName(board, layer, first ? b.b : b.a)
+          // The arrow is the way the connections run, as the far view's tag says it.
+          const words = bundleWords(board, layer.proposals, b)
+          const Way = words.way === 'forward' ? ArrowRight : words.way === 'backward' ? ArrowLeft : ArrowLeftRight
           return (
-            <li key={key}>
+            <li key={key} className={styles.pairItem}>
               <button
                 type="button"
-                className={styles.pair}
+                className={clsx(styles.pair, styles.withMap)}
                 data-row={`between:${key}`}
                 data-yours={b.mine || undefined}
                 aria-expanded={open}
-                aria-label={`${a} and ${z}, ${b.count} ${b.count === 1 ? 'connection' : 'connections'}`}
+                aria-label={words.spoken}
                 onClick={() => toggle(key, open)}
               >
                 <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
                 <span className={styles.pairEnds}>
                   <span>{a}</span>
-                  <ArrowLeftRight className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                  <Way className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
                   <span>{z}</span>
                 </span>
                 <span className={styles.end}>
                   <span className={styles.count}>{b.count}</span>
                 </span>
               </button>
+              <Tip label="Show on map" side="left">
+                <button type="button" className={styles.mapButton} aria-label={`Show ${a} and ${z} on the map`} onClick={() => actions.openOnMap(pairSelection(board, b), `between:${key}`)}>
+                  <MapIcon size={14} strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              </Tip>
               {open && <Connections board={board} layer={layer} bundle={b} actions={actions} />}
             </li>
           )

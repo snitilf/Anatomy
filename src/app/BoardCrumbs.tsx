@@ -42,7 +42,9 @@ function Trail({ trail, title, room }: { trail: TrailWords; title: string; room?
   const store = useAppStoreApi()
   const { context } = useCommands()
   const back = useCommand('goto.overview')
-  const zoom = useCommand('zoom.selection')
+  const zoomSelection = useCommand('zoom.selection')
+  const zoomBundle = useCommand('zoom.bundle')
+  const zoom = trail.last.kind === 'bundle' ? zoomBundle : zoomSelection
   /** Clears the selection and puts focus back on the map element that was selected, since this button is gone with the selection. */
   const leave = () => {
     const selected = store.getState().selection
