@@ -49,7 +49,7 @@
     {
       "id": "policy-check",
       "label": "Policy check",
-      "summary": "Compares the request with the policy and the spending limit, and proposes a payout when the policy allows it.",
+      "summary": "Compares the request with the policy and the limit, and proposes a payout if allowed.",
       "explanation": "The policy check only *proposes*. It does not pay anything.",
       "group": "refund-logic",
       "inputs": ["Request and policy", "Current spending limit"],
