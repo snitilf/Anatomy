@@ -16,7 +16,6 @@ export const SCHEMA_VERSION = 1
 
 export const LIMITS = {
   fileBytes: 1_000_000,
-  componentsWarn: 15,
   components: 60,
   relationships: 200,
   groups: 12,

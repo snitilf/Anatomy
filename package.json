@@ -2,6 +2,17 @@
   "name": "anatomy",
   "private": true,
   "version": "0.0.0",
+  "description": "A local browser app that turns a plan, feature, or project into a map you can explore, question, and mark up.",
+  "author": "Filip Snitil",
+  "license": "MIT",
+  "homepage": "https://github.com/snitilf/Anatomy#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snitilf/Anatomy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/snitilf/Anatomy/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
