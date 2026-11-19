@@ -8,6 +8,7 @@ import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
 import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
+import { labelTint } from './labelTint'
 import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
@@ -79,8 +80,8 @@ export interface ManualEdgeData extends Record<string, unknown> {
   labelHidden: boolean
   /** The line is hidden while a card moves. */
   moving: boolean
-  /** How many group areas lie under the label, so its cutout can match their tint. */
-  depth: number
+  /** The group areas under the label, so its cutout can match their tint on every side of an edge. See `labelTint`. */
+  tint: string
 }
 export interface GroupData extends Record<string, unknown> {
   label: string
@@ -105,8 +106,8 @@ export interface EdgeData extends Record<string, unknown> {
   labelHidden: boolean
   /** The line is hidden while a card moves. */
   moving: boolean
-  /** How many group areas lie under the label, so its cutout can match their tint. */
-  depth: number
+  /** The group areas under the label, so its cutout can match their tint on every side of an edge. See `labelTint`. */
+  tint: string
   /** The user moved an end: the line is drawn where the user wants it, and `ghost` is the original, dimmed. */
   edited: boolean
   ghost?: string
@@ -487,13 +488,6 @@ function markerFor(color: string): EdgeMarker {
   return marker
 }
 
-/** How many group areas hold a point, at most two. */
-function depthAt(groups: readonly GroupBox[], x: number, y: number): number {
-  let depth = 0
-  for (const g of groups) if (x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height) depth++
-  return Math.min(depth, 2)
-}
-
 /** Turns the geometry and the current selection into React Flow nodes and edges. Cheap, so it runs on every change. */
 export function assembleGraph(
   board: Board,
@@ -714,7 +708,7 @@ export function assembleGraph(
           labelLines: shape.labelLines,
           labelHidden: shape.labelHidden === true,
           moving: shape.cheap === true,
-          depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
+          tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true, far && selected),
           edited: moved !== undefined,
           ...(moved ? { ghost: original.path } : {}),
         },
@@ -754,7 +748,7 @@ export function assembleGraph(
           labelLines: shape.labelLines,
           labelHidden: shape.labelHidden === true,
           moving: shape.cheap === true,
-          depth: depthAt(geometry.groups, shape.labelX, shape.labelY),
+          tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true, far && selected),
         },
       } satisfies Edge<ManualEdgeData>),
     )

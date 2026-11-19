@@ -5,6 +5,7 @@ import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/
 import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
 import { KIND_STYLE, SELECTED_WIDTH, LINE_INK } from './kinds'
+import { LabelCutout } from './LabelCutout'
 import styles from './RelationshipEdge.module.css'
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
@@ -56,7 +57,6 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-moving={data.moving || undefined}
           data-hidden={data.labelHidden || undefined}
           data-hover={hover || undefined}
-          data-depth={data.depth || undefined}
           data-kind={data.kind}
           data-edited={data.edited || undefined}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, ...(data.labelHidden ? {} : { '--label-width': `${data.labelWidth}px` }) } as CSSProperties}
@@ -64,10 +64,10 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           aria-hidden="true"
           onClick={() => dispatch({ type: 'select', selection: { type: 'relationship', id: data.relationshipId } })}
         >
-          <span className={styles.cutout}>
+          <LabelCutout tint={data.tint}>
             {unknown && <CircleHelp className={styles.unknown} size={12} strokeWidth={1.5} aria-hidden="true" />}
             {data.label}
-          </span>
+          </LabelCutout>
         </div>
       </EdgeLabelRenderer>
     </>
