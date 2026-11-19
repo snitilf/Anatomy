@@ -30,6 +30,12 @@ describe('the agent README size', () => {
     )
   })
 
+  it('is not far below the baseline, so the baseline ratchets down on purpose', () => {
+    const floor = 1 - baseline.allowedGrowth
+    expect(characters, 'README shrank; lower the baseline in tokens.baseline.json').toBeGreaterThanOrEqual(Math.ceil(baseline.readme.characters * floor))
+    expect(tokens, 'README shrank; lower the baseline in tokens.baseline.json').toBeGreaterThanOrEqual(Math.ceil(baseline.readme.tokens * floor))
+  })
+
   it('stays under the hard cap', () => {
     expect(characters).toBeLessThanOrEqual(baseline.hardCap.characters)
     expect(tokens).toBeLessThanOrEqual(baseline.hardCap.tokens)

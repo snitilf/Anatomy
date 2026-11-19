@@ -17,7 +17,7 @@ function row(artifact: string, text: string, kind: TextKind): Row {
   return { artifact, characters: text.length, tokens: estimateTokens(text, kind) }
 }
 
-export async function measure(): Promise<Row[]> {
+async function measure(): Promise<Row[]> {
   const schemaText = read('schema/board.v1.schema.json')
   const guide = read('docs/authoring-guide.md')
   const [{ agentReadme }] = (await withAppModules(['/src/app/agentReadme.ts'], (modules) => modules)) as [
