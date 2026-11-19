@@ -45,8 +45,9 @@ import { EXAMPLES } from '../app/examples'
 import type { Selection } from '../app/state'
 import { copyText } from '../app/clipboard'
 import { trailOf } from '../app/crumbs'
+import { blockRect, boundsOf, frameBundle } from '../canvas/bundleFrame'
 import { showView } from '../app/viewActions'
-import { revealRow } from '../overview/memory'
+import { overviewMemory, revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
 import { reviewCounts } from '../notes/review'
 import { toast } from 'sonner'
@@ -70,14 +71,6 @@ const deletable = (c: CommandContext) => {
   return s && (s.type === 'link' || s.type === 'mark' || s.type === 'proposal') ? s : undefined
 }
 
-function bounds(rects: readonly (Rect | undefined)[]): Rect | undefined {
-  const all = rects.filter((r): r is Rect => r !== undefined)
-  if (all.length === 0) return undefined
-  const x = Math.min(...all.map((r) => r.x))
-  const y = Math.min(...all.map((r) => r.y))
-  return { x, y, width: Math.max(...all.map((r) => r.x + r.width)) - x, height: Math.max(...all.map((r) => r.y + r.height)) - y }
-}
-
 /** The box around the selection on the map: a part, or both ends of a connection or link. */
 function selectionBox(c: CommandContext): Rect | undefined {
   const s = selected(c)
@@ -85,13 +78,14 @@ function selectionBox(c: CommandContext): Rect | undefined {
   if (!s || !board || !c.camera) return undefined
   const at = c.camera.rectOf
   if (s.type === 'component') return at(s.id)
+  if (s.type === 'bundle') return boundsOf([blockRect(board, at, s.a), blockRect(board, at, s.b)])
   if (s.type === 'relationship') {
     const r = board.relationships.find((x) => x.id === s.id)
-    return r ? bounds([at(r.from), at(r.to)]) : undefined
+    return r ? boundsOf([at(r.from), at(r.to)]) : undefined
   }
   if (s.type === 'link') {
     const l = layer?.links.find((x) => x.id === s.id)
-    return l ? bounds([at(l.from), at(l.to)]) : undefined
+    return l ? boundsOf([at(l.from), at(l.to)]) : undefined
   }
   if (s.type === 'proposal') {
     const p = layer?.proposals.find((x) => x.id === s.id)
@@ -346,7 +340,7 @@ export const COMMANDS: readonly Command[] = [
     keywords: ['question', 'comment'],
     visible: hasBoard,
     // On the Overview a note belongs to the part under focus, so the key needs a part row.
-    enabled: (c) => onMap(c) || overviewRow() !== undefined,
+    enabled: (c) => (onMap(c) && selected(c)?.type !== 'bundle') || overviewRow() !== undefined,
     run: (c) => {
       const row = c.ui.view === 'overview' ? overviewRow() : undefined
       if (row) {
@@ -390,6 +384,11 @@ export const COMMANDS: readonly Command[] = [
         const group = selection.type === 'proposal' ? 'yours' : (board.components.find((p) => p.id === selection.id)?.group ?? 'other')
         revealRow(board.id, `part:${selection.id}`, group)
       } else if (selection.type === 'relationship' || selection.type === 'link') revealRow(board.id, `conn:${selection.id}`)
+      else if (selection.type === 'bundle') {
+        // The pair's row, open, and not folded away behind Show more.
+        overviewMemory(board.id).expanded.add('more').add(selection.id)
+        revealRow(board.id, `between:${selection.id}`)
+      }
       showView(c.uiApi, board.id, 'overview')
     },
   },
@@ -452,10 +451,22 @@ export const COMMANDS: readonly Command[] = [
     contextLabel: 'Zoom to',
     icon: Scan,
     keys: ['Shift+Digit2'],
-    visible: (c) => onMap(c) && selected(c) !== undefined,
+    visible: (c) => onMap(c) && selected(c) !== undefined && selected(c)?.type !== 'bundle',
     run: (c) => {
       const box = selectionBox(c)
       if (box) c.camera?.frame({ box, padding: 0.25, maxZoom: 1 })
+    },
+  },
+  {
+    id: 'zoom.bundle',
+    group: 'View',
+    label: 'Zoom to bundle',
+    icon: Scan,
+    keywords: ['fit', 'ends', 'selection', 'connections'],
+    visible: (c) => onMap(c) && !playing(c) && selected(c)?.type === 'bundle',
+    run: (c) => {
+      const s = selected(c)
+      if (c.camera && c.state.board && s?.type === 'bundle') frameBundle(c.camera, c.state.board, s.a, s.b)
     },
   },
   {
