@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Markdown, parseMarkdown, plainText } from './markdown'
+import { fastestMs } from '../test/timing'
 
 function html(source: string): string {
   const { container } = render(<Markdown source={source} />)
@@ -95,9 +96,7 @@ describe('untrusted text', () => {
 describe('performance', () => {
   it('handles adversarial input quickly', () => {
     for (const input of ['*'.repeat(4000), '**_`'.repeat(1000), '*a '.repeat(1333), '_a'.repeat(2000)]) {
-      const start = performance.now()
-      parseMarkdown(input)
-      expect(performance.now() - start).toBeLessThan(200)
+      expect(fastestMs(() => parseMarkdown(input), 200)).toBeLessThan(200)
     }
   })
 })

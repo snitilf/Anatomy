@@ -7,6 +7,7 @@ import { Drawn, hitsAnyCard, lineHitsCards, Obstacles, pickSides, planEdges, rou
 import { groupTitle } from './bands'
 import { minParallel } from '../test/lineMetrics'
 import type { EdgeShape } from './buildGraph'
+import { fastestMs } from '../test/timing'
 
 const CARD_WIDTH = CARD_SIZE.width
 const CARD_HEIGHT = CARD_SIZE.height
@@ -117,14 +118,12 @@ describe('routeConnection', () => {
   it('solves the forty part board quickly, in full and after one card moves', () => {
     const board = allBoards()[4]!
     const rects = placeCards(board, { positions: {}, sizes: {} })
-    let start = performance.now()
-    const full = computeGeometry(board, rects)
-    const fullMs = performance.now() - start
     const id = board.components[5]!.id
     const moved = { ...rects, [id]: { ...rects[id]!, x: rects[id]!.x + 40, y: rects[id]!.y + 300 } }
-    start = performance.now()
-    computeGeometry(board, moved, [], full)
-    const partMs = performance.now() - start
+    const full = computeGeometry(board, rects)
+    // The budgets sit about ten times above a quiet machine, which a slip to a cubic search would still break.
+    const fullMs = fastestMs(() => computeGeometry(board, rects), 400)
+    const partMs = fastestMs(() => computeGeometry(board, moved, [], full), 200)
     expect(fullMs).toBeLessThan(400)
     expect(partMs).toBeLessThan(200)
   })
