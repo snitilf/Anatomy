@@ -1,6 +1,6 @@
 /**
  * Pure behavior model for the approval-gate lesson.
- * It teaches four rules about a planned invoice follow-up app.
+ * It teaches four rules about an app that sends a message only after a person approves it.
  * Geometry, readout, caption and announcements all read from this one state.
  * It is a teaching model, not live execution.
  */

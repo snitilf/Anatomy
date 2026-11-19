@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { grabbable, open, pickConnection, pickPart, viewport } from './helpers.ts'
 
-const NORDET = 'src/examples/nordet.board.json'
+const REFUND = 'src/examples/refund-approval.board.json'
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
 
@@ -26,7 +26,7 @@ test('a board with many parts opens fitted whole, and Fit keeps showing the whol
 
 test('a small board is framed larger than before, and cards hold a title, three summary lines, and the badge row', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   expect(await zoomOf(page)).toBeGreaterThan(0.6)
   const fits = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('.react-flow__node-card > div')].every((card) => card.scrollHeight <= card.clientHeight + 1),
@@ -35,7 +35,7 @@ test('a small board is framed larger than before, and cards hold a title, three 
 })
 
 test('the map hint shows once, until the first click, and stays gone after a reload', async ({ page }) => {
-  await open(page, NORDET)
+  await open(page, REFUND)
   const hint = page.getByRole('note').filter({ hasText: 'Drag a card to move it' })
   await expect(hint).toBeVisible()
   await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
@@ -47,7 +47,7 @@ test('the map hint shows once, until the first click, and stays gone after a rel
 
 test('the map hint is not shown on a narrow screen and is not used up there', async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 800 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   await expect(page.getByRole('note')).toHaveCount(0)
   await page.setViewportSize({ width: 1280, height: 720 })
   await expect(page.getByRole('note').filter({ hasText: 'Drag a card to move it' })).toBeVisible()
@@ -70,7 +70,7 @@ test('Ctrl and wheel changes the zoom by at most about 20 per cent per event', a
 
 test('a card dropped under the inspector is brought back into view', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   const spot = await grabbable(page)
   const map = (await page.locator('.react-flow__pane').boundingBox())!
   await page.mouse.move(spot.x, spot.y)
@@ -86,28 +86,28 @@ test('a card dropped under the inspector is brought back into view', async ({ pa
 
 test('an example chosen from the start screen moves focus to the sidebar heading', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: /Nordet follow-up/ }).click()
+  await page.getByRole('button', { name: /Refund approval/ }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByRole('heading', { level: 2 }).first()).toBeFocused()
 })
 
 test('the map hint can be closed with its button', async ({ page }) => {
-  await open(page, NORDET)
+  await open(page, REFUND)
   await page.getByRole('button', { name: 'Dismiss hint' }).click()
   await expect(page.getByRole('note')).toHaveCount(0)
 })
 
 test('selecting a part softens the other lines, and a selected connection is drawn at 1.75px', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   const opacities = () =>
     page.evaluate(() => [...document.querySelectorAll<SVGElement>('.react-flow__edge g[data-faded]')].length)
   expect(await opacities()).toBe(0)
 
-  await pickPart(page, 'approval')
+  await pickPart(page, 'manager-approval')
   expect(await opacities()).toBeGreaterThan(0)
 
-  await pickConnection(page, 'approved action version')
+  await pickConnection(page, 'approved payout version')
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -120,28 +120,28 @@ test('selecting a part softens the other lines, and a selected connection is dra
 
 test('the panel starts at the top for every new selection', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 700 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const scroller = inspector.locator('[data-scroll]')
-  await pickPart(page, 'rule-check')
+  await pickPart(page, 'policy-check')
   await scroller.evaluate((el) => el.scrollTo({ top: 400 }))
   expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
-  await page.locator('.react-flow__node-card[data-id="approval"]').click()
-  await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
+  await page.locator('.react-flow__node-card[data-id="manager-approval"]').click()
+  await expect(inspector.getByRole('heading', { name: 'Manager approval', level: 2 })).toBeVisible()
   expect(await scroller.evaluate((el) => el.scrollTop)).toBe(0)
 })
 
 test('a part opens on its summary and flow, with the citations closed', async ({ page }) => {
-  await open(page, NORDET)
+  await open(page, REFUND)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
-  await pickPart(page, 'approval')
+  await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('region', { name: 'Outgoing' })).toBeVisible()
   await expect(inspector.getByRole('button', { name: /^Cited, not checked/ })).toHaveAttribute('aria-expanded', 'false')
 })
 
 test('the composer stays in reach, C focuses it, and a closed group is remembered', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 700 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const field = inspector.getByRole('textbox', { name: 'Add a note' })
   // On the overview, with the list scrolled to the top, the field is already on screen.
@@ -162,7 +162,7 @@ test('the composer stays in reach, C focuses it, and a closed group is remembere
 
 test('Add from the keyboard keeps focus in the field, even after a press that ended outside the form', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, NORDET)
+  await open(page, REFUND)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const field = inspector.getByRole('textbox', { name: 'Add a note' })
   await field.fill('Kept in the field')

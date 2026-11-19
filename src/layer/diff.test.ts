@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { diffBoards } from './diff'
-import { anatomyBoard, clone, nordetBoard } from './testBoards'
+import { anatomyBoard, clone, refundBoard } from './testBoards'
 
 describe('diffBoards', () => {
   it('reports nothing for identical boards', () => {
-    for (const b of [anatomyBoard(), nordetBoard()]) {
+    for (const b of [anatomyBoard(), refundBoard()]) {
       const d = diffBoards(b, clone(b))
       expect(d.added).toEqual({ components: [], relationships: [] })
       expect(d.removed).toEqual({ components: [], relationships: [] })
@@ -14,7 +14,7 @@ describe('diffBoards', () => {
   })
 
   it('reports added, removed, and changed parts and connections', () => {
-    const prev = nordetBoard()
+    const prev = refundBoard()
     const next = clone(prev)
     const removedC = next.components.pop()!
     const changedC = next.components[0]!

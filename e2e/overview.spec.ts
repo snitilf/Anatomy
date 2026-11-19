@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { open, viewport } from './helpers.ts'
 
-const NORDET = 'src/examples/nordet.board.json'
+const REFUND = 'src/examples/refund-approval.board.json'
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
 
 const tab = (page: import('@playwright/test').Page, name: 'Map' | 'Overview') => page.getByRole('tab', { name })
@@ -281,8 +281,8 @@ test('Back and Forward never carry the view of one board onto another', async ({
   await open(page, SHORTENER)
   await tab(page, 'Overview').click()
   await tab(page, 'Map').click()
-  await page.getByLabel('Board file').setInputFiles('src/examples/nordet.board.json')
-  await expect(page.getByRole('heading', { name: /Nordet/, level: 2 })).toBeVisible()
+  await page.getByLabel('Board file').setInputFiles('src/examples/refund-approval.board.json')
+  await expect(page.getByRole('heading', { name: /Refund approval/, level: 2 })).toBeVisible()
   await page.goBack()
   await expect(page.getByTestId('overview')).toHaveCount(0)
   await expect(tab(page, 'Map')).toHaveAttribute('aria-selected', 'true')
@@ -362,7 +362,7 @@ test('a part opened from the Overview is spotlit: the lines that do not touch it
 for (const [width, height] of [[1440, 900], [1024, 768], [390, 844]] as const) {
   test(`the walkthrough bar never covers the zoom surface or the tool dock at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height })
-    await open(page, NORDET)
+    await open(page, REFUND)
     await page.keyboard.press('ControlOrMeta+k')
     const menu = page.getByRole('dialog', { name: 'Command menu' })
     await menu.getByRole('combobox').fill('Play')
@@ -412,7 +412,7 @@ test.describe('first open on a phone', () => {
   })
 
   test('a board that reads whole on the map opens on the Map', async ({ page }) => {
-    await open(page, NORDET)
+    await open(page, REFUND)
     await expect(tab(page, 'Map')).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByTestId('overview')).toHaveCount(0)
   })

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import nordetText from '../examples/nordet.board.json?raw'
+import refundText from '../examples/refund-approval.board.json?raw'
 import { FILES } from './folder'
 import { createMemoryFolder } from './memoryFolder'
 import { observe, watchBoard } from './watch'
@@ -30,7 +30,7 @@ describe('watchBoard', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
-  const revision = (n: number) => nordetText.replace(/"revision": \d+/, `"revision": ${n}`)
+  const revision = (n: number) => refundText.replace(/"revision": \d+/, `"revision": ${n}`)
 
   it('opens a higher revision after two quiet checks, and stays silent about a broken or older file', async () => {
     let time = 100
