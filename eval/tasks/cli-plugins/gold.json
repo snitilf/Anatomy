@@ -1,0 +1,24 @@
+{
+  "id": "cli-plugins",
+  "kind": "first-board",
+  "components": [
+    { "name": "CLI entry", "aliases": ["cli entry point", "command line entry", "main entry"] },
+    { "name": "Config", "aliases": ["configuration", "argument parsing", "config loader"] },
+    { "name": "Plugin loader", "aliases": ["plugins loader", "plugin loading"] },
+    { "name": "Converter", "aliases": ["convert step", "conversion step", "convert function"] },
+    { "name": "CSV plugin", "aliases": ["built-in csv", "csv reader and writer"] },
+    { "name": "JSON plugin", "aliases": ["built-in json", "json reader and writer"] },
+    { "name": "User plugins", "aliases": ["custom plugins", "plugin directory", "user plugin folder", "external plugins"] }
+  ],
+  "edges": [
+    { "from": "CLI entry", "to": "Config" },
+    { "from": "CLI entry", "to": "Plugin loader" },
+    { "from": "CLI entry", "to": "Converter" },
+    { "from": "Plugin loader", "to": "CSV plugin" },
+    { "from": "Plugin loader", "to": "JSON plugin" },
+    { "from": "Plugin loader", "to": "User plugins" }
+  ],
+  "minUnknowns": 1,
+  "needsDocumentedIntent": false,
+  "notes": "Honest unknowns: what happens when a user plugin throws, and whether user plugins can override built-in ones."
+}

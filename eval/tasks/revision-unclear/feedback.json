@@ -1,0 +1,21 @@
+{
+  "format": "anatomy-feedback",
+  "schemaVersion": 1,
+  "id": "feedback-unclear00001",
+  "boardId": "taskly",
+  "baseRevision": 2,
+  "createdAt": "2026-11-14T11:30:00.000Z",
+  "items": [
+    { "id": "note-bbbbbbbbbb01", "type": "note", "text": "Say which file the API routes live in.", "about": { "type": "component", "id": "api", "label": "API" }, "snapshot": { "type": "component", "label": "API", "summary": "Three routes: list tasks, add a task, toggle a task." } },
+    { "id": "note-bbbbbbbbbb02", "type": "note", "text": "This is wrong.", "about": { "type": "component", "id": "task-store", "label": "Task store" }, "snapshot": { "type": "component", "label": "Task store", "summary": "Runs the three task queries for one user." } },
+    { "id": "draw-bbbbbbbbbbb03", "type": "drawing", "encloses": [], "touches": [] },
+    {
+      "id": "arrow-bbbbbbbbbb04",
+      "type": "arrow",
+      "from": { "type": "point" },
+      "to": { "type": "component", "id": "database", "label": "Database" }
+    },
+    { "id": "text-bbbbbbbbbbb05", "type": "text", "text": "Make it simpler.", "on": [] }
+  ],
+  "withdrawn": []
+}

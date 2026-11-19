@@ -1,0 +1,5 @@
+{
+  "readme": { "characters": 29696, "tokens": 8472 },
+  "hardCap": { "characters": 32000, "tokens": 9200 },
+  "allowedGrowth": 0.05
+}

@@ -1,0 +1,20 @@
+{
+  "id": "web-app",
+  "kind": "first-board",
+  "components": [
+    { "name": "Web page", "aliases": ["web app", "frontend", "task list page"] },
+    { "name": "API", "aliases": ["tasks API", "API server", "API routes"] },
+    { "name": "Session check", "aliases": ["session cookie", "sign in", "authentication"] },
+    { "name": "Task store", "aliases": ["tasks module", "task queries", "task functions"] },
+    { "name": "Database", "aliases": ["SQLite", "SQLite database", "taskly sqlite"] }
+  ],
+  "edges": [
+    { "from": "Web page", "to": "API" },
+    { "from": "API", "to": "Session check" },
+    { "from": "API", "to": "Task store" },
+    { "from": "Task store", "to": "Database" }
+  ],
+  "minUnknowns": 1,
+  "needsDocumentedIntent": false,
+  "notes": "Email reminders are planned and not built. A good board labels them as planned, or leaves them out."
+}
