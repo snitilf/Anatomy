@@ -6,11 +6,6 @@
 
 [How it works](#how-it-works) · [Quick start](#quick-start) · [Docs](#documentation)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/map-dark.png">
-  <img src="docs/images/map-light.png" alt="Anatomy showing a refund approval flow: cards in three groups, labeled lines between them, and walkthroughs in the sidebar." width="100%">
-</picture>
-
 </div>
 
 Your agent reads a codebase in seconds.
