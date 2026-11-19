@@ -4,7 +4,7 @@ import { placeCards } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
 import { addLink, addMark, addNote, addProposal, archiveItems, deleteNote, editNote, reconnect, recordSent } from '../layer/edits'
 import { emptyLayer, type Layer, type Mark } from '../layer/model'
-import { allBoards, nordetBoard } from '../layer/testBoards'
+import { allBoards, refundBoard } from '../layer/testBoards'
 import { nearestOnLine, pointAlong } from '../whiteboard/geometry'
 import { buildFeedback, describeMarkFor, mapSceneOf, unsentCount } from './build'
 
@@ -48,7 +48,7 @@ describe('buildFeedback', () => {
   })
 
   it('resolves a closed hand-drawn loop to what it encloses, and an open stroke to what it touches', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const [a, b] = board.components
     const box = rects(board)[a!.id]!
     const loop: Mark = {
@@ -75,7 +75,7 @@ describe('buildFeedback', () => {
   })
 
   it('uses the size the user gave a card', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const a = board.components[0]!
     const layer = { ...emptyLayer(board.id), sizes: { [a.id]: { width: 480, height: 320 } } }
     const r = rects(board, layer)[a.id]!
@@ -86,7 +86,7 @@ describe('buildFeedback', () => {
   })
 
   it('skips marks that say nothing, and sends them once they have a note', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const nowhere: Mark = { id: 'mark-empty1', createdAt: iso, kind: 'rect', x: -9000, y: -9000, width: 20, height: 20 }
     const free: Mark = { id: 'mark-free01', createdAt: iso, kind: 'arrow', from: { type: 'point', x: -9000, y: -9000 }, to: { type: 'point', x: -8000, y: -9000 } }
     const blank: Mark = { id: 'mark-blank1', createdAt: iso, kind: 'sticky', x: -9000, y: -9000, width: 100, height: 100, text: '' }
@@ -103,7 +103,7 @@ describe('buildFeedback', () => {
   })
 
   it('describes a reconnect as was and now, and a new part with its links and neighbors', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const rel = board.relationships[0]!
     const other = board.components.find((c) => c.id !== rel.from && c.id !== rel.to)!
     const near = rects(board)[other.id]!
@@ -158,7 +158,7 @@ describe('buildFeedback', () => {
   })
 
   it('reads marks against the lines the map draws, when the map passes them', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const layer = emptyLayer(board.id)
     const scene = mapSceneOf(board, layer)
     const rel = board.relationships[0]!
@@ -177,7 +177,7 @@ describe('buildFeedback', () => {
   })
 
   it('matches the unfiltered connection predicate for outlines and arrow points', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const layer = emptyLayer(board.id)
     const rel = board.relationships[0]!
     const ref = { type: 'relationship' as const, id: rel.id, label: rel.label, from: rel.from, to: rel.to }
@@ -233,7 +233,7 @@ describe('buildFeedback', () => {
   })
 
   it('sends what is new or changed, sends again what has no answer yet, and lists what was withdrawn', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     let layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'One', target: { type: 'board' } }, t0, 'note-aaaaaa')
     layer = addNote(layer, board, { kind: 'note', text: 'Two', target: { type: 'board' } }, t0, 'note-bbbbbb')
     const first = build(board, layer)
@@ -270,7 +270,7 @@ describe('buildFeedback', () => {
   })
 
   it('flags a note whose part changed or left the board', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const [a, b] = board.components
     let layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'x', target: { type: 'component', id: a!.id } }, t0, 'note-aaaaaa')
     layer = addNote(layer, board, { kind: 'note', text: 'y', target: { type: 'component', id: b!.id } }, t0, 'note-bbbbbb')

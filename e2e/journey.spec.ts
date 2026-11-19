@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { pickConnection, pickPart } from './helpers.ts'
 
-const BOARD_FILE = 'src/examples/nordet.board.json'
-const BOARD_TITLE = 'Nordet: follow-up on an overdue invoice'
+const BOARD_FILE = 'src/examples/refund-approval.board.json'
+const BOARD_TITLE = 'Refund approval: paying back a customer'
 
 test('open, inspect, walk through, learn, take a note, reload, export, and open the export in a fresh browser', async ({ page }, testInfo) => {
   const requests: string[] = []
@@ -20,8 +20,8 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
 
   // Inspect a part: its explanation and its source label.
-  await pickPart(page, 'rule-check')
-  await expect(inspector.getByRole('heading', { name: 'Rule check', level: 2 })).toBeVisible()
+  await pickPart(page, 'policy-check')
+  await expect(inspector.getByRole('heading', { name: 'Policy check', level: 2 })).toBeVisible()
   // The explanation is open, held to a height with a button for the rest.
   const more = inspector.getByRole('button', { name: 'Show more' })
   if (await more.count()) await more.click()
@@ -32,22 +32,22 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   // Inspect a connection: its kind in plain English.
   await pickConnection(page, 'proposes an action')
   await expect(inspector.getByRole('heading', { name: 'proposes an action', level: 2 })).toBeVisible()
-  await expect(inspector.getByText(/Rule check triggers Preview/)).toBeVisible()
+  await expect(inspector.getByText(/Policy check triggers Payout preview/)).toBeVisible()
 
   // Play a walkthrough.
-  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: /Nordet/ }).click()
+  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: /Refund approval/ }).click()
   await inspector.getByRole('button', { name: 'Play Approve and simulate' }).click()
   const player = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
   await expect(player.getByText('1 / 5')).toBeVisible()
   await player.getByRole('button', { name: 'Next' }).click()
   await expect(player.getByText('2 / 5')).toBeVisible()
-  await expect(player.getByText('The rule check finds that the rule matches and proposes a reminder.')).toBeVisible()
+  await expect(player.getByText('The policy check finds that the policy allows the refund and proposes a payout.')).toBeVisible()
   await player.getByRole('button', { name: 'Close' }).click()
   await expect(player).toBeHidden()
 
   // Open the lesson from the Approval part. A second send of the same approved version is blocked.
-  await pickPart(page, 'approval')
-  await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
+  await pickPart(page, 'manager-approval')
+  await expect(inspector.getByRole('heading', { name: 'Manager approval', level: 2 })).toBeVisible()
   await expect(inspector.getByText('From a written plan')).toBeVisible()
   await inspector.getByRole('button', { name: /^Approval gate/ }).click()
   const lesson = page.getByRole('dialog', { name: 'Approval gate' })
@@ -71,7 +71,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   // Reload: the board and the note come back from this browser.
   await page.reload()
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await pickPart(page, 'approval')
+  await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
 
   // Download a copy from the command menu.
@@ -93,7 +93,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.getByRole('heading', { name: BOARD_TITLE })).toHaveCount(0)
   await page.getByLabel('Board file').setInputFiles(exportPath)
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await pickPart(page, 'approval')
+  await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
 
   // No request left this machine.

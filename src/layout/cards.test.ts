@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Board } from '../board/schema'
-import { allBoards, anatomyBoard, clone, nordetBoard } from '../layer/testBoards'
+import { allBoards, anatomyBoard, clone, refundBoard } from '../layer/testBoards'
 import { autoLayout } from './autoLayout'
 import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, clampSize, contentSize, groupAreas, lineCount, placeCards, summaryLinesFor } from './cards'
 import { overlaps, type Rect } from './geometry'
@@ -42,19 +42,19 @@ describe('card sizes', () => {
   })
 
   it('leaves no large gap under a two-line summary', () => {
-    const size = contentSize({ label: 'Rule check', summary: 'Compares the invoice with the rules and the fictional date.' })
+    const size = contentSize({ label: 'Policy check', summary: 'Compares the request with the policy and the spending limit.' })
     expect(size.height).toBe(CARD_MIN.height)
-    expect(summaryLinesFor({ label: 'Rule check' }, size)).toBeGreaterThanOrEqual(2)
+    expect(summaryLinesFor({ label: 'Policy check' }, size)).toBeGreaterThanOrEqual(2)
   })
 
   it('shows more summary lines on a taller card', () => {
-    const card = { label: 'Rule check' }
+    const card = { label: 'Policy check' }
     expect(summaryLinesFor(card, { width: 240, height: 320 })).toBeGreaterThan(summaryLinesFor(card, { width: 240, height: 112 }))
   })
 
   it('keeps a line for the footer row when the part has notes, so the summary never runs into the note count', () => {
     const size = { width: 240, height: 112 }
-    expect(summaryLinesFor({ label: 'Rule check' }, size, 2)).toBeLessThan(summaryLinesFor({ label: 'Rule check' }, size))
+    expect(summaryLinesFor({ label: 'Policy check' }, size, 2)).toBeLessThan(summaryLinesFor({ label: 'Policy check' }, size))
   })
 
   it('clamps a size to the limits and snaps it to the grid', () => {
@@ -118,7 +118,7 @@ describe('autoLayout', () => {
   })
 
   it('packs cards that no connection joins instead of one long row or column', () => {
-    const b = withoutPositions(clone(nordetBoard()))
+    const b = withoutPositions(clone(refundBoard()))
     b.relationships = []
     b.groups = []
     b.components = b.components.map(({ group: _g, ...c }) => c)
@@ -140,7 +140,7 @@ describe('placeCards', () => {
   })
 
   it('sizes each card to its text unless the user resized it', () => {
-    const b = nordetBoard()
+    const b = refundBoard()
     const [a, c] = b.components
     const r = placeCards(b, { positions: {}, sizes: { [a!.id]: { width: 400, height: 300 } } })
     expect(r[a!.id]).toMatchObject({ width: 400, height: 300 })

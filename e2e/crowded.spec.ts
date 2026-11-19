@@ -277,7 +277,7 @@ test.describe('the spotlight on a selection', () => {
   })
 
   test('a selected line keeps its ends and steps the rest back', async ({ page }) => {
-    await open(page, 'src/examples/nordet.board.json')
+    await open(page, 'src/examples/refund-approval.board.json')
     await page.locator('.react-flow__edge').first().click({ force: true })
     await page.waitForTimeout(400)
     const fade = await page.locator('g[data-ends]').evaluateAll((all) => all.map((g) => Number.parseFloat(getComputedStyle(g).opacity)))
@@ -286,7 +286,7 @@ test.describe('the spotlight on a selection', () => {
   })
 
   test('the examples open as they always did, and never in the far view', async ({ page }) => {
-    for (const file of ['src/examples/nordet.board.json', 'src/examples/external/url-shortener.board.json', 'src/examples/anatomy.board.json']) {
+    for (const file of ['src/examples/refund-approval.board.json', 'src/examples/external/url-shortener.board.json', 'src/examples/anatomy.board.json']) {
       await open(page, file)
       await expect(farOn(page)).toHaveCount(0)
       expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.75)

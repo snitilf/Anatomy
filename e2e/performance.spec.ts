@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 import { cardCenter, cardTransform, drag, grabbable, nextFrame, open, startFrameLog, stopFrameLog, viewport } from './helpers.ts'
 
 const BOARDS = [
-  { name: 'seven parts', file: 'src/examples/nordet.board.json' },
+  { name: 'seven parts', file: 'src/examples/refund-approval.board.json' },
   { name: 'url shortener', file: 'src/examples/external/url-shortener.board.json' },
   { name: 'sixteen parts', file: 'e2e/fixtures/sixteen-parts.board.json' },
   { name: 'forty parts', file: 'e2e/fixtures/forty-parts.board.json' },

@@ -4,15 +4,15 @@ import { describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 import { AppStoreContext } from '../app/store'
 import { initialState, reducer, type Action } from '../app/state'
-import { nordetBoard } from '../layer/testBoards'
+import { refundBoard } from '../layer/testBoards'
 import { Canvas } from './Canvas'
 import { Shellless } from '../test/Shellless'
 
-const ID = nordetBoard().components[0]!.id
+const ID = refundBoard().components[0]!.id
 
 function setup(walkthrough = false) {
-  let state = reducer(initialState, { type: 'boardOpened', board: nordetBoard(), warnings: [] })
-  if (walkthrough) state = reducer(state, { type: 'scenarioStarted', id: nordetBoard().scenarios[0]!.id })
+  let state = reducer(initialState, { type: 'boardOpened', board: refundBoard(), warnings: [] })
+  if (walkthrough) state = reducer(state, { type: 'scenarioStarted', id: refundBoard().scenarios[0]!.id })
   const dispatch = vi.fn<(action: Action) => void>()
   const view = render(
     <AppStoreContext.Provider value={{ store: createStore(() => state), dispatch }}>

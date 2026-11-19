@@ -2,16 +2,16 @@ import 'fake-indexeddb/auto'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import nordetRaw from '../examples/nordet.board.json?raw'
+import refundRaw from '../examples/refund-approval.board.json?raw'
 import { FILES, type Folder } from '../workspace/folder'
 import { createMemoryFolder, memoryFolderAccess, type MemoryFile } from '../workspace/memoryFolder'
 import { AppStoreProvider } from './AppStoreProvider'
 import { Shell } from './Shell'
 import { WorkspaceProvider } from './workspace'
 
-const nordet = JSON.parse(nordetRaw) as { title: string; components: { id: string; label: string }[] }
+const refund = JSON.parse(refundRaw) as { title: string; components: { id: string; label: string }[] }
 const panel = () => within(screen.getByTestId('inspector'))
-const opened = async () => within(await screen.findByTestId('inspector')).findByRole('heading', { name: nordet.title })
+const opened = async () => within(await screen.findByTestId('inspector')).findByRole('heading', { name: refund.title })
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
@@ -27,7 +27,7 @@ beforeEach(() => {
   globalThis.indexedDB = new IDBFactory()
 })
 
-function repo(files: Record<string, string> = { [FILES.board]: nordetRaw }) {
+function repo(files: Record<string, string> = { [FILES.board]: refundRaw }) {
   let time = 1000
   const map = new Map<string, MemoryFile>(Object.entries(files).map(([name, text]) => [name, { text, lastModified: time }]))
   return createMemoryFolder('shop', map, { clock: () => ++time })
@@ -99,7 +99,7 @@ describe('folder mode', () => {
       fireEvent.click(main.getByRole('button', { name: 'Copy prompt' }))
       await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^<!-- Written by Anatomy[^]*# Authoring an Anatomy board/))
       expect(writeText).toHaveBeenCalledWith('Read .anatomy/README.md, then write .anatomy/board.json that explains: ')
-      await folder.write(FILES.board, nordetRaw)
+      await folder.write(FILES.board, refundRaw)
       await act(() => vi.advanceTimersByTimeAsync(4100))
       expect(await opened()).toBeInTheDocument()
     } finally {
@@ -115,7 +115,7 @@ describe('folder mode', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
       await opened()
       await addNote('Still mine')
-      const next = JSON.parse(nordetRaw) as { revision: number; components: { summary: string }[] }
+      const next = JSON.parse(refundRaw) as { revision: number; components: { summary: string }[] }
       next.revision = 2
       next.components[0]!.summary = 'Says something new.'
       await folder.write(FILES.board, JSON.stringify(next))
@@ -130,7 +130,7 @@ describe('folder mode', () => {
   })
 
   it('keeps a layer file it cannot read as a backup and starts a new one', async () => {
-    const folder: Folder & { files: Map<string, MemoryFile> } = repo({ [FILES.board]: nordetRaw, [FILES.layer]: '{ not json' })
+    const folder: Folder & { files: Map<string, MemoryFile> } = repo({ [FILES.board]: refundRaw, [FILES.layer]: '{ not json' })
     app(memoryFolderAccess(folder))
     fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
     await opened()

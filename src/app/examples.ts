@@ -1,6 +1,6 @@
 import anatomyRaw from '../examples/anatomy.board.json?raw'
 import shortenerRaw from '../examples/external/url-shortener.board.json?raw'
-import nordetRaw from '../examples/nordet.board.json?raw'
+import refundRaw from '../examples/refund-approval.board.json?raw'
 
 export interface Example {
   id: string
@@ -12,11 +12,11 @@ export interface Example {
 
 export const EXAMPLES: readonly Example[] = [
   {
-    id: 'nordet',
-    title: 'Nordet follow-up',
-    description: 'How an overdue invoice becomes an approved reminder.',
-    fileName: 'nordet.board.json',
-    raw: nordetRaw,
+    id: 'refund',
+    title: 'Refund approval',
+    description: 'How a refund request becomes an approved, simulated payout.',
+    fileName: 'refund-approval.board.json',
+    raw: refundRaw,
   },
   {
     id: 'anatomy',

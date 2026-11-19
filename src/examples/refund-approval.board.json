@@ -1,0 +1,247 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "id": "refund-approval",
+  "revision": 1,
+  "title": "Refund approval: paying back a customer",
+  "goal": "Understand how a planned local tool turns an invented refund request into an approved, simulated payout, and why each safeguard is needed.",
+  "scope": {
+    "includes": [
+      "The planned journey from a refund request and policy to a simulated payout",
+      "The safeguards listed in the refund scope document"
+    ],
+    "excludes": [
+      "Any running code: none exists yet, so this board describes intentions, not verified behavior",
+      "Real payouts, real customer data, login, scheduling, and deployment"
+    ]
+  },
+  "groups": [
+    { "id": "screens", "label": "Team screens", "description": "What the team member sees and acts on." },
+    { "id": "refund-logic", "label": "Refund logic", "description": "Decisions the app makes from the inputs." },
+    { "id": "local-storage", "label": "Local storage", "description": "Data that must survive a restart." }
+  ],
+  "components": [
+    {
+      "id": "refund-request",
+      "label": "Refund request",
+      "summary": "The invented $100 refund request and the policy that the user enters.",
+      "explanation": "Everything starts here. The request is **invented**, and the policy comes from the user, not from built-in rules.",
+      "group": "screens",
+      "inputs": ["Request details typed or loaded by the user", "Refund policy typed by the user"],
+      "outputs": ["Request and policy for the policy check"],
+      "source": {
+        "kind": "documented-intent",
+        "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md" }]
+      }
+    },
+    {
+      "id": "spending-limit",
+      "label": "Spending limit",
+      "summary": "An amount the user sets by hand, so the same request gives the same result every time.",
+      "group": "refund-logic",
+      "inputs": ["A limit chosen by the user"],
+      "outputs": ["The current spending limit"],
+      "source": {
+        "kind": "documented-intent",
+        "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md" }]
+      }
+    },
+    {
+      "id": "policy-check",
+      "label": "Policy check",
+      "summary": "Compares the request with the policy and the spending limit, and proposes a payout when the policy allows it.",
+      "explanation": "The policy check only *proposes*. It does not pay anything.",
+      "group": "refund-logic",
+      "inputs": ["Request and policy", "Current spending limit"],
+      "outputs": ["A proposed payout, or no payout"],
+      "source": { "kind": "agent-explanation", "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md" }] }
+    },
+    {
+      "id": "payout-preview",
+      "label": "Payout preview",
+      "summary": "Shows the exact amount and the exact account before anything can happen.",
+      "explanation": "The user must see what would be paid, to the cent. Approval of a vague summary would not protect anyone.",
+      "group": "screens",
+      "inputs": ["Proposed payout"],
+      "outputs": ["Exact amount and account shown to the user"],
+      "source": {
+        "kind": "documented-intent",
+        "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md" }]
+      }
+    },
+    {
+      "id": "manager-approval",
+      "label": "Manager approval",
+      "summary": "The manager approves or rejects one specific version of the proposed payout.",
+      "explanation": "Approval belongs to **one version** of the payout. If the amount or account changes, the old approval no longer counts.",
+      "group": "screens",
+      "inputs": ["The previewed payout version", "The manager's decision"],
+      "outputs": ["Approved or rejected payout version"],
+      "lesson": "approval-gate",
+      "source": {
+        "kind": "documented-intent",
+        "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md", "note": "Editing invalidates approval." }]
+      }
+    },
+    {
+      "id": "simulated-payout",
+      "label": "Simulated payout",
+      "summary": "Pretends to pay an approved refund and shows the result. No money moves.",
+      "explanation": "The payout must be blocked when the refund is:\n\n- not approved\n- rejected\n- already paid",
+      "group": "refund-logic",
+      "inputs": ["Approved payout version", "Earlier payout results"],
+      "outputs": ["A visible simulated result"],
+      "source": {
+        "kind": "documented-intent",
+        "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md" }]
+      }
+    },
+    {
+      "id": "payout-ledger",
+      "label": "Payout ledger",
+      "summary": "Local file storage that keeps decisions and payout results across an app restart.",
+      "explanation": "The safeguards only work if the app still remembers them after a restart. Otherwise a restart could allow a second payout.",
+      "group": "local-storage",
+      "inputs": ["Approval decisions", "Payout results"],
+      "outputs": ["Earlier decisions and payouts"],
+      "source": {
+        "kind": "documented-intent",
+        "references": [{ "label": "Refund scope", "path": "docs/refund-scope.md" }]
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "request-to-policy-check",
+      "from": "refund-request",
+      "to": "policy-check",
+      "kind": "sends-data-to",
+      "label": "request and policy",
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "limit-to-policy-check",
+      "from": "spending-limit",
+      "to": "policy-check",
+      "kind": "sends-data-to",
+      "label": "current spending limit",
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "policy-check-to-preview",
+      "from": "policy-check",
+      "to": "payout-preview",
+      "kind": "triggers",
+      "label": "proposes a payout",
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "preview-to-approval",
+      "from": "payout-preview",
+      "to": "manager-approval",
+      "kind": "sends-data-to",
+      "label": "amount and account",
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "approval-to-payout",
+      "from": "manager-approval",
+      "to": "simulated-payout",
+      "kind": "triggers",
+      "label": "approved payout version",
+      "explanation": "Only an approval of the current version can start a simulated payout.",
+      "source": { "kind": "agent-explanation" }
+    },
+    {
+      "id": "approval-to-ledger",
+      "from": "manager-approval",
+      "to": "payout-ledger",
+      "kind": "stores-in",
+      "label": "decision and version",
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "payout-to-ledger",
+      "from": "simulated-payout",
+      "to": "payout-ledger",
+      "kind": "stores-in",
+      "label": "payout result",
+      "source": { "kind": "agent-proposal" }
+    },
+    {
+      "id": "payout-reads-ledger",
+      "from": "simulated-payout",
+      "to": "payout-ledger",
+      "kind": "reads-from",
+      "label": "was this already paid?",
+      "source": { "kind": "agent-proposal" }
+    }
+  ],
+  "items": [
+    {
+      "id": "q-what-to-save",
+      "kind": "question",
+      "text": "What information must be saved to recognize the same refund after a restart?",
+      "about": "payout-ledger"
+    },
+    {
+      "id": "u-storage-format",
+      "kind": "unknown",
+      "text": "No storage format is chosen yet.",
+      "about": "payout-ledger"
+    },
+    {
+      "id": "u-policy-format",
+      "kind": "unknown",
+      "text": "The format of the policy that the user enters is not specified.",
+      "about": "refund-request"
+    },
+    {
+      "id": "a-version-changes-on-edit",
+      "kind": "assumption",
+      "text": "A payout gets a new version whenever its amount or account changes.",
+      "about": "manager-approval"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "approve-and-pay",
+      "title": "Approve and pay",
+      "summary": "The normal path from a refund request to a simulated payout.",
+      "steps": [
+        { "caption": "The user enters the invented request and a policy, and sets a spending limit above the amount.", "highlight": ["refund-request", "spending-limit"] },
+        { "caption": "The policy check finds that the policy allows the refund and proposes a payout.", "highlight": ["policy-check", "request-to-policy-check", "limit-to-policy-check"] },
+        { "caption": "The preview shows the exact amount and account.", "highlight": ["payout-preview", "policy-check-to-preview"] },
+        { "caption": "The manager approves this version, and the decision is saved.", "highlight": ["manager-approval", "preview-to-approval", "approval-to-ledger"] },
+        { "caption": "The simulated payout runs and its result is saved.", "highlight": ["simulated-payout", "approval-to-payout", "payout-to-ledger", "payout-ledger"] }
+      ]
+    },
+    {
+      "id": "reject-and-stop",
+      "title": "Reject and stop",
+      "steps": [
+        { "caption": "The preview shows the proposed payout.", "highlight": ["payout-preview"] },
+        { "caption": "The manager rejects it. The rejection is saved.", "highlight": ["manager-approval", "approval-to-ledger"] },
+        { "caption": "No simulated payout is allowed for a rejected refund.", "highlight": ["simulated-payout"] }
+      ]
+    },
+    {
+      "id": "edit-needs-fresh-approval",
+      "title": "Edit, then approve again",
+      "steps": [
+        { "caption": "The manager approves a payout.", "highlight": ["manager-approval"] },
+        { "caption": "The user edits the amount. This makes a new version of the payout.", "highlight": ["payout-preview"] },
+        { "caption": "The earlier approval was for the old version, so the payout is blocked until the manager approves the new one.", "highlight": ["manager-approval", "approval-to-payout", "simulated-payout"] }
+      ]
+    },
+    {
+      "id": "duplicate-blocked",
+      "title": "A repeated payout is blocked",
+      "steps": [
+        { "caption": "An approved refund was already simulated as paid, and the result was saved.", "highlight": ["payout-ledger", "payout-to-ledger"] },
+        { "caption": "The app restarts. The ledger still holds the earlier payout.", "highlight": ["payout-ledger"] },
+        { "caption": "The user tries the same payout again. The payout checks the ledger and refuses.", "highlight": ["simulated-payout", "payout-reads-ledger"] }
+      ]
+    }
+  ]
+}

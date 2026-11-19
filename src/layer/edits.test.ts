@@ -24,7 +24,7 @@ import {
   updateMark,
 } from './edits'
 import { emptyLayer, layerSchema, type Layer, type Mark, type Proposal } from './model'
-import { anatomyBoard, clone, nordetBoard } from './testBoards'
+import { anatomyBoard, clone, refundBoard } from './testBoards'
 
 const t0 = new Date('2026-01-01T00:00:00.000Z')
 const t1 = new Date('2026-02-01T00:00:00.000Z')
@@ -161,7 +161,7 @@ describe('marks', () => {
 })
 
 describe('proposals and reconnects', () => {
-  const board = nordetBoard()
+  const board = refundBoard()
   const rel = board.relationships[0]!
   const other = board.components.find((c) => c.id !== rel.from && c.id !== rel.to)!
 
@@ -213,7 +213,7 @@ describe('archive', () => {
 
 describe('answers from a revision', () => {
   /** The next revision of a board, answering the user's items. */
-  function answering(board: ReturnType<typeof nordetBoard>, items: { feedbackId: string; status: 'adopted' | 'declined' | 'answered'; text: string; changed: string[] }[]) {
+  function answering(board: ReturnType<typeof refundBoard>, items: { feedbackId: string; status: 'adopted' | 'declined' | 'answered'; text: string; changed: string[] }[]) {
     const next = clone(board)
     next.revision = board.revision + 1
     next.responses = { respondsTo: 'feedback-aaaaaa', items }
@@ -221,7 +221,7 @@ describe('answers from a revision', () => {
   }
 
   it('archives an adopted reconnect whose changes are on the board, and keeps declined and answered items with their answer', () => {
-    for (const board of [nordetBoard(), anatomyBoard()]) {
+    for (const board of [refundBoard(), anatomyBoard()]) {
       const rel = board.relationships[0]!
       const other = board.components.find((c) => c.id !== rel.from && c.id !== rel.to)!
       let layer = addNote(emptyLayer(board.id), board, { kind: 'question', text: 'Why?', target: { type: 'board' } }, t0, 'note-aaaaaa')
@@ -251,7 +251,7 @@ describe('answers from a revision', () => {
   })
 
   it('keeps an adopted item on the map when what it names is not on the board', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'Add a queue.', target: { type: 'board' } }, t0, 'note-aaaaaa')
     for (const changed of [[], ['no-such-part']]) {
       const after = receiveAnswers(layer, answering(board, [{ feedbackId: 'note-aaaaaa', status: 'adopted', text: 'Added.', changed }]), t1)
@@ -262,7 +262,7 @@ describe('answers from a revision', () => {
   })
 
   it('a restored item keeps its answer and is not archived again by the same revision', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const part = board.components[0]!
     const layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'Rename it.', target: { type: 'component', id: part.id } }, t0, 'note-aaaaaa')
     const next = answering(board, [{ feedbackId: 'note-aaaaaa', status: 'adopted', text: 'Renamed.', changed: [part.id] }])
@@ -275,7 +275,7 @@ describe('answers from a revision', () => {
   })
 
   it('dismissing archives the item and its answer; deleting an item drops its answer', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     let layer = addNote(emptyLayer(board.id), board, { kind: 'note', text: 'x', target: { type: 'board' } }, t0, 'note-aaaaaa')
     layer = addNote(layer, board, { kind: 'note', text: 'y', target: { type: 'board' } }, t0, 'note-bbbbbb')
     const next = answering(board, [

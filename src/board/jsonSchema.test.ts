@@ -12,10 +12,10 @@ describe('exported JSON Schema with an independent validator', () => {
   it('accepts both example boards and rejects a misspelled field', async () => {
     const { Ajv2020 } = await import('ajv/dist/2020.js')
     const anatomy = (await import('../examples/anatomy.board.json')).default
-    const nordet = (await import('../examples/nordet.board.json')).default
+    const refund = (await import('../examples/refund-approval.board.json')).default
     const validate = new Ajv2020({ strict: false }).compile(JSON.parse(committed))
     expect(validate(anatomy)).toBe(true)
-    expect(validate(nordet)).toBe(true)
-    expect(validate({ ...nordet, titel: 'typo' })).toBe(false)
+    expect(validate(refund)).toBe(true)
+    expect(validate({ ...refund, titel: 'typo' })).toBe(false)
   })
 })

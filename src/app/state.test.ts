@@ -1,30 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import { clone, nordetBoard } from '../layer/testBoards'
+import { clone, refundBoard } from '../layer/testBoards'
 import { emptyLayer, type Mark } from '../layer/model'
 import { HISTORY_LIMIT } from './history'
 import { bundleGroups } from '../canvas/bundles'
 import { bundleSelection, initialState, reducer, type Action, type AppState } from './state'
 
-const opened = (): AppState => reducer(initialState, { type: 'boardOpened', board: nordetBoard(), warnings: [] })
+const opened = (): AppState => reducer(initialState, { type: 'boardOpened', board: refundBoard(), warnings: [] })
 const run = (state: AppState, ...actions: Action[]) => actions.reduce(reducer, state)
 const now = new Date('2026-01-01T00:00:00.000Z')
 
 describe('reducer', () => {
   it('opens a board with an empty layer that stores no positions', () => {
     const state = opened()
-    expect(state.layer).toEqual(emptyLayer(nordetBoard().id))
+    expect(state.layer).toEqual(emptyLayer(refundBoard().id))
     expect(state.changes).toBeUndefined()
   })
 
   it('does not change the state when a card is dropped where it already is', () => {
-    const id = nordetBoard().components[0]!.id
+    const id = refundBoard().components[0]!.id
     const state = run(opened(), { type: 'cardsMoved', positions: { [id]: { x: 5, y: 6 } } })
     expect(reducer(state, { type: 'cardsMoved', positions: { [id]: { x: 5, y: 6 } } })).toBe(state)
     expect(reducer(state, { type: 'cardsMoved', positions: { ghost: { x: 5, y: 6 } } })).toBe(state)
   })
 
   it('moves and resizes a proposed part like a card, together with the cards it pushed, as one step', () => {
-    const id = nordetBoard().components[0]!.id
+    const id = refundBoard().components[0]!.id
     const proposal = { id: 'part-abcdef', label: 'Cache', summary: '', x: 0, y: 0, width: 260, height: 112, createdAt: now.toISOString() }
     let state = run(opened(), { type: 'proposalAdded', proposal })
     state = run(state, { type: 'cardsMoved', positions: { 'part-abcdef': { x: 40, y: 80 }, [id]: { x: 400, y: 0 } } })
@@ -39,9 +39,9 @@ describe('reducer', () => {
   })
 
   it('keeps the layer and computes changes when the same board is opened again', () => {
-    const first = nordetBoard().components[0]!.id
+    const first = refundBoard().components[0]!.id
     let state = run(opened(), { type: 'cardsMoved', positions: { [first]: { x: 900, y: 700 } } })
-    const next = clone(nordetBoard())
+    const next = clone(refundBoard())
     next.revision = 2
     next.components[0]!.summary = 'A new summary.'
     next.components.push({ ...clone(next.components[1]!), id: 'brand-new', label: 'Brand new' })
@@ -53,7 +53,7 @@ describe('reducer', () => {
   })
 
   it('takes in the answers of a new revision: adopted items that landed are archived, the rest keep their answer', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const part = board.components[0]!.id
     let state = run(
       opened(),
@@ -84,7 +84,7 @@ describe('reducer', () => {
 
   it('starts fresh for a different board', () => {
     const state = opened()
-    const other = clone(nordetBoard())
+    const other = clone(refundBoard())
     other.id = 'another-board'
     const next = reducer(state, { type: 'boardOpened', board: other, warnings: [] })
     expect(next.layer?.boardId).toBe('another-board')
@@ -93,7 +93,7 @@ describe('reducer', () => {
   })
 
   it('uses the layer that comes with an export file', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const layer = { ...emptyLayer(board.id), positions: { [board.components[0]!.id]: { x: 5, y: 6 } } }
     const state = reducer(initialState, { type: 'boardOpened', board, layer, warnings: [] })
     expect(state.layer).toBe(layer)
@@ -117,7 +117,7 @@ describe('reducer', () => {
 })
 
 describe('reducer: undo and redo', () => {
-  const id = nordetBoard().components[0]!.id
+  const id = refundBoard().components[0]!.id
   const move = (x: number): Action => ({ type: 'cardsMoved', positions: { [id]: { x, y: 0 } } })
   const box: Mark = { id: 'mark-aaaaaa', createdAt: now.toISOString(), kind: 'rect', x: 0, y: 0, width: 50, height: 50 }
 
@@ -140,7 +140,7 @@ describe('reducer: undo and redo', () => {
 
   it('records nothing for a change that changes nothing, or for selection and walkthroughs', () => {
     const state = run(opened(), move(10))
-    const same = run(state, move(10), { type: 'select', selection: { type: 'component', id } }, { type: 'scenarioStarted', id: 'approve-and-simulate' })
+    const same = run(state, move(10), { type: 'select', selection: { type: 'component', id } }, { type: 'scenarioStarted', id: 'approve-and-pay' })
     expect(same.history.past).toHaveLength(1)
   })
 
@@ -153,7 +153,7 @@ describe('reducer: undo and redo', () => {
   })
 
   it('undoes every kind of layer change', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const [a, b] = board.components
     const rel = board.relationships[0]!
     const other = board.components.find((c) => c.id !== rel.from && c.id !== rel.to)!
@@ -191,7 +191,7 @@ describe('reducer: undo and redo', () => {
   })
 
   it('selects an item that undo brings back, and drops a selection whose item went away', () => {
-    const [a, b] = nordetBoard().components
+    const [a, b] = refundBoard().components
     let state = run(opened(), { type: 'linkAdded', from: a!.id, to: b!.id, label: '', id: 'link-aaaaaa', now }, { type: 'select', selection: { type: 'link', id: 'link-aaaaaa' } })
     state = reducer(state, { type: 'undo' })
     expect(state.selection).toBeUndefined()
@@ -202,7 +202,7 @@ describe('reducer: undo and redo', () => {
   })
 
   it('treats a new revision and a send to the agent as barriers', () => {
-    const board = clone(nordetBoard())
+    const board = clone(refundBoard())
     const sent = { feedbackId: 'feedback-aaaaaa', baseRevision: 1, at: now.toISOString(), items: [] }
     const afterSend = run(opened(), move(10), { type: 'feedbackSent', sent })
     expect(afterSend.layer?.sent).toEqual(sent)
@@ -216,17 +216,17 @@ describe('reducer: undo and redo', () => {
 })
 
 describe('reducer: scenarios', () => {
-  const playing = (): AppState => reducer(opened(), { type: 'scenarioStarted', id: 'approve-and-simulate' })
-  const total = nordetBoard().scenarios.find((s) => s.id === 'approve-and-simulate')!.steps.length
+  const playing = (): AppState => reducer(opened(), { type: 'scenarioStarted', id: 'approve-and-pay' })
+  const total = refundBoard().scenarios.find((s) => s.id === 'approve-and-pay')!.steps.length
 
   it('starts a scenario at its first step', () => {
-    expect(playing().scenario).toEqual({ id: 'approve-and-simulate', step: 0 })
+    expect(playing().scenario).toEqual({ id: 'approve-and-pay', step: 0 })
   })
 
   it('ignores a scenario the board does not have', () => {
     const state = opened()
     expect(reducer(state, { type: 'scenarioStarted', id: 'nope' })).toBe(state)
-    expect(reducer(initialState, { type: 'scenarioStarted', id: 'approve-and-simulate' }).scenario).toBeUndefined()
+    expect(reducer(initialState, { type: 'scenarioStarted', id: 'approve-and-pay' }).scenario).toBeUndefined()
   })
 
   it('moves to the next and previous step and stops at both ends', () => {
@@ -256,17 +256,17 @@ describe('reducer: scenarios', () => {
   })
 
   it('stops the scenario when another board opens', () => {
-    const other = clone(nordetBoard())
+    const other = clone(refundBoard())
     other.id = 'another-board'
     expect(reducer(playing(), { type: 'boardOpened', board: other, warnings: [] }).scenario).toBeUndefined()
-    expect(reducer(playing(), { type: 'boardOpened', board: nordetBoard(), warnings: [] }).scenario).toBeUndefined()
+    expect(reducer(playing(), { type: 'boardOpened', board: refundBoard(), warnings: [] }).scenario).toBeUndefined()
   })
 
   describe('a selected bundle', () => {
-    const pairOf = (board: ReturnType<typeof nordetBoard>) => bundleGroups(board)[0]!
+    const pairOf = (board: ReturnType<typeof refundBoard>) => bundleGroups(board)[0]!
 
     it('is kept when the same board is opened again with its pair still there', () => {
-      const board = nordetBoard()
+      const board = refundBoard()
       const pair = pairOf(board)
       let state = run(opened(), { type: 'select', selection: bundleSelection(pair.a, pair.b) })
       state = reducer(state, { type: 'boardOpened', board: { ...clone(board), revision: board.revision + 1 }, warnings: [] })
@@ -274,12 +274,12 @@ describe('reducer: scenarios', () => {
     })
 
     it('is keyed by its two ends, not by where it is in the list', () => {
-      const pair = pairOf(nordetBoard())
+      const pair = pairOf(refundBoard())
       expect(bundleSelection(pair.a, pair.b)).toEqual({ type: 'bundle', id: `${pair.a}|${pair.b}`, a: pair.a, b: pair.b })
     })
 
     it('is cleared when a reimport leaves nothing between its ends', () => {
-      const board = nordetBoard()
+      const board = refundBoard()
       const pair = pairOf(board)
       const without = { ...clone(board), revision: board.revision + 1, relationships: board.relationships.filter((r) => !pair.connectionIds.includes(r.id)) }
       let state = run(opened(), { type: 'select', selection: bundleSelection(pair.a, pair.b) })
@@ -288,7 +288,7 @@ describe('reducer: scenarios', () => {
     })
 
     it('is cleared when the last link between its ends is deleted, and kept while one is left', () => {
-      const board = { ...clone(nordetBoard()), relationships: [] }
+      const board = { ...clone(refundBoard()), relationships: [] }
       const [a, b] = [board.components.find((c) => c.group !== undefined)!, board.components.find((c) => c.group !== undefined && c.group !== board.components[0]?.group)!]
       let state = reducer(initialState, { type: 'boardOpened', board, warnings: [] })
       state = run(

@@ -4,7 +4,7 @@ import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
 import { CARD_SIZE, placeCards } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
-import { anatomyBoard, nordetBoard } from '../layer/testBoards'
+import { anatomyBoard, refundBoard } from '../layer/testBoards'
 import { assembleGraph, buildGraph, computeGeometry, GraphCache, moveCard } from './buildGraph'
 import { RunIndex } from './labelPlacement'
 
@@ -25,7 +25,7 @@ function setup(board: Board) {
 }
 
 describe.each([
-  ['a small board', nordetBoard],
+  ['a small board', refundBoard],
   ['a large board', forty],
 ])('moving one card on %s', (_name, load) => {
   const board = load()
@@ -100,7 +100,7 @@ describe.each([
 
 describe('a walkthrough', () => {
   it('never dims the selected card or the card being held', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const [a, b, c] = board.components
     const positions = placeCards(board, { positions: {}, sizes: {} })
     const geometry = computeGeometry(board, positions)
@@ -118,7 +118,7 @@ describe('a walkthrough', () => {
 })
 
 describe('softening the lines while a part is selected', () => {
-  const board = nordetBoard()
+  const board = refundBoard()
   const positions = placeCards(board, { positions: {}, sizes: {} })
   const geometry = computeGeometry(board, positions)
   const part = board.components.find((c) => board.relationships.some((r) => r.from === c.id || r.to === c.id))!
@@ -140,7 +140,7 @@ describe('softening the lines while a part is selected', () => {
 })
 
 describe('the spotlight on a selection', () => {
-  const board = nordetBoard()
+  const board = refundBoard()
   const positions = placeCards(board, { positions: {}, sizes: {} })
   const geometry = computeGeometry(board, positions)
   const build = (selection: Parameters<typeof assembleGraph>[3]) =>
@@ -216,7 +216,7 @@ describe('RunIndex', () => {
 })
 
 describe.each([
-  ['a small board', nordetBoard],
+  ['a small board', refundBoard],
   ['a large board', forty],
 ])('the full build after a card is dropped on %s', (_name, load) => {
   const board = load()
@@ -300,7 +300,7 @@ describe.each([
 
 describe('card sizes', () => {
   it('draws a resized card at its size, grows its group, and solves its lines again', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const grouped = board.components.find((c) => c.group !== undefined)!
     const rects = placeCards(board, { positions: {}, sizes: {} })
     const before = computeGeometry(board, rects)
@@ -317,7 +317,7 @@ describe('card sizes', () => {
 })
 
 describe('the user layer on the map', () => {
-  const board = nordetBoard()
+  const board = refundBoard()
   const iso = '2026-01-01T00:00:00.000Z'
   const rects: Record<string, Rect> = { ...placeCards(board, { positions: {}, sizes: {} }), 'part-abcdef': { x: -600, y: -400, width: 240, height: 112 } }
   const proposal = { id: 'part-abcdef', label: 'Cache', summary: '', x: -600, y: -400, width: 240, height: 112, createdAt: iso }
@@ -400,7 +400,7 @@ describe('a kept line after another card moves', () => {
 
 describe('a hidden label after room frees up', () => {
   it('is placed again by the next build, when its line stays', () => {
-    const board = nordetBoard()
+    const board = refundBoard()
     const positions = placeCards(board, { positions: {}, sizes: {} })
     const before = computeGeometry(board, positions)
     const shown = [...before.edges.values()].find((e) => e.labelWidth > 0 && !e.labelHidden)!
