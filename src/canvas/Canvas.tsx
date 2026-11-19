@@ -348,9 +348,17 @@ export function Canvas() {
   const pressedAt = useRef({ x: 0, y: 0 })
   /** The card that takes focus once a group picked from the far view is in view, so a keyboard user is not dropped to the page. */
   const focusAfterPick = useRef<string | undefined>(undefined)
+  /** Focus is on a button of the far layer, which goes when the map zooms in. */
+  const focusInFar = useRef(false)
   useEffect(() => {
     // The hover rule was written for the other view. It is cleared when the view changes.
     if (hoverStyle.current) hoverStyle.current.textContent = ''
+    // A count or a name that had focus goes with the far view. Focus goes to a card, not to the page.
+    if (!far && focusInFar.current && !focusAfterPick.current && (!document.activeElement || document.activeElement === document.body)) {
+      const sel = viewRef.current?.board ? store.getState().selection : undefined
+      focusAfterPick.current = sel?.type === 'component' ? sel.id : viewRef.current?.board.components[0]?.id
+    }
+    focusInFar.current = false
     if (far || !focusAfterPick.current) return
     const id = focusAfterPick.current
     focusAfterPick.current = undefined
@@ -362,7 +370,7 @@ export function Canvas() {
       if (card && document.activeElement !== card && tries++ < 20) window.requestAnimationFrame(focus)
     }
     window.requestAnimationFrame(focus)
-  }, [far])
+  }, [far, store])
   const takePicked = useCallback(() => {
     const id = pickedOnMap.current
     pickedOnMap.current = undefined
@@ -553,6 +561,8 @@ export function Canvas() {
     },
     [camera],
   )
+  /** The two ends of the selected bundle. One array for as long as the selection stands, so the far layer's memo holds. */
+  const selectedEnds = useMemo(() => (selection?.type === 'bundle' ? [selection.a, selection.b] : undefined), [selection])
   /** The parts a selected bundle's connections touch, lifted like a spotlighted card. One rule, so the map does not render again. */
   const bundleLift = useMemo(() => {
     if (selection?.type !== 'bundle' || !board || step) return ''
@@ -1025,6 +1035,9 @@ export function Canvas() {
       data-labels={quiet || far ? 'quiet' : undefined}
       data-far={far || undefined}
       data-spot={spotlit || undefined}
+      onFocusCapture={(e) => {
+        focusInFar.current = e.target instanceof Element && e.target.closest('[data-unit], [data-far-label]') !== null
+      }}
       onPointerDownCapture={(e) => {
         pressedAt.current = { x: e.clientX, y: e.clientY }
       }}
@@ -1081,7 +1094,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <FarMode onChange={setFar} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selection?.type === 'bundle' ? [selection.a, selection.b] : undefined} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}

@@ -99,6 +99,11 @@ export const FarLayer = memo(function FarLayer({
     spotlight(undefined)
   }, [])
 
+  // A bundle that goes while its tag is up (a link added, a layout that changed) takes the tag and the lift with it.
+  useEffect(() => {
+    if (shown.current !== undefined && !byId.has(shown.current)) hide()
+  }, [byId, hide])
+
   // The layer goes with the far view. A tag and a lift it left behind go too.
   useEffect(
     () => () => {

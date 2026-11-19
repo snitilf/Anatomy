@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { open, viewport } from './helpers.ts'
+import { readFile, writeFile } from 'node:fs/promises'
+import { open, pickPart, viewport } from './helpers.ts'
 
 const SIXTY = 'e2e/fixtures/sixty-parts.board.json'
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
@@ -101,8 +102,7 @@ test.describe('bundles in the far view', () => {
     const row = panel.locator('[data-row^="conn:"]').first()
     const label = await row.locator('span').nth(1).innerText()
     await row.click()
-    await page.waitForTimeout(700)
-    expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.75)
+    await expect.poll(() => zoomOf(page)).toBeGreaterThanOrEqual(0.75)
     await expect(farOn(page)).toHaveCount(0)
     await expect(panel.getByRole('heading', { level: 2 })).toHaveText(label)
     await expect(page.locator('.react-flow__edge.selected')).toHaveCount(1)
@@ -145,13 +145,15 @@ test.describe('bundles in the far view', () => {
   })
 
   test('Tab reaches every bundle, after the group names', async ({ page }) => {
+    const board = JSON.parse(await readFile(SIXTY, 'utf8')) as { groups: { id: string; label: string }[]; components: { group?: string }[] }
+    const names = board.groups.map((g) => `${g.label}, ${board.components.filter((c) => c.group === g.id).length} parts`)
     await open(page, SIXTY)
     const total = await units(page).count()
     expect(total).toBeGreaterThan(10)
-    await page.getByRole('button', { name: /^Frontend, 15 parts/ }).focus()
+    await page.getByRole('button', { name: new RegExp(`^${names[0]}`) }).focus()
     const seen: string[] = []
+    const namesSeen = new Set([names[0]])
     let sawBundleBeforeName = false
-    let names = 1
     for (let i = 0; i < total + 40 && seen.length < total; i++) {
       await page.keyboard.press('Tab')
       const at = await page.evaluate(() => {
@@ -160,13 +162,84 @@ test.describe('bundles in the far view', () => {
       })
       if (at.inUnit) seen.push(at.label)
       else if (/Zoom to this group\.$/.test(at.label)) {
-        names++
+        namesSeen.add(at.label.replace(/\. Zoom to this group\.$/, ''))
         if (seen.length > 0) sawBundleBeforeName = true
       }
     }
     expect(new Set(seen).size).toBe(total)
-    expect(names).toBe(3)
+    expect([...namesSeen].sort()).toEqual([...names].sort())
     expect(sawBundleBeforeName).toBe(false)
+  })
+
+  test('a selected bundle survives zooming in past the far view', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await open(page, SIXTY)
+    const { at } = await pickMany(page)
+    await page.mouse.click(at.x, at.y)
+    const panel = page.getByTestId('inspector')
+    const title = await panel.getByRole('heading', { level: 2 }).innerText()
+    const rows = await panel.locator('[data-row^="conn:"]').count()
+    await page.keyboard.press('Shift+0')
+    await expect.poll(() => zoomOf(page)).toBeGreaterThanOrEqual(0.75)
+    await expect(farOn(page)).toHaveCount(0)
+    await expect(panel.getByRole('heading', { level: 2 })).toHaveText(title)
+    // The lines of the bundle stay lit, and the rest of the map stays stepped back.
+    expect(await page.locator('g[data-active]').count()).toBe(rows)
+    // Back out, the bundle is still the selection.
+    await page.keyboard.press('Shift+1')
+    await expect(farOn(page)).toHaveCount(1)
+    await expect(page.locator('[data-unit][data-on]')).toHaveCount(1)
+    expect(errors).toEqual([])
+  })
+
+  test('focus on a count is not dropped to the page when the map zooms in', async ({ page }) => {
+    await open(page, SIXTY)
+    await many(page).first().locator('button').focus()
+    await page.keyboard.press('Shift+0')
+    await expect.poll(() => zoomOf(page)).toBeGreaterThanOrEqual(0.75)
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe('BODY')
+  })
+
+  test('a bundle made of links is cleared when undo takes its last link away', async ({ page }, testInfo) => {
+    const board = JSON.parse(await readFile(SIXTY, 'utf8')) as { components: { id: string; label: string; group?: string }[]; relationships: { from: string; to: string }[] }
+    const [x, y] = board.components.filter((c) => c.group === undefined)
+    if (!x || !y) throw new Error('the fixture has no two parts without a group')
+    // Two parts with no connection, so the only thing between them is what the test draws.
+    board.relationships = board.relationships.filter((r) => ![x.id, y.id].includes(r.from) && ![x.id, y.id].includes(r.to))
+    const file = testInfo.outputPath('linked.board.json')
+    await writeFile(file, JSON.stringify(board))
+    await open(page, file)
+    const link = async (from: typeof x, to: typeof x, label: string) => {
+      await pickPart(page, from.id)
+      await page.keyboard.press('l')
+      await page.getByRole('combobox', { name: /Search parts/ }).or(page.getByPlaceholder('Search parts')).fill(to.label)
+      await page.keyboard.press('Enter')
+      await page.getByLabel('Label', { exact: true }).fill(label)
+      await page.keyboard.press('Enter')
+      await expect(page.getByTestId('inspector').getByRole('heading', { level: 2 })).toHaveText(label)
+    }
+    await link(x, y, 'first link')
+    await link(y, x, 'second link')
+    await page.locator('.react-flow__pane').click({ position: { x: 4, y: 300 } })
+    await page.keyboard.press('Shift+1')
+    await expect(farOn(page)).toHaveCount(1)
+    const [a, b] = [x.id, y.id].sort()
+    const unit = page.locator(`[data-unit="${a}|${b}"]`)
+    await expect(unit).toBeAttached()
+    await page.mouse.click((await onLine(unit)).x, (await onLine(unit)).y)
+    await expect(unit).toHaveAttribute('data-on', 'true')
+    const panel = page.getByTestId('inspector')
+    await expect(panel.locator('[data-row^="conn:"]')).toHaveCount(2)
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(panel.locator('[data-row^="conn:"]')).toHaveCount(1)
+    await page.keyboard.press('ControlOrMeta+z')
+    await expect(page.locator('[data-unit][data-on]')).toHaveCount(0)
+    await expect(unit).toHaveCount(0)
+    // Redo brings the link back, selected as a link. The bundle is not selected again.
+    await page.keyboard.press('ControlOrMeta+Shift+z')
+    await expect(panel.getByRole('heading', { level: 2 })).toHaveText('first link')
+    await expect(page.locator('[data-unit][data-on]')).toHaveCount(0)
   })
 
   test('a focused bundle shows its tag and Enter selects it', async ({ page }) => {
@@ -186,10 +259,9 @@ test.describe('bundles in the far view', () => {
     await expect(unit).toBeAttached()
     const at = await onLine(unit)
     await page.mouse.click(at.x, at.y)
-    await page.waitForTimeout(700)
+    await expect.poll(() => zoomOf(page)).toBeGreaterThanOrEqual(0.75)
     await expect(page.locator('[data-unit][data-on]')).toHaveCount(0)
     await expect(page.locator('.react-flow__edge.selected')).toHaveCount(1)
-    expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.75)
   })
 
   test('the command menu zooms to the selected bundle first', async ({ page }) => {
