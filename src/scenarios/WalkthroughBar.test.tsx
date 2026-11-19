@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import App from '../App'
-import exampleRaw from '../examples/example.board.json?raw'
+import refundRaw from '../examples/refund-approval.board.json?raw'
 import { openPart } from '../test/openOnMap'
 
 beforeAll(() => {
@@ -13,14 +13,14 @@ beforeAll(() => {
   })
 })
 
-const example = JSON.parse(exampleRaw) as {
+const refund = JSON.parse(refundRaw) as {
   scenarios: { id: string; title: string; steps: { caption: string; highlight: string[] }[] }[]
   components: { id: string; label: string; lesson?: string }[]
 }
-const walk = example.scenarios[0]!
+const walk = refund.scenarios[0]!
 
-async function loadExample() {
-  fireEvent.click(screen.getByRole('button', { name: /Example check-in/ }))
+async function loadRefund() {
+  fireEvent.click(screen.getByRole('button', { name: /Refund approval/ }))
   await screen.findByTestId('inspector')
 }
 
@@ -36,16 +36,16 @@ const bar = () => screen.getByRole('region', { name: `Walkthrough: ${walk.title}
 describe('walkthroughs', () => {
   it('lists the walkthroughs in the overview, with a step count', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const panel = screen.getByTestId('inspector')
     expect(within(panel).getByRole('heading', { name: /^Walkthroughs/ })).toBeInTheDocument()
-    for (const s of example.scenarios) expect(within(panel).getByText(s.title)).toBeInTheDocument()
+    for (const s of refund.scenarios) expect(within(panel).getByText(s.title)).toBeInTheDocument()
     expect(within(panel).getByText(`${walk.steps.length} steps`)).toBeInTheDocument()
   })
 
   it('plays from the overview and shows step 1 with its caption', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     play()
     const player = within(bar())
     expect(player.getByText(`Step 1 of ${walk.steps.length}`)).toBeInTheDocument()
@@ -57,7 +57,7 @@ describe('walkthroughs', () => {
 
   it('moves with Next, Previous, and the arrow keys, and stops at both ends', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     play()
     const player = within(bar())
     fireEvent.click(player.getByRole('button', { name: 'Next' }))
@@ -79,7 +79,7 @@ describe('walkthroughs', () => {
 
   it('moves focus into the player on start, and Escape closes it and returns focus to Play', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const button = play()
     await waitFor(() => expect(bar().contains(document.activeElement)).toBe(true))
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
@@ -89,7 +89,7 @@ describe('walkthroughs', () => {
 
   it('keeps the tooltip shut for the focus that starts a walkthrough, and shows it for a later keyboard focus', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     play()
     const next = within(bar()).getByRole('button', { name: 'Next' })
     await waitFor(() => expect(next).toHaveFocus())
@@ -106,7 +106,7 @@ describe('walkthroughs', () => {
 
   it('closes from the Close button', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     play()
     fireEvent.click(within(bar()).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('region', { name: /^Walkthrough:/ })).not.toBeInTheDocument()
@@ -114,12 +114,12 @@ describe('walkthroughs', () => {
 
   it('marks the highlighted parts and dims the others', async () => {
     const { container } = render(<App />)
-    await loadExample()
+    await loadRefund()
     expect(container.querySelector('[data-highlighted]')).toBeNull()
     expect(container.querySelector('[data-dimmed]')).toBeNull()
     play()
     const lit = new Set(walk.steps[0]!.highlight)
-    const parts = example.components.map((c) => c.id)
+    const parts = refund.components.map((c) => c.id)
     const marked = [...container.querySelectorAll<HTMLElement>('[data-id]')]
       .filter((el) => parts.includes(el.dataset.id ?? ''))
     expect(marked.length).toBe(parts.length)
@@ -142,8 +142,8 @@ describe('walkthroughs', () => {
 describe('lessons in the sidebar', () => {
   it('offers the lesson for Approval and opens it, then returns focus to the button', async () => {
     render(<App />)
-    await loadExample()
-    const approval = example.components.find((c) => c.lesson)!
+    await loadRefund()
+    const approval = refund.components.find((c) => c.lesson)!
     const panel = screen.getByTestId('inspector')
     openPart(approval.label)
     expect(within(panel).getByRole('heading', { name: 'Lesson' })).toBeInTheDocument()
@@ -165,8 +165,8 @@ describe('lessons in the sidebar', () => {
 
   it('shows no lesson section for a part without one', async () => {
     render(<App />)
-    await loadExample()
-    const plain = example.components.find((c) => !c.lesson)!
+    await loadRefund()
+    const plain = refund.components.find((c) => !c.lesson)!
     const panel = screen.getByTestId('inspector')
     openPart(plain.label)
     expect(within(panel).queryByRole('heading', { name: 'Lesson' })).not.toBeInTheDocument()
@@ -176,29 +176,29 @@ describe('lessons in the sidebar', () => {
 describe('Escape on the map', () => {
   it('gives focus back to the card that was focused when the sidebar button disappears', async () => {
     const { container } = render(<App />)
-    await loadExample()
-    const card = container.querySelector<HTMLElement>('.react-flow__node[data-id="preview"]')
+    await loadRefund()
+    const card = container.querySelector<HTMLElement>('.react-flow__node[data-id="payout-preview"]')
     expect(card).not.toBeNull()
     card!.focus()
     fireEvent.focus(card!)
     const panel = screen.getByTestId('inspector')
-    openPart(/^Approval/)
-    const back = within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Example/ })
+    openPart(/^Manager approval/)
+    const back = within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Refund approval/ })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
-    await waitFor(() => expect(within(panel).getByRole('heading', { name: /Example/ })).toBeInTheDocument())
+    await waitFor(() => expect(within(panel).getByRole('heading', { name: /Refund approval/ })).toBeInTheDocument())
     await waitFor(() => expect(document.activeElement).not.toBe(document.body))
     expect(card).toHaveFocus()
   })
 
   it('falls back to the panel heading when no map element had focus', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const panel = screen.getByTestId('inspector')
-    openPart(/^Approval/)
-    const back = within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Example/ })
+    openPart(/^Manager approval/)
+    const back = within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Refund approval/ })
     back.focus()
     fireEvent.keyDown(back, { key: 'Escape' })
-    await waitFor(() => expect(within(panel).getByRole('heading', { name: /Example/ })).toHaveFocus())
+    await waitFor(() => expect(within(panel).getByRole('heading', { name: /Refund approval/ })).toHaveFocus())
   })
 })

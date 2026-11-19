@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Board } from '../board/schema'
-import { allBoards, clone, exampleBoard } from '../layer/testBoards'
+import { allBoards, clone, refundBoard } from '../layer/testBoards'
 import { emptyLayer } from '../layer/model'
 import { currentTrail, neighbors, noteSelection, rememberStep, walkStep, type Trail } from './walk'
 
 /** A small board by hand: a feeds b and c, b feeds d, c feeds d, and d feeds nothing. */
 function diamond(): Board {
-  const board = clone(exampleBoard())
+  const board = clone(refundBoard())
   const base = board.components[0]!
   board.components = ['a', 'b', 'c', 'd', 'lone'].map((id) => ({ ...clone(base), id, label: id.toUpperCase(), inputs: [], outputs: [] }))
   const line = { ...clone(board.relationships[0]!) }

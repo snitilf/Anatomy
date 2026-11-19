@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { placeCards } from '../layout/cards'
-import { exampleBoard } from '../layer/testBoards'
+import { refundBoard } from '../layer/testBoards'
 import { solve } from './Canvas'
 
 const text = vi.hoisted(() => ({ scale: 1 }))
@@ -10,7 +10,7 @@ vi.mock('./textMeasure', async (original) => {
 })
 
 describe('the solve memo', () => {
-  const board = exampleBoard()
+  const board = refundBoard()
   const rects = placeCards(board, { positions: {}, sizes: {} })
 
   it('builds again from scratch after the text sizes change, as the font refresh does', () => {

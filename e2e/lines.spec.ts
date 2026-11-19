@@ -4,7 +4,7 @@ import { open } from './helpers.ts'
 
 const BOARDS = [
   { name: 'anatomy', file: 'src/examples/anatomy.board.json' },
-  { name: 'example', file: 'src/examples/example.board.json' },
+  { name: 'refund approval', file: 'src/examples/refund-approval.board.json' },
   { name: 'url shortener', file: 'src/examples/external/url-shortener.board.json' },
   { name: 'sixteen parts', file: 'e2e/fixtures/sixteen-parts.board.json' },
   { name: 'forty parts', file: 'e2e/fixtures/forty-parts.board.json' },

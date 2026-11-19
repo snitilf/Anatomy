@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { pickConnection, pickPart } from './helpers.ts'
 
-const BOARD_FILE = 'src/examples/example.board.json'
-const BOARD_TITLE = 'Example: check-in on a late order'
+const BOARD_FILE = 'src/examples/refund-approval.board.json'
+const BOARD_TITLE = 'Refund approval: paying back a customer'
 
 test('open, inspect, walk through, learn, take a note, reload, export, and open the export in a fresh browser', async ({ page }, testInfo) => {
   const requests: string[] = []
@@ -20,34 +20,34 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.locator('[data-save-state="saved"]')).toBeAttached()
 
   // Inspect a part: its explanation and its source label.
-  await pickPart(page, 'rule-check')
-  await expect(inspector.getByRole('heading', { name: 'Rule check', level: 2 })).toBeVisible()
+  await pickPart(page, 'policy-check')
+  await expect(inspector.getByRole('heading', { name: 'Policy check', level: 2 })).toBeVisible()
   // The explanation is open, held to a height with a button for the rest.
   const more = inspector.getByRole('button', { name: 'Show more' })
   if (await more.count()) await more.click()
-  await expect(inspector.getByText('The rule check only proposes. It does not send anything.')).toBeVisible()
+  await expect(inspector.getByText('The policy check only proposes. It does not pay anything, and it never changes the request or the policy.')).toBeVisible()
   // The default source, the agent's own explanation, shows no source line.
   await expect(inspector.locator('[data-source]')).toHaveCount(0)
 
   // Inspect a connection: its kind in plain English.
-  await pickConnection(page, 'proposes an action')
-  await expect(inspector.getByRole('heading', { name: 'proposes an action', level: 2 })).toBeVisible()
-  await expect(inspector.getByText(/Rule check triggers Preview/)).toBeVisible()
+  await pickConnection(page, 'proposes a payout')
+  await expect(inspector.getByRole('heading', { name: 'proposes a payout', level: 2 })).toBeVisible()
+  await expect(inspector.getByText(/Policy check triggers Payout preview/)).toBeVisible()
 
   // Play a walkthrough.
-  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: /Example/ }).click()
-  await inspector.getByRole('button', { name: 'Play Approve and simulate' }).click()
-  const player = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
+  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: /Refund approval/ }).click()
+  await inspector.getByRole('button', { name: 'Play Approve and pay' }).click()
+  const player = page.getByRole('region', { name: 'Walkthrough: Approve and pay' })
   await expect(player.getByText('1 / 5')).toBeVisible()
   await player.getByRole('button', { name: 'Next' }).click()
   await expect(player.getByText('2 / 5')).toBeVisible()
-  await expect(player.getByText('The rule check finds that the rule matches and proposes a notice.')).toBeVisible()
+  await expect(player.getByText('The policy check finds that the policy allows the refund and proposes a payout.')).toBeVisible()
   await player.getByRole('button', { name: 'Close' }).click()
   await expect(player).toBeHidden()
 
-  // Open the lesson from the Approval part. A second send of the same approved version is blocked.
-  await pickPart(page, 'approval')
-  await expect(inspector.getByRole('heading', { name: 'Approval', level: 2 })).toBeVisible()
+  // Open the lesson from the Manager approval part. A second send of the same approved version is blocked.
+  await pickPart(page, 'manager-approval')
+  await expect(inspector.getByRole('heading', { name: 'Manager approval', level: 2 })).toBeVisible()
   await expect(inspector.getByText('From a written plan')).toBeVisible()
   await inspector.getByRole('button', { name: /^Approval gate/ }).click()
   const lesson = page.getByRole('dialog', { name: 'Approval gate' })
@@ -62,7 +62,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await lesson.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(lesson).toBeHidden()
 
-  // Add a note to Approval and wait for it to be saved.
+  // Add a note to Manager approval and wait for it to be saved.
   await inspector.getByRole('textbox', { name: 'Add a note' }).fill(noteText)
   await inspector.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
@@ -71,7 +71,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   // Reload: the board and the note come back from this browser.
   await page.reload()
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await pickPart(page, 'approval')
+  await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
 
   // Download a copy from the command menu.
@@ -93,7 +93,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await expect(page.getByRole('heading', { name: BOARD_TITLE })).toHaveCount(0)
   await page.getByLabel('Board file').setInputFiles(exportPath)
   await expect(page.getByRole('heading', { name: BOARD_TITLE, level: 2 })).toBeVisible()
-  await pickPart(page, 'approval')
+  await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()
 
   // No request left this machine.

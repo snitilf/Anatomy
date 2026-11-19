@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react'
 import { Profiler } from 'react'
 import { describe, expect, it } from 'vitest'
 import { NotesSection } from '../inspector/notes'
-import { exampleBoard } from '../layer/testBoards'
+import { refundBoard } from '../layer/testBoards'
 import { PanelContext } from '../inspector/panelContext'
 import { AppStoreContext, createAppStore } from './store'
 import { TopBar } from './TopBar'
@@ -10,7 +10,7 @@ import { Shellless } from '../test/Shellless'
 
 function opened() {
   const api = createAppStore()
-  const board = exampleBoard()
+  const board = refundBoard()
   api.dispatch({ type: 'boardOpened', board, warnings: [] })
   return { api, board }
 }
@@ -73,7 +73,7 @@ describe('the app store', () => {
   it('keeps one store for each app', () => {
     const a = createAppStore()
     const b = createAppStore()
-    a.dispatch({ type: 'boardOpened', board: exampleBoard(), warnings: [] })
+    a.dispatch({ type: 'boardOpened', board: refundBoard(), warnings: [] })
     expect(b.store.getState().board).toBeUndefined()
   })
 })

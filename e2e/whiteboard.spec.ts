@@ -72,9 +72,9 @@ async function dragLine(page: Page, from: { x: number; y: number }, to: { x: num
 }
 
 test('the whiteboard: draw, write, propose, re-point, undo, and everything comes back after a reload', async ({ page }) => {
-  // Wide enough that Example opens fitted whole, with every card in the open.
+  // Wide enough that the refund board opens fitted whole, with every card in the open.
   await page.setViewportSize({ width: 1440, height: 900 })
-  await openFolder(page, 'src/examples/example.board.json')
+  await openFolder(page, 'src/examples/refund-approval.board.json')
   const map = await boxOf(page, '.react-flow')
   const toolbar = page.getByRole('toolbar', { name: 'Whiteboard tools' })
   await expect(toolbar).toBeVisible()
@@ -215,7 +215,7 @@ test('Escape and V return to Select, Space pans with any tool, and the tool bar 
 
 test('phones only view the map: no tool bar', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await openFolder(page, 'src/examples/example.board.json')
+  await openFolder(page, 'src/examples/refund-approval.board.json')
   await expect(page.getByRole('toolbar', { name: 'Whiteboard tools' })).toBeHidden()
 })
 
@@ -223,7 +223,7 @@ test.describe('coarse pointer', () => {
   test.use({ hasTouch: true, viewport: { width: 1440, height: 900 } })
 
   test('each toolbar button owns its visible edges', async ({ page }) => {
-    await openFolder(page, 'src/examples/example.board.json')
+    await openFolder(page, 'src/examples/refund-approval.board.json')
     const buttons = page.getByRole('toolbar', { name: 'Whiteboard tools' }).getByRole('button')
     expect(await buttons.count()).toBeGreaterThan(1)
     for (const button of await buttons.all()) {
@@ -236,7 +236,7 @@ test.describe('coarse pointer', () => {
 })
 
 test('a proposal uses its label as name and summary as description', async ({ page }) => {
-  const board = await readFile('src/examples/example.board.json', 'utf8')
+  const board = await readFile('src/examples/refund-approval.board.json', 'utf8')
   const boardId = (JSON.parse(board) as { id: string }).id
   const layer = { format: 'anatomy-layer', schemaVersion: 2, boardId, positions: {}, sizes: {}, notes: [], links: [], marks: [], proposals: [{ id: 'part-aaaaaa', label: 'Rate limiter', summary: 'Limits incoming requests', x: 0, y: 0, width: 240, height: 140, createdAt: '2026-11-13T00:00:00.000Z' }], reconnects: [], archive: [] }
   await page.addInitScript(([key, text, layerText]) => {

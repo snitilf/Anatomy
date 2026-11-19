@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { v1Placement } from './v1Layout'
 import { emptyLayer, layerSchema, LAYER_LIMITS } from './model'
-import { allBoards, exampleBoard } from './testBoards'
+import { allBoards, refundBoard } from './testBoards'
 import { readLayer } from './upgrade'
 
 const iso = '2026-01-01T00:00:00.000Z'
@@ -40,7 +40,7 @@ describe('readLayer', () => {
   })
 
   it('reads version 2 as it is, and reports problems with paths', () => {
-    const board = exampleBoard()
+    const board = refundBoard()
     const layer = emptyLayer(board.id)
     expect(readLayer(layer, board)).toEqual({ ok: true, layer })
     const bad = readLayer({ ...layer, notes: [{ id: 'nope' }] })

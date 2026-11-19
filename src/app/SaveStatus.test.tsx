@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { exampleBoard } from '../layer/testBoards'
+import { refundBoard } from '../layer/testBoards'
 import { SaveStatus } from './SaveStatus'
 import { AppStoreContext, createAppStore } from './store'
 import { WorkspaceContext, type SaveState, type WorkspaceApi } from './workspaceContext'
@@ -18,7 +18,7 @@ function Harness({ save }: { save: SaveState }) {
 
 function app() {
   const store = createAppStore()
-  store.dispatch({ type: 'boardOpened', board: exampleBoard(), warnings: [] })
+  store.dispatch({ type: 'boardOpened', board: refundBoard(), warnings: [] })
   return (s: SaveState) => (
     <AppStoreContext.Provider value={store}>
       <Harness save={s} />

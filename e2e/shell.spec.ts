@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { open, pickConnection, viewport } from './helpers.ts'
 
-const EXAMPLE = 'src/examples/example.board.json'
+const REFUND = 'src/examples/refund-approval.board.json'
 const SHORTENER = 'src/examples/external/url-shortener.board.json'
 const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
 
@@ -59,9 +59,9 @@ test('] hides the sidebar, the map takes the room and keeps its middle, and ] br
 })
 
 test('widening the map clamps zoom to its new fit minimum', async ({ page }) => {
-  // Example is wider than the map beside the sidebar, so its fit is set by width and rises when the sidebar hides.
+  // The refund board is wider than the map beside the sidebar, so its fit is set by width and rises when the sidebar hides.
   await page.setViewportSize({ width: 1280, height: 800 })
-  await open(page, EXAMPLE)
+  await open(page, REFUND)
   const zoom = async () => Number(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1])
   // A zoom that reads the same twice in a row has finished gliding.
   const settled = async () => {
@@ -93,9 +93,9 @@ test('widening the map clamps zoom to its new fit minimum', async ({ page }) => 
 })
 
 test('the walkthrough bar steps with the arrow keys and closes with Escape', async ({ page }) => {
-  await open(page, EXAMPLE)
-  await page.getByRole('complementary', { name: 'Sidebar' }).getByRole('button', { name: 'Play Approve and simulate' }).click()
-  const bar = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
+  await open(page, REFUND)
+  await page.getByRole('complementary', { name: 'Sidebar' }).getByRole('button', { name: 'Play Approve and pay' }).click()
+  const bar = page.getByRole('region', { name: 'Walkthrough: Approve and pay' })
   await expect(bar.getByText('1 / 5')).toBeVisible()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
@@ -108,7 +108,7 @@ test('the walkthrough bar steps with the arrow keys and closes with Escape', asy
 
 test('the top bar is 40px high with 28px controls in three groups: 4px inside a group, 16px between', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, EXAMPLE)
+  await open(page, REFUND)
   const bar = page.getByRole('banner')
   expect((await bar.boundingBox())!.height).toBe(40)
   const box = async (name: string | RegExp) => (await bar.getByRole('button', { name }).boundingBox())!
@@ -130,7 +130,7 @@ test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
   test('the sidebar is a sheet: a slow drag settles on the nearest stop, a flick goes on to the next', async ({ page }) => {
-    await open(page, EXAMPLE)
+    await open(page, REFUND)
     const sheet = page.getByRole('region', { name: 'Sidebar' })
     await expect(sheet).toHaveAttribute('data-stop', '0')
     const header = sheet.getByRole('button').first()
@@ -158,10 +158,10 @@ test.describe('on a phone', () => {
   })
 
   test('rows of the Overview are 44px, and a part picked from it stays above the sheet', async ({ page }) => {
-    await open(page, EXAMPLE)
+    await open(page, REFUND)
     const sheet = page.getByRole('region', { name: 'Sidebar' })
     await page.getByRole('tab', { name: 'Overview' }).tap()
-    const row = page.getByTestId('overview').locator('[data-row="part:approval"]')
+    const row = page.getByTestId('overview').locator('[data-row="part:manager-approval"]')
     expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     // A part chosen from the list is shown on the map above the half-height sheet.
     await row.tap()
@@ -198,7 +198,7 @@ test.describe('on a phone', () => {
   })
 
   test('a drag of the sheet header leaves no focus ring', async ({ page }) => {
-    await open(page, EXAMPLE)
+    await open(page, REFUND)
     const sheet = page.getByRole('region', { name: 'Sidebar' })
     const header = sheet.getByRole('button').first()
     const box = (await header.boundingBox())!
@@ -215,7 +215,7 @@ test.describe('touch controls at the bottom of the map', () => {
   test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } })
 
   test('every control owns its edges, so a tap near an edge reaches that control', async ({ page }) => {
-    await open(page, EXAMPLE)
+    await open(page, REFUND)
     await expect(page.getByRole('note')).toBeVisible()
     const groups = [page.getByRole('toolbar', { name: 'Zoom' }), page.getByRole('toolbar', { name: 'Whiteboard tools' }), page.getByRole('note')]
     for (const group of groups) {
@@ -239,7 +239,7 @@ test.describe('touch controls at the bottom of the map', () => {
   })
 
   test('a tap at the edge of the zoom percentage resets the zoom and does not zoom in', async ({ page }) => {
-    await open(page, EXAMPLE)
+    await open(page, REFUND)
     const level = page.getByRole('button', { name: /^Zoom \d+%/ })
     const box = (await level.boundingBox())!
     await page.touchscreen.tap(box.x + box.width - 2, box.y + box.height / 2)

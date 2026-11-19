@@ -5,8 +5,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import App from './App'
 import { StorageError, openStore } from './workspace/db'
 import { placeCards } from './layout/cards'
-import { exampleBoard } from './layer/testBoards'
-import exampleRaw from './examples/example.board.json?raw'
+import { refundBoard } from './layer/testBoards'
+import refundRaw from './examples/refund-approval.board.json?raw'
 import { openConnection, openPart } from './test/openOnMap'
 import { press } from './test/press'
 
@@ -31,8 +31,8 @@ type RawBoard = {
   scenarios: { steps: { highlight: string[] }[] }[]
   items: { about?: string }[]
 }
-const example = JSON.parse(exampleRaw) as RawBoard & { id: string }
-const part = (id: string) => example.components.find((c) => c.id === id)!
+const refund = JSON.parse(refundRaw) as RawBoard & { id: string }
+const part = (id: string) => refund.components.find((c) => c.id === id)!
 
 const blobs: Blob[] = []
 
@@ -71,8 +71,8 @@ function readBlob(blob: Blob): Promise<string> {
   })
 }
 
-async function loadExample() {
-  fireEvent.click(screen.getByRole('button', { name: /Example check-in/ }))
+async function loadRefund() {
+  fireEvent.click(screen.getByRole('button', { name: /Refund approval/ }))
   await screen.findByTestId('inspector')
 }
 
@@ -83,7 +83,7 @@ function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: n
 const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Outgoing' })
 const panel = () => within(screen.getByTestId('inspector'))
 /** The board segment of the top bar's crumb, which clears the selection. */
-const backToBoard = () => fireEvent.click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Example/ }))
+const backToBoard = () => fireEvent.click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Refund approval/ }))
 
 /** Picks a row in an open picker or the command menu. */
 async function pick(name: RegExp | string) {
@@ -139,13 +139,13 @@ async function exportText(): Promise<string> {
   return readBlob(blobs[blobs.length - 1]!)
 }
 
-/** A copy of Example where Preview says something new and Sample clock is gone. */
-function modifiedExample(): string {
-  const next = structuredClone(example)
+/** A copy of the refund board where Payout preview says something new and Spending limit is gone. */
+function modifiedRefund(): string {
+  const next = structuredClone(refund)
   next.revision = 2
-  next.components.find((c) => c.id === 'preview')!.summary = 'Shows the proposed message, with the amount in bold.'
-  next.components = next.components.filter((c) => c.id !== 'sample-clock')
-  const gone = new Set(['sample-clock', 'clock-to-rule-check'])
+  next.components.find((c) => c.id === 'payout-preview')!.summary = 'Shows the proposed message, with the amount in bold.'
+  next.components = next.components.filter((c) => c.id !== 'spending-limit')
+  const gone = new Set(['spending-limit', 'limit-to-policy-check'])
   next.relationships = next.relationships.filter((r) => !gone.has(r.id))
   for (const s of next.scenarios) for (const step of s.steps) step.highlight = step.highlight.filter((h) => !gone.has(h))
   next.items = next.items.filter((i) => i.about === undefined || !gone.has(i.about))
@@ -155,8 +155,8 @@ function modifiedExample(): string {
 describe('your notes', () => {
   it('adds, edits, and deletes a note on a part', async () => {
     render(<App />)
-    await loadExample()
-    selectPart('approval')
+    await loadRefund()
+    selectPart('manager-approval')
     addNote('Ask legal who signs off')
     const item = panel().getByText('Ask legal who signs off').closest('li')!
     expect(item).toHaveAttribute('data-yours')
@@ -178,21 +178,21 @@ describe('your notes', () => {
 
   it('adds a question to a connection, and counts it on the card', async () => {
     render(<App />)
-    await loadExample()
-    const rel = example.relationships.find((r) => r.id === 'approval-to-send')!
+    await loadRefund()
+    const rel = refund.relationships.find((r) => r.id === 'approval-to-payout')!
     await openConnection(rel.label)
     addNote('What if the version is stale?', 'Question')
     const item = panel().getByText('What if the version is stale?').closest('li')!
     expect(within(item).getByText(/^Question/)).toBeInTheDocument()
 
-    selectPart('approval')
+    selectPart('manager-approval')
     addNote('One more')
     expect(screen.getByRole('img', { name: '1 note or question from you, not sent' })).toBeInTheDocument()
   })
 
   it('keeps the composer to one row until it is used', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const box = panel().getByRole('textbox', { name: 'Add a note' })
     expect(panel().queryByRole('radiogroup', { name: 'Kind' })).not.toBeInTheDocument()
     fireEvent.focus(box)
@@ -202,7 +202,7 @@ describe('your notes', () => {
 
   it('shows a note under its group even when the group was closed', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     expect(panel().queryByRole('button', { name: /^Notes/ })).not.toBeInTheDocument()
     addNote('First thought')
     fireEvent.click(panel().getByRole('button', { name: /^Notes/ }))
@@ -214,7 +214,7 @@ describe('your notes', () => {
 
   it('keeps C working after a group was opened with the keyboard', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const toggle = panel().getByRole('button', { name: /^Walkthroughs/ })
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -225,7 +225,7 @@ describe('your notes', () => {
 
   it('keeps focus in the field when Add is pressed from the keyboard', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const box = panel().getByRole('textbox', { name: 'Add a note' })
     fireEvent.focus(box)
     fireEvent.change(box, { target: { value: 'From the keyboard' } })
@@ -236,7 +236,7 @@ describe('your notes', () => {
 
   it('shows a counter only near the limit', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const box = panel().getByRole('textbox', { name: 'Add a note' })
     fireEvent.change(box, { target: { value: 'a'.repeat(100) } })
     expect(panel().queryByText(/of 2000/)).not.toBeInTheDocument()
@@ -246,7 +246,7 @@ describe('your notes', () => {
 
   it('adds with Ctrl+Enter', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     fireEvent.change(panel().getByRole('textbox', { name: 'Add a note' }), { target: { value: 'Whole board thought' } })
     fireEvent.keyDown(panel().getByRole('textbox', { name: 'Add a note' }), { key: 'Enter', ctrlKey: true })
     expect(within(panel().getByRole('region', { name: 'Notes' })).getByText('Whole board thought')).toBeInTheDocument()
@@ -256,16 +256,16 @@ describe('your notes', () => {
 describe('your links', () => {
   it('draws a link from the keyboard path, shows it in the flow, and lists it in the line key', async () => {
     render(<App />)
-    await loadExample()
-    selectPart('preview')
-    await addLink('Saved record', 'I would check this')
+    await loadRefund()
+    selectPart('payout-preview')
+    await addLink('Payout ledger', 'I would check this')
     expect(await panel().findByRole('heading', { name: 'I would check this' })).toBeInTheDocument()
     expect(panel().getByRole('textbox', { name: 'Label' })).toHaveValue('I would check this')
 
-    selectPart('preview')
+    selectPart('payout-preview')
     const row = within(flow()).getByRole('button', { name: 'I would check this' }).closest('li')!
     expect(row).toHaveAttribute('data-yours', 'link')
-    expect(within(row).getByRole('button', { name: 'Saved record' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Payout ledger' })).toBeInTheDocument()
     fireEvent.click(within(row).getByRole('button', { name: 'I would check this' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Line key' }))
@@ -273,7 +273,7 @@ describe('your links', () => {
     expect(within(key).getByText('Your link')).toBeInTheDocument()
 
     fireEvent.click(panel().getByRole('button', { name: 'Delete' }))
-    expect(panel().getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(panel().getByRole('heading', { name: refund.title })).toBeInTheDocument()
     expect(await screen.findByText('Link deleted')).toBeInTheDocument()
   })
 })
@@ -281,15 +281,15 @@ describe('your links', () => {
 describe('saving', () => {
   it('keeps notes, a moved card, and a link across a reload', async () => {
     const first = render(<App />)
-    await loadExample()
-    selectPart('approval')
+    await loadRefund()
+    selectPart('manager-approval')
     addNote('Survives a reload')
-    await addLink('Saved record')
+    await addLink('Payout ledger')
     // Adding a link shows the link. The card must be selected again for the arrow keys to move it.
     backToBoard()
-    selectPart('approval')
+    selectPart('manager-approval')
 
-    const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
+    const card = first.container.querySelector('.react-flow__node[data-id="manager-approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowRight', shiftKey: true })
     // A keyboard move is saved once the keys stop, a quarter of a second later.
     await new Promise((resolve) => setTimeout(resolve, 350))
@@ -297,32 +297,32 @@ describe('saving', () => {
     first.unmount()
 
     const store = await openStore()
-    const raw = await store.loadBoard('example-order-check-in')
+    const raw = await store.loadBoard('refund-approval')
     store.close()
-    const moved = positionOf(raw, 'approval')
+    const moved = positionOf(raw, 'manager-approval')
     expect(moved).toBeDefined()
-    const start = placeCards(exampleBoard(), { positions: {}, sizes: {} })['approval']!
+    const start = placeCards(refundBoard(), { positions: {}, sizes: {} })['manager-approval']!
     expect(moved).not.toEqual(start)
 
     render(<App />)
     await screen.findByTestId('inspector')
-    expect(await panel().findByRole('heading', { name: example.title })).toBeInTheDocument()
-    selectPart('approval')
+    expect(await panel().findByRole('heading', { name: refund.title })).toBeInTheDocument()
+    selectPart('manager-approval')
     expect(panel().getByText('Survives a reload')).toBeInTheDocument()
     const mine = within(flow()).getByRole('button', { name: 'Link' }).closest('li')!
-    expect(within(mine).getByRole('button', { name: 'Saved record' })).toBeInTheDocument()
+    expect(within(mine).getByRole('button', { name: 'Payout ledger' })).toBeInTheDocument()
     await saved()
     const again = await openStore()
-    const reloaded = await again.loadBoard('example-order-check-in')
+    const reloaded = await again.loadBoard('refund-approval')
     again.close()
-    expect(positionOf(reloaded, 'approval').x).toBe(moved.x)
+    expect(positionOf(reloaded, 'manager-approval').x).toBe(moved.x)
   })
 
   it('says Not saved and offers a download when the write fails, and keeps the note', async () => {
     failing.on = true
     render(<App />)
-    await loadExample()
-    selectPart('approval')
+    await loadRefund()
+    selectPart('manager-approval')
     addNote('Still here')
     const alert = await screen.findByRole('alert', {}, { timeout: 3000 })
     expect(within(alert).getByText('Not saved')).toBeInTheDocument()
@@ -335,13 +335,13 @@ describe('saving', () => {
 
   it('lists saved boards, and asks before deleting one', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     await saved()
     press(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' }))
     const open = within(await screen.findByRole('dialog', { name: 'Open' }))
     expect(open.getByRole('heading', { name: 'Recent' })).toBeInTheDocument()
-    fireEvent.click(open.getByRole('button', { name: `Delete ${example.title}` }))
-    const dialog = await screen.findByRole('dialog', { name: `Delete ${example.title}?` })
+    fireEvent.click(open.getByRole('button', { name: `Delete ${refund.title}` }))
+    const dialog = await screen.findByRole('dialog', { name: `Delete ${refund.title}?` })
     expect(within(dialog).getByText(/notes from this browser/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete board' }))
     expect(await screen.findByRole('button', { name: 'Open file' })).toBeInTheDocument()
@@ -352,13 +352,13 @@ describe('saving', () => {
 describe('export and open', () => {
   it('restores notes, positions, and links from an export in a fresh browser', async () => {
     const first = render(<App />)
-    await loadExample()
-    selectPart('approval')
+    await loadRefund()
+    selectPart('manager-approval')
     addNote('Travels with the file')
-    await addLink('Saved record')
+    await addLink('Payout ledger')
     backToBoard()
-    selectPart('approval')
-    const card = first.container.querySelector('.react-flow__node[data-id="approval"]') as HTMLElement
+    selectPart('manager-approval')
+    const card = first.container.querySelector('.react-flow__node[data-id="manager-approval"]') as HTMLElement
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true })
     // A keyboard move joins the layer once the keys stop, a quarter of a second later.
     await new Promise((resolve) => setTimeout(resolve, 350))
@@ -372,22 +372,22 @@ describe('export and open', () => {
     const second = render(<App />)
     await openFile(second.container, text, 'export.json')
     await screen.findByTestId('inspector')
-    expect(await panel().findByRole('heading', { name: example.title })).toBeInTheDocument()
-    selectPart('approval')
+    expect(await panel().findByRole('heading', { name: refund.title })).toBeInTheDocument()
+    selectPart('manager-approval')
     expect(panel().getByText('Travels with the file')).toBeInTheDocument()
     const mine = within(flow()).getByRole('button', { name: 'Link' }).closest('li')!
-    expect(within(mine).getByRole('button', { name: 'Saved record' })).toBeInTheDocument()
+    expect(within(mine).getByRole('button', { name: 'Payout ledger' })).toBeInTheDocument()
     await saved()
     const store = await openStore()
-    const raw = await store.loadBoard('example-order-check-in')
+    const raw = await store.loadBoard('refund-approval')
     store.close()
-    expect(positionOf(raw, 'approval').y).toBe(file.layer.positions['approval']!.y)
+    expect(positionOf(raw, 'manager-approval').y).toBe(file.layer.positions['manager-approval']!.y)
   })
 
   it('asks which notes to keep when a file and this browser both have notes', async () => {
     const first = render(<App />)
-    await loadExample()
-    selectPart('approval')
+    await loadRefund()
+    selectPart('manager-approval')
     addNote('In the file')
     const text = await exportText()
     addNote('Only in the browser')
@@ -413,30 +413,30 @@ describe('export and open', () => {
 describe('a new version of a board you already have', () => {
   it('reviews what changed and flags notes, and never moves them by itself', async () => {
     const first = render(<App />)
-    await loadExample()
-    selectPart('preview')
+    await loadRefund()
+    selectPart('payout-preview')
     addNote('Check the wording')
     backToBoard()
-    selectPart('sample-clock')
+    selectPart('spending-limit')
     addNote('Where does the date come from?', 'Question')
     backToBoard()
     await saved()
 
-    await openFile(first.container, modifiedExample(), 'example.json')
+    await openFile(first.container, modifiedRefund(), 'refund.json')
     // A new revision does not switch tabs. A toast says so and offers the review.
     expect(await screen.findByText('Revision 2 is open')).toBeInTheDocument()
     const tab = await panel().findByRole('tab', { name: /Review/ })
     expect(tab).toHaveTextContent('2')
-    expect(panel().getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(panel().getByRole('heading', { name: refund.title })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Review' }))
 
     const changes = panel().getByRole('region', { name: 'Changed in revision 2' })
-    expect(within(changes).getByRole('button', { name: part('preview').label })).toBeInTheDocument()
-    expect(within(changes).getByText(part('sample-clock').label)).toBeInTheDocument()
+    expect(within(changes).getByRole('button', { name: part('payout-preview').label })).toBeInTheDocument()
+    expect(within(changes).getByText(part('spending-limit').label)).toBeInTheDocument()
 
     const outdatedGroup = panel().getByRole('region', { name: 'Possibly outdated' })
     const outdated = within(outdatedGroup).getByText('Check the wording').closest('li')!
-    expect(within(outdated).getByText(/Preview changed after you wrote this: summary\./)).toBeInTheDocument()
+    expect(within(outdated).getByText(/Payout preview changed after you wrote this: summary\./)).toBeInTheDocument()
     const relinking = panel().getByRole('region', { name: 'Needs relinking' })
     const homeless = within(relinking).getByText('Where does the date come from?').closest('li')!
     expect(within(homeless).getByText(/was removed\./)).toBeInTheDocument()
@@ -445,24 +445,24 @@ describe('a new version of a board you already have', () => {
     expect(panel().queryByRole('region', { name: 'Possibly outdated' })).not.toBeInTheDocument()
 
     press(within(homeless).getByRole('button', { name: 'Attach to' }))
-    await pick(/^Rule check/)
+    await pick(/^Policy check/)
     expect(panel().queryByRole('region', { name: 'Needs relinking' })).not.toBeInTheDocument()
 
     fireEvent.click(panel().getByRole('button', { name: 'Mark reviewed' }))
     // With nothing left to review, the Review tab goes quiet and the details show.
     await waitFor(() => expect(panel().getByRole('tab', { name: /Review/ })).toHaveAttribute('aria-disabled', 'true'))
 
-    selectPart('rule-check')
+    selectPart('policy-check')
     expect(panel().getByText('Where does the date come from?')).toBeInTheDocument()
   })
 
   it('keeps a note whose part was removed until the user decides', async () => {
     const first = render(<App />)
-    await loadExample()
-    selectPart('sample-clock')
+    await loadRefund()
+    selectPart('spending-limit')
     addNote('Orphan')
     backToBoard()
-    await openFile(first.container, modifiedExample(), 'example.json')
+    await openFile(first.container, modifiedRefund(), 'refund.json')
     fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
     fireEvent.click(await panel().findByRole('button', { name: 'Mark reviewed' }))
     const relinking = panel().getByRole('region', { name: 'Needs relinking' })

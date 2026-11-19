@@ -73,7 +73,7 @@ for (const width of [1440, 390]) {
 
 test('a sticky with more words than fit fades at the bottom, and a short one does not', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   const map = (await page.locator('.react-flow').boundingBox())!
   const make = async (text: string, dy: number) => {
     await page.keyboard.press('s')
@@ -89,7 +89,7 @@ test('a sticky with more words than fit fades at the bottom, and a short one doe
 
 test('a long note is held to six lines until Show more', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   await page.locator('.react-flow__node-card').first().click({ force: true })
   const panel = page.getByTestId('inspector')
   await panel.getByRole('textbox', { name: /note/i }).fill(Array.from({ length: 60 }, (_, i) => `Line ${i} of a very long note.`).join('\n'))
@@ -118,7 +118,7 @@ test('with many problems the error panel keeps its count and Dismiss in view whi
 })
 
 test('a card is named by its label and group, its summary is the description, and a connection is read once', async ({ page }) => {
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   const card = page.locator('.react-flow__node-card').first()
   const name = (await card.getAttribute('aria-label'))!
   expect(name.length).toBeLessThan(120)
@@ -155,7 +155,7 @@ const pressesButton = (page: Page, name: string, gap: number) =>
 
 test('small controls answer the pointer in a larger area than they look', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   expect(await pressesButton(page, 'Settings', 1)).toBe(true)
   expect(await pressesButton(page, 'Settings', 8)).toBe(false)
 })
@@ -164,7 +164,7 @@ test.describe('on a touch screen', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
   test('the hit area of a control is at least 44 pixels', async ({ page }) => {
-    await open(page, 'src/examples/example.board.json')
+    await open(page, 'src/examples/refund-approval.board.json')
     const size = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--hit').trim())
     expect(size).toBe('44px')
     const box = await page.evaluate(() => {
@@ -180,7 +180,7 @@ test.describe('on a touch screen', () => {
 
 test('every form field has a name or an id', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   await page.locator('.react-flow__node-card').first().click({ force: true })
   await page.keyboard.press('ControlOrMeta+k')
   await expect(page.getByRole('dialog', { name: 'Command menu' })).toBeVisible()
@@ -190,7 +190,7 @@ test('every form field has a name or an id', async ({ page }) => {
 
 test('the Send to agent tooltip does not come back when the popover closes', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   const trigger = page.getByRole('button', { name: /^Send to agent/ })
   await trigger.click()
   await expect(page.getByRole('dialog', { name: 'Send to agent' })).toBeVisible()
@@ -214,7 +214,7 @@ test('the Send to agent tooltip does not come back when the popover closes', asy
 })
 
 test('the Send tooltip appears on deliberate keyboard refocus after closing', async ({ page }) => {
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   const trigger = page.getByRole('button', { name: /^Send to agent/ })
   await trigger.click()
   await page.keyboard.press('Escape')
@@ -227,7 +227,7 @@ test('the Send tooltip appears on deliberate keyboard refocus after closing', as
 
 test('a whiteboard tool shows its name and key on hover and on keyboard focus', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   const pen = page.getByRole('button', { name: 'Pen', exact: true })
   await pen.hover()
   const tip = page.getByRole('tooltip')
@@ -241,7 +241,7 @@ test('a whiteboard tool shows its name and key on hover and on keyboard focus', 
 })
 
 test('a collapsed note remeasures when its available width shrinks', async ({ page }) => {
-  await open(page, 'src/examples/example.board.json')
+  await open(page, 'src/examples/refund-approval.board.json')
   await page.locator('.react-flow__node-card').first().click({ force: true })
   const panel = page.getByTestId('inspector')
   await panel.getByRole('textbox', { name: /note/i }).fill('A short sentence with enough words to wrap. '.repeat(4))

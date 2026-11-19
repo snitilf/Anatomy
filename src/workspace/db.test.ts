@@ -1,13 +1,13 @@
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import exampleText from '../examples/example.board.json?raw'
+import refundText from '../examples/refund-approval.board.json?raw'
 import { parseBoard } from '../board/validate'
 import type { Board } from '../board/schema'
 import { emptyLayer, type Layer } from '../layer/model'
 import { openStore, StorageError, type BoardStore } from './db'
 
 function exampleBoard(): Board {
-  const result = parseBoard(exampleText)
+  const result = parseBoard(refundText)
   if (!result.ok) throw new Error('example board is invalid')
   return result.board
 }

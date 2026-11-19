@@ -4,16 +4,16 @@ import App from './App'
 import { SOURCE_LABEL } from './app/labels'
 import type { SourceKind } from './board/schema'
 import shortenerRaw from './examples/external/url-shortener.board.json?raw'
-import exampleRaw from './examples/example.board.json?raw'
+import refundRaw from './examples/refund-approval.board.json?raw'
 import { openConnection, openPart } from './test/openOnMap'
 import { press } from './test/press'
 
-async function loadExample() {
-  fireEvent.click(screen.getByRole('button', { name: /Example check-in/ }))
+async function loadRefund() {
+  fireEvent.click(screen.getByRole('button', { name: /Refund approval/ }))
   await screen.findByTestId('inspector')
 }
 
-const example = JSON.parse(exampleRaw) as {
+const refund = JSON.parse(refundRaw) as {
   title: string
   components: { id: string; label: string; explanation?: string; source: { kind: SourceKind } }[]
   relationships: { id: string; from: string; to: string; kind: string; label: string }[]
@@ -35,15 +35,15 @@ describe('App', () => {
     expect(main.getByRole('button', { name: 'Open file' })).toBeInTheDocument()
     expect(main.queryByRole('button', { name: 'Open folder' })).not.toBeInTheDocument()
     // Examples are plain rows, each one action.
-    expect(main.getByRole('button', { name: /Example check-in/ })).toBeInTheDocument()
+    expect(main.getByRole('button', { name: /Refund approval/ })).toBeInTheDocument()
     expect(main.getByRole('button', { name: /Anatomy itself/ })).toBeInTheDocument()
   })
 
   it('opens an example and shows the overview', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const panel = within(screen.getByTestId('inspector'))
-    expect(panel.getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(panel.getByRole('heading', { name: refund.title })).toBeInTheDocument()
     expect(panel.getByText('Revision').closest('div')).toHaveTextContent('Revision1')
     // Scope and open items live on the Overview page, not in the sidebar.
     expect(panel.queryByText('Covers')).not.toBeInTheDocument()
@@ -55,8 +55,8 @@ describe('App', () => {
 
   it('shows a part with its explanation and source label', async () => {
     render(<App />)
-    await loadExample()
-    const part = example.components.find((c) => c.explanation && c.source.kind !== 'agent-explanation')!
+    await loadRefund()
+    const part = refund.components.find((c) => c.explanation && c.source.kind !== 'agent-explanation')!
     const panel = screen.getByTestId('inspector')
     openPart(part.label)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
@@ -67,8 +67,8 @@ describe('App', () => {
 
   it('shows no source line for the default, the agent explanation', async () => {
     render(<App />)
-    await loadExample()
-    const part = example.components.find((c) => c.source.kind === 'agent-explanation')!
+    await loadRefund()
+    const part = refund.components.find((c) => c.source.kind === 'agent-explanation')!
     const panel = screen.getByTestId('inspector')
     openPart(part.label)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
@@ -77,8 +77,8 @@ describe('App', () => {
 
   it('shows a connection in plain words', async () => {
     render(<App />)
-    await loadExample()
-    const rel = example.relationships.find((r) => r.kind === 'sends-data-to')!
+    await loadRefund()
+    const rel = refund.relationships.find((r) => r.kind === 'sends-data-to')!
     const panel = screen.getByTestId('inspector')
     await openConnection(rel.label)
     expect(within(panel).getByRole('heading', { name: rel.label })).toBeInTheDocument()
@@ -87,24 +87,24 @@ describe('App', () => {
 
   it('returns to the overview when Escape is pressed', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const panel = screen.getByTestId('inspector')
-    const first = example.components[0]!
+    const first = refund.components[0]!
     openPart(first.label)
     expect(within(panel).getByRole('heading', { name: first.label })).toBeInTheDocument()
     key('Escape', {}, panel)
-    expect(within(panel).getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(within(panel).getByRole('heading', { name: refund.title })).toBeInTheDocument()
   })
 
   it('shows the problems for a bad file and keeps the open board', async () => {
     const { container } = render(<App />)
-    await loadExample()
+    await loadRefund()
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     const bad = new File(['{ "format": "anatomy-board" '], 'broken.json', { type: 'application/json' })
     fireEvent.change(input, { target: { files: [bad] } })
     await waitFor(() => expect(screen.getByText('was not opened')).toBeInTheDocument())
     expect(screen.getByText('broken.json')).toBeInTheDocument()
-    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: refund.title })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText('was not opened')).not.toBeInTheDocument()
   })
@@ -122,7 +122,7 @@ describe('App', () => {
 
   it('opens every way to open a board from the folder crumb, and Escape closes it', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const header = within(screen.getByRole('banner'))
     // Export, Open, and the help icon left the top bar.
     expect(header.queryByRole('button', { name: /Export/ })).not.toBeInTheDocument()
@@ -137,16 +137,16 @@ describe('App', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open' })).not.toBeInTheDocument())
     expect(trigger).toHaveFocus()
     // Escape in the popover must not clear what the sidebar shows.
-    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: example.title })).toBeInTheDocument()
+    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: refund.title })).toBeInTheDocument()
   })
 
   it('opens another example from the Open popover', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     press(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' }))
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Open' })).getByRole('button', { name: /Anatomy itself/ }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open' })).not.toBeInTheDocument())
-    expect(screen.queryByRole('heading', { name: example.title })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: refund.title })).not.toBeInTheDocument()
   })
 
   it('opens the how-to dialog from the settings menu', async () => {
@@ -173,15 +173,15 @@ describe('App', () => {
 describe('the command menu', () => {
   it('opens with Cmd+K, finds commands and parts, and runs one', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     key('k', { meta: true })
     const menu = within(await screen.findByRole('dialog', { name: 'Command menu' }))
     // Parts show only once something is typed.
-    expect(menu.queryByRole('option', { name: new RegExp(`^${example.components[1]!.label}`) })).not.toBeInTheDocument()
-    fireEvent.change(menu.getByRole('combobox'), { target: { value: example.components[1]!.label } })
-    fireEvent.click(await menu.findByRole('option', { name: new RegExp(`^${example.components[1]!.label}`) }))
+    expect(menu.queryByRole('option', { name: new RegExp(`^${refund.components[1]!.label}`) })).not.toBeInTheDocument()
+    fireEvent.change(menu.getByRole('combobox'), { target: { value: refund.components[1]!.label } })
+    fireEvent.click(await menu.findByRole('option', { name: new RegExp(`^${refund.components[1]!.label}`) }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument())
-    await waitFor(() => expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: example.components[1]!.label })).toBeInTheDocument())
+    await waitFor(() => expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: refund.components[1]!.label })).toBeInTheDocument())
   })
 
   it('says when nothing matches', async () => {
@@ -208,7 +208,7 @@ describe('the command menu', () => {
 describe('the sidebar', () => {
   it('hides and shows with ] and the top bar button', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     key(']')
     expect(screen.queryByTestId('inspector')).not.toBeInTheDocument()
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Show sidebar' }))
@@ -218,7 +218,7 @@ describe('the sidebar', () => {
 
   it('resizes from its edge with the keyboard and keeps the width', async () => {
     render(<App />)
-    await loadExample()
+    await loadRefund()
     const edge = screen.getByRole('separator', { name: 'Sidebar width' })
     expect(edge).toHaveAttribute('aria-valuenow', '360')
     fireEvent.keyDown(edge, { key: 'ArrowLeft' })

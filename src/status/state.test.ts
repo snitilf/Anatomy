@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { emptyLayer, type Layer, type Note } from '../layer/model'
 import { fingerprintTarget, fingerprintValue } from '../layer/fingerprint'
-import { clone, exampleBoard } from '../layer/testBoards'
+import { clone, refundBoard } from '../layer/testBoards'
 import { itemState, noteBadgeLabel, partStates, topState } from './state'
 
-const board = exampleBoard()
+const board = refundBoard()
 const part = board.components[0]!
 const at = '2026-05-01T00:00:00.000Z'
 

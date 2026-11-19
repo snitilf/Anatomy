@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { reducer, initialState, type AppState } from '../app/state'
 import { emptyLayer, type Layer, type Mark } from '../layer/model'
-import { exampleBoard } from '../layer/testBoards'
+import { refundBoard } from '../layer/testBoards'
 import { connectionEnds, endDropAction } from './endDrop'
 import type { Scene } from './geometry'
 
-const board = exampleBoard()
+const board = refundBoard()
 const rel = board.relationships[0]!
 const others = board.components.map((c) => c.id).filter((id) => id !== rel.from && id !== rel.to)
 const third = others[0]!
