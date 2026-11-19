@@ -5,6 +5,7 @@ import { type BundleWords } from './bundleWords'
 import { middleOf, visibleArrows, type Bundle } from './bundleRoutes'
 import { spotlight } from './emphasis'
 import { farLabelScale } from './far'
+import { YOURS_FAR_DASH } from './kinds'
 import { groupNameRect, placeCounts } from './farLabels'
 import { clampTip } from './useTipClamp'
 import styles from './FarLayer.module.css'
@@ -177,7 +178,7 @@ export const FarLayer = memo(function FarLayer({
           return (
             <div key={b.id} className={styles.unit} data-unit={b.id} data-mine={mine} data-on={on}>
               <svg className={styles.lines} width="1" height="1" aria-hidden="true">
-                <path d={b.d} className={styles.bundle} data-bundle="" data-mine={mine} data-on={on} style={{ '--w': b.width } as CSSProperties} />
+                <path d={b.d} className={styles.bundle} data-bundle="" data-mine={mine} data-on={on} style={{ '--w': b.width, ...(mine ? { '--far-dash': YOURS_FAR_DASH } : {}) } as CSSProperties} />
                 <path d={b.d} className={styles.hit} data-hit="" />
               </svg>
               {head && (

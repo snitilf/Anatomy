@@ -109,10 +109,13 @@
   opacity: var(--spot-line);
 }
 
-/* A dash is drawn at the zoom of the map, so it is a speck in the far view. The lines of the selection are solid there. */
+/*
+ * A dash is drawn at the zoom of the map, so it is a speck in the far view. The lines of the selection are solid there,
+ * except the user's links, which keep their dash and dot at its size on screen (`--far-dash`).
+ */
 .canvas[data-far] g[data-active] :global(.react-flow__edge-path),
 .canvas[data-far] g[data-selected] :global(.react-flow__edge-path) {
-  stroke-dasharray: none !important;
+  stroke-dasharray: var(--far-dash, none) !important;
   /* The map's own scale takes the line down with the board, so the width is multiplied back to screen pixels. */
   stroke-width: calc(2px * var(--label-scale, 1)) !important;
 }

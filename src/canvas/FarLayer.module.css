@@ -41,8 +41,11 @@
   transition: opacity 120ms var(--ease-out);
 }
 
+/* A bundle of only the user's links: their color and their dash and dot, held at its size on screen. */
 .bundle[data-mine] {
   stroke: var(--yours);
+  stroke-dasharray: var(--far-dash);
+  stroke-linecap: round;
 }
 
 /* The pointer's room: a stroke 12px wide on screen, whatever the zoom, which draws nothing. */

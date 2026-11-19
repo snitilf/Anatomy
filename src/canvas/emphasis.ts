@@ -55,7 +55,7 @@ function edgeRules(edges: readonly string[]): string {
 ${each(ids, '[data-hover-scope]', 'g')} { opacity: 1; }
 ${each(ids, '[data-hover-scope]', 'g', ' .react-flow__edge-path')} { stroke: var(--accent-line) !important; stroke-width: 1.75px !important; }
 ${each(ids, far, 'g')} { opacity: 1 !important; }
-${each(ids, far, 'g', ' .react-flow__edge-path')} { stroke-dasharray: none !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
+${each(ids, far, 'g', ' .react-flow__edge-path')} { stroke-dasharray: var(--far-dash, none) !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
 ${each(ids, '[data-hover-scope]', '[data-label]')} { color: var(--accent-line); }
 ${each(ids, quiet, '[data-label]')} { visibility: visible !important; opacity: 1 !important; }`
 }

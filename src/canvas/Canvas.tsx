@@ -842,9 +842,9 @@ export function Canvas() {
     if (!style || hold.current || node.id.startsWith('group:')) return
     const id = CSS.escape(node.id)
     if (farRef.current) {
-      // The far view: the lines are out of the picture, so only the part's own come in, solid, and the bundles step back.
+      // The far view: the lines are out of the picture, so only the part's own come in, solid (the user's links keep their dash and dot), and the bundles step back.
       style.textContent = `[data-hover-scope][data-far] g[data-ends~="${id}"] { opacity: 1 !important; --line-ink: var(--fg-2); }
-[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: none !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
+[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: var(--far-dash, none) !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
 [data-hover-scope] [data-bundle] { opacity: var(--spot-line); }`
       return
     }

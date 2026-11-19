@@ -3,7 +3,7 @@ import { memo, useState, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
 import type { ManualEdgeData } from './buildGraph'
-import { MANUAL_STYLE, SELECTED_WIDTH } from './kinds'
+import { MANUAL_STYLE, SELECTED_WIDTH, YOURS_FAR_DASH } from './kinds'
 import { LabelCutout } from './LabelCutout'
 import styles from './RelationshipEdge.module.css'
 
@@ -17,7 +17,18 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
   const emphasized = selected || data.active
   return (
     <>
-      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-faded={data.faded || undefined} data-active={emphasized || undefined} data-ends={ends} data-edge={id}>
+      <g
+        className={styles.line}
+        onPointerEnter={() => setHover(true)}
+        onPointerLeave={() => setHover(false)}
+        data-faded={data.faded || undefined}
+        data-active={emphasized || undefined}
+        data-ends={ends}
+        data-edge={id}
+        data-mine=""
+        // The far view draws the lines it shows solid. The user's link keeps its dash and dot there, at its size on screen.
+        style={{ '--far-dash': YOURS_FAR_DASH } as CSSProperties}
+      >
         <BaseEdge
           id={id}
           path={data.path}
