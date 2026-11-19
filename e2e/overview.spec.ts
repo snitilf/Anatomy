@@ -2,8 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { open, viewport } from './helpers.ts'
 
-const REFUND = 'src/examples/refund-approval.board.json'
-const SHORTENER = 'src/examples/external/url-shortener.board.json'
+const REFUND = 'e2e/fixtures/refund-approval.board.json'
+const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 
 const tab = (page: import('@playwright/test').Page, name: 'Map' | 'Overview') => page.getByRole('tab', { name })
 
@@ -281,7 +281,7 @@ test('Back and Forward never carry the view of one board onto another', async ({
   await open(page, SHORTENER)
   await tab(page, 'Overview').click()
   await tab(page, 'Map').click()
-  await page.getByLabel('Board file').setInputFiles('src/examples/refund-approval.board.json')
+  await page.getByLabel('Board file').setInputFiles('e2e/fixtures/refund-approval.board.json')
   await expect(page.getByRole('heading', { name: /Refund approval/, level: 2 })).toBeVisible()
   await page.goBack()
   await expect(page.getByTestId('overview')).toHaveCount(0)

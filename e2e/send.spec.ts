@@ -61,7 +61,7 @@ const sendButton = (page: Page) => page.getByRole('banner').getByRole('button', 
 
 test('send to the agent, get answers in the next revision, dismiss, restore, and nothing is dropped on a second send', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  const boardText = await readFile('src/examples/external/url-shortener.board.json', 'utf8')
+  const boardText = await readFile('e2e/fixtures/url-shortener.board.json', 'utf8')
   await page.addInitScript(
     ([key, text]) => {
       if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify({ name: 'shortener', files: { 'board.json': { text, lastModified: 1 } }, remembered: false }))

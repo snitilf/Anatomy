@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test'
 import { cardTransform, grabbable, nextFrame, open } from './helpers.ts'
 
-const BOARD_FILE = 'src/examples/refund-approval.board.json'
+const BOARD_FILE = 'e2e/fixtures/refund-approval.board.json'
 
 test('Escape during a drag puts the card back and keeps the selection', async ({ page }) => {
   await open(page, BOARD_FILE)
@@ -66,9 +66,11 @@ test('dragging a card during a walkthrough keeps the panel and never dims the he
 })
 
 const EDGE_BOARDS = [
-  { name: 'Refund approval example', file: 'src/examples/refund-approval.board.json' },
+  { name: 'Claude Code harness example', file: 'src/examples/claude-code-harness.board.json' },
+  { name: 'Large language model example', file: 'src/examples/how-an-llm-works.board.json' },
+  { name: 'Refund approval', file: 'e2e/fixtures/refund-approval.board.json' },
   { name: 'Anatomy example', file: 'src/examples/anatomy.board.json' },
-  { name: 'URL shortener', file: 'src/examples/external/url-shortener.board.json' },
+  { name: 'URL shortener', file: 'e2e/fixtures/url-shortener.board.json' },
 ]
 
 for (const board of EDGE_BOARDS) {

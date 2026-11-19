@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import App from '../App'
-import refundRaw from '../examples/refund-approval.board.json?raw'
+import refundRaw from '../../e2e/fixtures/refund-approval.board.json?raw'
 import { openPart } from '../test/openOnMap'
+import { openBoardFile } from '../test/openFile'
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
@@ -20,7 +21,7 @@ const refund = JSON.parse(refundRaw) as {
 const walk = refund.scenarios[0]!
 
 async function loadRefund() {
-  fireEvent.click(screen.getByRole('button', { name: /Refund approval/ }))
+  openBoardFile(refundRaw, 'refund-approval.board.json')
   await screen.findByTestId('inspector')
 }
 

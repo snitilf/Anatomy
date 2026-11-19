@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { open, pickPart } from './helpers.ts'
 
 const SIXTY = 'e2e/fixtures/sixty-parts.board.json'
-const REFUND = 'src/examples/refund-approval.board.json'
+const REFUND = 'e2e/fixtures/refund-approval.board.json'
 
 interface Raw {
   components: { id: string; label: string }[]

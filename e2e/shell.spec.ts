@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { open, pickConnection, viewport } from './helpers.ts'
 
-const REFUND = 'src/examples/refund-approval.board.json'
-const SHORTENER = 'src/examples/external/url-shortener.board.json'
+const REFUND = 'e2e/fixtures/refund-approval.board.json'
+const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
 
 test('the command menu finds a part by name and opens it', async ({ page }) => {

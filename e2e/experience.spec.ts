@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { grabbable, open, pickConnection, pickPart, viewport } from './helpers.ts'
 
-const REFUND = 'src/examples/refund-approval.board.json'
-const SHORTENER = 'src/examples/external/url-shortener.board.json'
+const REFUND = 'e2e/fixtures/refund-approval.board.json'
+const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
 
 const zoomOf = async (page: Page) => {
@@ -86,7 +86,7 @@ test('a card dropped under the inspector is brought back into view', async ({ pa
 
 test('an example chosen from the start screen moves focus to the sidebar heading', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: /Refund approval/ }).click()
+  await page.getByRole('button', { name: /How the Claude Code harness works/ }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByRole('heading', { level: 2 }).first()).toBeFocused()
 })

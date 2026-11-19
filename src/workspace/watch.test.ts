@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import refundText from '../examples/refund-approval.board.json?raw'
+import refundText from '../../e2e/fixtures/refund-approval.board.json?raw'
 import { FILES } from './folder'
 import { createMemoryFolder } from './memoryFolder'
 import { observe, watchBoard } from './watch'

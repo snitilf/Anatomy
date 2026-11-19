@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { open, pickConnection, pickPart } from './helpers.ts'
 
-const REFUND = 'src/examples/refund-approval.board.json'
+const REFUND = 'e2e/fixtures/refund-approval.board.json'
 const SIXTY = 'e2e/fixtures/sixty-parts.board.json'
 
 const menu = (page: import('@playwright/test').Page) => page.getByRole('dialog', { name: 'Command menu' })

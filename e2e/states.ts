@@ -42,7 +42,7 @@ function fingerprintPart(board: Board, id: string): string {
   return fingerprintValue({ label: c.label, summary: c.summary, explanation: c.explanation, group: c.group, inputs: c.inputs ?? [], outputs: c.outputs ?? [], source: { references: [], ...c.source } })
 }
 
-export const SHORTENER = 'src/examples/external/url-shortener.board.json'
+export const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 const KEY = 'anatomy:test-folder'
 const AT = '2026-11-14T00:00:00.000Z'
 
