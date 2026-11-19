@@ -5,7 +5,7 @@ import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/
 import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
 import { KIND_STYLE, SELECTED_WIDTH, LINE_INK } from './kinds'
-import { LabelBackdrop } from './LabelBackdrop'
+import { LabelCutout } from './LabelCutout'
 import styles from './RelationshipEdge.module.css'
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
@@ -64,11 +64,10 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           aria-hidden="true"
           onClick={() => dispatch({ type: 'select', selection: { type: 'relationship', id: data.relationshipId } })}
         >
-          <LabelBackdrop tint={data.tint} />
-          <span className={styles.cutout}>
+          <LabelCutout tint={data.tint}>
             {unknown && <CircleHelp className={styles.unknown} size={12} strokeWidth={1.5} aria-hidden="true" />}
             {data.label}
-          </span>
+          </LabelCutout>
         </div>
       </EdgeLabelRenderer>
     </>

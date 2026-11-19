@@ -4,7 +4,7 @@ import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/
 import { useAppDispatch } from '../app/store'
 import type { ManualEdgeData } from './buildGraph'
 import { MANUAL_STYLE, SELECTED_WIDTH } from './kinds'
-import { LabelBackdrop } from './LabelBackdrop'
+import { LabelCutout } from './LabelCutout'
 import styles from './RelationshipEdge.module.css'
 
 /** An arrow the user drew. It never looks like a connection the agent supplied. */
@@ -48,8 +48,7 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           title={data.hasLabel ? data.text : undefined}
           onClick={() => dispatch({ type: 'select', selection: { type: 'link', id: data.linkId } })}
         >
-          <LabelBackdrop tint={data.tint} />
-          <span className={styles.cutout}>{data.text}</span>
+          <LabelCutout tint={data.tint}>{data.text}</LabelCutout>
         </div>
       </EdgeLabelRenderer>
     </>

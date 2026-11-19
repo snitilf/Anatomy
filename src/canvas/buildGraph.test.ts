@@ -5,8 +5,8 @@ import { parseBoard } from '../board/validate'
 import { CARD_SIZE, placeCards } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
 import { anatomyBoard, refundBoard } from '../layer/testBoards'
-import { assembleGraph, buildGraph, computeGeometry, GraphCache, moveCard } from './buildGraph'
-import { RunIndex } from './labelPlacement'
+import { assembleGraph, buildGraph, type EdgeData, computeGeometry, GraphCache, moveCard } from './buildGraph'
+import { MAX_WIDTH, RunIndex } from './labelPlacement'
 
 const forty = (): Board => {
   const r = parseBoard(fortyText)
@@ -75,7 +75,8 @@ describe.each([
     const { positions, geometry, build } = setup(board)
     const first = build(positions)
     const next = { ...positions, [id]: { ...positions[id]!, x: positions[id]!.x + 40, y: positions[id]!.y + 30 } }
-    const second = build(next, moveCard(board, geometry, next, id), id)
+    const movedGeometry = moveCard(board, geometry, next, id)
+    const second = build(next, movedGeometry, id)
     const mine = new Set(touching(id))
     const group = board.components.find((c) => c.id === id)?.group
     for (const node of first.nodes) {
@@ -89,10 +90,19 @@ describe.each([
         expect(again === edge).toBe(!mine.has(edge.id))
         continue
       }
-      // A label near the edge of the moved card's group sees that group change size: only its tint differs.
+      // A label near the edge of the moved card's group sees that group change size: only its tint differs,
+      // and the label lies within reach of the group's old or new edge.
       expect(group).toBeDefined()
       expect({ ...again.data, tint: '' }).toEqual({ ...edge.data, tint: '' })
       expect(again.data!.tint).not.toBe(edge.data!.tint)
+      expect(edge.data!.tint !== '' || again.data!.tint !== '').toBe(true)
+      const reach = MAX_WIDTH / 2 + 8
+      const near = [geometry, movedGeometry].some((geo) => {
+        const g = geo.groups.find((b) => b.id === group)!
+        const { labelX, labelY } = edge.data as unknown as EdgeData
+        return labelX > g.x - reach && labelX < g.x + g.width + reach && labelY > g.y - reach && labelY < g.y + g.height + reach
+      })
+      expect(near).toBe(true)
     }
   })
 

@@ -7,7 +7,7 @@ interface Box {
   height: number
 }
 
-/** A held-back label takes its own width on hover, up to this much. */
+/** A held-back label takes its own width on hover, up to this much. The same as `max-width` of `.pill[data-hidden]` in RelationshipEdge.module.css. */
 const HELD_BACK_WIDTH = 260
 /** The label grows a little when selected: a margin so a group at its edge is still counted. */
 const MARGIN = 8

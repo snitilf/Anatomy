@@ -9,7 +9,10 @@ const BOARDS = [
   'src/examples/how-an-llm-works.board.json',
 ]
 
-/** Every label that shows: the group areas painted under it, against the group areas on the map. */
+/**
+ * Every label that shows: the group areas painted under each line of its words, against the group areas on the map.
+ * `straddles` is true when an edge of a group lies inside the label, so one cutout covers two different backgrounds.
+ */
 async function cutouts(page: Page) {
   return page.evaluate(() => {
     const areas = [...document.querySelectorAll('.react-flow__node-group-area')].map((n) => n.firstElementChild!.getBoundingClientRect())
@@ -17,16 +20,25 @@ async function cutouts(page: Page) {
     return [...document.querySelectorAll<HTMLElement>('[data-label]')]
       .filter((l) => getComputedStyle(l).opacity !== '0' && l.getBoundingClientRect().width > 0)
       .map((l) => {
-        const box = l.firstElementChild!.getBoundingClientRect()
-        const tints = [...l.firstElementChild!.children].map((t) => t.getBoundingClientRect())
-        const under = areas.filter((a) => a.left < box.right && a.right > box.left && a.top < box.bottom && a.bottom > box.top)
-        const matched = tints.every((t) => areas.some((a) => near(t.left, a.left) && near(t.top, a.top) && near(t.width, a.width) && near(t.height, a.height)))
-        return { text: l.textContent, tints: tints.length, under: under.length, matched }
+        const lines = [...l.querySelectorAll('[data-cutout]')].map((c) => c.getBoundingClientRect())
+        let matched = true
+        let straddles = false
+        let missing = 0
+        for (const [i, line] of lines.entries()) {
+          const tints = [...l.querySelectorAll('[data-cutout]')[i]!.querySelectorAll('[data-tint]')].map((t) => t.getBoundingClientRect())
+          if (!tints.every((t) => areas.some((a) => near(t.left, a.left) && near(t.top, a.top) && near(t.width, a.width) && near(t.height, a.height)))) matched = false
+          const under = areas.filter((a) => a.left < line.right && a.right > line.left && a.top < line.bottom && a.bottom > line.top)
+          missing += Math.max(0, under.length - tints.length)
+          if (under.some((a) => [a.left, a.right].some((x) => x > line.left + 1 && x < line.right - 1) || [a.top, a.bottom].some((y) => y > line.top + 1 && y < line.bottom - 1))) straddles = true
+        }
+        return { text: l.textContent, lines: lines.length, matched, missing, straddles }
       })
   })
 }
 
-test.describe('the cutout under a label', () => {
+test.describe.serial('the cutout under a label', () => {
+  let straddling = 0
+
   for (const file of BOARDS) {
     test(`matches the group areas under it, at every zoom (${file})`, async ({ page }) => {
       await open(page, file)
@@ -36,26 +48,24 @@ test.describe('the cutout under a label', () => {
           await page.waitForTimeout(350)
         }
         for (const c of await cutouts(page)) {
-          expect(c.matched, `${c.text} after ${step}`).toBe(true)
-          // Every area that reaches the label's box is painted under it.
-          expect(c.tints, `${c.text} after ${step}`).toBeGreaterThanOrEqual(c.under)
+          const where = `${c.text} after ${step}`
+          expect(c.lines, where).toBeGreaterThan(0)
+          expect(c.matched, where).toBe(true)
+          // Every area that reaches a line of the words is painted under it.
+          expect(c.missing, where).toBe(0)
+          if (c.straddles && step === 'start') straddling++
         }
       }
     })
   }
 
-  test('a label across the edge of a group paints the area on its own side only', async ({ page }) => {
-    await open(page, BOARDS[0] as string)
-    const straddling = (await cutouts(page)).filter((c) => c.tints > 0)
-    expect(straddling.map((c) => c.text)).toContain('payout result')
-    const side = await page.evaluate(() => {
-      const label = [...document.querySelectorAll<HTMLElement>('[data-label]')].find((l) => l.textContent === 'payout result')!
-      const box = label.firstElementChild!.getBoundingClientRect()
-      const tint = label.firstElementChild!.firstElementChild!.getBoundingClientRect()
-      return { left: tint.left, right: tint.right, boxLeft: box.left, boxRight: box.right }
-    })
-    // The area ends or begins inside the label, so the label's cutout is not one flat tint.
-    const insideBox = (x: number) => x > side.boxLeft + 1 && x < side.boxRight - 1
-    expect(insideBox(side.left) || insideBox(side.right)).toBe(true)
+  test('a label across the edge of a group shows up on some board', () => {
+    expect(straddling).toBeGreaterThan(0)
+  })
+
+  test('a label of two lines has a cutout for each line', async ({ page }) => {
+    await open(page, BOARDS[2] as string)
+    const counts = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-label]')].map((l) => l.querySelectorAll('[data-cutout]').length))
+    expect(Math.max(...counts)).toBeGreaterThan(1)
   })
 })
