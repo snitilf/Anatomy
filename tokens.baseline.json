@@ -3,7 +3,7 @@
   "hardCap": { "characters": 32000, "tokens": 9200 },
   "allowedGrowth": 0.05,
   "cli": {
-    "anatomy help": { "characters": 571, "tokens": 143 },
+    "anatomy help": { "characters": 573, "tokens": 144 },
     "anatomy validate, valid example": { "characters": 38, "tokens": 10 },
     "anatomy validate, one broken reference": { "characters": 173, "tokens": 44 },
     "anatomy validate, four faults": { "characters": 377, "tokens": 95 },

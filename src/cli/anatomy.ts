@@ -1,6 +1,6 @@
 import { boardAdvice, readFeedback } from '../board/advice.ts'
 import { inSchemaOrder } from '../board/shape.ts'
-import { parseBoard, type BoardProblem, type ProblemCode } from '../board/validate.ts'
+import { parseBoard, type BoardProblem } from '../board/validate.ts'
 import { LESSON_IDS } from '../lessons/ids.ts'
 
 // The `anatomy` command line tool, without any file system access: the caller passes the files in and takes the output.
@@ -35,7 +35,7 @@ export function usage(invocation: string): string {
 
 Commands:
   validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
-  fmt [file]       Put the keys in schema order and indent with two spaces, then validate.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
   help             Show this text.
 
 Options:
@@ -70,14 +70,27 @@ function parseArgs(args: readonly string[]): Options | string {
   return options
 }
 
-/** Problems that mean the file is not a board at all, so fmt leaves it alone. */
-const NOT_A_BOARD: ReadonlySet<ProblemCode | undefined> = new Set(['file-too-large', 'not-json', 'not-object', 'not-board', 'schema-version'])
+/** Quoted values longer than this are cut in printed lines, so one huge key or ID cannot flood the output. */
+const MAX_QUOTED = 80
+/** No printed line is longer than this. */
+const MAX_LINE = 1000
+/** Warnings past this many are counted, not listed, as the app does with errors. */
+const MAX_WARNINGS = 25
+
+/** Cuts long quoted values to `"start…" (N characters)`, then cuts the line itself if it is still too long. */
+export function clip(text: string): string {
+  // Quotes pair up from the left, so text between two quoted values is never taken for a value.
+  const quoted = text.replace(/"([^"]*)"/g, (match, value: string) =>
+    value.length <= MAX_QUOTED ? match : `"${value.slice(0, MAX_QUOTED)}…" (${value.length.toLocaleString('en-US')} characters)`,
+  )
+  return quoted.length <= MAX_LINE ? quoted : `${quoted.slice(0, MAX_LINE)}…`
+}
 
 function line(problem: BoardProblem): string {
   const where = problem.path === '' ? '(file)' : problem.path
-  if (problem.hint === undefined) return `${where}: ${problem.message}`
+  if (problem.hint === undefined) return clip(`${where}: ${problem.message}`)
   const stop = /[.?!]$/.test(problem.message) ? '' : '.'
-  return `${where}: ${problem.message}${stop} ${problem.hint}`
+  return clip(`${where}: ${problem.message}${stop} ${problem.hint}`)
 }
 
 function count(n: number, word: string): string {
@@ -102,8 +115,9 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
   let text = read.text
   let formatted: boolean | undefined
   const result = parseBoard(text, { knownLessons: LESSON_IDS })
-  if (options.command === 'fmt' && (result.ok || !result.errors.some((e) => NOT_A_BOARD.has(e.code)))) {
-    const next = `${JSON.stringify(inSchemaOrder(JSON.parse(text.replace(/^﻿/, ''))), null, 2)}\n`
+  // fmt writes only a valid board. The schema bounds its depth and its numbers, so the rewrite keeps every value.
+  if (options.command === 'fmt' && result.ok) {
+    const next = `${JSON.stringify(inSchemaOrder(JSON.parse(text.replace(/^\uFEFF/, ''))), null, 2)}\n`
     formatted = next !== text
     if (formatted) {
       try {
@@ -127,6 +141,10 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
   }
 
   const code = errors.length > 0 || (options.strict && warnings.length > 0) ? 1 : 0
+  const warningCount = warnings.length
+  if (warningCount > MAX_WARNINGS) {
+    warnings = [...warnings.slice(0, MAX_WARNINGS), { path: '', code: 'more-problems', message: `${warningCount - MAX_WARNINGS} more warnings are not shown.` }]
+  }
   if (options.json) {
     const report = {
       file: shown,
@@ -143,7 +161,7 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
   if (formatted !== undefined) status.push(formatted ? 'formatted' : 'already formatted')
   if (result.ok) {
     status.push(`valid, revision ${result.board.revision}`)
-    if (warnings.length > 0) status.push(count(warnings.length, 'warning'))
+    if (warningCount > 0) status.push(count(warningCount, 'warning'))
   } else {
     const more = errors.some((e) => e.code === 'more-problems')
     const real = errors.filter((e) => e.code !== 'more-problems').length

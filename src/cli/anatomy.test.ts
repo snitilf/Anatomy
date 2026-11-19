@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseBoard } from '../board/validate'
 import { LESSON_IDS } from '../lessons/ids'
-import { runAnatomy } from './anatomy'
+import { clip, runAnatomy } from './anatomy'
 import { baseBoard, CORPUS, INVALID_CASES, memoryIo, runCase, VALID_CASES } from './corpus'
 
 const examples = import.meta.glob(['../examples/*.board.json', '../../eval/tasks/*/board.json'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>
@@ -41,7 +41,7 @@ describe('validate', () => {
     if (app.ok) return
     const lines = result.stdout.trimEnd().split('\n')
     expect(lines).toHaveLength(app.errors.length + 1)
-    app.errors.forEach((e, i) => expect(lines[i + 1]).toContain(`${e.path || '(file)'}: ${e.message}`))
+    app.errors.forEach((e, i) => expect(lines[i + 1]).toContain(clip(`${e.path || '(file)'}: ${e.message}`)))
   })
 
   it('gives every problem in the corpus a code', () => {
@@ -88,6 +88,30 @@ describe('validate', () => {
   })
 })
 
+describe('long output', () => {
+  it('cuts long quoted values and long lines', () => {
+    expect(clip(`a: "${'x'.repeat(81)}" and "short"`)).toBe(`a: "${'x'.repeat(80)}…" (81 characters) and "short"`)
+    expect(clip(`a: "${'x'.repeat(80)}"`)).toBe(`a: "${'x'.repeat(80)}"`)
+    const between = `The ID "api" is already used. ${'Text between two values. '.repeat(5)}Use "api-2".`
+    expect(clip(between)).toBe(between)
+    expect(clip('y'.repeat(5000))).toBe(`${'y'.repeat(1000)}…`)
+  })
+
+  it('keeps every printed line short, whatever the board holds', () => {
+    for (const c of CORPUS) {
+      for (const text of runCase(c).stdout.split('\n')) expect(text.length, c.name).toBeLessThanOrEqual(1001)
+    }
+  })
+
+  it('lists at most 25 warnings and counts the rest', () => {
+    const result = runCase(CORPUS.find((c) => c.name === 'more warnings than the report shows')!)
+    const lines = result.stdout.trimEnd().split('\n')
+    expect(lines[0]).toBe('.anatomy/board.json: valid, revision 4, 33 warnings')
+    expect(lines).toHaveLength(27)
+    expect(lines.at(-1)).toBe('(file): 8 more warnings are not shown.')
+  })
+})
+
 describe('usage', () => {
   it('prints help with exit 0', () => {
     for (const args of [[], ['help'], ['--help'], ['validate', '-h']]) {
@@ -123,22 +147,18 @@ describe('fmt', () => {
     expect(io.written).toEqual([])
   })
 
-  it('formats an invalid board and still reports its problems', () => {
-    const broken = compact.replace('"to":"payment"', '"to":"paymnt"')
-    const io = memoryIo(new Map([['.anatomy/board.json', broken]]))
-    const result = runAnatomy(['fmt'], io)
-    expect(result.code).toBe(1)
-    expect(result.stdout).toMatch(/^\.anatomy\/board\.json: formatted, invalid, 1 error\n/)
-    expect(io.written).toHaveLength(1)
-  })
-
   it.each([
+    ['an invalid board', compact.replace('"to":"payment"', '"to":"paymnt"')],
+    ['a board whose numbers JSON cannot keep', compact.replace('"revision":3', '"revision":3,"big":1e400,"neg":-0,"huge":123456789012345678901234567890')],
+    ['a board nested 200,000 levels deep', compact.replace('"revision":3', `"revision":3,"deep":${'['.repeat(200_000)}${']'.repeat(200_000)}`)],
     ['text that is not JSON', '{ "format": '],
     ['a JSON file that is not a board', '{"version":"1.0.0","name":"shop"}'],
     ['a board of another schema version', JSON.stringify({ ...baseBoard(), schemaVersion: 2 })],
-  ])('leaves %s alone', (_name, text) => {
+  ])('leaves %s alone and reports its problems', (_name, text) => {
     const io = memoryIo(new Map([['.anatomy/board.json', text]]))
-    expect(runAnatomy(['fmt'], io).code).toBe(1)
+    const result = runAnatomy(['fmt'], io)
+    expect(result.code).toBe(1)
+    expect(result.stdout).toMatch(/^\.anatomy\/board\.json: invalid, /)
     expect(io.written).toEqual([])
   })
 

@@ -229,7 +229,7 @@ In this repository, `npm run anatomy -- <command>` runs the same tool from the s
 | Command | What it does |
 | --- | --- |
 | `node .anatomy/anatomy.mjs validate [file]` | Checks the board the way Anatomy does. The file is `.anatomy/board.json` unless you name one. |
-| `node .anatomy/anatomy.mjs fmt [file]` | Puts the keys in schema order, indents with two spaces, and then validates. It writes only when the text changes, and only to a board. |
+| `node .anatomy/anatomy.mjs fmt [file]` | Validates the board and, when it is valid, puts the keys in schema order and indents with two spaces. It writes only when the text changes. |
 | `node .anatomy/anatomy.mjs help` | Shows the commands. |
 
 `--json` prints the result as one JSON object, and `--strict` makes warnings count as problems.
@@ -254,13 +254,21 @@ They do not stop the board from opening:
 - A lesson that this version of Anatomy does not have.
 - An ID in `changed` that is not on the board.
 - A component with no connection.
-- A word that promises a guarantee, such as "guaranteed" or "never fails", in a claim.
+- A phrase that promises what no explanation can know, such as "never fails", "foolproof", or "100% secure", in a claim.
+  Words that honest text uses, such as "always" or "guarantees", are left alone.
 - An adopted answer with an empty `changed` list, which keeps the user's mark on the map.
 - When `feedback.json` is next to the board and is for the same board: a revision that should answer it but does not, an item with no answer, an answer to an unknown or withdrawn item, and a revision that is not higher than the feedback's `baseRevision`.
 
 With `--json`, each problem has a `code` that stays the same when a message changes, for example `unknown-component`, `duplicate-id`, or `unanswered-feedback`.
 The full list is the `ProblemCode` type in `src/board/validate.ts`.
 
-The tool reads only the board and the `feedback.json` next to it.
+The tool lists at most 25 warnings and counts the rest.
+It cuts a quoted value longer than 80 characters, and a line longer than 1,000 characters, so a huge key or ID cannot flood the output.
+
+The tool reads only the board and the `feedback.json` next to it, and only when each is a regular file of at most 16,000,000 bytes.
 It writes only the board, and only for `fmt`.
+`fmt` writes a new file next to the board and renames it over the board, so the board keeps its permissions and is never half written.
+It leaves a read-only board alone.
+When the board is a link, `fmt` writes the file the link points to, if that file is in the board's folder or below it, and keeps the link.
+It refuses a link to a file anywhere else.
 It never runs anything from the board and makes no network calls.

@@ -20,7 +20,7 @@ components[6]: Component "mailer" has no connection.
 $ validate (exit 0)
 .anatomy/board.json: valid, revision 3, 2 warnings
 components[3].summary: "never fails" promises a guarantee. Keep it only if the material states it.
-relationships[1].explanation: "guaranteed" promises a guarantee. Keep it only if the material states it.
+relationships[1].explanation: "bulletproof" promises a guarantee. Keep it only if the material states it.
 
 ## changed ID not on the board
 $ validate (exit 0)
@@ -58,6 +58,42 @@ responses.items: Feedback item "edit-0p9o8i7u6y5t" has no answer.
 responses.items: Feedback item "part-9z8y7x6w5v4u" has no answer.
 responses.items[1].feedbackId: The user withdrew "note-old000000001". Remove this answer.
 responses.items[2].feedbackId: "edit-0p9o8i7u6y5u" is not an item in feedback.json. Did you mean "edit-0p9o8i7u6y5t"?
+
+## more warnings than the report shows
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 33 warnings
+responses.items: Feedback item "note-a1b2c3d4e5f6" has no answer.
+responses.items: Feedback item "edit-0p9o8i7u6y5t" has no answer.
+responses.items: Feedback item "part-9z8y7x6w5v4u" has no answer.
+responses.items[0].feedbackId: "zz-0" is not an item in feedback.json.
+responses.items[1].feedbackId: "zz-1" is not an item in feedback.json.
+responses.items[2].feedbackId: "zz-2" is not an item in feedback.json.
+responses.items[3].feedbackId: "zz-3" is not an item in feedback.json.
+responses.items[4].feedbackId: "zz-4" is not an item in feedback.json.
+responses.items[5].feedbackId: "zz-5" is not an item in feedback.json.
+responses.items[6].feedbackId: "zz-6" is not an item in feedback.json.
+responses.items[7].feedbackId: "zz-7" is not an item in feedback.json.
+responses.items[8].feedbackId: "zz-8" is not an item in feedback.json.
+responses.items[9].feedbackId: "zz-9" is not an item in feedback.json.
+responses.items[10].feedbackId: "zz-10" is not an item in feedback.json.
+responses.items[11].feedbackId: "zz-11" is not an item in feedback.json.
+responses.items[12].feedbackId: "zz-12" is not an item in feedback.json.
+responses.items[13].feedbackId: "zz-13" is not an item in feedback.json.
+responses.items[14].feedbackId: "zz-14" is not an item in feedback.json.
+responses.items[15].feedbackId: "zz-15" is not an item in feedback.json.
+responses.items[16].feedbackId: "zz-16" is not an item in feedback.json.
+responses.items[17].feedbackId: "zz-17" is not an item in feedback.json.
+responses.items[18].feedbackId: "zz-18" is not an item in feedback.json.
+responses.items[19].feedbackId: "zz-19" is not an item in feedback.json.
+responses.items[20].feedbackId: "zz-20" is not an item in feedback.json.
+responses.items[21].feedbackId: "zz-21" is not an item in feedback.json.
+(file): 8 more warnings are not shown.
+
+## huge feedback item IDs
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 2 warnings
+responses.items: Feedback item "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…" (300,000 characters) has no answer.
+responses.items[0].feedbackId: "note-a1b2c3d4e5f6" is not an item in feedback.json.
 
 ## feedback for another board
 $ validate (exit 0)
@@ -133,6 +169,11 @@ components[0]: Unrecognized key: "summery". Did you mean "summary"?
 $ validate (exit 1)
 .anatomy/board.json: invalid, 1 error
 relationships[0]: Unrecognized key: "color"
+
+## unknown key of 900,000 characters
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[0]: Unrecognized key: "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk…" (900,000 characters)
 
 ## ID with capitals and spaces
 $ validate (exit 1)
@@ -289,7 +330,7 @@ $ validate --json (exit 0)
 
 ## guarantee words
 $ validate --json (exit 0)
-{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"warnings":[{"path":"components[3].summary","code":"guarantee","message":"\"never fails\" promises a guarantee. Keep it only if the material states it."},{"path":"relationships[1].explanation","code":"guarantee","message":"\"guaranteed\" promises a guarantee. Keep it only if the material states it."}]}
+{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"warnings":[{"path":"components[3].summary","code":"guarantee","message":"\"never fails\" promises a guarantee. Keep it only if the material states it."},{"path":"relationships[1].explanation","code":"guarantee","message":"\"bulletproof\" promises a guarantee. Keep it only if the material states it."}]}
 
 ## relationship to a misspelled component
 $ validate --json (exit 1)

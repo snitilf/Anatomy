@@ -101,7 +101,7 @@ export const VALID_CASES: readonly CorpusCase[] = [
   mutate('part with no connection', (b) => b.components.push({ id: 'mailer', label: 'Mailer', summary: 'Sends receipts.', source: { kind: 'agent-proposal' } })),
   mutate('guarantee words', (b) => {
     b.components[3].summary = 'Charges the card and never fails.'
-    b.relationships[1].explanation = 'Delivery is **guaranteed**.'
+    b.relationships[1].explanation = 'Delivery is **bulletproof**.'
   }),
   mutate('changed ID not on the board', (b) => (b.responses = answers([answer('note-x1', 'adopted', ['api-to-paymnt'])], 'feedback-older0000001'))),
   mutate('adopted with no changed IDs', (b) => (b.responses = answers([answer('note-x1', 'adopted')], 'feedback-older0000001'))),
@@ -118,6 +118,14 @@ export const VALID_CASES: readonly CorpusCase[] = [
   mutate('feedback partly answered, revision not raised', (b) => {
     b.responses = answers([answer('note-a1b2c3d4e5f6'), answer('note-old000000001'), answer('edit-0p9o8i7u6y5u', 'adopted', ['api-to-payment'])])
   }, feedbackFile()),
+  mutate('more warnings than the report shows', (b) => {
+    b.revision = 4
+    b.responses = answers(Array.from({ length: 30 }, (_, i) => answer(`zz-${i}`)))
+  }, feedbackFile()),
+  mutate('huge feedback item IDs', (b) => {
+    b.revision = 4
+    b.responses = answers([answer('note-a1b2c3d4e5f6')])
+  }, feedbackFile({ items: [{ id: 'x'.repeat(300_000), type: 'note' }] })),
   mutate('feedback for another board', (b) => (b.revision = 4), feedbackFile({ boardId: 'other-board' })),
   mutate('feedback file that is not feedback', (b) => (b.revision = 4), '{ "format": "something-else" }'),
 ]
@@ -140,6 +148,7 @@ export const INVALID_CASES: readonly CorpusCase[] = [
     delete b.components[0].summary
   }),
   mutate('unknown key with no near match', (b) => (b.relationships[0].color = 'red')),
+  mutate('unknown key of 900,000 characters', (b) => (b.components[0]['k'.repeat(900_000)] = 1)),
   mutate('ID with capitals and spaces', (b) => (b.groups[0].id = 'Front End')),
   mutate('duplicate component ID', (b) => (b.components[5].id = 'payment')),
   mutate('item ID equal to a component ID', (b) => (b.items[0].id = 'api')),

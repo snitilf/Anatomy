@@ -19,7 +19,7 @@ export interface FeedbackSummary {
 export function readFeedback(text: string): FeedbackSummary | undefined {
   let data: unknown
   try {
-    data = JSON.parse(text.replace(/^﻿/, ''))
+    data = JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch {
     return undefined
   }
@@ -34,8 +34,11 @@ export function readFeedback(text: string): FeedbackSummary | undefined {
   return { id: record.id, boardId: record.boardId, baseRevision: record.baseRevision, items: itemIds, withdrawn }
 }
 
-/** Words that promise more than an explanation can know. "Always" and "secure" are left out: they are common in honest text. */
-const GUARANTEE = /(?<![\w-])(guarantee[ds]?|never fails?|cannot fail|can't fail|can never fail|foolproof|bulletproof|unbreakable|100% (?:secure|safe|reliable|uptime))(?![\w-])/i
+/**
+ * Phrases that promise more than an explanation can know. Words that honest text uses often are left out:
+ * "always", "secure", and "guarantees" ("TCP guarantees ordering" is a fact, not a promise).
+ */
+const GUARANTEE = /(?<![\w-])(never fails?|cannot fail|can't fail|can never fail|foolproof|bulletproof|unbreakable|100% (?:secure|safe|reliable|uptime))(?![\w-])/i
 
 /** The text fields that make claims. Items and answers are left out, because a question may name a guarantee to ask about it. */
 function claims(board: Board): [path: string, text: string][] {

@@ -57,7 +57,7 @@ describe('boardAdvice rules', () => {
 
   it('flags words that promise a guarantee in claims, once per field', () => {
     const b = board((d) => {
-      d.goal = 'Show why checkout never fails and is guaranteed.'
+      d.goal = 'Show why checkout never fails and is foolproof.'
       d.scenarios[0].steps[1].caption = 'The bulletproof API checks the order.'
       d.items[0].text = 'Is delivery guaranteed?'
     })
@@ -68,7 +68,10 @@ describe('boardAdvice rules', () => {
   })
 
   it('leaves common words alone', () => {
-    const b = board((d) => (d.goal = 'The API always answers over a secure connection, with a guaranteed-free trial of guarantees-api.'))
+    const b = board((d) => {
+      d.goal = 'The API always answers over a secure connection, with a guaranteed-free trial of guarantees-api.'
+      d.components[2].summary = 'TCP guarantees the order of the bytes, so the API reads them as sent.'
+    })
     expect(codes(b)).toEqual([])
   })
 
