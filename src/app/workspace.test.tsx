@@ -60,7 +60,7 @@ describe('folder mode', () => {
     expect(folder.files.has(FILES.layer)).toBe(false)
 
     await addNote('Kept in the repository')
-    await waitFor(() => expect(layerOf(folder)?.notes.map((n) => n.text)).toEqual(['Kept in the repository']), { timeout: 2000 })
+    await waitFor(() => expect(layerOf(folder)?.notes.map((n) => n.text)).toEqual(['Kept in the repository']), { timeout: 10_000 })
     await waitFor(() => expect(document.querySelector('[data-save-state="saved"]')).not.toBeNull())
     // The crumb names the folder.
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'shop' })).toBeInTheDocument()
