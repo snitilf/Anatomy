@@ -4,7 +4,7 @@
   "id": "refund-approval",
   "revision": 1,
   "title": "Refund approval: paying back a customer",
-  "goal": "Understand how a planned local tool turns an invented refund request into an approved, simulated payout, and why each safeguard is needed.",
+  "goal": "Understand how a planned local tool turns a sample refund request into an approved, simulated payout, and why each safeguard is needed.",
   "scope": {
     "includes": [
       "The planned journey from a refund request and policy to a simulated payout",
@@ -24,8 +24,8 @@
     {
       "id": "refund-request",
       "label": "Refund request",
-      "summary": "The invented $100 refund request and the policy that the user enters.",
-      "explanation": "Everything starts here. The request is **invented**, and the policy comes from the user, not from built-in rules.",
+      "summary": "A sample $100 refund request and the policy that the user enters.",
+      "explanation": "Everything starts here. The request is a **sample**, and the policy comes from the user, not from built-in rules.",
       "group": "screens",
       "inputs": ["Request details typed or loaded by the user", "Refund policy typed by the user"],
       "outputs": ["Request and policy for the policy check"],
@@ -209,7 +209,7 @@
       "title": "Approve and pay",
       "summary": "The normal path from a refund request to a simulated payout.",
       "steps": [
-        { "caption": "The user enters the invented request and a policy, and sets a spending limit above the amount.", "highlight": ["refund-request", "spending-limit"] },
+        { "caption": "The user enters the sample request and a policy, and sets a spending limit above the amount.", "highlight": ["refund-request", "spending-limit"] },
         { "caption": "The policy check finds that the policy allows the refund and proposes a payout.", "highlight": ["policy-check", "request-to-policy-check", "limit-to-policy-check"] },
         { "caption": "The preview shows the exact amount and account.", "highlight": ["payout-preview", "policy-check-to-preview"] },
         { "caption": "The manager approves this version, and the decision is saved.", "highlight": ["manager-approval", "preview-to-approval", "approval-to-ledger"] },
