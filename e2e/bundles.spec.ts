@@ -332,8 +332,9 @@ test.describe('on a phone', () => {
     const sheet = page.getByTestId('inspector')
     await expect(sheet).toHaveAttribute('data-stop', '0')
     await page.waitForTimeout(600)
-    const unit = many(page).first()
-    const at = await onLine(unit)
+    const at = await onLine(many(page).first())
+    // Bundles can share a stretch of track, so the one the tap lands on is whichever one is on afterward.
+    const unit = page.locator('[data-unit]:has(button[aria-label$="Show them."])[data-on]')
     await page.touchscreen.tap(at.x, at.y)
     await expect(sheet).toHaveAttribute('data-stop', '1')
     await expect(unit).toHaveAttribute('data-on', 'true')
