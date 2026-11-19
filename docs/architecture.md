@@ -1,12 +1,14 @@
 # Architecture
 
 Anatomy is a static browser app.
-It has no server code, no accounts, and no network calls after the page loads.
+It has no server code and no accounts.
+It makes no network calls after the page loads.
 All board processing happens in the browser tab.
 
 ## Two layers of data
 
-A board has two layers that are stored separately:
+A board has two layers of data.
+The app stores the two layers separately.
 
 | Layer | Written by | Contents |
 | --- | --- | --- |
@@ -14,9 +16,15 @@ A board has two layers that are stored separately:
 | User layer | The user, inside the app | Moved cards, card sizes, notes, questions, links, drawings, proposed parts, moved connection ends, and resolved items. |
 
 The app never edits the base board.
-When a new revision arrives, the layer stays, and the app compares the layer with the new base.
+When a new revision of the base board arrives, the user layer stays.
+The app then compares the user layer with the new base board.
 
 ## Modules
+
+A pure function is a function that only turns its input into a result.
+It changes nothing outside itself.
+Logic lives in pure functions with unit tests.
+React components read from the app state and dispatch actions.
 
 | Folder | Owns | Depends on |
 | --- | --- | --- |
@@ -37,45 +45,82 @@ When a new revision arrives, the layer stays, and the app compares the layer wit
 | `src/theme/` | Theme choice (system, light, dark), stored in `localStorage` and applied as `data-theme` on `<html>`. An inline script in `index.html` applies it before the first paint. | `react` |
 | `src/styles/` | Design tokens: colors for both themes, type scale, spacing, radii, and the one shadow for floating surfaces. | none |
 
-Logic lives in pure functions with unit tests.
-React components read from the app state and dispatch actions.
-
 ## Cards and the map
 
-Every card has a rect: its position and its size.
-`placeCards` in `src/layout/cards.ts` gives the rect of every card.
-A position the user set wins, then the board's position, then the layered layout.
-A size the user set wins over the size of the card's text (`contentSize`: 240 wide, at least 112 tall, on an 8 px grid).
+Every card has a rect, which is its position and its size.
+The function `placeCards` in `src/layout/cards.ts` gives the rect of every card.
+A position that the user set wins.
+The position in the board comes next, and the layered layout comes last.
+
+A size that the user set wins over the size of the text in the card.
+That text size is `contentSize`: 240 wide, at least 112 tall, on an 8 px grid.
 A resized card stays between 224 by 112 and 480 by 320.
-Only the cards the user moved or resized are stored, so the other cards follow the layout each time a board opens.
+The app stores only the cards that the user moved or resized.
+The other cards follow the layout each time a board opens.
 
-The layout (`src/layout/autoLayout.ts`) is a left-to-right flow from the connections, made with dagre in two passes.
-The members of each group are laid out first, then each group is one block among the loose cards.
-Connections in both directions between two blocks count in the direction of the block the board lists first.
-Pieces that no connection joins are packed in rows toward a screen-like shape.
-The layout uses each card's text size, never a size the user set, so a resize never moves the other cards around.
-When some cards have a board position, the rest are laid out as a block to their right.
-A card the layout placed never stays under a card with a fixed position: `pushApart` in `src/layout/push.ts` moves it aside.
+### The layout
 
-A drop or a resize that covers other cards pushes them aside along the shorter way out, 40 units away, for at most three rounds.
-A pushed card prefers a free spot and its own group area, and never lands on a card that has settled.
-The dropped card and every pushed card are saved in one action, so one undo puts them all back.
+The layout in `src/layout/autoLayout.ts` is a left-to-right flow that follows the connections.
+It uses dagre in two passes.
+In the first pass, it lays out the members of each group.
+In the second pass, it treats each group as one block among the loose cards.
 
-Routing, labels, group areas, and the camera all read the card rects, never a fixed card size.
-Every connection is made of straight runs with rounded corners (`src/canvas/routing.ts`).
-A connection is a straight run when its ends line up, else an elbow on a free track of the gap between the cards, else a path found with A* around the cards.
-The search charges for turns, for running along or across a line already drawn, and for passing through a group area neither end belongs to.
-Each gap between cards has up to three tracks, so parallel lines do not run on top of each other.
-While a card is dragged or resized, only its connections are redrawn, as plain elbows, and their labels hide.
-After the drop, one full layout pass routes the connections and places the labels, which keep off every card, line, and other label.
-Connections whose cards did not move or change size keep their route and label when those are still clear.
+Connections in both directions between two blocks count in the direction of the block that the board lists first.
+The layout packs pieces that no connection joins in rows, toward the shape of a screen.
+The layout uses the text size of each card and never a size that the user set.
+For this reason, a resize never moves the other cards.
 
-The camera (`src/canvas/camera.ts`) keeps the map inside limits worked out from the content: cards, group areas, marks, and proposed parts.
-The map zooms out only until the whole content fits, never needing more than 100%, and in to 200%.
+If some cards have a board position, the layout places the other cards as a block to their right.
+A card that the layout placed never stays under a card with a fixed position.
+The function `pushApart` in `src/layout/push.ts` moves it aside.
+
+A drop or a resize can cover other cards.
+The app then pushes the covered cards aside along the shorter way out.
+It pushes them 40 units away, for at most three rounds.
+A pushed card prefers a free spot and its own group area.
+It never lands on a card that has settled.
+The app saves the dropped card and every pushed card in one action, so one undo puts them all back.
+
+### Connections
+
+Routing, labels, group areas, and the camera all read the card rects and never a fixed card size.
+Every connection has straight runs with rounded corners (`src/canvas/routing.ts`).
+The router picks the first of three shapes that fits:
+
+1. A straight run, when the two ends line up.
+2. An elbow on a free track of the gap between the cards.
+3. A path that A* finds around the cards.
+
+The search adds a cost for each of these:
+
+- A turn.
+- A run along or across a line that is already drawn.
+- A run through a group area that neither end belongs to.
+
+Tracks are 16 units apart.
+A gap between cards holds as many lines as it has tracks, so parallel lines do not run on top of each other.
+
+While the user drags or resizes a card, the app redraws only the connections of that card.
+It draws them as plain elbows and hides their labels.
+After the drop, one full layout pass routes the connections and places the labels.
+The labels keep off every card, every line, and every other label.
+A connection keeps its route and label when its cards did not move or change size and the route is still clear.
+
+### The camera
+
+The camera in `src/canvas/camera.ts` keeps the map inside limits.
+The app works out the limits from the content: cards, group areas, marks, and proposed parts.
+The map zooms out only until the whole content fits, and never needs more than 100%.
+It zooms in to 200%.
 Panning stops a margin past the content.
-Every camera move the app makes goes through `clampViewport`, because React Flow applies the limits only to the user's own panning.
-Opening a board fits it when the fit leaves text readable (60% or more), else it shows the start of the flow at 80%.
-On a crowded map, connection labels below 90% show only for the selection and for the card under the pointer.
+
+React Flow applies the limits only to panning by the user.
+For this reason, every camera move that the app makes goes through `clampViewport`.
+
+When a board opens, the camera fits the whole board if the fit leaves text readable, which means a zoom of 75% or more.
+If the fit is below 75%, the camera shows the start of the flow at 80%.
+A board with more than 15 parts always opens fitted whole.
+On a crowded map, connection labels show below 90% zoom only for the selection and for the card under the pointer.
 
 ## User layer, version 2
 
@@ -98,104 +143,225 @@ interface Layer {
 ```
 
 The Zod schema in `src/layer/model.ts` is the source of the types.
-It caps every list, the points of a stroke (2000), text lengths, and coordinates.
-IDs of the user's items have a prefix: `note-`, `link-`, `mark-`, `part-` (proposed part), `edit-` (reconnect), and `feedback-`.
-A part is a component of the board or a proposed part, so links, arrows, and moved connection ends can join either.
-A stroke is simplified to about 0.75 units before it is stored.
+It sets a cap on every list, on the points of a stroke (2000), on text lengths, and on coordinates.
+The IDs of the items that the user makes have a prefix:
+
+- `note-` for a note or question.
+- `link-` for a link.
+- `mark-` for a mark.
+- `part-` for a proposed part.
+- `edit-` for a reconnect.
+- `feedback-` for a feedback file.
+
+A part is a component of the board or a proposed part.
+For this reason, links, arrows, and moved connection ends can join either kind.
+The app simplifies a stroke to about 0.75 units before it stores the stroke.
 
 A version 1 overlay (`anatomy-overlay`) and a version 1 export file still open.
-`readLayer` upgrades them: `manualLinks` become `links`, and a stored position that equals where the layout puts the card is dropped, because version 1 froze every position when a board opened.
+The function `readLayer` upgrades them.
+It changes `manualLinks` to `links`.
+It also drops a stored position that equals the layout position of the card.
+Version 1 froze every position when a board opened, so these positions are not real moves.
 
-Note status is computed, never stored:
+### Note status
+
+The app computes the status of a note and never stores it.
+A note has one of three statuses:
 
 - `current`: the target exists and its fingerprint matches.
-- `possibly-outdated`: the target exists but its content changed since the note was written or confirmed.
+- `possibly-outdated`: the target exists, but its content changed since the user wrote or confirmed the note.
 - `needs-relinking`: the target no longer exists in the base board.
 
-A link whose part is missing is also `needs-relinking`.
+A link whose part is missing also has the status `needs-relinking`.
 The app never deletes or moves a note or link by itself.
-The only thing it moves on its own is an item the agent adopted, into the archive, from where it can be restored.
+The app moves only one kind of item on its own: an item that the agent adopted.
+It moves that item into the archive, and the user can restore it from there.
 
 A fingerprint is a short hash of the meaning of a part or connection, without its position.
-For a component it covers label, summary, explanation, group, inputs, outputs, and source.
-For a relationship it covers from, to, kind, label, explanation, and source.
-For the board it covers title, goal, and scope.
+For a component, it covers label, summary, explanation, group, inputs, outputs, and source.
+For a relationship, it covers from, to, kind, label, explanation, and source.
+For the board, it covers title, goal, and scope.
 
 ## Undo and redo
 
-The app state keeps a history of earlier layers: up to 100 steps, in memory, for the open board.
-Every change to the layer is one step: a drop (one or more cards), a run of arrow keys, a resize, and every note, link, mark, proposal, reconnect, or archive change.
+The app state keeps a history of earlier layers for the open board.
+The history holds up to 100 steps, in memory.
+Every change to the layer is one step.
+A step is one of these changes:
+
+- A drop of one or more cards.
+- A run of arrow keys.
+- A resize.
+- A change to a note, link, mark, proposal, reconnect, or archive.
+
 Selection, tool, theme, camera, and walkthroughs are not part of the history.
-Opening a revision and sending feedback are barriers: nothing before them can be undone.
-After an undo or redo, an item that came back is selected, and a selection whose item went away is cleared.
-Cmd or Ctrl with Z undoes; with Shift, or Ctrl+Y, it redoes.
+Opening a revision and sending feedback are barriers, so nothing before them can be undone.
+After an undo or redo, the app selects an item that came back.
+It clears a selection whose item went away.
+
+Cmd or Ctrl with Z undoes.
+Cmd or Ctrl with Shift and Z redoes, and so does Ctrl+Y.
 Text fields and dialogs keep their own undo.
 
 ## Commands
 
-Every user action with a name is one entry in `COMMANDS` in `src/commands/list.ts`: an ID, a group, a label, an icon, its keys, and when it shows and is enabled.
-The command menu (Cmd or Ctrl with K), the top bar buttons, the tooltips, and the keys all read that one list, so a new action lands in one place.
-`useCommand(id)` gives a button the label, the printed shortcut, the state, and a way to run it.
+Every user action with a name is one entry in `COMMANDS` in `src/commands/list.ts`.
+An entry has an ID, a group, a label, an icon, and its keys.
+It also says when the command shows and when it is enabled.
+The command menu (Cmd or Ctrl with K), the top bar buttons, the tooltips, and the keys all read that one list.
+For this reason, a new action needs a change in one place only.
+
+The function `useCommand(id)` gives a button the label, the printed shortcut, the state, and a way to run the command.
 One `keydown` listener, in the capture phase on the document, runs the shortcuts.
-A single key does nothing while a text field, a dialog, a menu, or a popover has focus, and Cmd or Ctrl shortcuts leave text fields to their own keys.
-The single keys of the whiteboard tools (V, H, P, R, O, A, T, S, N) belong to the tools alone, and Escape leaves a tool before it clears the selection.
-Commands made from what is open, such as one per example, walkthrough, part, and connection, come from `boardCommands`.
+
+A single key does nothing while a text field, a dialog, a menu, or a popover has focus.
+Cmd or Ctrl shortcuts leave text fields to their own keys.
+The single keys of the whiteboard tools (V, H, P, R, O, A, T, S, N) belong to the tools alone.
+Escape leaves a tool before it clears the selection.
+The function `boardCommands` makes the commands that depend on what is open, such as one per example, walkthrough, part, and connection.
 
 ## The whiteboard
 
-The tool bar at the bottom of the map holds Select (V), Hand (H, or hold Space), Pen (P), Rectangle (R), Ellipse (O), Arrow (A), Text (T), Sticky note (S), and New part (N).
-The tool in use is screen state, not part of the history, and Escape or V returns to Select.
-Every tool but the pen returns to Select after one use, and a walkthrough or a phone screen leaves only Select.
-Under Select the map behaves as before; under Hand it pans from anywhere; under a drawing tool nothing on the map moves or takes the pointer.
+The tool bar at the bottom of the map holds these tools:
+
+- Select (V).
+- Hand (H, or hold Space).
+- Pen (P).
+- Rectangle (R).
+- Ellipse (O).
+- Arrow (A).
+- Text (T).
+- Sticky note (S).
+- New part (N).
+
+The tool in use is screen state and is not part of the history.
+Escape or V returns to Select.
+Every tool except the pen returns to Select after one use.
+In a walkthrough or on a phone screen, only Select is available.
+
+Under Select, the map behaves as before.
+Under Hand, the map pans from anywhere.
+Under a drawing tool, nothing on the map moves or takes the pointer.
+
+### Drawing
 
 A drawing tool puts a surface over the map (`DrawSurface`) that captures the pointer.
-The line or shape in progress lives in a ref and is drawn once per frame by setting SVG attributes, never through React state.
-Letting go saves one mark: a pen line simplified to 0.75 screen pixels, a rectangle or ellipse (Shift keeps it square; a click with no drag makes a default size), or an arrow.
-A click with Text, Sticky note, or New part opens an editor in place; what is typed is saved as one change when the editor loses focus or on Escape, and nothing is saved when nothing was typed.
+The line or shape in progress lives in a ref.
+The app draws it once per frame by changing SVG attributes and never through React state.
+
+When the user lets go, the app saves one mark:
+
+- A pen line, simplified to 0.75 screen pixels.
+- A rectangle or an ellipse. Shift keeps it square, and a click with no drag makes a default size.
+- An arrow.
+
+A click with Text, Sticky note, or New part opens an editor in place.
+The app saves what the user typed as one change when the editor loses focus, or when the user presses Escape.
+If the user typed nothing, the app saves nothing.
 The wheel and a pinch zoom over the surface, as on the map.
 
 Pen lines, rectangles, ellipses, and arrows are one SVG in board coordinates, above the cards and the labels (`InkLayer`).
 Only a wide invisible copy of each line takes the pointer, so the cards under a shape stay reachable.
-Text, sticky notes, and proposed parts are React Flow nodes: they are selected, moved, and resized like cards and pass through the same cache.
-A proposed part is a card in every way: links join it, the lines route around it, and a drop or resize pushes it and is pushed by it, in the same undo step.
-Marks are never obstacles for the lines and never pushed.
+Marks are never obstacles for the lines and are never pushed.
 
-An arrow end is attached to a part, to a connection at a place along its drawn line (`t` from 0 to 1), or to a free point (`attachAt` in `src/whiteboard/geometry.ts`).
-An attached end follows its part or line when that moves, and stops at the edge of a part.
+Text, sticky notes, and proposed parts are React Flow nodes.
+The user selects, moves, and resizes them like cards, and they pass through the same cache.
+A proposed part is a card in every way.
+Links join it, and the lines route around it.
+A drop or a resize pushes it and is pushed by it, in the same undo step.
+
+### Arrow ends and moved connection ends
+
+An arrow end attaches in one of three ways:
+
+- To a part.
+- To a connection, at a place along its drawn line (`t` from 0 to 1).
+- To a free point.
+
+The function `attachAt` in `src/whiteboard/geometry.ts` does this.
+An attached end follows its part or line when that moves.
+It stops at the edge of a part.
 
 A selected connection, link, or arrow shows a handle at each drawn end.
-`useEndDrag` captures the pointer, draws a straight ghost from the end that stays, and outlines the part under the pointer, all on the DOM.
-Letting go becomes one action through `endDropAction`: a connection end moved to another part (`reconnected`), a link end moved, or an arrow end attached again.
-A connection with a moved end is drawn where the user put it, in the user's color, over its original at 35% opacity; dropping the end back on its original part removes the edit.
+The hook `useEndDrag` captures the pointer.
+It draws a straight ghost from the end that stays, and it outlines the part under the pointer, all on the DOM.
+
+When the user lets go, `endDropAction` turns the drop into one action.
+The action is one of these:
+
+- A connection end moved to another part (`reconnected`).
+- A link end moved.
+- An arrow end attached again.
+
+The app draws a connection with a moved end where the user put it, in the color of the user.
+The original connection stays under it at 60% opacity.
+If the user drops the end back on its original part, the app removes the edit.
 The connection view in the sidebar has the same moves as pickers, for the keyboard.
 
 ## The sidebar
 
-The sidebar shows the overview or the selection under Details, and a Review tab while a new revision, a note, or an answer needs a look.
-Its width (300 to 520) and whether it is open are kept per browser.
-On a screen 760 px wide or less it is a bottom sheet with three stops, dragged by its header only.
+Under Details, the sidebar shows the overview or the selection.
+It shows a Review tab while a new revision, a note, or an answer needs a look.
+The app keeps the width of the sidebar (300 to 520) and whether it is open, for each browser.
+On a screen 760 px wide or less, the sidebar is a bottom sheet with three stops.
+The user drags the sheet by its header only.
 
 ## Feedback and answers
 
-Send to agent (`src/app/SendMenu.tsx`) is the top bar's primary action, with `Cmd+Enter` or `Ctrl+Enter`.
-It opens a popover that shows what will go, then writes `.anatomy/feedback.json` and copies a short prompt.
-For a board opened as a file or an example it downloads `feedback.json` instead, and the prompt says it is in the Downloads folder.
-The copy starts first, inside the press, because browsers allow it only there.
-`.anatomy/README.md` is written on the first send, and replaced when the format changes, unless the user removed its first line.
+Send to agent (`src/app/SendMenu.tsx`) is the primary action of the top bar.
+Its keys are `Cmd+Enter` or `Ctrl+Enter`.
+It opens a popover that shows what will go.
+It then writes `.anatomy/feedback.json` and copies a short prompt.
 
-`buildFeedback` in `src/feedback/build.ts` turns the layer into an `anatomy-feedback` file, version 1.
-Each item says what the user meant in board terms: a note or question about a target with a snapshot of that target, a link between parts, a connection with its old and new ends, a new part with its links and neighbors, and drawings as what they enclose, touch, or point at.
-Marks are read against the lines the map draws, routed around the cards, which the map passes in as its scene; an arrow end on a connection says where along it (`at`, 0 to 1).
-A send holds every item that is new or changed since the last send, and every item sent before that has no answer yet, so a second send never drops what the first one held.
-Deleted items that were sent before are listed as withdrawn.
-A drawing with no note that touches nothing is skipped, and the popover lists it with a way to select it.
+If the user opened the board as a file or as an example, the app downloads `feedback.json` instead.
+The prompt then says that the file is in the Downloads folder.
+The copy starts first, inside the press, because browsers allow a copy only there.
+The app writes `.anatomy/README.md` on the first send.
+It replaces that file when the format changes, unless the user removed its first line.
+
+### The feedback file
+
+The function `buildFeedback` in `src/feedback/build.ts` turns the layer into an `anatomy-feedback` file, version 1.
+Each item says what the user meant in board terms.
+The items are of these kinds:
+
+- A note or question about a target, with a snapshot of that target.
+- A link between parts.
+- A connection with its old and new ends.
+- A new part with its links and neighbors.
+- Drawings, described as what they enclose, touch, or point at.
+
+Marks are read against the lines that the map draws, routed around the cards.
+The map passes these lines in as its scene.
+An arrow end on a connection says where along the connection it is (`at`, 0 to 1).
+
+A send holds every item that is new or changed since the last send.
+It also holds every item that was sent before and still has no answer.
+For this reason, a second send never drops what the first send held.
+The file lists deleted items that were sent before as withdrawn.
+The app skips a drawing with no note that touches nothing, and the popover lists it with a way to select it.
+
+### The answers
 
 The agent answers in the `responses` of the next board revision.
-When a revision opens (`receiveAnswers` in `src/layer/edits.ts`), each answer is kept in the layer next to its item, so a later revision without answers does not lose it.
-An adopted item moves to the archive when the answer names what changed and every named ID is on the board; otherwise it stays with its answer.
-Declined and answered items keep their answer until the user dismisses them, which archives them as one step of undo.
-An answer already taken in is not taken in again, so an item restored from the archive stays restored when the same revision opens again.
-The Review tab lists the answers, the items adopted in this revision, each moved connection with its old ends, the ends the user asked for, and whether the board now has them, and the rest of the archive, which can be restored.
+When a revision opens, `receiveAnswers` in `src/layer/edits.ts` keeps each answer in the layer next to its item.
+For this reason, a later revision without answers does not lose it.
+
+An adopted item moves to the archive when the answer names what changed and every named ID is on the board.
+Otherwise, it stays with its answer.
+Declined and answered items keep their answer until the user dismisses them.
+Dismissing them archives them as one step of undo.
+
+The app never takes in an answer twice.
+For this reason, an item restored from the archive stays restored when the same revision opens again.
+
+The Review tab lists these things:
+
+- The answers.
+- The items that the agent adopted in this revision.
+- Each moved connection with its old ends.
+- The ends that the user asked for, and whether the board now has them.
+- The rest of the archive, which the user can restore.
 
 ## Export file
 
@@ -203,68 +369,88 @@ The Review tab lists the answers, the items adopted in this revision, each moved
 { "format": "anatomy-export", "schemaVersion": 2, "exportedAt": "...", "board": { }, "layer": { } }
 ```
 
-The app opens a bare board file (up to 1,000,000 bytes) or an export file (up to 2,000,000 bytes).
-A version 1 export file holds an `overlay` instead of a `layer`, and is upgraded when it opens.
-An export file is valid only if the layer's `boardId` matches the board's `id`.
+The app opens a bare board file of up to 1,000,000 bytes.
+It also opens an export file of up to 2,000,000 bytes.
+A version 1 export file holds an `overlay` instead of a `layer`, and the app upgrades it when it opens.
+An export file is valid only if the `boardId` of the layer matches the `id` of the board.
 
 ## Where the work is kept
 
-There is one workspace per repository, and two ways to keep it.
+There is one workspace for each repository.
+The app can keep the workspace in two ways.
 
 ### Repository folder (Chrome and Edge)
 
 The user opens the repository folder with the File System Access API.
+The app uses these files in the folder:
 
 | File | Written by | Purpose |
 | --- | --- | --- |
 | `.anatomy/board.json` | The agent | The board. The app only reads it. |
 | `.anatomy/layer.json` | The app | The user layer, saved a moment after each change. |
-| `.anatomy/layer.backup.json` | The app | A layer file that could not be read, kept before a new one starts. |
+| `.anatomy/layer.backup.json` | The app | A layer file that the app cannot read, kept before a new one starts. |
 | `.anatomy/feedback.json` | The app | What the user sends to the agent. |
 | `.anatomy/README.md` | The app | Format notes for agents. |
 
-The folder handle is kept in IndexedDB.
-After a reload the app opens the folder again when the browser still allows it, and otherwise shows "Reopen" with the folder name, because asking again needs a click.
+The app keeps the folder handle in IndexedDB.
+After a reload, the app opens the folder again if the browser still allows it.
+Otherwise, the app shows "Reopen" with the folder name, because the browser needs a click to ask again.
 If `board.json` is missing, the app says so and points to "How to make a board".
 
-While the page is visible, the app checks `board.json` every 2 seconds and when the window gains focus.
-It compares the modification time and size, reads the file only after it stayed the same for two checks, and opens it only when it is valid and its `revision` is higher.
+While the page is visible, the app looks at `board.json` every 2 seconds.
+It also looks at it when the window gains focus.
+Each look compares the modification time and the size of the file.
+The app reads the file only after the file stayed the same for two looks in a row.
+It opens the file only if the file is valid and its `revision` is higher.
 A new revision goes through the update review.
-A check never shows an error.
+A look never shows an error.
 
 The folder sits behind the `Folder` interface in `src/workspace/folder.ts`.
 Unit tests use the in-memory folder in `src/workspace/memoryFolder.ts`.
-End-to-end tests build the app with `vite build --mode e2e`, which includes `src/workspace/testFolder.ts`: a folder kept in `localStorage` that stands in for the folder picker when a test sets the key `anatomy:test-folder`.
+
+End-to-end tests build the app with `vite build --mode e2e`.
+That build includes `src/workspace/testFolder.ts`.
+It is a folder kept in `localStorage`, and it stands in for the folder picker when a test sets the key `anatomy:test-folder`.
 Every other build leaves it out.
 
 ### This browser (other browsers, examples, single files)
 
-The user opens a board file or an example, and the board and its layer are kept in IndexedDB, keyed by board ID.
+The user opens a board file or an example.
+The app keeps the board and its layer in IndexedDB, with the board ID as the key.
 The Open menu lists the boards saved in this browser.
 
 ### Storage
 
-IndexedDB holds one database, `anatomy`, with the stores `boards`, `layers`, and `meta` (what was opened last, and the folder handle).
-The databases of earlier versions, `anatomy-home` and `anatomy-work`, are left as they are and not read.
-The toolbar shows the save state: saved, saving, or not saved, with where the layer went as a tooltip.
+IndexedDB holds one database, `anatomy`.
+It has three stores:
+
+- `boards`.
+- `layers`.
+- `meta`, which holds what was opened last and the folder handle.
+
+The app leaves the databases of earlier versions, `anatomy-home` and `anatomy-work`, as they are and does not read them.
+The toolbar shows the save state: saved, saving, or not saved.
+A tooltip says where the layer went.
 If saving fails, the app keeps the work in memory and offers an export.
 
 ## Opening a board that is already open or saved
 
-If a board with the same ID is open or saved in this browser:
+This section applies if a board with the same ID is open or saved in this browser.
+The app does these steps:
 
 1. The new base board replaces the old base board.
 2. The layer stays.
 3. The app compares the old and new base boards and shows what was added, removed, and changed.
 4. Notes on changed parts show as possibly outdated, and notes on removed parts show in a needs-relinking list.
 
-If the opened file is an export file, and this browser already has a different layer with work in it for that board, the app asks which layer to keep.
+Sometimes the opened file is an export file, and this browser already has a different layer with work in it for that board.
+In that case, the app asks which layer to keep.
 Neither choice merges the two layers.
 
 ## Safety
 
-- Board text is rendered as React text nodes.
-  The Markdown subset is parsed by a small local parser, never through `innerHTML`.
-- Paths in references are shown as text and never opened.
-- The app makes no network requests after the page loads.
-  Inter is bundled with the app.
+The app has these safety rules:
+
+- The app renders board text as React text nodes. A small local parser reads the Markdown subset and never uses `innerHTML`.
+- The app shows paths in references as text and never opens them.
+- The app makes no network requests after the page loads. Inter is bundled with the app.
