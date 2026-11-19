@@ -1,26 +1,107 @@
+<div align="center">
+
 # Anatomy
 
-Anatomy is a local browser app that turns a plan, feature, or project into a visual explanation that you can explore, question, and annotate.
-Your coding agent writes a board, a JSON document in `.anatomy/board.json` that describes the parts of a system, how they connect, and walkthroughs of a journey.
-You mark the board up, send your marks back with Send to agent, and the agent answers them in its next revision.
-The app runs in the browser on your own machine and does not send board data to any server.
+### Your coding agent knows your code. Now you can see what it knows.
+
+[How it works](#how-it-works) · [Quick start](#quick-start) · [Docs](#documentation)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/map-dark.png">
+  <img src="docs/images/map-light.png" alt="Anatomy showing a refund approval flow: cards in three groups, labeled lines between them, and walkthroughs in the sidebar." width="100%">
+</picture>
+
+</div>
+
+Your agent reads a codebase in seconds.
+You get a wall of text back.
+
+Anatomy turns that text into a map.
+Every part is a card, every connection says what it carries, and every guess is marked as a guess.
+Walk through it, poke holes in it, draw on it, and send your questions straight back to the agent.
+The map gets better each round.
+
+It runs on your machine, in your browser.
+No accounts, no cloud, no telemetry, and no AI inside the app.
+Your agent does the thinking, and Anatomy shows it.
+
+## How it works
+
+1. Start Anatomy and open it in Chrome or Edge (see [Quick start](#quick-start)).
+2. Click **Open folder** and pick your project.
+3. Click **Copy prompt**.
+   Anatomy writes `.anatomy/README.md` into your project, which teaches your agent the board format.
+4. Paste the prompt into your coding agent and finish the sentence:
+
+   ```text
+   Read .anatomy/README.md, then write .anatomy/board.json that explains: how a refund gets approved
+   ```
+
+   The map appears as soon as the agent writes the file.
+5. Mark it up with notes, questions, your own links, and drawings.
+   Click **Send to agent**, then give your agent the prompt it shows:
+
+   ```text
+   Read .anatomy/feedback.json and answer every item in the next revision of .anatomy/board.json. The format is in .anatomy/README.md.
+   ```
+
+   The answers appear next to your marks.
+
+Commit `.anatomy/board.json` with the code it explains.
+Add `.anatomy/layer.json` and `.anatomy/feedback.json` to `.gitignore`, because they hold your own working state.
+
+No agent at hand?
+Open a built-in example: Refund approval, Anatomy itself, or URL shortener.
+
+## What you get
+
+- A map that lays itself out, from left to right, with lines that route around the cards.
+- A big board that folds into its groups when you zoom out, with one bundled line for each pair of groups.
+- Walkthroughs that play a journey step by step, one highlight at a time.
+- Honest sources: each claim says if the user said it, the agent read it, a plan states it, or the agent proposes it and nobody decided it yet.
+- An Overview page with the goal, the scope, where to start, and every open question.
+- A whiteboard on top: pen, shapes, arrows, text, sticky notes, and parts you propose.
+- A Review tab with every answer from your agent, plus undo and redo for your last 100 steps.
+- Light and dark themes, a command menu on <kbd>⌘</kbd> <kbd>K</kbd> or <kbd>Ctrl</kbd> <kbd>K</kbd>, and full keyboard control.
+
+Boards are data, never code.
+Anatomy never runs a script, opens a URL, or renders HTML from a board file.
+
+## Quick start
+
+You need Node.js 24 or later, which includes npm.
+
+1. Clone the repository and install the packages:
+
+   ```sh
+   git clone https://github.com/snitilf/Anatomy.git
+   cd Anatomy
+   npm install
+   ```
+
+2. Start the app:
+
+   ```sh
+   npm run dev
+   ```
+
+3. Open http://127.0.0.1:5173.
+
+If you use Chrome or Edge, you can open a project folder.
+In other browsers, open a board file or a built-in example.
 
 ## Documentation
 
-- [Board format](docs/board-format.md): every field of a board file and what Anatomy checks.
-- [Authoring guide](docs/authoring-guide.md): give this and the JSON Schema to your coding agent so it can write a board.
-- [Architecture](docs/architecture.md): modules, the user layer, the repository folder, storage, undo, and safety.
+- [Board format](docs/board-format.md): every field of a board file, and every check Anatomy runs on it.
+- [Authoring guide](docs/authoring-guide.md): the rules your agent follows when it writes a board.
+- [Architecture](docs/architecture.md): how the app lays out the map, stores your work, and keeps your files safe.
 
-## Requirements
-
-- Node.js 24 or later (see `.nvmrc`).
-- npm 11 or later.
-
-## Commands
+## Working on Anatomy
 
 | Command | What it does |
 | --- | --- |
-| `npm install` | Installs the exact versions in `package-lock.json`. |
+| `npm install` | Installs the packages. |
+| `npm ci` | Installs the exact versions in `package-lock.json`, as CI does. |
 | `npm run dev` | Starts the dev server on `http://127.0.0.1:5173`. |
 | `npm run build` | Type-checks and builds the static app into `dist/`. |
 | `npm run preview` | Serves the built app on `127.0.0.1`. |
@@ -33,14 +114,16 @@ The app runs in the browser on your own machine and does not send board data to 
 
 The dev and preview servers listen on the loopback interface only.
 
-## Continuous integration and releases
+Each pull request and each push to `main` runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests.
+Run the frame-time gate locally before you merge: `npx playwright test e2e/performance.spec.ts --workers=1`.
+Hosted CI reports that gate without enforcing it, because runner resources can distort frame timing.
 
-Each pull request runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests.
-The frame-time gate is enforced locally before merge with `npx playwright test e2e/performance.spec.ts --workers=1` and reported without enforcement on hosted CI because runner resources can distort frame timing.
-To cut a release, run `npm version <patch|minor>` and then `git push --follow-tags`.
-A tag starting with `v` triggers the release workflow, which attaches a zip containing the app and local run instructions to the GitHub Release.
+To cut a release, run `npm version <patch|minor>`, then `git push --follow-tags`.
+A tag that starts with `v` starts the release workflow.
+That workflow attaches a zip with the app and its local run instructions to the GitHub Release.
 
-## Stack
+<details>
+<summary>Stack</summary>
 
 All versions are exact.
 `.npmrc` sets `save-exact=true`, so new dependencies are also pinned.
@@ -73,10 +156,14 @@ All versions are exact.
 
 Versions recorded on November 13, 2026.
 
-## Licenses
+</details>
+
+## License
+
+Anatomy is released under the [MIT License](LICENSE).
 
 The approval-gate lesson uses the Anatomy kit by wheresryan22 (MIT).
 Its license and source commit are in `src/lessons/kit/`.
 
-The production dependency tree is MIT, ISC, and BSD-3-Clause as of November 13, 2026, plus the Inter font under the SIL Open Font License 1.1.
-Review the locked tree again before any public release.
+The production dependencies are under the MIT, ISC, and BSD-3-Clause licenses as of November 13, 2026.
+The Inter font is under the SIL Open Font License 1.1.
