@@ -33,7 +33,7 @@
 /* The width is in screen pixels at every zoom. */
 .bundle {
   fill: none;
-  stroke: var(--line-strong);
+  stroke: var(--line);
   /* Drawn on the board and scaled with it, so the width is multiplied back to screen pixels. */
   stroke-width: calc(var(--w, 1.25) * 1px * var(--label-scale, 1));
   stroke-linecap: butt;
@@ -114,7 +114,7 @@
   /* At very low zoom the head shrinks with the tiles, to no less than 55% of its size, so heads do not pile up at a group's edge. */
   transform: rotate(var(--angle)) scale(calc(var(--label-scale, 1) * clamp(0.55, calc(1 / (var(--label-scale, 1) * 0.3)), 1)));
   transform-origin: 0 0;
-  fill: var(--line-strong);
+  fill: var(--line);
 }
 
 .arrow[data-mine] svg {

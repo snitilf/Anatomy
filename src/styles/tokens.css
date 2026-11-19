@@ -28,18 +28,14 @@
   --card-shadow: 0 1px 2px rgb(26 27 50 / 0.06);
   /* How much of the label color a faded label keeps. */
   --faded-label: 80%;
-  /* How much of a line is left when it steps back (a part is selected, a card is hovered, a walkthrough plays). Each ink keeps 2 to 1 on the canvas and on a group wash. */
-  --fade-strong: 0.56;
-  --fade-light: 0.64;
-  --fade-faint: 0.72;
+  /* How much of a line is left when it steps back (a part is selected, a card is hovered, a walkthrough plays). Every agent line has one ink, so one share serves them all. */
+  --fade-line: 0.62;
   /* A selection is a spotlight: what is not touching it steps much further back than the fade above. */
   --spot-line: 0.16;
   --spot-label: 0.32;
   --spot-card: 0.5;
   /* Connection ink: a share of the text color, never a hue. */
-  --line-strong: color-mix(in srgb, var(--fg) 66%, transparent);
-  --line-light: color-mix(in srgb, var(--fg) 58%, transparent);
-  --line-faint: color-mix(in srgb, var(--fg) 50%, transparent);
+  --line: color-mix(in srgb, var(--fg) 60%, transparent);
   /* The wash of a group area, and of two that overlap. */
   --wash-share: 5.2%;
   --wash-share-2: 10.1%;
@@ -93,15 +89,11 @@
   --group-edge: color-mix(in srgb, var(--fg) 14%, transparent);
   --card-shadow: 0 1px 2px rgb(6 6 12 / 0.3);
   --faded-label: 70%;
-  --fade-strong: 0.5;
-  --fade-light: 0.56;
-  --fade-faint: 0.68;
+  --fade-line: 0.54;
   --spot-line: 0.22;
   --spot-label: 0.38;
   --spot-card: 0.45;
-  --line-strong: color-mix(in srgb, var(--fg) 58%, transparent);
-  --line-light: color-mix(in srgb, var(--fg) 50%, transparent);
-  --line-faint: color-mix(in srgb, var(--fg) 40%, transparent);
+  --line: color-mix(in srgb, var(--fg) 52%, transparent);
   --wash-share: 5.8%;
   --wash-share-2: 11.3%;
   --sticky-mix: 18%;

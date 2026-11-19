@@ -29,10 +29,8 @@ export interface KeyRow {
   words: string
 }
 
-/** What the eye tells apart: the dash and the width. The ink differs by too little to name a row for. */
+/** What the eye tells apart: the dash and the width. Every line has the same ink. */
 const lookOf = (s: KindStyle) => `${s.dash}|${s.width}`
-
-const TONES: readonly KindStyle['tone'][] = ['strong', 'light', 'faint']
 
 const listed = (kinds: readonly RelationshipKind[]): string => kinds.map((k, i) => (i === 0 ? KIND_SHORT[k] : KIND_SHORT[k].toLowerCase())).join(', ')
 
@@ -45,11 +43,7 @@ export function lineKeyRows(styles: Readonly<Record<RelationshipKind, KindStyle>
     const style = styles[kind]
     const look = lookOf(style)
     const row = rows.get(look)
-    if (row) {
-      row.kinds.push(kind)
-      // The swatch is drawn in the strongest ink of its kinds.
-      if (TONES.indexOf(style.tone) < TONES.indexOf(row.style.tone)) row.style = style
-    }
+    if (row) row.kinds.push(kind)
     else rows.set(look, { kinds: [kind], style, label: '', words: '' })
   }
   return [...rows.values()].map((row) => ({
