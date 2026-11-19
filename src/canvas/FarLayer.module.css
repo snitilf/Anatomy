@@ -35,7 +35,7 @@
   fill: none;
   stroke: var(--line-strong);
   /* Drawn on the board and scaled with it, so the width is multiplied back to screen pixels. */
-  stroke-width: calc(var(--w, 1.5) * 1px * var(--label-scale, 1));
+  stroke-width: calc(var(--w, 1.25) * 1px * var(--label-scale, 1));
   stroke-linecap: butt;
   vector-effect: non-scaling-stroke;
   transition: opacity 120ms var(--ease-out);
@@ -63,12 +63,17 @@
   }
 }
 
+/* Something is selected: the bundles that are not part of it step back to a hairline, at their dim opacity. */
+:global([data-spot]) .bundle:not([data-on]) {
+  stroke-width: calc(min(var(--w, 1.25), 1) * 1px * var(--label-scale, 1));
+}
+
 /* The pointer or the keyboard on a bundle, or the bundle selected: thicker, in full ink, and nothing else in the way. */
 .unit:hover .bundle,
 .unit:has(:focus-visible) .bundle,
 .unit[data-on] .bundle {
   stroke: var(--lift-ink);
-  stroke-width: calc((var(--w, 1.5) * 1px + 1.5px) * var(--label-scale, 1));
+  stroke-width: calc((var(--w, 1.25) * 1px + 1.5px) * var(--label-scale, 1));
   opacity: 1 !important;
 }
 
@@ -271,4 +276,9 @@
 /* A bundle is selected: the names of its two groups keep full ink and the others step back. */
 .name[data-quiet] {
   color: var(--fg-3);
+}
+
+/* The selected bundle is a pixel wider than its own width. */
+.unit[data-on] .bundle {
+  stroke-width: calc((var(--w, 1.25) * 1px + 1px) * var(--label-scale, 1));
 }

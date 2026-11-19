@@ -16,11 +16,12 @@ export interface Bundle extends Pair {
   arrow?: { at: Point; angle: number } | undefined
 }
 
-export const BUNDLE_MIN_WIDTH = 1.5
-export const BUNDLE_MAX_WIDTH = 6
+export const BUNDLE_MIN_WIDTH = 1.25
+export const BUNDLE_MAX_WIDTH = 2.5
 
 export function bundleWidth(count: number): number {
-  return Math.min(BUNDLE_MAX_WIDTH, BUNDLE_MIN_WIDTH + Math.log2(Math.max(1, count)))
+  // One or two connections draw at the minimum. Each doubling after that adds half a pixel.
+  return Math.min(BUNDLE_MAX_WIDTH, BUNDLE_MIN_WIDTH + 0.5 * Math.log2(Math.max(1, count / 2)))
 }
 
 /** The blocks the bundles join: each group area, each part that has no group, and each proposed part. Solved once per layout. */

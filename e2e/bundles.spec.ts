@@ -90,7 +90,7 @@ test.describe('bundles in the far view', () => {
     expect(widths.length).toBeGreaterThan(0)
     for (const w of widths) expect(w * zoom).toBeGreaterThan(1.8)
     const bundle = await unit.locator('path[data-bundle]').evaluate((p) => Number.parseFloat(getComputedStyle(p).strokeWidth))
-    expect(bundle * zoom).toBeGreaterThan(3)
+    expect(bundle * zoom).toBeGreaterThan(2)
   })
 
   test('a row opens its connection and leaves the far view', async ({ page }) => {
