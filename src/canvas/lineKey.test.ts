@@ -7,18 +7,20 @@ import { lineKeyRows } from './lineKey'
 describe('the line key', () => {
   it('has one row for each way a line is drawn, and names every kind that is drawn that way', () => {
     const rows = lineKeyRows()
-    const looks = new Set(KIND_ORDER.map((k) => JSON.stringify(KIND_STYLE[k])))
+    const looks = new Set(KIND_ORDER.map((k) => `${KIND_STYLE[k].dash}|${KIND_STYLE[k].width}`))
     expect(rows).toHaveLength(looks.size)
     expect(rows.length).toBeLessThan(KIND_ORDER.length)
     expect(rows.flatMap((r) => r.kinds).sort()).toEqual([...KIND_ORDER].sort())
-    expect(rows.map((r) => r.label)).toEqual(['Calls, triggers', 'Sends data to', 'Stores or reads data', 'Depends on', 'Not known'])
+    expect(rows.map((r) => r.label)).toEqual(['Calls, triggers, sends data', 'Stores or reads data', 'Depends on, not known'])
   })
 
   it('keeps the order of the kinds, and the words of each kind as the title', () => {
     const rows = lineKeyRows()
     expect(rows.flatMap((r) => r.kinds)).toEqual([...KIND_ORDER])
-    expect(rows[0]?.words).toBe(`${KIND_WORDS.calls}; ${KIND_WORDS.triggers}`)
-    expect(rows[rows.length - 1]?.words).toBe(KIND_WORDS.unknown)
+    expect(rows[0]?.words).toBe(`${KIND_WORDS.calls}; ${KIND_WORDS.triggers}; ${KIND_WORDS['sends-data-to']}`)
+    expect(rows[rows.length - 1]?.words).toBe(`${KIND_WORDS['depends-on']}; ${KIND_WORDS.unknown}`)
+    // Each swatch is the strongest ink of its group.
+    expect(rows.map((r) => r.style.tone)).toEqual(['strong', 'light', 'light'])
   })
 
   it('regroups by itself when a style changes', () => {
@@ -30,6 +32,6 @@ describe('the line key', () => {
     const split = lineKeyRows({ ...KIND_STYLE, triggers: { ...KIND_STYLE.triggers, width: 2 } })
     expect(split.map((r) => r.kinds)).toContainEqual(['triggers'])
     expect(split.map((r) => r.label)).toContain('Triggers')
-    expect(split.map((r) => r.label)).toContain('Calls')
+    expect(split.map((r) => r.label)).toContain('Calls, sends data to')
   })
 })

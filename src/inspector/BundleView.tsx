@@ -84,7 +84,7 @@ export function BundleView({ board, a, b }: { board: Board; a: string; b: string
               {row.mine ? <Link2 className={styles.yoursIcon} size={14} strokeWidth={1.5} aria-hidden="true" /> : <MoveRight className={styles.rowIcon} size={14} strokeWidth={1.5} aria-hidden="true" />}
               <span className={styles.rowMain}>
                 <span className={styles.rowTitle}>{row.label}</span>
-                <span className={styles.rowMeta}>
+                <span className={`${styles.rowMeta} ${styles.rowMetaWrap}`}>
                   {name(row.from)} to {name(row.to)}
                 </span>
               </span>

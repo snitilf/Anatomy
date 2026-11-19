@@ -139,8 +139,8 @@ test.describe('zoom bar', () => {
     const key = page.getByRole('dialog', { name: 'Line key' })
     await expect(key).toContainText('Stores or reads data')
     // One row for each way a line is drawn, and one for the user's own.
-    await expect(key.getByRole('listitem')).toHaveText(['Calls, triggers', 'Sends data to', 'Stores or reads data', 'Depends on', 'Not known', 'Your link'])
-    await expect(key.getByRole('listitem').nth(2)).toHaveAttribute('title', 'stores data in; reads data from')
+    await expect(key.getByRole('listitem')).toHaveText(['Calls, triggers, sends data', 'Stores or reads data', 'Depends on, not known', 'Your link'])
+    await expect(key.getByRole('listitem').nth(1)).toHaveAttribute('title', 'stores data in; reads data from')
   })
 })
 
