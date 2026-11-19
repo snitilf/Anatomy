@@ -6,7 +6,7 @@ You write the map as a board file, `.anatomy/board.json`, in the project that th
 The user reads the map, marks it up, and sends questions back to you.
 
 Use this file when the user wants to see their own project in Anatomy.
-Do not use it for work on Anatomy itself until you reach the last section.
+The last section is for work on Anatomy itself.
 
 ## Set up Anatomy for the user
 
