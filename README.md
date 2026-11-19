@@ -8,7 +8,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/map-dark.png">
-  <img src="docs/images/map-light.png" alt="Anatomy showing a refund approval flow: cards for each part in three groups, labeled lines between them, and the walkthroughs in the sidebar." width="100%">
+  <img src="docs/images/map-light.png" alt="Anatomy showing a refund approval flow: cards in three groups, labeled lines between them, and walkthroughs in the sidebar." width="100%">
 </picture>
 
 </div>
@@ -58,7 +58,7 @@ Open a built-in example: Refund approval, Anatomy itself, or URL shortener.
 - A map that lays itself out, from left to right, with lines that route around the cards.
 - A big board that folds into its groups when you zoom out, with one bundled line for each pair of groups.
 - Walkthroughs that play a journey step by step, one highlight at a time.
-- Honest sources: each claim says if the user said it, the agent read it, a plan states it, or nobody decided it yet.
+- Honest sources: each claim says if the user said it, the agent read it, a plan states it, or the agent proposes it and nobody decided it yet.
 - An Overview page with the goal, the scope, where to start, and every open question.
 - A whiteboard on top: pen, shapes, arrows, text, sticky notes, and parts you propose.
 - A Review tab with every answer from your agent, plus undo and redo for your last 100 steps.
@@ -69,7 +69,7 @@ Anatomy never runs a script, opens a URL, or renders HTML from a board file.
 
 ## Quick start
 
-You need Node.js 24 or later and npm 11 or later.
+You need Node.js 24 or later, which includes npm.
 
 1. Clone the repository and install the packages:
 
@@ -100,7 +100,8 @@ In other browsers, open a board file or a built-in example.
 
 | Command | What it does |
 | --- | --- |
-| `npm install` | Installs the exact versions in `package-lock.json`. |
+| `npm install` | Installs the packages. |
+| `npm ci` | Installs the exact versions in `package-lock.json`, as CI does. |
 | `npm run dev` | Starts the dev server on `http://127.0.0.1:5173`. |
 | `npm run build` | Type-checks and builds the static app into `dist/`. |
 | `npm run preview` | Serves the built app on `127.0.0.1`. |
@@ -113,7 +114,7 @@ In other browsers, open a board file or a built-in example.
 
 The dev and preview servers listen on the loopback interface only.
 
-Each pull request runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests.
+Each pull request and each push to `main` runs type checks, lint, unit tests, a production build, a schema freshness check, and Chrome end-to-end tests.
 Run the frame-time gate locally before you merge: `npx playwright test e2e/performance.spec.ts --workers=1`.
 Hosted CI reports that gate without enforcing it, because runner resources can distort frame timing.
 

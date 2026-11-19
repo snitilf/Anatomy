@@ -10,7 +10,7 @@ The last section is for work on Anatomy itself.
 
 ## Set up Anatomy for the user
 
-You need Node.js 24 or later and npm.
+You need Node.js 24 or later, which includes npm.
 
 1. Clone this repository and open its folder, if you are not there yet.
 2. Run `npm install`.
@@ -49,7 +49,8 @@ The rules that matter most:
 - Write each ID with lowercase letters, digits, and single hyphens.
   Every ID must be unique on the board.
   Keep IDs stable across revisions, because the notes of the user stay attached by ID.
-- Write 1 to 4 scenarios of 3 to 6 steps.
+- Aim for 1 to 4 scenarios of 3 to 6 steps.
+  The schema allows more, but short walkthroughs read better.
   A `highlight` list holds component IDs and relationship IDs only.
 
 This repository has no command that validates a board file outside the app.
