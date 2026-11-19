@@ -1,6 +1,6 @@
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import refundText from '../examples/refund-approval.board.json?raw'
+import refundText from '../../e2e/fixtures/refund-approval.board.json?raw'
 import { parseBoard } from '../board/validate'
 import type { Board } from '../board/schema'
 import { emptyLayer, type Layer } from '../layer/model'

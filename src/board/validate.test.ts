@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import anatomyText from '../examples/anatomy.board.json?raw'
-import refundText from '../examples/refund-approval.board.json?raw'
+import claudeCodeText from '../examples/claude-code-harness.board.json?raw'
+import llmText from '../examples/how-an-llm-works.board.json?raw'
+import refundText from '../../e2e/fixtures/refund-approval.board.json?raw'
 import { LIMITS } from './schema'
 import { parseBoard, type ParseResult } from './validate'
 
@@ -43,6 +45,8 @@ function expectError(result: ParseResult, path: string, message: RegExp) {
 describe('example boards', () => {
   it.each([
     ['Refund approval', refundText],
+    ['Claude Code harness', claudeCodeText],
+    ['Large language model', llmText],
     ['Anatomy', anatomyText],
   ])('accepts the %s example without warnings', (_name, text) => {
     const result = parseBoard(text)

@@ -4,10 +4,12 @@ import { expect, test } from '@playwright/test'
 import { cardCenter, cardTransform, drag, grabbable, nextFrame, open, startFrameLog, stopFrameLog, viewport } from './helpers.ts'
 
 const BOARDS = [
-  { name: 'seven parts', file: 'src/examples/refund-approval.board.json' },
-  { name: 'url shortener', file: 'src/examples/external/url-shortener.board.json' },
+  { name: 'seven parts', file: 'e2e/fixtures/refund-approval.board.json' },
+  { name: 'url shortener', file: 'e2e/fixtures/url-shortener.board.json' },
   { name: 'sixteen parts', file: 'e2e/fixtures/sixteen-parts.board.json' },
   { name: 'forty parts', file: 'e2e/fixtures/forty-parts.board.json' },
+  { name: 'claude code harness', file: 'src/examples/claude-code-harness.board.json' },
+  { name: 'large language model', file: 'src/examples/how-an-llm-works.board.json' },
 ]
 
 const P95_MS = 25

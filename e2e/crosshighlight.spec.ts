@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { open, pickPart } from './helpers.ts'
 
-const SHORTENER = 'src/examples/external/url-shortener.board.json'
+const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 const SIXTY = 'e2e/fixtures/sixty-parts.board.json'
 
 /** The ring a card on the map shows, or '' when it has none. */

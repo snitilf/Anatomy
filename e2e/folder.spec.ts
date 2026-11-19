@@ -12,7 +12,7 @@ const storedLayer = (page: import('@playwright/test').Page) =>
   }, KEY)
 
 test('folder mode: open the repository, move a card, reload, the place is kept, and undo works', async ({ page }) => {
-  const board = await readFile('src/examples/external/url-shortener.board.json', 'utf8')
+  const board = await readFile('e2e/fixtures/url-shortener.board.json', 'utf8')
   await page.addInitScript(
     ([key, text]) => {
       if (localStorage.getItem(key) === null) {

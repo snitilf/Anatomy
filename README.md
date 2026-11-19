@@ -46,7 +46,7 @@ Commit `.anatomy/board.json` with the code it explains.
 Add `.anatomy/layer.json` and `.anatomy/feedback.json` to `.gitignore`, because they hold your own working state.
 
 No agent at hand?
-Open a built-in example: Refund approval, Anatomy itself, or URL shortener.
+Open a built-in example: How the Claude Code harness works, Anatomy itself, or How a large language model like Opus 5.5 works.
 
 ## What you get
 

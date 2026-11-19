@@ -4,8 +4,10 @@ import { open } from './helpers.ts'
 
 const BOARDS = [
   { name: 'anatomy', file: 'src/examples/anatomy.board.json' },
-  { name: 'refund approval', file: 'src/examples/refund-approval.board.json' },
-  { name: 'url shortener', file: 'src/examples/external/url-shortener.board.json' },
+  { name: 'claude code harness', file: 'src/examples/claude-code-harness.board.json' },
+  { name: 'large language model', file: 'src/examples/how-an-llm-works.board.json' },
+  { name: 'refund approval', file: 'e2e/fixtures/refund-approval.board.json' },
+  { name: 'url shortener', file: 'e2e/fixtures/url-shortener.board.json' },
   { name: 'sixteen parts', file: 'e2e/fixtures/sixteen-parts.board.json' },
   { name: 'forty parts', file: 'e2e/fixtures/forty-parts.board.json' },
 ]

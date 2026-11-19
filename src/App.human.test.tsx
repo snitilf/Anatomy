@@ -6,8 +6,9 @@ import App from './App'
 import { StorageError, openStore } from './workspace/db'
 import { placeCards } from './layout/cards'
 import { refundBoard } from './layer/testBoards'
-import refundRaw from './examples/refund-approval.board.json?raw'
+import refundRaw from '../e2e/fixtures/refund-approval.board.json?raw'
 import { openConnection, openPart } from './test/openOnMap'
+import { openBoardFile } from './test/openFile'
 import { press } from './test/press'
 
 // A test can make saving fail by setting this. The store itself stays the real one.
@@ -72,7 +73,7 @@ function readBlob(blob: Blob): Promise<string> {
 }
 
 async function loadRefund() {
-  fireEvent.click(screen.getByRole('button', { name: /Refund approval/ }))
+  openBoardFile(refundRaw, 'refund-approval.board.json')
   await screen.findByTestId('inspector')
 }
 
@@ -337,7 +338,7 @@ describe('saving', () => {
     render(<App />)
     await loadRefund()
     await saved()
-    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' }))
+    press(within(screen.getByRole('banner')).getByRole('button', { name: 'Local file' }))
     const open = within(await screen.findByRole('dialog', { name: 'Open' }))
     expect(open.getByRole('heading', { name: 'Recent' })).toBeInTheDocument()
     fireEvent.click(open.getByRole('button', { name: `Delete ${refund.title}` }))

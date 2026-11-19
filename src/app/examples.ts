@@ -1,6 +1,6 @@
 import anatomyRaw from '../examples/anatomy.board.json?raw'
-import shortenerRaw from '../examples/external/url-shortener.board.json?raw'
-import refundRaw from '../examples/refund-approval.board.json?raw'
+import claudeCodeRaw from '../examples/claude-code-harness.board.json?raw'
+import llmRaw from '../examples/how-an-llm-works.board.json?raw'
 
 export interface Example {
   id: string
@@ -12,11 +12,11 @@ export interface Example {
 
 export const EXAMPLES: readonly Example[] = [
   {
-    id: 'refund',
-    title: 'Refund approval',
-    description: 'How a refund request becomes an approved, simulated payout.',
-    fileName: 'refund-approval.board.json',
-    raw: refundRaw,
+    id: 'claude-code',
+    title: 'How the Claude Code harness works',
+    description: 'What happens between your prompt and a change in your repository.',
+    fileName: 'claude-code-harness.board.json',
+    raw: claudeCodeRaw,
   },
   {
     id: 'anatomy',
@@ -26,11 +26,11 @@ export const EXAMPLES: readonly Example[] = [
     raw: anatomyRaw,
   },
   {
-    id: 'url-shortener',
-    title: 'URL shortener',
-    description: 'How a short link is created and how a visitor opens it.',
-    fileName: 'url-shortener.board.json',
-    raw: shortenerRaw,
+    id: 'llm',
+    title: 'How a large language model like Opus 5.5 works',
+    description: 'How a model like Opus 5.5 turns a prompt into an answer.',
+    fileName: 'how-an-llm-works.board.json',
+    raw: llmRaw,
   },
 ]
 

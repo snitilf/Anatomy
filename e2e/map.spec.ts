@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 import { cardTransform, grabbable, nextFrame, open, viewport } from './helpers.ts'
 
-const SHORTENER = 'src/examples/external/url-shortener.board.json'
+const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
 

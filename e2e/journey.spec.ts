@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { pickConnection, pickPart } from './helpers.ts'
 
-const BOARD_FILE = 'src/examples/refund-approval.board.json'
+const BOARD_FILE = 'e2e/fixtures/refund-approval.board.json'
 const BOARD_TITLE = 'Refund approval: paying back a customer'
 
 test('open, inspect, walk through, learn, take a note, reload, export, and open the export in a fresh browser', async ({ page }, testInfo) => {
