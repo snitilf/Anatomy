@@ -87,7 +87,7 @@ button.part {
   text-decoration: line-through;
 }
 
-/* The user's link, or an end the user moved: the arrow is amber, the words stay as they are. */
+/* The user's link (the link glyph), or an end the user moved (the old end struck through): the glyph is amber, the words stay as they are. */
 .row[data-yours] .arrow {
   color: var(--yours);
 }

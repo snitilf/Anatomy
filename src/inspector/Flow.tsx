@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowLeft, ArrowRight, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Link2, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
@@ -20,7 +20,8 @@ import { spotProps } from './spotlight'
 /** One connection at a part: the part at the other end is the name, and the connection's label is the quiet text at the right. */
 function Row({ row, side, names }: { row: FlowRow & { part: string }; side: Side; names: (id: string) => string | undefined }) {
   const { choose } = usePanel()
-  const Arrow = side === 'in' ? ArrowLeft : ArrowRight
+  // A link of the user's takes the link glyph it has on the Overview and in Yours, so it is told apart by shape. The group says which way it goes.
+  const Arrow = row.yours === 'link' ? Link2 : side === 'in' ? ArrowLeft : ArrowRight
   const name = names(row.part)
   const what = row.unlabeled ? 'Link' : row.what
   const select = row.select
