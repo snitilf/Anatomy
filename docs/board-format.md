@@ -218,3 +218,49 @@ The error list names the location of each problem, for example `relationships[2]
 The JSON Schema file validates the shape and the limits only.
 It cannot validate unique IDs or references.
 For this reason, Anatomy can reject a file that passes the JSON Schema.
+
+## Check a board outside the app
+
+Anatomy writes `.anatomy/anatomy.mjs` next to `.anatomy/README.md`.
+It is the `anatomy` tool, bundled in one file from the same code that the app uses to open a board.
+It needs Node.js 24 or later, and nothing to install.
+In this repository, `npm run anatomy -- <command>` runs the same tool from the source.
+
+| Command | What it does |
+| --- | --- |
+| `node .anatomy/anatomy.mjs validate [file]` | Checks the board the way Anatomy does. The file is `.anatomy/board.json` unless you name one. |
+| `node .anatomy/anatomy.mjs fmt [file]` | Puts the keys in schema order, indents with two spaces, and then validates. It writes only when the text changes, and only to a board. |
+| `node .anatomy/anatomy.mjs help` | Shows the commands. |
+
+`--json` prints the result as one JSON object, and `--strict` makes warnings count as problems.
+The exit code is 0 when the board is valid, 1 when it has problems, and 2 when the file cannot be read or the command is wrong.
+
+The output has one line for the file, then one line per problem:
+
+```text
+.anatomy/board.json: invalid, 2 errors
+components[0]: Unrecognized key: "summery". Did you mean "summary"?
+relationships[2].to: Relationship "api-to-payment" points to "paymnt", which is not a component on this board. Did you mean "payment"?
+```
+
+Each problem has the same path and message as in the app.
+Many also have a hint: the nearest ID or value, a free ID, a valid ID, or the length of a text that is too long.
+The checks run in steps, as in the app: the file, then the fields, then the references.
+So fix the errors and run the tool again.
+
+A valid board can still get warnings.
+They do not stop the board from opening:
+
+- A lesson that this version of Anatomy does not have.
+- An ID in `changed` that is not on the board.
+- A component with no connection.
+- A word that promises a guarantee, such as "guaranteed" or "never fails", in a claim.
+- An adopted answer with an empty `changed` list, which keeps the user's mark on the map.
+- When `feedback.json` is next to the board and is for the same board: a revision that should answer it but does not, an item with no answer, an answer to an unknown or withdrawn item, and a revision that is not higher than the feedback's `baseRevision`.
+
+With `--json`, each problem has a `code` that stays the same when a message changes, for example `unknown-component`, `duplicate-id`, or `unanswered-feedback`.
+The full list is the `ProblemCode` type in `src/board/validate.ts`.
+
+The tool reads only the board and the `feedback.json` next to it.
+It writes only the board, and only for `fmt`.
+It never runs anything from the board and makes no network calls.

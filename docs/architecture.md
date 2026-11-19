@@ -28,10 +28,11 @@ React components read from the app state and dispatch actions.
 
 | Folder | Owns | Depends on |
 | --- | --- | --- |
-| `src/board/` | Board schema (including `responses`), validation, JSON Schema export. | `zod` |
+| `src/board/` | Board schema (including `responses`), validation with problem codes and hints, the warnings only the `anatomy` tool shows, schema key order, JSON Schema export. | `zod` |
 | `src/layout/` | Geometry (point, size, rect), the layered layout, card sizes, push apart, and a rect per card from the user's positions and sizes. | `src/board/`, `@dagrejs/dagre` |
 | `src/layer/` | User layer schema, version 1 upgrade, every edit as a pure function, fingerprints, board comparison, note status, export files. | `src/board/`, `src/layout/` |
 | `src/feedback/` | The `anatomy-feedback` format and the pure builder that turns a layer into feedback. | `src/layer/`, `src/layout/` |
+| `src/cli/` | The `anatomy` tool without file access: commands, output, and the corpus of broken boards for its tests. `bin/anatomy.ts` connects it to Node. | `src/board/` |
 | `src/workspace/` | Where work is kept: the one IndexedDB database, the repository folder behind a small interface, the save queue, and the board watcher. | `src/board/`, `src/layer/` |
 | `src/text/` | Safe renderer for the Markdown subset. | `react` |
 | `src/lessons/` | Built-in lesson catalog and lesson components. | `react` |
@@ -391,6 +392,7 @@ The app uses these files in the folder:
 | `.anatomy/layer.backup.json` | The app | A layer file that the app cannot read, kept before a new one starts. |
 | `.anatomy/feedback.json` | The app | What the user sends to the agent. |
 | `.anatomy/README.md` | The app | Format notes for agents. |
+| `.anatomy/anatomy.mjs` | The app | The `anatomy` tool that checks a board. See below. |
 
 The app keeps the folder handle in IndexedDB.
 After a reload, the app opens the folder again if the browser still allows it.
@@ -404,6 +406,15 @@ The app reads the file only after the file stayed the same for two looks in a ro
 It opens the file only if the file is valid and its `revision` is higher.
 A new revision goes through the update review.
 A look never shows an error.
+
+The app writes `README.md` and `anatomy.mjs` when the user clicks **Copy prompt** or sends feedback.
+Each starts with a marker line.
+The app replaces a file that has the marker when its text changes, and leaves a file without the marker alone.
+
+`anatomy.mjs` is `bin/anatomy.ts` and everything it imports, bundled into one file of about 100 KB.
+The Vite plugin in `scripts/lib/cliBundle.ts` builds it during the dev server, the build, and the tests, and serves the text as `virtual:anatomy-cli`.
+The app loads that module only when it writes the file, so the tool adds nothing to the first load.
+The tool and the app run the same `parseBoard`, and `bin/anatomy.test.ts` runs the bundle in Node on every board in the repository to prove that they agree.
 
 The folder sits behind the `Folder` interface in `src/workspace/folder.ts`.
 Unit tests use the in-memory folder in `src/workspace/memoryFolder.ts`.
@@ -453,4 +464,5 @@ The app has these safety rules:
 
 - The app renders board text as React text nodes. A small local parser reads the Markdown subset and never uses `innerHTML`.
 - The app shows paths in references as text and never opens them.
-- The app makes no network requests after the page loads. Inter is bundled with the app.
+- The app makes no network requests after the page loads, except for its own files on the same local server: a lesson and the `anatomy` tool load on first use. Inter is bundled with the app.
+- The `anatomy` tool imports only the Node modules for files and paths. It reads the board and the `feedback.json` next to it, writes only the board (`fmt`), and never runs anything from either file. It turns off the code generation of Zod, so it evaluates no generated code either.
