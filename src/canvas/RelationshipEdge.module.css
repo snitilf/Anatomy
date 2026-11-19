@@ -28,8 +28,9 @@
 }
 
 /*
- * A label sits on a cutout in the color of the map under it, so the line breaks around the words. No border, no pill.
- * Over a group area the cutout takes the area's tint, one layer for each area.
+ * A label sits on a cutout that shows the map under it, so the line breaks around the words. No border, no pill.
+ * The cutout is the map color, and each group area under the label is painted again on it (see LabelBackdrop),
+ * so it matches on both sides of a group edge, in a group inside a group, and in either theme.
  */
 .pill {
   position: absolute;
@@ -45,6 +46,7 @@
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+  isolation: isolate;
   pointer-events: all;
   cursor: pointer;
   transition:
@@ -52,21 +54,40 @@
     color 120ms var(--ease-out);
 }
 
-/* The cutout hugs the words, line by line. */
+/* The words sit above the cutout. */
 .cutout {
+  position: relative;
   padding: 2px 4px;
+}
+
+.backdrop {
+  position: absolute;
+  /* As wide as the longest line and its cutout padding, so it breaks the line no wider than the words do. The pill is 22px wider than that line. */
+  top: 2px;
+  bottom: 2px;
+  left: 50%;
+  width: calc((var(--label-width, 150px) - 22px) * var(--label-scale, 1) + 5px);
+  transform: translateX(-50%);
+  z-index: -1;
+  overflow: hidden;
   border-radius: var(--radius-xs);
   background: var(--bg);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+  pointer-events: none;
 }
 
-.pill[data-depth='1'] .cutout {
-  background: color-mix(in srgb, var(--fg) var(--wash-share), var(--bg));
+/* A held-back label is as wide as its words, whole. */
+.pill[data-hidden] .backdrop {
+  left: 2px;
+  right: 2px;
+  width: auto;
+  transform: none;
 }
 
-.pill[data-depth='2'] .cutout {
-  background: color-mix(in srgb, var(--fg) var(--wash-share-2), var(--bg));
+/* An area, as wide as it is on the map and placed from the middle of the label. The backdrop cuts it to the label. */
+.tint {
+  position: absolute;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
 }
 
 .pill:hover {
