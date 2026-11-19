@@ -465,4 +465,4 @@ The app has these safety rules:
 - The app renders board text as React text nodes. A small local parser reads the Markdown subset and never uses `innerHTML`.
 - The app shows paths in references as text and never opens them.
 - The app makes no network requests after the page loads, except for its own files on the same local server: a lesson and the `anatomy` tool load on first use. Inter is bundled with the app.
-- The `anatomy` tool imports only the Node modules for files and paths. It reads the board and the `feedback.json` next to it, writes only the board (`fmt`), and never runs anything from either file. It turns off the code generation of Zod, so it evaluates no generated code either.
+- The `anatomy` tool imports only `node:fs`, `node:path`, and `node:url`. It reads the board and the `feedback.json` next to it, only as regular files and with a size cap, writes only the board (`fmt`), and never runs anything from either file. Its first import, `src/cli/jitless.ts`, turns off the code generation of Zod before any schema loads, so it never calls `Function`. A test runs the bundle with `Function` trapped to prove it.

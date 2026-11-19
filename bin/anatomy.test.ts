@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -7,7 +7,7 @@ import script from 'virtual:anatomy-cli'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { parseBoard } from '../src/board/validate.ts'
 import { runAnatomy } from '../src/cli/anatomy.ts'
-import { CORPUS, memoryIo, type CorpusCase } from '../src/cli/corpus.ts'
+import { baseBoard, CORPUS, memoryIo, type CorpusCase } from '../src/cli/corpus.ts'
 import { keepScript, SCRIPT_BANNER, SCRIPT_MARK } from '../src/cli/script.ts'
 import { LESSON_IDS } from '../src/lessons/ids.ts'
 
@@ -78,6 +78,7 @@ async function eachCase<T>(work: (c: CorpusCase, i: number) => Promise<T>): Prom
 describe('the bundled tool', () => {
   it('starts with the banner and carries no source maps', () => {
     expect(script.startsWith(`${SCRIPT_BANNER}`)).toBe(true)
+    expect(SCRIPT_BANNER).toContain('/* eslint-disable */')
     expect(script.split('\n')[0]).toBe(SCRIPT_MARK)
     expect(script).not.toMatch(/sourceMappingURL/)
   })
@@ -178,6 +179,83 @@ describe('what the bundled tool runs', () => {
     expect(blocked.stdout).toBe(normal.stdout)
     expect(blocked.code).toBe(normal.code)
     expect(blocked.stderr).toBe('Function calls: 0\n')
+  })
+})
+
+describe('files the bundled tool refuses', () => {
+  it.each([
+    ['a link to /dev/zero', (path: string) => symlinkSync('/dev/zero', path)],
+    ['a folder', (path: string) => mkdirSync(path)],
+  ])('does not read %s as the board or the feedback', async (_name, make) => {
+    const dir = join(root, `refuse-${_name.replace(/\W+/g, '-')}`)
+    mkdirSync(dir)
+    make(join(dir, 'board.json'))
+    const board = await node(['validate', 'board.json'], dir)
+    expect(board.code).toBe(2)
+    expect(board.stderr).toMatch(/^Cannot read board\.json: it is (not a regular file|a folder)\.\n$/)
+    // Feedback that cannot be read only skips the feedback checks.
+    rmSync(join(dir, 'board.json'), { recursive: true })
+    writeFileSync(join(dir, 'board.json'), JSON.stringify({ ...baseBoard(), revision: 4 }))
+    make(join(dir, 'feedback.json'))
+    const feedback = await node(['validate', 'board.json'], dir)
+    expect(feedback).toEqual({ code: 0, stdout: expect.stringContaining('feedback.json is not a feedback file'), stderr: '' })
+  })
+})
+
+describe('fmt in the bundled tool', () => {
+  const compact = JSON.stringify(baseBoard())
+  const pretty = `${JSON.stringify(baseBoard(), null, 2)}\n`
+
+  it('keeps the permissions of the board and leaves no temporary file', async () => {
+    const dir = join(root, 'fmt-mode')
+    mkdirSync(dir)
+    writeFileSync(join(dir, 'board.json'), compact)
+    chmodSync(join(dir, 'board.json'), 0o640)
+    expect((await node(['fmt', 'board.json'], dir)).code).toBe(0)
+    expect(statSync(join(dir, 'board.json')).mode & 0o777).toBe(0o640)
+    expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(pretty)
+    expect(readdirSync(dir)).toEqual(['board.json'])
+  })
+
+  it('leaves a read-only board alone', async () => {
+    const dir = join(root, 'fmt-read-only')
+    mkdirSync(dir)
+    writeFileSync(join(dir, 'board.json'), compact)
+    chmodSync(join(dir, 'board.json'), 0o444)
+    expect(await node(['fmt', 'board.json'], dir)).toEqual({ code: 2, stdout: '', stderr: 'Cannot write board.json: it is read-only.\n' })
+    expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(compact)
+  })
+
+  it('writes through a link to a file in the same folder and keeps the link', async () => {
+    const dir = join(root, 'fmt-link-inside')
+    mkdirSync(join(dir, 'boards'), { recursive: true })
+    writeFileSync(join(dir, 'boards', 'shop.json'), compact)
+    symlinkSync(join('boards', 'shop.json'), join(dir, 'board.json'))
+    expect((await node(['fmt', 'board.json'], dir)).code).toBe(0)
+    expect(lstatSync(join(dir, 'board.json')).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(join(dir, 'board.json'))).toBe(join('boards', 'shop.json'))
+    expect(readFileSync(join(dir, 'boards', 'shop.json'), 'utf8')).toBe(pretty)
+  })
+
+  it('refuses a link to a file outside the board folder', async () => {
+    const dir = join(root, 'fmt-link-outside')
+    mkdirSync(join(dir, 'project'), { recursive: true })
+    writeFileSync(join(dir, 'elsewhere.json'), compact)
+    symlinkSync(join('..', 'elsewhere.json'), join(dir, 'project', 'board.json'))
+    expect(await node(['fmt', 'board.json'], join(dir, 'project'))).toEqual({ code: 2, stdout: '', stderr: 'Cannot write board.json: it is a link to a file outside its folder.\n' })
+    expect(readFileSync(join(dir, 'elsewhere.json'), 'utf8')).toBe(compact)
+  })
+
+  it('never follows a link planted where a temporary file could go', async () => {
+    const dir = join(root, 'fmt-planted')
+    mkdirSync(dir)
+    writeFileSync(join(dir, 'board.json'), compact)
+    writeFileSync(join(dir, 'victim.txt'), 'keep me')
+    // The names are random, so plant links for the ones a careless writer would use.
+    for (const name of ['.board.json.tmp', `.board.json.${process.pid}.tmp`]) symlinkSync('victim.txt', join(dir, name))
+    expect((await node(['fmt', 'board.json'], dir)).code).toBe(0)
+    expect(readFileSync(join(dir, 'victim.txt'), 'utf8')).toBe('keep me')
+    expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(pretty)
   })
 })
 
