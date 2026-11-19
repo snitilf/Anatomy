@@ -25,7 +25,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   // The explanation is open, held to a height with a button for the rest.
   const more = inspector.getByRole('button', { name: 'Show more' })
   if (await more.count()) await more.click()
-  await expect(inspector.getByText('The policy check only proposes. It does not pay anything.')).toBeVisible()
+  await expect(inspector.getByText('The policy check only proposes. It does not pay anything, and it never changes the request or the policy.')).toBeVisible()
   // The default source, the agent's own explanation, shows no source line.
   await expect(inspector.locator('[data-source]')).toHaveCount(0)
 

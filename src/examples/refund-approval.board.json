@@ -50,7 +50,7 @@
       "id": "policy-check",
       "label": "Policy check",
       "summary": "Compares the request with the policy and the limit, and proposes a payout if allowed.",
-      "explanation": "The policy check only *proposes*. It does not pay anything.",
+      "explanation": "The policy check only *proposes*. It does not pay anything, and it never changes the request or the policy.",
       "group": "refund-logic",
       "inputs": ["Request and policy", "Current spending limit"],
       "outputs": ["A proposed payout, or no payout"],
