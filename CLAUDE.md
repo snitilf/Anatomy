@@ -34,7 +34,9 @@ The path is `.anatomy/board.json`.
    It holds the authoring guide, the feedback format, and the schema.
 2. If it does not exist, read `docs/authoring-guide.md` and `schema/board.v1.schema.json` in this repository.
 3. Read only the material that the user authorized.
-4. Write the whole file.
+4. Ask the user a few questions in plain English before you write, as the guide explains under "Ask before you write".
+   If the user says to skip them, list your assumptions and record them as items.
+5. Write the whole file.
    Raise `revision` by one each time you write it.
 
 The rules that matter most:
