@@ -1,14 +1,12 @@
 // The `anatomy` command line tool on Node. The app bundles this file, with everything it imports, into
 // `.anatomy/anatomy.mjs`. In this repository, run it with `npm run anatomy -- <command>`.
 // It reads only the board and the feedback.json next to it, writes only the board (fmt), and imports no network module.
+// Must stay first. See src/cli/jitless.ts.
+import '../src/cli/jitless.ts'
 import { readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { z } from 'zod'
 import { runAnatomy, type ReadResult } from '../src/cli/anatomy.ts'
-
-// Zod can compile a fast path with `new Function`. The tool does not need the speed, so nothing is compiled at all.
-z.config({ jitless: true })
 
 /** Larger files are not read. The board limit is 1,000,000 bytes, so this only stops a wrong path from filling memory. */
 const MAX_READ_BYTES = 16_000_000

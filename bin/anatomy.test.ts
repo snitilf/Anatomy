@@ -46,9 +46,9 @@ afterAll(() => {
 })
 
 /** Runs the bundled tool. A non-zero exit is a result here, not a failure. */
-async function node(args: string[], cwd: string): Promise<{ code: number; stdout: string; stderr: string }> {
+async function node(args: string[], cwd: string, nodeArgs: string[] = []): Promise<{ code: number; stdout: string; stderr: string }> {
   try {
-    const { stdout, stderr } = await run(process.execPath, [tool, ...args], { cwd })
+    const { stdout, stderr } = await run(process.execPath, [...nodeArgs, tool, ...args], { cwd, timeout: 20_000 })
     return { code: 0, stdout, stderr }
   } catch (error) {
     const failed = error as { code: number; stdout: string; stderr: string }
@@ -82,7 +82,7 @@ describe('the bundled tool', () => {
     expect(script).not.toMatch(/sourceMappingURL/)
   })
 
-  it('imports only the file system and path modules of Node', () => {
+  it('imports only the node:fs, node:path, and node:url modules', () => {
     const imports = [...script.matchAll(/\bfrom\s*["']([^"']+)["']/g)].map((m) => m[1]).sort()
     expect(imports).toEqual(['node:fs', 'node:path', 'node:url'])
     expect(script).not.toMatch(/\bimport\s*\(|\brequire\s*\(|child_process|node:(?:http|https|net|dgram|tls|dns|worker_threads|vm)|\bfetch\s*\(|XMLHttpRequest|WebSocket|\beval\s*\(/)
@@ -132,6 +132,52 @@ describe('the bundled tool', () => {
     expect(result).toEqual({ code: 0, stdout: 'board.json: formatted, valid, revision 3\n', stderr: '' })
     expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(base.text)
     expect(readdirSync(dir)).toEqual(['board.json'])
+  })
+})
+
+/** A Node --import file that counts every call to Function. With `block`, each call throws instead. */
+function functionTrap(block: boolean): string {
+  const file = join(root, `trap-${block ? 'block' : 'count'}.mjs`)
+  writeFileSync(
+    file,
+    `const Original = globalThis.Function
+let calls = 0
+const handle = (run) => (...args) => { calls++; if (${block}) throw new Error('Function is blocked'); return run(...args) }
+const trap = new Proxy(Original, { apply: handle((t, self, args) => Reflect.apply(t, self, args)), construct: handle((t, args, nt) => Reflect.construct(t, args, nt)) })
+globalThis.Function = trap
+Original.prototype.constructor = trap
+process.on('exit', () => process.stderr.write('Function calls: ' + calls + '\\n'))
+`,
+  )
+  return file
+}
+
+describe('what the bundled tool runs', () => {
+  const board = () => CORPUS.find((c) => c.name === 'feedback partly answered, revision not raised')!
+
+  it('never builds code with Function, on a valid board and on an invalid one', async () => {
+    const dir = join(root, 'jit')
+    mkdirSync(dir)
+    const trap = functionTrap(false)
+    writeFileSync(join(dir, 'board.json'), board().text)
+    writeFileSync(join(dir, 'feedback.json'), board().feedback!)
+    writeFileSync(join(dir, 'broken.json'), CORPUS.find((c) => c.name === 'several faults at once')!.text)
+    for (const file of ['board.json', 'broken.json']) {
+      const result = await node(['validate', file], dir, ['--import', trap])
+      expect(result.stderr).toBe('Function calls: 0\n')
+    }
+  })
+
+  it('prints the normal output when Function throws', async () => {
+    const dir = join(root, 'no-function')
+    mkdirSync(dir)
+    writeFileSync(join(dir, 'board.json'), board().text)
+    writeFileSync(join(dir, 'feedback.json'), board().feedback!)
+    const normal = await node(['validate', 'board.json'], dir)
+    const blocked = await node(['validate', 'board.json'], dir, ['--import', functionTrap(true)])
+    expect(blocked.stdout).toBe(normal.stdout)
+    expect(blocked.code).toBe(normal.code)
+    expect(blocked.stderr).toBe('Function calls: 0\n')
   })
 })
 
