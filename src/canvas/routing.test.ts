@@ -132,7 +132,7 @@ describe('routeConnection', () => {
 
 describe('labels', () => {
   it('wraps a long label onto two lines, and a short one stays on one', () => {
-    expect(wrap('amount and account')?.lines).toBe(2)
+    expect(wrap('exact amount and bank account')?.lines).toBe(2)
     expect(wrap('writes')?.lines).toBe(1)
   })
 
@@ -153,7 +153,7 @@ describe('labels', () => {
   })
 
   it('keeps every line of a wrapped label whole, split at a space', () => {
-    const size = wrap('amount and account')!
+    const size = wrap('exact amount and bank account')!
     expect(size.width).toBeLessThanOrEqual(220)
     expect(size.lines).toBe(2)
   })
@@ -165,7 +165,7 @@ describe('labels', () => {
     const route = routeConnection(plan!, [a, b])
     const lines = new RunIndex()
     lines.add(0, route.runs!)
-    const spot = placeLabel(route.runs!, 'amount and account', context([a, b], lines, [], 0))
+    const spot = placeLabel(route.runs!, 'exact amount and bank account', context([a, b], lines, [], 0))
     expect(spot.hidden).toBeUndefined()
     const top = spot.y - pillHeight(spot.lines) / 2
     const bottom = spot.y + pillHeight(spot.lines) / 2
@@ -180,7 +180,7 @@ describe('labels', () => {
     const route = routeConnection(plan!, [a, b])
     const lines = new RunIndex()
     lines.add(0, route.runs!)
-    const spot = placeLabel(route.runs!, 'amount and account', context([a, b], lines, [], 0))
+    const spot = placeLabel(route.runs!, 'exact amount and bank account', context([a, b], lines, [], 0))
     expect(spot.hidden).toBe(true)
     expect(spot.width).toBe(0)
   })
