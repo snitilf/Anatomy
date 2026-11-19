@@ -327,6 +327,9 @@ function flowAndPack(
   return { at, width, height }
 }
 
+/** Lighter than any one connection, so ranking gives up this edge first. */
+const LOOP_WEIGHT = 0.1
+
 /**
  * Merges the connections between two nodes into one edge, with the count as its weight. Connections in both directions
  * become one edge from the node the board lists first: a reply that comes back does not turn the flow around.
@@ -372,6 +375,8 @@ function oriented(pairs: readonly { from: string; to: string; label: number }[],
   for (const e of all) if (e.weight > 0) result.push({ from: e.from, to: e.to, weight: e.weight + e.back, label: e.label })
   for (const e of lone) {
     // e runs from the earlier card; its real direction is e.to -> e.from.
+    // The turned edge points forward like the rest, so no loop is left for the acyclic step to break by reversing some
+    // edge of the chain. Its low weight keeps this shortcut from pulling its two ends close together.
     if (reaches(e.from, e.to)) {
       result.push({ from: e.from, to: e.to, weight: LOOP_WEIGHT, label: e.label })
       link(e.from, e.to)
@@ -382,9 +387,6 @@ function oriented(pairs: readonly { from: string; to: string; label: number }[],
   }
   return result
 }
-
-/** Lighter than any one connection, so ranking gives up this edge first. */
-const LOOP_WEIGHT = 0.1
 
 /** The shapes tried for a layout: the ratio a group is packed toward, and the ratio of the whole. */
 const GROUP_SHAPES = [1, 1.3, 1.6, 2, 2.4]
