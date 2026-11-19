@@ -1,5 +1,5 @@
 {
-  "readme": { "characters": 29696, "tokens": 8472 },
+  "readme": { "characters": 30718, "tokens": 8727 },
   "hardCap": { "characters": 32000, "tokens": 9200 },
   "allowedGrowth": 0.05,
   "cli": {

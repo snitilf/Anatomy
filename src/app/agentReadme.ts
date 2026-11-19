@@ -69,15 +69,28 @@ The user sends their marks to you in \`.anatomy/feedback.json\`, and you answer 
 | \`layer.json\` | Anatomy | The user's own layer: positions, notes, drawings, and proposed changes. Do not edit it. |
 | \`feedback.json\` | Anatomy, when the user sends | What the user wants you to answer. Do not edit it. |
 | \`README.md\` | Anatomy | This file. |
+| \`anatomy.mjs\` | Anatomy | A script that checks \`board.json\`. Run it, do not read it. |
 
 Commit \`board.json\` with the code it explains.
-Add \`.anatomy/layer.json\` and \`.anatomy/feedback.json\` to \`.gitignore\`: they are the user's working state.
+Add \`.anatomy/layer.json\`, \`.anatomy/feedback.json\`, and \`.anatomy/anatomy.mjs\` to \`.gitignore\`: the first two are the user's working state, and Anatomy writes the script again.
+
+## Check the board
+
+Before you hand over \`board.json\`, run \`node .anatomy/anatomy.mjs validate\`.
+It runs the same checks as Anatomy and prints one line per problem, with its path and often a fix.
+Exit code 0 means valid, 1 means problems, and 2 means the file could not be read.
+Fix the errors and run it again, because some checks run only once the earlier ones pass.
+Warnings do not stop the board from opening, but read them.
+\`node .anatomy/anatomy.mjs fmt\` also orders the keys and indents the file, so you can write compact JSON.
+The script needs Node.js 24 or later, and running it is optional.
+Without it, use the checklist in section 8.
 
 ## Answering feedback
 
 1. Read \`feedback.json\`. Each item has an \`id\` and a \`type\`.
 2. Decide what to do with each item, then write the next revision of \`board.json\`.
 3. Raise \`revision\` by one, and add a \`responses\` block that answers every item.
+4. Run \`node .anatomy/anatomy.mjs validate\`. It also checks that every item has an answer.
 
 Anatomy notices the new revision on its own.
 It shows each answer next to the user's mark, and removes a mark from the map once you adopted it and the IDs you list in \`changed\` are on the board.

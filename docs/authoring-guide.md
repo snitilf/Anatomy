@@ -186,6 +186,7 @@ See [Responses](board-format.md#responses).
 ## 8. Checklist before you hand over the file
 
 Before you reply, make sure that every item in this list is true.
+If `.anatomy/anatomy.mjs` exists, run `node .anatomy/anatomy.mjs validate`: it checks items 1 to 3, 5, 6, 8, and 10 for you.
 
 1. `format` is `anatomy-board`, `schemaVersion` is `1`, and `revision` is 1 or higher.
 2. Every ID is lowercase and hyphenated, and no ID appears twice on the board.
