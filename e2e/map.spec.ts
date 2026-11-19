@@ -384,7 +384,7 @@ test('the card under the pointer keeps its lines and the rest step back', async 
   }, spot.id)
   expect(opacities.own.length).toBeGreaterThan(0)
   expect(Math.min(...opacities.own)).toBe(1)
-  // Each ink keeps its own share, between half and three quarters, so every kind stays traceable.
+  // Stepped-back lines keep one share, between half and three quarters, so every line stays traceable.
   expect(Math.max(...opacities.rest)).toBeLessThanOrEqual(0.72)
   expect(Math.min(...opacities.rest)).toBeGreaterThanOrEqual(0.5)
 

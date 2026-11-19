@@ -17,17 +17,9 @@
   opacity: var(--spot-line);
 }
 
-/* A walkthrough plays: the lines that are not in focus step back, each ink by its own share. */
+/* A walkthrough plays: the lines that are not in focus step back. */
 .line[data-dimmed] {
-  opacity: var(--fade-light);
-}
-
-.line[data-dimmed][data-tone='strong'] {
-  opacity: var(--fade-strong);
-}
-
-.line[data-dimmed][data-tone='faint'] {
-  opacity: var(--fade-faint);
+  opacity: var(--fade-line);
 }
 
 .line[data-faded]:hover,

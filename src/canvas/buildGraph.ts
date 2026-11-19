@@ -9,7 +9,7 @@ import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
 import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
-import { TONE_COLOR } from './kinds'
+import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
@@ -683,7 +683,7 @@ export function assembleGraph(
     const selected = selection?.type === 'relationship' && selection.id === r.id
     const active = selected || bundled.has(r.id) || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
     const highlighted = playing && highlight.has(r.id)
-    const color = active || highlighted ? 'var(--accent-line)' : moved ? 'var(--yours)' : TONE_COLOR.strong
+    const color = active || highlighted ? 'var(--accent-line)' : moved ? 'var(--yours)' : LINE_INK
     edges.push(
       stable(cache.edges, {
         id: r.id,
