@@ -106,6 +106,8 @@ In other browsers, open a board file or a built-in example.
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
 | `npm run test:e2e` | Builds the app in the `e2e` mode and runs the browser tests with the installed Google Chrome. |
 | `npm run schema` | Writes `schema/board.v1.schema.json` from the Zod schema. Run it after a schema change. |
+| `npm run tokens` | Prints the size of the generated agent README, each guide section, and each example board. |
+| `npm run eval` | Prints the evaluation tasks in `eval/` and scores a board file against them. |
 
 The dev and preview servers listen on the loopback interface only.
 
