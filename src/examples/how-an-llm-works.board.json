@@ -1,0 +1,550 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "id": "how-an-llm-works",
+  "revision": 1,
+  "title": "How a large language model like Opus 5.5 works",
+  "goal": "Understand how a large language model turns a prompt into an answer: tokens, the context window, the transformer layers, next-token prediction, the loop that builds the answer, and how training shaped the model.",
+  "scope": {
+    "includes": [
+      "How large language models of this kind work in general, from a prompt to an answer",
+      "What Anthropic publishes about Claude Opus 5.5, such as the context window and the tool use loop"
+    ],
+    "excludes": [
+      "Anthropic does not publish the architecture, size, or training data of Opus 5.5. This board explains how models like it work in general, not the details of Opus 5.5",
+      "Safety training, image input, and the speed tricks that serving systems use"
+    ]
+  },
+  "groups": [
+    {
+      "id": "transformer",
+      "label": "Inside the transformer",
+      "description": "The layers that turn those pieces into a prediction. A real model repeats them many times."
+    },
+    {
+      "id": "writing",
+      "label": "Writing the answer",
+      "description": "Picking one token at a time, and reaching outside the model."
+    },
+    {
+      "id": "making",
+      "label": "How it was made",
+      "description": "The two training stages before you ever send a prompt."
+    }
+  ],
+  "components": [
+    {
+      "id": "tokenizer",
+      "label": "Tokenizer",
+      "summary": "Cuts your text into tokens, which are short pieces of words, and turns each one into a number.",
+      "explanation": "A model never reads letters. It reads **tokens**. A common word is often one token, and a rare word may be several.\n\nThe size of the window is counted in tokens. For Opus 5.5, Anthropic says 1M tokens is roughly 555k words.",
+      "inputs": [
+        "Your text"
+      ],
+      "outputs": [
+        "A list of token numbers"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Claude Opus 5.5 overview",
+            "path": "Claude API docs: Models, Claude Opus 5.5",
+            "note": "Words per token on the current tokenizer."
+          }
+        ]
+      }
+    },
+    {
+      "id": "context-window",
+      "label": "Context window",
+      "summary": "The model's working memory: your prompt, the earlier conversation, tool results, and the answer so far.",
+      "explanation": "The window holds everything the model can use for the next token, including the answer it is writing. It is **not** the training data. The model does not look anything up in that.\n\nOpus 5.5 has a 1M-token window. When a conversation grows past what fits, an app has to shorten it, for example by summarizing the older parts.",
+      "inputs": [
+        "Tokens from the tokenizer",
+        "New tokens from the answer",
+        "Tool results"
+      ],
+      "outputs": [
+        "The tokens the layers read"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Context windows",
+            "path": "Claude API docs: Context windows",
+            "note": "Everything in the request counts, including the output."
+          }
+        ]
+      }
+    },
+    {
+      "id": "embeddings",
+      "label": "Embeddings",
+      "summary": "Turns each token number into a long list of numbers (a vector) that the model can do arithmetic on.",
+      "explanation": "The vector for a token starts out the same wherever the token appears, and learning during training put similar words near each other. The model also adds information about each token's **position**, because order matters.",
+      "group": "transformer",
+      "inputs": [
+        "Token numbers"
+      ],
+      "outputs": [
+        "One vector per token"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "attention",
+      "label": "Attention",
+      "summary": "Lets each token look at the earlier tokens and decide which ones matter for its meaning here.",
+      "explanation": "In the sentence \"The dog chased the cat because it was fast\", attention helps decide what \"it\" refers to. Each token mixes in information from the tokens that score as relevant.\n\nA model usually runs many attention \"heads\" side by side, and each head can focus on a different kind of link.",
+      "group": "transformer",
+      "inputs": [
+        "Vectors for all tokens so far"
+      ],
+      "outputs": [
+        "Vectors that carry context from other tokens"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "feed-forward",
+      "label": "Feed-forward layers",
+      "summary": "Process each token's vector on its own, to transform what attention gathered. Then the next layer starts.",
+      "explanation": "A transformer stacks the same pair many times: attention, then feed-forward. Each pass refines the vectors. Early layers tend to capture simple patterns, and later layers more abstract ones.\n\nMuch of what the model knows is stored in the numbers (weights) of these layers, but nobody can point to one fact in one place.",
+      "group": "transformer",
+      "inputs": [
+        "Vectors after attention"
+      ],
+      "outputs": [
+        "Refined vectors, passed to the next layer"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "next-token",
+      "label": "Next-token prediction",
+      "summary": "Turns the final vector into a score for every token in the vocabulary: how likely is each one to come next?",
+      "explanation": "The model does exactly one job: given the tokens so far, rate every possible next token. Writing an essay, a function, or an answer is that one job, repeated.",
+      "group": "writing",
+      "inputs": [
+        "The final vector of the last token"
+      ],
+      "outputs": [
+        "A probability for every possible next token"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "sampling",
+      "label": "Sampling",
+      "summary": "Picks one token from those probabilities. A setting called temperature makes the pick more or less random.",
+      "explanation": "Always taking the top token gives the same text every time. Sampling takes a likely token, sometimes not the top one, so the same prompt can give different answers.",
+      "group": "writing",
+      "inputs": [
+        "Probabilities for the next token",
+        "Sampling settings"
+      ],
+      "outputs": [
+        "One chosen token"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "generation-loop",
+      "label": "Generation loop",
+      "summary": "Adds the chosen token to the context window and runs the whole pass again, until the model writes a stop token.",
+      "explanation": "The answer is written **one token at a time**. After each token the model reads the longer context again. Production systems reuse work from earlier passes so that this is fast, but the idea stays the same.\n\nThe loop also stops when the output limit is reached. Opus 5.5 can write up to 128K tokens in one answer.",
+      "group": "writing",
+      "inputs": [
+        "The chosen token"
+      ],
+      "outputs": [
+        "A longer context window",
+        "A finished answer"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Context windows",
+            "path": "Claude API docs: Context windows",
+            "note": "Each response becomes part of the input for the next turn."
+          }
+        ]
+      }
+    },
+    {
+      "id": "tool-use",
+      "label": "Tool use",
+      "summary": "The model writes a structured tool call. The app runs it and adds the result to the context window.",
+      "explanation": "Tool use is ordinary text generation that follows a format. The model does not run anything. It stops with a request such as \"call this tool with these arguments\".\n\nFor tools that you define, your application runs the call and sends back the result. The model then continues with that result in its context.",
+      "group": "writing",
+      "inputs": [
+        "A tool call written by the model"
+      ],
+      "outputs": [
+        "A tool result for the context window"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Tool use with Claude",
+            "path": "Claude API docs: Tool use overview",
+            "note": "A tool_use block, then a tool_result block."
+          }
+        ]
+      }
+    },
+    {
+      "id": "pretraining",
+      "label": "Pretraining",
+      "summary": "The model reads a huge amount of text and learns to predict the next token. This stage builds most of what it knows.",
+      "explanation": "At first the model's numbers are random. The training run shows it text, checks its guesses against the real next token, and nudges millions or billions of numbers to guess better. Then it repeats this at enormous scale.\n\nWhat a model learns here is language, facts, and patterns of reasoning. It does not yet follow instructions well.",
+      "group": "making",
+      "inputs": [
+        "A very large body of text"
+      ],
+      "outputs": [
+        "A model that continues text well"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "fine-tuning",
+      "label": "Fine-tuning with feedback",
+      "summary": "Further training with human and AI feedback teaches the model to follow instructions and to be helpful and honest.",
+      "explanation": "People and AI models compare answers and say which is better. Training then pushes the model toward the preferred kind of answer. Anthropic has described methods such as learning from human feedback and Constitutional AI, where an AI model applies written principles.\n\nThe weights that come out of this stage are what you talk to.",
+      "group": "making",
+      "inputs": [
+        "The pretrained model",
+        "Feedback on which answers are better"
+      ],
+      "outputs": [
+        "The weights used when you send a prompt"
+      ],
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "tokenizer-to-context",
+      "from": "tokenizer",
+      "to": "context-window",
+      "kind": "stores-in",
+      "label": "token numbers",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "context-to-embeddings",
+      "from": "context-window",
+      "to": "embeddings",
+      "kind": "sends-data-to",
+      "label": "tokens in the window",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "embeddings-to-attention",
+      "from": "embeddings",
+      "to": "attention",
+      "kind": "sends-data-to",
+      "label": "one vector per token",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "attention-to-feed-forward",
+      "from": "attention",
+      "to": "feed-forward",
+      "kind": "sends-data-to",
+      "label": "vectors with context mixed in",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "feed-forward-to-next-token",
+      "from": "feed-forward",
+      "to": "next-token",
+      "kind": "sends-data-to",
+      "label": "the last layer's vector",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "next-token-to-sampling",
+      "from": "next-token",
+      "to": "sampling",
+      "kind": "sends-data-to",
+      "label": "probabilities",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "sampling-to-loop",
+      "from": "sampling",
+      "to": "generation-loop",
+      "kind": "sends-data-to",
+      "label": "the chosen token",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "explanation": "The loop adds this token to the context window, then runs the layers again."
+    },
+    {
+      "id": "loop-calls-tool",
+      "from": "generation-loop",
+      "to": "tool-use",
+      "kind": "calls",
+      "label": "a tool call, then a pause",
+      "explanation": "The model stops after it writes a tool call. The loop continues when the result arrives.",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Tool use with Claude",
+            "path": "Claude API docs: Tool use overview"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fine-tuning-after-pretraining",
+      "from": "pretraining",
+      "to": "fine-tuning",
+      "kind": "sends-data-to",
+      "label": "a model that continues text",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "fine-tuning-to-layers",
+      "from": "fine-tuning",
+      "to": "embeddings",
+      "kind": "sends-data-to",
+      "label": "the learned weights",
+      "explanation": "Embeddings, attention, and feed-forward layers all use the weights that training produced. One line stands for all three.",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "a-general-recipe",
+      "kind": "assumption",
+      "text": "This board assumes Opus 5.5 follows the broad recipe of today's large language models: a transformer that predicts the next token, trained in two stages."
+    },
+    {
+      "id": "u-architecture",
+      "kind": "unknown",
+      "text": "Anthropic does not publish the architecture of Opus 5.5: the number of layers, the size of the vectors, the kind of attention, or whether it uses experts.",
+      "about": "feed-forward"
+    },
+    {
+      "id": "u-size",
+      "kind": "unknown",
+      "text": "Anthropic does not publish how many parameters (weights) Opus 5.5 has.",
+      "about": "embeddings"
+    },
+    {
+      "id": "u-training-data",
+      "kind": "unknown",
+      "text": "The mix of training data is not published. Anthropic states only a training data cutoff of June 2026.",
+      "about": "pretraining"
+    },
+    {
+      "id": "u-feedback-mix",
+      "kind": "unknown",
+      "text": "The exact mix of human and AI feedback, and the steps in the recipe, are not published for Opus 5.5.",
+      "about": "fine-tuning"
+    },
+    {
+      "id": "u-tokenizer-details",
+      "kind": "unknown",
+      "text": "The vocabulary and the method of the tokenizer are not described. Anthropic says only how many words a million tokens hold.",
+      "about": "tokenizer"
+    },
+    {
+      "id": "q-adaptive-thinking",
+      "kind": "question",
+      "text": "Opus 5.5 always uses adaptive thinking and decides how much to think before it answers. How does it make that choice inside the loop?",
+      "about": "generation-loop"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "prompt-to-first-token",
+      "title": "From a prompt to the first token",
+      "summary": "One pass through the model for the prompt \"The capital of France is\".",
+      "steps": [
+        {
+          "caption": "The tokenizer cuts the prompt into tokens and gives each one a number.",
+          "highlight": [
+            "tokenizer",
+            "tokenizer-to-context"
+          ]
+        },
+        {
+          "caption": "The tokens sit in the context window, together with any earlier conversation.",
+          "highlight": [
+            "context-window"
+          ]
+        },
+        {
+          "caption": "Each token becomes a vector, and the model adds where it sits in the sentence.",
+          "highlight": [
+            "context-to-embeddings",
+            "embeddings"
+          ]
+        },
+        {
+          "caption": "Attention lets \"is\" look back at \"capital\" and \"France\". The feed-forward layers then refine each vector. A real model repeats this pair many times.",
+          "highlight": [
+            "embeddings-to-attention",
+            "attention",
+            "attention-to-feed-forward",
+            "feed-forward"
+          ]
+        },
+        {
+          "caption": "The last vector becomes a score for every token. \"Paris\" gets a very high one.",
+          "highlight": [
+            "feed-forward-to-next-token",
+            "next-token"
+          ]
+        },
+        {
+          "caption": "Sampling picks a token, most likely \"Paris\".",
+          "highlight": [
+            "next-token-to-sampling",
+            "sampling"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "one-token-at-a-time",
+      "title": "One token at a time",
+      "summary": "How a whole answer grows out of a single prediction step.",
+      "steps": [
+        {
+          "caption": "The chosen token goes to the generation loop.",
+          "highlight": [
+            "sampling-to-loop",
+            "generation-loop"
+          ]
+        },
+        {
+          "caption": "The loop appends the token to the context window. The answer so far is now part of the input.",
+          "highlight": [
+            "generation-loop",
+            "context-window"
+          ]
+        },
+        {
+          "caption": "The loop runs the layers again with the longer context, and predicts the next token.",
+          "highlight": [
+            "context-to-embeddings",
+            "embeddings",
+            "next-token"
+          ]
+        },
+        {
+          "caption": "This repeats until the model writes a stop token or reaches the output limit.",
+          "highlight": [
+            "generation-loop",
+            "sampling"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "how-it-learned",
+      "title": "How the model learned",
+      "summary": "The two training stages that happen before your prompt. The details for Opus 5.5 are not public.",
+      "steps": [
+        {
+          "caption": "Pretraining: the model reads a very large body of text and practices predicting the next token.",
+          "highlight": [
+            "pretraining"
+          ]
+        },
+        {
+          "caption": "Fine-tuning: feedback from people and AI models teaches it to follow instructions and to give helpful, honest answers.",
+          "highlight": [
+            "fine-tuning-after-pretraining",
+            "fine-tuning"
+          ]
+        },
+        {
+          "caption": "The final weights are what the layers use for every prompt you send.",
+          "highlight": [
+            "fine-tuning-to-layers",
+            "embeddings",
+            "attention",
+            "feed-forward"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "use-a-tool",
+      "title": "Using a tool",
+      "summary": "How a model that only writes text can still act.",
+      "steps": [
+        {
+          "caption": "While writing, the model produces a structured tool call, for example a request for the weather.",
+          "highlight": [
+            "generation-loop",
+            "loop-calls-tool",
+            "tool-use"
+          ]
+        },
+        {
+          "caption": "The model stops. The application runs the tool, because the model cannot.",
+          "highlight": [
+            "tool-use"
+          ]
+        },
+        {
+          "caption": "The application sends the result back. It goes into the context window like any other text.",
+          "highlight": [
+            "tool-use",
+            "context-window"
+          ]
+        },
+        {
+          "caption": "The generation loop continues, and the model writes its answer using the result.",
+          "highlight": [
+            "context-to-embeddings",
+            "generation-loop"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,666 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "id": "claude-code-harness",
+  "revision": 1,
+  "title": "How the Claude Code harness works",
+  "goal": "Understand what happens between typing a prompt into Claude Code and a change landing in your repository: the loop, the tools, the permission check, the context, and the places where you can extend it.",
+  "scope": {
+    "includes": [
+      "The agent loop: the model proposes tool calls, the harness runs them, and the results go back into the context",
+      "The permission check, the context and memory files, and the extension points: hooks, subagents, MCP servers, and skills"
+    ],
+    "excludes": [
+      "Anything the public Claude Code documentation does not state, such as the system prompt text and the exact compaction rules",
+      "Settings, flags, and version differences, which change often. Check the current documentation before you rely on a detail"
+    ]
+  },
+  "groups": [
+    {
+      "id": "harness",
+      "label": "The harness",
+      "description": "The Claude Code program around the model. It runs the loop, the tools, and the checks."
+    },
+    {
+      "id": "your-machine",
+      "label": "Your machine",
+      "description": "What you type into, and what Claude Code changes."
+    },
+    {
+      "id": "extensions",
+      "label": "Extension points",
+      "description": "Ways to add rules, helpers, and outside tools."
+    }
+  ],
+  "components": [
+    {
+      "id": "you",
+      "label": "You and your prompt",
+      "summary": "You type a task. You can also answer permission questions, press Esc to stop, and type a correction while Claude works.",
+      "explanation": "You are part of the loop, not only the start of it.\n\n- You can **interrupt** at any point with `Esc`.\n- You can type a correction while Claude works. Claude reads it after the current tool calls finish.\n- You decide what the permission check asks you.",
+      "group": "your-machine",
+      "inputs": [
+        "A task in plain language",
+        "Answers to permission questions"
+      ],
+      "outputs": [
+        "The prompt",
+        "Approvals, refusals, and corrections"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Section: Interrupt and steer."
+          }
+        ]
+      }
+    },
+    {
+      "id": "agent-loop",
+      "label": "Agent loop",
+      "summary": "Repeats three phases until the task is done: gather context, take action, verify the result.",
+      "explanation": "The harness asks the model what to do next. The model answers with a tool call or with a final reply. The harness runs the tool, adds the result to the context, and asks again.\n\nThe documentation describes the phases as **gather context**, **take action**, and **verify results**. They blend together, and the loop ends when the task is complete or you stop it.",
+      "group": "harness",
+      "inputs": [
+        "Your prompt",
+        "The model's next step",
+        "Results of tool calls"
+      ],
+      "outputs": [
+        "Requests to the model",
+        "Tool calls to check and run",
+        "The final reply to you"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Section: The agentic loop."
+          }
+        ]
+      }
+    },
+    {
+      "id": "model",
+      "label": "The Claude model",
+      "summary": "Reads the context and proposes the next step: a tool call, or a final answer. It does not run anything itself.",
+      "explanation": "The model reasons about your task and decides which tool to use. The harness provides the tools and manages what the model sees.\n\nThe model only **proposes**. Nothing happens on your machine until the harness runs the call.",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Section: Models."
+          }
+        ]
+      },
+      "group": "harness"
+    },
+    {
+      "id": "context-window",
+      "label": "Context and memory files",
+      "summary": "Everything the model can see now: the conversation, file contents, command output, system instructions, and your CLAUDE.md files.",
+      "explanation": "**CLAUDE.md files** hold instructions you write once, such as build commands and conventions. Claude Code loads them at the start of every session. Claude treats them as **context, not enforced rules**, so a rule that must always hold belongs in a hook or a permission rule. Claude Code also keeps auto memory, which are notes that Claude writes itself.\n\nThe window has a limit. When it nears the limit, Claude Code **compacts** the conversation into a summary. The summary keeps your requests and key code, but detailed instructions from early in the conversation may be lost. A new session starts with a fresh window.",
+      "group": "harness",
+      "inputs": [
+        "Prompts and replies",
+        "Tool results",
+        "CLAUDE.md files and auto memory",
+        "Subagent summaries"
+      ],
+      "outputs": [
+        "The context for each model request"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Sections: The context window, When context fills up."
+          },
+          {
+            "label": "How Claude remembers your project",
+            "path": "Claude Code docs: Memory",
+            "note": "Memory files are context, not enforced configuration."
+          }
+        ]
+      }
+    },
+    {
+      "id": "permission-check",
+      "label": "Permission check",
+      "summary": "Decides, before a tool runs, whether to run it, ask you, or refuse. Deny rules, ask rules, and allow rules are checked in that order.",
+      "explanation": "The result depends on the **permission mode** and on your rules.\n\n- **Manual**: asks before file edits and shell commands.\n- **Accept edits**: edits files and runs common filesystem commands without asking.\n- **Plan**: explores and proposes a plan without editing your source files.\n- **Auto**: a classifier reviews actions and blocks the risky ones.\n\nThe prompt shows the exact action. If you choose \"don't ask again\", Claude Code saves a rule for that command, and that record stops the question from coming back. The lesson shows why an approval must belong to one exact version of an action.",
+      "group": "harness",
+      "inputs": [
+        "A proposed tool call",
+        "Permission mode and rules",
+        "Decisions from hooks"
+      ],
+      "outputs": [
+        "Run, ask you, or refuse"
+      ],
+      "lesson": "approval-gate",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Configure permissions",
+            "path": "Claude Code docs: Permissions",
+            "note": "Rules are evaluated in order: deny, then ask, then allow."
+          }
+        ]
+      }
+    },
+    {
+      "id": "tools",
+      "label": "Tools",
+      "summary": "The actions Claude can take: read and edit files, search, run shell commands, and fetch from the web.",
+      "explanation": "The built-in tools fall into five groups: file operations, search, execution, web, and code intelligence.\n\nEach tool call returns information that goes back into the context. That result decides what the model proposes next.",
+      "group": "harness",
+      "inputs": [
+        "An approved tool call"
+      ],
+      "outputs": [
+        "A result: file text, search matches, or command output",
+        "Changes to files"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Section: Tools."
+          }
+        ]
+      }
+    },
+    {
+      "id": "your-files",
+      "label": "Your repository and terminal",
+      "summary": "The files, git state, and commands that tools act on. This is where the change lands.",
+      "explanation": "Before Claude edits a file, Claude Code snapshots it, so you can rewind with `Esc` twice. These checkpoints cover file changes only. They cannot undo actions on remote systems.",
+      "group": "your-machine",
+      "inputs": [
+        "File edits and new files",
+        "Shell commands"
+      ],
+      "outputs": [
+        "File contents",
+        "Command output"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Section: Undo changes with checkpoints."
+          }
+        ]
+      }
+    },
+    {
+      "id": "hooks",
+      "label": "Hooks",
+      "summary": "Your own scripts that run at set moments, such as before or after a tool call. A hook can block a call.",
+      "explanation": "A hook is a handler that runs at an event, for example `PreToolUse` or `Stop`. A command hook reads the event as JSON and can block the action with exit code 2.\n\nA hook can deny a call, but a hook that says nothing does not approve it.",
+      "group": "extensions",
+      "inputs": [
+        "Event details such as the tool name and its input"
+      ],
+      "outputs": [
+        "Allow, deny, or ask decisions",
+        "Extra context for Claude"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Hooks reference",
+            "path": "Claude Code docs: Hooks",
+            "note": "Hook events, exit codes, and PreToolUse decisions."
+          }
+        ]
+      }
+    },
+    {
+      "id": "subagents",
+      "label": "Subagents",
+      "summary": "Helpers that work in their own context window and send back only a summary.",
+      "explanation": "A subagent has its own system prompt, its own tool access, and its own permissions. Its many file reads stay out of your main context.\n\nBuilt-in subagents include Explore, which searches the codebase read-only, and Plan.",
+      "group": "extensions",
+      "inputs": [
+        "A task written by Claude"
+      ],
+      "outputs": [
+        "A summary of the result"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Custom subagents",
+            "path": "Claude Code docs: Subagents",
+            "note": "Own context window, summary returned."
+          }
+        ]
+      }
+    },
+    {
+      "id": "mcp-and-skills",
+      "label": "MCP servers and skills",
+      "summary": "MCP servers connect Claude to outside tools and data. Skills are reusable instructions that load only when used.",
+      "explanation": "**MCP** stands for Model Context Protocol. A server can run as a local process or be reached over HTTP. Its tools appear next to the built-in tools, and the permission check covers them too. Tool definitions load on demand, so they cost little context until Claude uses one.\n\nA **skill** is a SKILL.md file with a description and instructions. Claude sees the description, and the full text loads into the context only when the skill is used. You can run one yourself with `/skill-name`.",
+      "group": "extensions",
+      "inputs": [
+        "A tool call for an outside service",
+        "A SKILL.md file"
+      ],
+      "outputs": [
+        "Data from the outside service",
+        "Skill instructions, when used"
+      ],
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Connect Claude Code to tools",
+            "path": "Claude Code docs: MCP",
+            "note": "Transports and scopes."
+          },
+          {
+            "label": "Extend Claude with skills",
+            "path": "Claude Code docs: Skills",
+            "note": "Descriptions load at start. Full content loads when used."
+          }
+        ]
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "you-to-loop",
+      "from": "you",
+      "to": "agent-loop",
+      "kind": "sends-data-to",
+      "label": "your prompt",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "loop-to-context",
+      "from": "agent-loop",
+      "to": "context-window",
+      "kind": "stores-in",
+      "label": "prompts, replies, and results",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "loop-calls-model",
+      "from": "agent-loop",
+      "to": "model",
+      "kind": "calls",
+      "label": "what should happen next?",
+      "explanation": "The model answers with a tool call to run, or with a final reply for you.",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "loop-to-permission",
+      "from": "agent-loop",
+      "to": "permission-check",
+      "kind": "calls",
+      "label": "may this tool call run?",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "permission-asks-you",
+      "from": "permission-check",
+      "to": "you",
+      "kind": "calls",
+      "label": "asks you to approve",
+      "explanation": "Only when the mode and the rules do not already decide the call.",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Permissions",
+            "path": "Claude Code docs: Permissions"
+          }
+        ]
+      }
+    },
+    {
+      "id": "permission-to-tools",
+      "from": "permission-check",
+      "to": "tools",
+      "kind": "triggers",
+      "label": "runs the approved call",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "tools-read-files",
+      "from": "tools",
+      "to": "your-files",
+      "kind": "reads-from",
+      "label": "files, search matches, git state",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "tools-write-files",
+      "from": "tools",
+      "to": "your-files",
+      "kind": "stores-in",
+      "label": "edits, new files, shell effects",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "tools-to-context",
+      "from": "tools",
+      "to": "context-window",
+      "kind": "sends-data-to",
+      "label": "tool results",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Each tool use feeds back into the loop."
+          }
+        ]
+      }
+    },
+    {
+      "id": "context-to-loop",
+      "from": "context-window",
+      "to": "agent-loop",
+      "kind": "unknown",
+      "label": "compaction when nearly full",
+      "explanation": "The documentation says Claude Code compacts the conversation into a summary as it nears the limit. It does not say here how it picks the moment or what the summary keeps beyond key requests and code.",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "loop-fires-hooks",
+      "from": "agent-loop",
+      "to": "hooks",
+      "kind": "triggers",
+      "label": "runs hooks around tool calls",
+      "explanation": "A hook can block a call, and it stops the call even when an allow rule would permit it. A deny rule still wins over a hook that allows.",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Permissions",
+            "path": "Claude Code docs: Permissions",
+            "note": "Precedence among rules and hooks."
+          }
+        ]
+      }
+    },
+    {
+      "id": "loop-to-subagents",
+      "from": "agent-loop",
+      "to": "subagents",
+      "kind": "calls",
+      "label": "hand off a task, get a summary",
+      "source": {
+        "kind": "documented-intent",
+        "references": [
+          {
+            "label": "Subagents",
+            "path": "Claude Code docs: Subagents"
+          }
+        ]
+      },
+      "explanation": "A subagent works in its own context window. Only a summary comes back to the main conversation."
+    },
+    {
+      "id": "tools-call-mcp",
+      "from": "tools",
+      "to": "mcp-and-skills",
+      "kind": "calls",
+      "label": "outside tool calls",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "a-manual-mode",
+      "kind": "assumption",
+      "text": "The walkthroughs assume Manual mode, where Claude asks before file edits and shell commands. Other modes ask less, and Auto mode lets a classifier decide.",
+      "about": "permission-check"
+    },
+    {
+      "id": "q-which-rules-must-hold",
+      "kind": "question",
+      "text": "Which rules in your project must always hold? Memory files are context, so a rule like that needs a hook or a deny rule.",
+      "about": "context-window"
+    },
+    {
+      "id": "u-compaction-rules",
+      "kind": "unknown",
+      "text": "The exact point where compaction starts, and what the summary keeps, are not stated in the pages this board draws on.",
+      "about": "context-to-loop"
+    },
+    {
+      "id": "u-prompt-text",
+      "kind": "unknown",
+      "text": "The full system prompt and the exact wording of the built-in tool descriptions were not part of the pages this board draws on.",
+      "about": "model"
+    },
+    {
+      "id": "u-refusal-result",
+      "kind": "unknown",
+      "text": "What the model sees after you refuse a call, and how it chooses its next step, is not described in the pages this board draws on.",
+      "about": "permission-check"
+    },
+    {
+      "id": "q-docs-change",
+      "kind": "question",
+      "text": "Claude Code changes often. Does this board still match the current documentation, including mode names and hook events?"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fix-a-failing-test",
+      "title": "Fix a failing test",
+      "summary": "One pass through the loop, from your prompt to a change in your files.",
+      "steps": [
+        {
+          "caption": "You ask Claude to fix a failing test. Memory files were loaded into the context at the start of the session.",
+          "highlight": [
+            "you",
+            "you-to-loop",
+            "context-window"
+          ]
+        },
+        {
+          "caption": "The harness sends the context to the model. The model proposes a tool call: run the tests.",
+          "highlight": [
+            "agent-loop",
+            "loop-to-context",
+            "loop-calls-model",
+            "model"
+          ]
+        },
+        {
+          "caption": "The permission check sees a shell command. In Manual mode it asks you, and you approve.",
+          "highlight": [
+            "loop-to-permission",
+            "permission-check",
+            "permission-asks-you"
+          ]
+        },
+        {
+          "caption": "The tool runs the tests in your terminal. The failure output goes back into the context.",
+          "highlight": [
+            "permission-to-tools",
+            "tools",
+            "tools-read-files",
+            "tools-to-context"
+          ]
+        },
+        {
+          "caption": "The model proposes an edit. After approval, the tool changes the file in your repository.",
+          "highlight": [
+            "permission-check",
+            "tools",
+            "tools-write-files",
+            "your-files"
+          ]
+        },
+        {
+          "caption": "The loop runs the tests again to verify. It ends when they pass, and Claude reports back to you.",
+          "highlight": [
+            "agent-loop",
+            "tools-read-files",
+            "tools-to-context"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "refuse-a-command",
+      "title": "You refuse a command",
+      "summary": "A call that does not pass the permission check never runs.",
+      "steps": [
+        {
+          "caption": "The model proposes a shell command that deletes files.",
+          "highlight": [
+            "model",
+            "loop-calls-model",
+            "agent-loop"
+          ]
+        },
+        {
+          "caption": "The permission check asks you. A matching deny rule would refuse the call before it asks.",
+          "highlight": [
+            "loop-to-permission",
+            "permission-check",
+            "permission-asks-you",
+            "you"
+          ]
+        },
+        {
+          "caption": "You refuse. The tool does not run, and your files stay as they were.",
+          "highlight": [
+            "permission-check",
+            "tools",
+            "your-files"
+          ]
+        },
+        {
+          "caption": "What Claude does next is not described on this board. See the open item about refusals.",
+          "highlight": [
+            "agent-loop",
+            "model"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "long-session",
+      "title": "A long session fills the context",
+      "summary": "Why rules that matter belong in memory files and not in your first message.",
+      "steps": [
+        {
+          "caption": "File contents and command output keep arriving in the context window.",
+          "highlight": [
+            "tools-to-context",
+            "context-window"
+          ]
+        },
+        {
+          "caption": "Near the limit, Claude Code compacts the conversation into a summary.",
+          "highlight": [
+            "context-window",
+            "context-to-loop",
+            "agent-loop"
+          ]
+        },
+        {
+          "caption": "Detailed instructions from early in the conversation may be lost in the summary.",
+          "highlight": [
+            "context-window",
+            "you"
+          ]
+        },
+        {
+          "caption": "Rules in a CLAUDE.md file are context that Claude Code loads at the start of a session, so put persistent rules there.",
+          "highlight": [
+            "context-window"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extend-the-harness",
+      "title": "Hooks, helpers, and outside tools",
+      "summary": "How the four extension points join the loop.",
+      "steps": [
+        {
+          "caption": "A hook runs before a tool call. It blocks a command that you never want to run.",
+          "highlight": [
+            "hooks",
+            "loop-fires-hooks",
+            "permission-check"
+          ]
+        },
+        {
+          "caption": "A subagent searches the codebase in its own context window.",
+          "highlight": [
+            "loop-to-subagents",
+            "subagents"
+          ]
+        },
+        {
+          "caption": "Only a short summary comes back, so your main context stays small.",
+          "highlight": [
+            "loop-to-subagents",
+            "context-window"
+          ]
+        },
+        {
+          "caption": "An MCP server adds a tool that reads from an outside service. The permission check covers it too.",
+          "highlight": [
+            "tools-call-mcp",
+            "mcp-and-skills"
+          ]
+        },
+        {
+          "caption": "A skill adds its instructions to the context only when it is used.",
+          "highlight": [
+            "mcp-and-skills",
+            "context-window"
+          ]
+        }
+      ]
+    }
+  ]
+}
