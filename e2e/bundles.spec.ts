@@ -29,6 +29,39 @@ async function onLine(unit: Locator): Promise<{ x: number; y: number }> {
   return at
 }
 
+/**
+ * A point on the line of a bundle that is also at least `apart` screen pixels from every other bundle. On a phone the
+ * browser moves a tap to the nearest target within reach, so a spot beside a neighbouring track picks the neighbour.
+ */
+async function onLineApart(unit: Locator, apart: number): Promise<{ x: number; y: number }> {
+  const at = await unit.evaluate((el, gap) => {
+    const screen = (path: SVGPathElement, length: number) => {
+      const m = path.getScreenCTM()!
+      const p = path.getPointAtLength(length)
+      return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }
+    }
+    const own = el.querySelector<SVGPathElement>('path[data-hit]')!
+    const others = [...document.querySelectorAll<SVGPathElement>('[data-unit] path[data-hit]')].filter((p) => p !== own)
+    const near: { x: number; y: number }[] = []
+    for (const path of others) {
+      const total = path.getTotalLength()
+      const step = Math.max(2, total * Math.abs(path.getScreenCTM()!.a) > 0 ? 2 / Math.abs(path.getScreenCTM()!.a) : total)
+      for (let l = 0; l <= total; l += step) near.push(screen(path, l))
+    }
+    const total = own.getTotalLength()
+    let best: { x: number; y: number; room: number } | undefined
+    for (let t = 0.05; t < 0.96; t += 0.01) {
+      const p = screen(own, total * t)
+      if (!el.contains(document.elementFromPoint(p.x, p.y))) continue
+      const room = Math.min(...near.map((q) => Math.hypot(q.x - p.x, q.y - p.y)))
+      if (!best || room > best.room) best = { ...p, room }
+    }
+    return best && best.room >= gap ? { x: best.x, y: best.y } : { room: best?.room ?? -1 }
+  }, apart)
+  if (at.x === undefined) throw new Error(`no point of this bundle is ${apart}px from the others (best ${Math.round(at.room ?? -1)}px)`)
+  return at
+}
+
 /** The bundles that hold more than one connection, in the order of the page. */
 const many = (page: Page) => page.locator('[data-unit]:has(button[aria-label$="Show them."])')
 const single = (page: Page) => page.locator('[data-unit]:has(button[aria-label$="Open it."])')
@@ -328,13 +361,18 @@ test.describe('on a phone', () => {
 
 
   test('a tap on a bundle raises the sheet to half, with the pair as its title', async ({ page }) => {
-    await open(page, SIXTY)
+    await open(page, FORTY)
     const sheet = page.getByTestId('inspector')
     await expect(sheet).toHaveAttribute('data-stop', '0')
     await page.waitForTimeout(600)
-    const at = await onLine(many(page).first())
-    // Bundles can share a stretch of track, so the one the tap lands on is whichever one is on afterward.
-    const unit = page.locator('[data-unit]:has(button[aria-label$="Show them."])[data-on]')
+    // A finger reaches 12px either side of a line, so the first bundle with a stretch 25px clear of its neighbours is the one that must turn on.
+    let unit = many(page).first()
+    let at: { x: number; y: number } | undefined
+    for (let i = 0; i < (await many(page).count()) && !at; i++) {
+      unit = many(page).nth(i)
+      at = await onLineApart(unit, 25).catch(() => undefined)
+    }
+    if (!at) throw new Error('no bundle has a stretch clear of the others')
     await page.touchscreen.tap(at.x, at.y)
     await expect(sheet).toHaveAttribute('data-stop', '1')
     await expect(unit).toHaveAttribute('data-on', 'true')
