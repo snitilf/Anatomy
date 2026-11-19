@@ -4,7 +4,7 @@ import claudeCodeText from '../examples/claude-code-harness.board.json?raw'
 import llmText from '../examples/how-an-llm-works.board.json?raw'
 import refundText from '../../e2e/fixtures/refund-approval.board.json?raw'
 import { LIMITS } from './schema'
-import { parseBoard, type ParseResult } from './validate'
+import { parseBoard, type BoardProblem, type ParseResult } from './validate'
 
 /** A small valid board. Each test copies it and breaks one thing. */
 function minimalBoard(): Record<string, any> {
@@ -39,7 +39,7 @@ function errorsOf(result: ParseResult) {
 }
 
 function expectError(result: ParseResult, path: string, message: RegExp) {
-  expect(errorsOf(result)).toContainEqual({ path, message: expect.stringMatching(message) })
+  expect(errorsOf(result)).toContainEqual(expect.objectContaining({ path, message: expect.stringMatching(message) }))
 }
 
 describe('example boards', () => {
@@ -222,7 +222,7 @@ describe('lessons', () => {
     data.components[0].lesson = 'flux-capacitor'
     const result = parseBoard(JSON.stringify(data), { knownLessons: ['approval-gate'] })
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.warnings).toEqual([{ path: 'components[0].lesson', message: expect.stringMatching(/flux-capacitor/) }])
+    if (result.ok) expect(result.warnings).toEqual([{ path: 'components[0].lesson', code: 'unknown-lesson', message: expect.stringMatching(/flux-capacitor/) }])
   })
 
   it('accepts a known lesson without warnings', () => {
@@ -258,5 +258,102 @@ describe('size', () => {
     const errors = errorsOf(parse(data))
     expect(errors).toHaveLength(26)
     expect(errors.at(-1)?.message).toMatch(/15 more problems/)
+  })
+})
+
+describe('codes and hints', () => {
+  function only(result: ParseResult): BoardProblem {
+    const errors = errorsOf(result)
+    expect(errors).toHaveLength(1)
+    return errors[0]!
+  }
+
+  it('names the file problems', () => {
+    expect(only(parseBoard('')).code).toBe('not-json')
+    expect(only(parseBoard('[]')).code).toBe('not-object')
+    expect(only(parse({ name: 'package' })).code).toBe('not-board')
+    expect(only(parse({ ...minimalBoard(), schemaVersion: 2 })).code).toBe('schema-version')
+    expect(only(parseBoard(`{"padding":"${'x'.repeat(LIMITS.fileBytes)}"}`)).code).toBe('file-too-large')
+  })
+
+  it('tells a missing field from a field of the wrong type', () => {
+    const data = minimalBoard()
+    delete data.title
+    expect(only(parse(data))).toMatchObject({ path: 'title', code: 'missing', hint: 'The field is missing.' })
+    expect(only(parse({ ...minimalBoard(), revision: '2' }))).toMatchObject({ path: 'revision', code: 'wrong-type' })
+    expect(only(parse({ ...minimalBoard(), revision: 0 }))).toMatchObject({ path: 'revision', code: 'out-of-range' })
+  })
+
+  it('gives the length of a text that is too long, after trimming', () => {
+    const data = minimalBoard()
+    data.components[0].label = `  ${'a'.repeat(LIMITS.label + 5)}  `
+    expect(only(parse(data))).toMatchObject({ code: 'too-long', hint: `It has ${LIMITS.label + 5}.` })
+  })
+
+  it('counts the entries of a list that is too long', () => {
+    const data = minimalBoard()
+    data.groups = Array.from({ length: LIMITS.groups + 1 }, (_, i) => ({ id: `g-${i}`, label: `G ${i}` }))
+    data.components[0].group = 'g-0'
+    expect(only(parse(data))).toMatchObject({ path: 'groups', code: 'too-many', hint: `It has ${LIMITS.groups + 1}.` })
+  })
+
+  it('marks empty text and empty lists', () => {
+    expect(only(parse({ ...minimalBoard(), title: ' ' }))).toMatchObject({ code: 'empty' })
+    const data = minimalBoard()
+    data.scenarios[0].steps = []
+    expect(only(parse(data))).toMatchObject({ code: 'too-few' })
+  })
+
+  it('suggests a valid ID for a badly formed one', () => {
+    const data = minimalBoard()
+    data.groups[0].id = 'Back End'
+    data.components[0].group = 'Back End'
+    expect(errorsOf(parse(data))).toContainEqual(expect.objectContaining({ path: 'groups[0].id', code: 'bad-id', hint: 'Try "back-end".' }))
+  })
+
+  it('suggests the nearest allowed value and key', () => {
+    const data = minimalBoard()
+    data.relationships[0].kind = 'store-in'
+    expect(only(parse(data))).toMatchObject({ code: 'bad-value', hint: 'Did you mean "stores-in"?' })
+    const typo = minimalBoard()
+    typo.components[0].sumary = 'x'
+    delete typo.components[0].summary
+    expect(errorsOf(parse(typo))).toContainEqual(expect.objectContaining({ path: 'components[0]', code: 'unknown-key', hint: 'Did you mean "summary"?' }))
+    const far = minimalBoard()
+    far.components[0].color = 'red'
+    expect(only(parse(far))).toEqual({ path: 'components[0]', code: 'unknown-key', message: expect.stringContaining('color') })
+  })
+
+  it('names a missing reference for documented intent', () => {
+    const data = minimalBoard()
+    data.components[0].source = { kind: 'documented-intent' }
+    expect(only(parse(data)).code).toBe('needs-reference')
+  })
+
+  it('suggests a free ID for a duplicate', () => {
+    const data = minimalBoard()
+    data.items[0].id = 'api'
+    expect(only(parse(data))).toMatchObject({ code: 'duplicate-id', hint: 'Use a new ID, for example "api-2".' })
+  })
+
+  it('suggests the nearest ID for a broken reference, and nothing when no ID is close', () => {
+    const data = minimalBoard()
+    data.relationships[0].to = 'dbb'
+    data.components[1].group = 'backnd'
+    data.items[0].about = 'api-to-dc'
+    data.scenarios[0].steps[0].highlight = ['something-else']
+    const errors = errorsOf(parse(data))
+    expect(errors).toEqual([
+      expect.objectContaining({ path: 'components[1].group', code: 'unknown-group', hint: 'Did you mean "backend"?' }),
+      expect.objectContaining({ path: 'relationships[0].to', code: 'unknown-component', hint: 'Did you mean "db"?' }),
+      expect.objectContaining({ path: 'items[0].about', code: 'unknown-target', hint: 'Did you mean "api-to-db"?' }),
+      { path: 'scenarios[0].steps[0].highlight[0]', code: 'unknown-target', message: expect.any(String) },
+    ])
+  })
+
+  it('marks the line that counts the problems left out', () => {
+    const data = minimalBoard()
+    for (let i = 0; i < 30; i++) data.components.push({ id: `p-${i}`, label: 'P', summary: 'P.', group: 'nowhere', source: { kind: 'agent-proposal' } })
+    expect(errorsOf(parse(data)).at(-1)?.code).toBe('more-problems')
   })
 })

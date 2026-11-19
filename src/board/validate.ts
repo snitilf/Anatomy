@@ -1,10 +1,60 @@
 import type { z } from 'zod'
-import { BOARD_FORMAT, LIMITS, SCHEMA_VERSION, board as boardSchema, type Board } from './schema'
+import { BOARD_FORMAT, LIMITS, SCHEMA_VERSION, board as boardSchema, type Board } from './schema.ts'
+import { keysOf, schemaAt } from './shape.ts'
+import { freeId, nearest, slugify } from './suggest.ts'
+
+/**
+ * A short, stable name for each kind of problem, for scripts and for the `anatomy` command line tool.
+ * The app shows `message`; the code never changes when a message is reworded.
+ */
+export type ProblemCode =
+  // The file
+  | 'file-too-large'
+  | 'not-json'
+  | 'not-object'
+  | 'not-board'
+  | 'schema-version'
+  // One field
+  | 'missing'
+  | 'wrong-type'
+  | 'empty'
+  | 'too-long'
+  | 'too-few'
+  | 'too-many'
+  | 'out-of-range'
+  | 'bad-id'
+  | 'bad-value'
+  | 'unknown-key'
+  | 'needs-reference'
+  | 'invalid'
+  // Between fields
+  | 'duplicate-id'
+  | 'unknown-group'
+  | 'unknown-component'
+  | 'unknown-target'
+  | 'more-problems'
+  // Warnings. The board opens, but something is likely wrong.
+  | 'unknown-lesson'
+  | 'changed-not-on-board'
+  // Advice, from `advice.ts`. Only the command line tool reports these.
+  | 'unconnected'
+  | 'guarantee'
+  | 'adopted-without-changes'
+  | 'unanswered-feedback'
+  | 'unknown-feedback-item'
+  | 'withdrawn-answered'
+  | 'responds-to-other'
+  | 'revision-not-raised'
+  | 'feedback-unreadable'
 
 export interface BoardProblem {
   /** Where the problem is, for example `relationships[2].to`. Empty for the whole file. */
   path: string
   message: string
+  /** Set on every problem `parseBoard` reports. Problems from other readers, such as the layer, have none. */
+  code?: ProblemCode
+  /** A concrete fix when one can be computed, for example `Did you mean "payment"?`. */
+  hint?: string
 }
 
 export type ParseResult =
@@ -30,7 +80,7 @@ export function parseBoard(fileText: string, options: ParseOptions = {}): ParseR
 
   const bytes = new TextEncoder().encode(fileText).length
   if (bytes > LIMITS.fileBytes) {
-    return fail('', `The file is ${formatBytes(bytes)}. The limit is ${formatBytes(LIMITS.fileBytes)}.`)
+    return fail('', 'file-too-large', `The file is ${formatBytes(bytes)}. The limit is ${formatBytes(LIMITS.fileBytes)}.`)
   }
 
   let data: unknown
@@ -38,7 +88,7 @@ export function parseBoard(fileText: string, options: ParseOptions = {}): ParseR
     data = JSON.parse(fileText)
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
-    return fail('', `The file is not valid JSON: ${detail}`)
+    return fail('', 'not-json', `The file is not valid JSON: ${detail}`)
   }
 
   const headerProblem = checkHeader(data)
@@ -46,7 +96,7 @@ export function parseBoard(fileText: string, options: ParseOptions = {}): ParseR
 
   const parsed = boardSchema.safeParse(data)
   if (!parsed.success) {
-    return { ok: false, errors: limit(parsed.error.issues.map(fromIssue)) }
+    return { ok: false, errors: limit(parsed.error.issues.map((issue) => fromIssue(issue, data))) }
   }
 
   const errors = checkReferences(parsed.data)
@@ -58,18 +108,20 @@ export function parseBoard(fileText: string, options: ParseOptions = {}): ParseR
 /** Gives a clear message for files that are not boards, or boards from another version. */
 function checkHeader(data: unknown): BoardProblem | undefined {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    return { path: '', message: 'A board file must contain one JSON object.' }
+    return { path: '', code: 'not-object', message: 'A board file must contain one JSON object.' }
   }
   const record = data as Record<string, unknown>
   if (record.format !== BOARD_FORMAT) {
     return {
       path: 'format',
+      code: 'not-board',
       message: `This is not an Anatomy board. Expected "format": "${BOARD_FORMAT}".`,
     }
   }
   if (record.schemaVersion !== SCHEMA_VERSION) {
     return {
       path: 'schemaVersion',
+      code: 'schema-version',
       message: `This board uses schema version ${JSON.stringify(record.schemaVersion)}. This app supports version ${SCHEMA_VERSION}.`,
     }
   }
@@ -82,10 +134,17 @@ function checkReferences(board: Board): BoardProblem[] {
   // IDs are unique across the whole document, so a reference like `about`
   // or a scenario highlight always points at exactly one thing.
   const owners = new Map<string, string>()
+  const allIds = new Set([board.id, ...[board.groups, board.components, board.relationships, board.items, board.scenarios].flatMap((list) => list.map((x) => x.id))])
   const claim = (id: string, path: string) => {
     const first = owners.get(id)
     if (first === undefined) owners.set(id, path)
-    else errors.push({ path, message: `The ID "${id}" is already used at ${first}. IDs must be unique.` })
+    else
+      errors.push({
+        path,
+        code: 'duplicate-id',
+        message: `The ID "${id}" is already used at ${first}. IDs must be unique.`,
+        hint: `Use a new ID, for example "${freeId(id, allIds, LIMITS.id)}".`,
+      })
   }
   claim(board.id, 'id')
   board.groups.forEach((g, i) => claim(g.id, `groups[${i}].id`))
@@ -97,12 +156,15 @@ function checkReferences(board: Board): BoardProblem[] {
   const groups = new Set(board.groups.map((g) => g.id))
   const components = new Set(board.components.map((c) => c.id))
   const relationships = new Set(board.relationships.map((r) => r.id))
-  const isTarget = (id: string) => components.has(id) || relationships.has(id)
+  const targets = new Set([...components, ...relationships])
+  const isTarget = (id: string) => targets.has(id)
 
   board.components.forEach((c, i) => {
     if (c.group !== undefined && !groups.has(c.group)) {
       errors.push({
         path: `components[${i}].group`,
+        code: 'unknown-group',
+        ...didYouMean(c.group, groups),
         message: `Component "${c.id}" is in group "${c.group}", which is not a group on this board.`,
       })
     }
@@ -113,6 +175,8 @@ function checkReferences(board: Board): BoardProblem[] {
       if (!components.has(r[end])) {
         errors.push({
           path: `relationships[${i}].${end}`,
+          code: 'unknown-component',
+          ...didYouMean(r[end], components),
           message: `Relationship "${r.id}" points ${end} "${r[end]}", which is not a component on this board.`,
         })
       }
@@ -123,6 +187,8 @@ function checkReferences(board: Board): BoardProblem[] {
     if (it.about !== undefined && !isTarget(it.about)) {
       errors.push({
         path: `items[${i}].about`,
+        code: 'unknown-target',
+        ...didYouMean(it.about, targets),
         message: `The ${it.kind} "${it.id}" is about "${it.about}", which is not a component or relationship on this board.`,
       })
     }
@@ -134,6 +200,8 @@ function checkReferences(board: Board): BoardProblem[] {
         if (!isTarget(target)) {
           errors.push({
             path: `scenarios[${si}].steps[${ti}].highlight[${hi}]`,
+            code: 'unknown-target',
+            ...didYouMean(target, targets),
             message: `Step ${ti + 1} of scenario "${s.id}" highlights "${target}", which is not a component or relationship on this board.`,
           })
         }
@@ -152,6 +220,7 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
       if (c.lesson !== undefined && !known.has(c.lesson)) {
         warnings.push({
           path: `components[${i}].lesson`,
+          code: 'unknown-lesson',
           message: `Component "${c.id}" names the lesson "${c.lesson}", which this version of Anatomy does not have.`,
         })
       }
@@ -163,6 +232,8 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
       if (!targets.has(changedId)) {
         warnings.push({
           path: `responses.items[${i}].changed[${j}]`,
+          code: 'changed-not-on-board',
+          ...didYouMean(changedId, targets),
           message: `The answer to "${r.feedbackId}" says it changed "${changedId}", which is not a component or relationship on this board.`,
         })
       }
@@ -171,8 +242,60 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
   return warnings
 }
 
-function fromIssue(issue: z.core.$ZodIssue): BoardProblem {
-  return { path: formatPath(issue.path), message: issue.message }
+/** A hint that names the nearest existing ID, when the value looks like a typo of one. */
+function didYouMean(value: string, candidates: Iterable<string>): { hint?: string } {
+  const near = nearest(value, candidates)
+  return near === undefined ? {} : { hint: `Did you mean "${near}"?` }
+}
+
+function valueAt(data: unknown, path: readonly PropertyKey[]): unknown {
+  let current = data
+  for (const key of path) {
+    if (current === null || typeof current !== 'object') return undefined
+    const record = current as Record<PropertyKey, unknown>
+    current = Object.hasOwn(record, key) ? record[key] : undefined
+  }
+  return current
+}
+
+function fromIssue(issue: z.core.$ZodIssue, data: unknown): BoardProblem {
+  const problem = { path: formatPath(issue.path), message: issue.message }
+  const value = valueAt(data, issue.path)
+  const withHint = (code: ProblemCode, hint?: string): BoardProblem => (hint === undefined ? { ...problem, code } : { ...problem, code, hint })
+  switch (issue.code) {
+    case 'invalid_type':
+      return value === undefined ? withHint('missing', 'The field is missing.') : withHint('wrong-type')
+    case 'too_big':
+      if (issue.origin === 'string' && typeof value === 'string') return withHint('too-long', `It has ${value.trim().length}.`)
+      if (issue.origin === 'array' && Array.isArray(value)) return withHint('too-many', `It has ${value.length}.`)
+      return withHint('out-of-range')
+    case 'too_small':
+      if (issue.origin === 'string') return withHint('empty')
+      if (issue.origin === 'array') return withHint('too-few')
+      return withHint('out-of-range')
+    case 'invalid_format': {
+      const slug = typeof value === 'string' ? slugify(value).slice(0, LIMITS.id).replace(/-+$/, '') : ''
+      return withHint('bad-id', slug === '' ? undefined : `Try "${slug}".`)
+    }
+    case 'invalid_value': {
+      const near = typeof value === 'string' ? nearest(value, issue.values.map(String)) : undefined
+      return withHint('bad-value', near === undefined ? undefined : `Did you mean "${near}"?`)
+    }
+    case 'unrecognized_keys': {
+      const allowed = keysOf(schemaAt(issue.path))
+      const fixes = issue.keys.flatMap((key) => {
+        const near = nearest(key, allowed)
+        return near === undefined ? [] : [{ key, near }]
+      })
+      const [only] = fixes
+      if (fixes.length === 1 && only && issue.keys.length === 1) return withHint('unknown-key', `Did you mean "${only.near}"?`)
+      return withHint('unknown-key', fixes.length === 0 ? undefined : `Did you mean ${fixes.map((f) => `"${f.near}" for "${f.key}"`).join(', ')}?`)
+    }
+    case 'custom':
+      return withHint(issue.path.at(-1) === 'references' ? 'needs-reference' : 'invalid')
+    default:
+      return withHint('invalid')
+  }
 }
 
 export function formatPath(path: readonly PropertyKey[]): string {
@@ -181,15 +304,15 @@ export function formatPath(path: readonly PropertyKey[]): string {
     .join('')
 }
 
-function fail(path: string, message: string): ParseResult {
-  return { ok: false, errors: [{ path, message }] }
+function fail(path: string, code: ProblemCode, message: string): ParseResult {
+  return { ok: false, errors: [{ path, code, message }] }
 }
 
 function limit(errors: BoardProblem[]): BoardProblem[] {
   if (errors.length <= MAX_REPORTED_ERRORS) return errors
   return [
     ...errors.slice(0, MAX_REPORTED_ERRORS),
-    { path: '', message: `${errors.length - MAX_REPORTED_ERRORS} more problems are not shown.` },
+    { path: '', code: 'more-problems', message: `${errors.length - MAX_REPORTED_ERRORS} more problems are not shown.` },
   ]
 }
 
