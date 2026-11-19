@@ -12,6 +12,7 @@ import { findItem } from '../layer/edits'
 import type { Layer, Target } from '../layer/model'
 import type { Board } from '../board/schema'
 import { hasChanges, reviewCounts } from '../notes/review'
+import { BundleView } from './BundleView'
 import { ConnectionView } from './ConnectionView'
 import { Overview } from './Overview'
 import { PanelContext } from './panelContext'
@@ -31,13 +32,15 @@ const selectionKey = (s: Selection | undefined) => (s && s.type !== 'board' ? `$
 /** What a note written in the panel is about: the part or connection shown, or the board. A user's own item has its own note field. */
 function composerTarget(board: Board | undefined, layer: Layer | undefined, s: Selection | undefined): Target | undefined {
   if (!board) return undefined
+  // A bundle is many connections, so a note has no one to be about.
+  if (s?.type === 'bundle') return undefined
   if (s?.type === 'component' && board.components.some((c) => c.id === s.id)) return { type: 'component', id: s.id }
   if (s?.type === 'relationship' && board.relationships.some((r) => r.id === s.id)) return { type: 'relationship', id: s.id }
   if (s && layer && (s.type === 'link' || s.type === 'mark' || s.type === 'proposal') && findItem(layer, s.id)) return undefined
   return { type: 'board' }
 }
 
-const KIND_WORD = { board: 'Board', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part' } as const
+const KIND_WORD = { board: 'Board', component: 'Part', relationship: 'Connection', link: 'Link', mark: 'Mark', proposal: 'New part', bundle: 'Bundle' } as const
 
 /** The view for the selection: the overview, a part, a connection, or something the user made. */
 function Details() {
@@ -47,6 +50,8 @@ function Details() {
   if (s?.type === 'component') {
     const c = board.components.find((x) => x.id === s.id)
     if (c) return <PartView board={board} component={c} />
+  } else if (s?.type === 'bundle') {
+    return <BundleView key={s.id} board={board} a={s.a} b={s.b} />
   } else if (s?.type === 'relationship') {
     const r = board.relationships.find((x) => x.id === s.id)
     if (r) return <ConnectionView board={board} relationship={r} />
