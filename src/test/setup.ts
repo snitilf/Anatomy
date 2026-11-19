@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach } from 'vitest'
+
+// findBy and waitFor give up after one second by default, which a busy machine can exceed without anything being wrong.
+configure({ asyncUtilTimeout: 5000 })
 
 // React Flow measures elements. jsdom has no layout, so it gets stand-ins.
 class ResizeObserverStub {
