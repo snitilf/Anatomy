@@ -94,8 +94,8 @@ test('widening the map clamps zoom to its new fit minimum', async ({ page }) => 
 
 test('the walkthrough bar steps with the arrow keys and closes with Escape', async ({ page }) => {
   await open(page, REFUND)
-  await page.getByRole('complementary', { name: 'Sidebar' }).getByRole('button', { name: 'Play Approve and simulate' }).click()
-  const bar = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
+  await page.getByRole('complementary', { name: 'Sidebar' }).getByRole('button', { name: 'Play Approve and pay' }).click()
+  const bar = page.getByRole('region', { name: 'Walkthrough: Approve and pay' })
   await expect(bar.getByText('1 / 5')).toBeVisible()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
@@ -161,7 +161,7 @@ test.describe('on a phone', () => {
     await open(page, REFUND)
     const sheet = page.getByRole('region', { name: 'Sidebar' })
     await page.getByRole('tab', { name: 'Overview' }).tap()
-    const row = page.getByTestId('overview').locator('[data-row="part:approval"]')
+    const row = page.getByTestId('overview').locator('[data-row="part:manager-approval"]')
     expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     // A part chosen from the list is shown on the map above the half-height sheet.
     await row.tap()

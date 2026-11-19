@@ -25,19 +25,19 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   // The explanation is open, held to a height with a button for the rest.
   const more = inspector.getByRole('button', { name: 'Show more' })
   if (await more.count()) await more.click()
-  await expect(inspector.getByText('The rule check only proposes. It does not send anything.')).toBeVisible()
+  await expect(inspector.getByText('The policy check only proposes. It does not pay anything.')).toBeVisible()
   // The default source, the agent's own explanation, shows no source line.
   await expect(inspector.locator('[data-source]')).toHaveCount(0)
 
   // Inspect a connection: its kind in plain English.
-  await pickConnection(page, 'proposes an action')
-  await expect(inspector.getByRole('heading', { name: 'proposes an action', level: 2 })).toBeVisible()
+  await pickConnection(page, 'proposes a payout')
+  await expect(inspector.getByRole('heading', { name: 'proposes a payout', level: 2 })).toBeVisible()
   await expect(inspector.getByText(/Policy check triggers Payout preview/)).toBeVisible()
 
   // Play a walkthrough.
   await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: /Refund approval/ }).click()
-  await inspector.getByRole('button', { name: 'Play Approve and simulate' }).click()
-  const player = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
+  await inspector.getByRole('button', { name: 'Play Approve and pay' }).click()
+  const player = page.getByRole('region', { name: 'Walkthrough: Approve and pay' })
   await expect(player.getByText('1 / 5')).toBeVisible()
   await player.getByRole('button', { name: 'Next' }).click()
   await expect(player.getByText('2 / 5')).toBeVisible()
@@ -45,7 +45,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await player.getByRole('button', { name: 'Close' }).click()
   await expect(player).toBeHidden()
 
-  // Open the lesson from the Approval part. A second send of the same approved version is blocked.
+  // Open the lesson from the Manager approval part. A second send of the same approved version is blocked.
   await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('heading', { name: 'Manager approval', level: 2 })).toBeVisible()
   await expect(inspector.getByText('From a written plan')).toBeVisible()
@@ -62,7 +62,7 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   await lesson.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(lesson).toBeHidden()
 
-  // Add a note to Approval and wait for it to be saved.
+  // Add a note to Manager approval and wait for it to be saved.
   await inspector.getByRole('textbox', { name: 'Add a note' }).fill(noteText)
   await inspector.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(noteText)).toBeVisible()

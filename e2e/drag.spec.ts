@@ -39,8 +39,8 @@ test('Escape during a drag puts the card back and keeps the selection', async ({
 test('dragging a card during a walkthrough keeps the panel and never dims the held card', async ({ page }) => {
   await open(page, BOARD_FILE)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
-  await inspector.getByRole('button', { name: 'Play Approve and simulate' }).click()
-  const player = page.getByRole('region', { name: 'Walkthrough: Approve and simulate' })
+  await inspector.getByRole('button', { name: 'Play Approve and pay' }).click()
+  const player = page.getByRole('region', { name: 'Walkthrough: Approve and pay' })
   await expect(player.getByText('1 / 5')).toBeVisible()
   await page.waitForTimeout(400)
 

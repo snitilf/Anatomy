@@ -32,11 +32,11 @@ test('with nothing selected the menu has no group named for a selection', async 
 
 test('a line has no Add link, and its name heads the group', async ({ page }) => {
   await open(page, REFUND)
-  await pickConnection(page, 'proposes an action')
-  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('[aria-current="location"]')).toHaveText('proposes an action')
+  await pickConnection(page, 'proposes a payout')
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('[aria-current="location"]')).toHaveText('proposes a payout')
   await page.keyboard.press('ControlOrMeta+k')
   const first = menu(page).locator('[cmdk-group]').first()
-  await expect(first.locator('[cmdk-group-heading]')).toHaveText('proposes an action')
+  await expect(first.locator('[cmdk-group-heading]')).toHaveText('proposes a payout')
   await expect(first.getByRole('option', { name: /^Add note/ })).toBeVisible()
   await expect(first.getByRole('option', { name: /^Add link/ })).toHaveCount(0)
 })

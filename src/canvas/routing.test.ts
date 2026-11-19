@@ -132,7 +132,7 @@ describe('routeConnection', () => {
 
 describe('labels', () => {
   it('wraps a long label onto two lines, and a short one stays on one', () => {
-    expect(wrap('exact recipient and message')?.lines).toBe(2)
+    expect(wrap('amount and account')?.lines).toBe(2)
     expect(wrap('writes')?.lines).toBe(1)
   })
 
@@ -153,7 +153,7 @@ describe('labels', () => {
   })
 
   it('keeps every line of a wrapped label whole, split at a space', () => {
-    const size = wrap('exact recipient and message')!
+    const size = wrap('amount and account')!
     expect(size.width).toBeLessThanOrEqual(220)
     expect(size.lines).toBe(2)
   })
@@ -165,7 +165,7 @@ describe('labels', () => {
     const route = routeConnection(plan!, [a, b])
     const lines = new RunIndex()
     lines.add(0, route.runs!)
-    const spot = placeLabel(route.runs!, 'exact recipient and message', context([a, b], lines, [], 0))
+    const spot = placeLabel(route.runs!, 'amount and account', context([a, b], lines, [], 0))
     expect(spot.hidden).toBeUndefined()
     const top = spot.y - pillHeight(spot.lines) / 2
     const bottom = spot.y + pillHeight(spot.lines) / 2
@@ -180,7 +180,7 @@ describe('labels', () => {
     const route = routeConnection(plan!, [a, b])
     const lines = new RunIndex()
     lines.add(0, route.runs!)
-    const spot = placeLabel(route.runs!, 'exact recipient and message', context([a, b], lines, [], 0))
+    const spot = placeLabel(route.runs!, 'amount and account', context([a, b], lines, [], 0))
     expect(spot.hidden).toBe(true)
     expect(spot.width).toBe(0)
   })
@@ -219,7 +219,7 @@ describe('connections between the same two cards', () => {
     const lines = new RunIndex()
     routes.forEach((r, i) => lines.add(i, r.runs!))
     routes.forEach((route, i) => {
-      const spot = placeLabel(route.runs!, 'was this already sent?', context([a, b], lines, taken, i))
+      const spot = placeLabel(route.runs!, 'was this already paid?', context([a, b], lines, taken, i))
       if (spot.hidden) return
       const box = { x: spot.x - spot.width / 2, y: spot.y - pillHeight(spot.lines) / 2, width: spot.width, height: pillHeight(spot.lines) }
       for (const t of taken) {

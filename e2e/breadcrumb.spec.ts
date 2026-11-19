@@ -21,8 +21,8 @@ test('the crumb follows the selection: board, group, part', async ({ page }) => 
 
 test('a connection has no group segment, and a link is named by its label', async ({ page }) => {
   await open(page, REFUND)
-  await pickConnection(page, 'proposes an action')
-  await expect(crumb(page).locator('[aria-current="location"]')).toHaveText('proposes an action')
+  await pickConnection(page, 'proposes a payout')
+  await expect(crumb(page).locator('[aria-current="location"]')).toHaveText('proposes a payout')
   await expect(crumb(page).getByRole('button')).toHaveCount(3)
 })
 

@@ -107,7 +107,7 @@ test('selecting a part softens the other lines, and a selected connection is dra
   await pickPart(page, 'manager-approval')
   expect(await opacities()).toBeGreaterThan(0)
 
-  await pickConnection(page, 'approved action version')
+  await pickConnection(page, 'approved payout version')
   await expect
     .poll(() =>
       page.evaluate(() => {
