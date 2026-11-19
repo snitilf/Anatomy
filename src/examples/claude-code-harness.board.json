@@ -36,8 +36,8 @@
     {
       "id": "you",
       "label": "You and your prompt",
-      "summary": "You type a task. You can also answer permission questions, press Esc to stop, and type a correction while Claude works.",
-      "explanation": "You are part of the loop, not only the start of it.\n\n- You can **interrupt** at any point with `Esc`.\n- You can type a correction while Claude works. Claude reads it after the current tool calls finish.\n- You decide what the permission check asks you.",
+      "summary": "You type the task, answer permission questions, and can stop or steer Claude.",
+      "explanation": "You type a task. You are part of the loop, not only the start of it.\n\n- You answer permission questions.\n- You can **interrupt** at any point with `Esc`.\n- You can type a correction while Claude works. Claude reads it after the current tool calls finish.",
       "group": "your-machine",
       "inputs": [
         "A task in plain language",
@@ -61,7 +61,7 @@
     {
       "id": "agent-loop",
       "label": "Agent loop",
-      "summary": "Repeats three phases until the task is done: gather context, take action, verify the result.",
+      "summary": "Repeats three phases until the task is done: gather context, act, verify.",
       "explanation": "The harness asks the model what to do next. The model answers with a tool call or with a final reply. The harness runs the tool, adds the result to the context, and asks again.\n\nThe documentation describes the phases as **gather context**, **take action**, and **verify results**. They blend together, and the loop ends when the task is complete or you stop it.",
       "group": "harness",
       "inputs": [
@@ -88,7 +88,7 @@
     {
       "id": "model",
       "label": "The Claude model",
-      "summary": "Reads the context and proposes the next step: a tool call, or a final answer. It does not run anything itself.",
+      "summary": "Reads the context and proposes the next step. It does not run anything itself.",
       "explanation": "The model reasons about your task and decides which tool to use. The harness provides the tools and manages what the model sees.\n\nThe model only **proposes**. Nothing happens on your machine until the harness runs the call.",
       "source": {
         "kind": "documented-intent",
@@ -105,7 +105,7 @@
     {
       "id": "context-window",
       "label": "Context and memory files",
-      "summary": "Everything the model can see now: the conversation, file contents, command output, system instructions, and your CLAUDE.md files.",
+      "summary": "Everything the model can see now, plus your CLAUDE.md files.",
       "explanation": "**CLAUDE.md files** hold instructions you write once, such as build commands and conventions. Claude Code loads them at the start of every session. Claude treats them as **context, not enforced rules**, so a rule that must always hold belongs in a hook or a permission rule. Claude Code also keeps auto memory, which are notes that Claude writes itself.\n\nThe window has a limit. When it nears the limit, Claude Code **compacts** the conversation into a summary. The summary keeps your requests and key code, but detailed instructions from early in the conversation may be lost. A new session starts with a fresh window.",
       "group": "harness",
       "inputs": [
@@ -136,8 +136,8 @@
     {
       "id": "permission-check",
       "label": "Permission check",
-      "summary": "Decides, before a tool runs, whether to run it, ask you, or refuse. Deny rules, ask rules, and allow rules are checked in that order.",
-      "explanation": "The result depends on the **permission mode** and on your rules.\n\n- **Manual**: asks before file edits and shell commands.\n- **Accept edits**: edits files and runs common filesystem commands without asking.\n- **Plan**: explores and proposes a plan without editing your source files.\n- **Auto**: a classifier reviews actions and blocks the risky ones.\n\nThe prompt shows the exact action. If you choose \"don't ask again\", Claude Code saves a rule for that command, and that record stops the question from coming back. The lesson shows why an approval must belong to one exact version of an action.",
+      "summary": "Decides before each tool runs: run it, ask you, or refuse.",
+      "explanation": "Deny rules, ask rules, and allow rules are checked in that order. The result also depends on the **permission mode** and on your rules.\n\n- **Manual**: asks before file edits and shell commands.\n- **Accept edits**: edits files and runs common filesystem commands without asking.\n- **Plan**: explores and proposes a plan without editing your source files.\n- **Auto**: a classifier reviews actions and blocks the risky ones.\n\nThe prompt shows the exact action. If you choose \"don't ask again\", Claude Code saves a rule for that command, and that record stops the question from coming back. The lesson shows why an approval must belong to one exact version of an action.",
       "group": "harness",
       "inputs": [
         "A proposed tool call",
@@ -162,7 +162,7 @@
     {
       "id": "tools",
       "label": "Tools",
-      "summary": "The actions Claude can take: read and edit files, search, run shell commands, and fetch from the web.",
+      "summary": "What Claude can do: read and edit files, search, run commands, use the web.",
       "explanation": "The built-in tools fall into five groups: file operations, search, execution, web, and code intelligence.\n\nEach tool call returns information that goes back into the context. That result decides what the model proposes next.",
       "group": "harness",
       "inputs": [
@@ -186,7 +186,7 @@
     {
       "id": "your-files",
       "label": "Your repository and terminal",
-      "summary": "The files, git state, and commands that tools act on. This is where the change lands.",
+      "summary": "The files, git state, and commands that tools act on. The change lands here.",
       "explanation": "Before Claude edits a file, Claude Code snapshots it, so you can rewind with `Esc` twice. These checkpoints cover file changes only. They cannot undo actions on remote systems.",
       "group": "your-machine",
       "inputs": [
@@ -211,7 +211,7 @@
     {
       "id": "hooks",
       "label": "Hooks",
-      "summary": "Your own scripts that run at set moments, such as before or after a tool call. A hook can block a call.",
+      "summary": "Your own scripts that run at set moments. A hook can block a tool call.",
       "explanation": "A hook is a handler that runs at an event, for example `PreToolUse` or `Stop`. A command hook reads the event as JSON and can block the action with exit code 2.\n\nA hook can deny a call, but a hook that says nothing does not approve it.",
       "group": "extensions",
       "inputs": [
@@ -258,7 +258,7 @@
     {
       "id": "mcp-and-skills",
       "label": "MCP servers and skills",
-      "summary": "MCP servers connect Claude to outside tools and data. Skills are reusable instructions that load only when used.",
+      "summary": "MCP connects outside tools and data. Skills are instructions loaded when used.",
       "explanation": "**MCP** stands for Model Context Protocol. A server can run as a local process or be reached over HTTP. Its tools appear next to the built-in tools, and the permission check covers them too. Tool definitions load on demand, so they cost little context until Claude uses one.\n\nA **skill** is a SKILL.md file with a description and instructions. Claude sees the description, and the full text loads into the context only when the skill is used. You can run one yourself with `/skill-name`.",
       "group": "extensions",
       "inputs": [
@@ -329,12 +329,12 @@
       }
     },
     {
-      "id": "permission-asks-you",
-      "from": "permission-check",
-      "to": "you",
-      "kind": "calls",
-      "label": "asks you to approve",
-      "explanation": "Only when the mode and the rules do not already decide the call.",
+      "id": "you-decide",
+      "from": "you",
+      "to": "permission-check",
+      "kind": "sends-data-to",
+      "label": "your approval or refusal",
+      "explanation": "The permission check asks you only when the mode and the rules do not already decide the call. Your answer comes back here.",
       "source": {
         "kind": "documented-intent",
         "references": [
@@ -514,7 +514,7 @@
           "highlight": [
             "loop-to-permission",
             "permission-check",
-            "permission-asks-you"
+            "you-decide"
           ]
         },
         {
@@ -563,7 +563,7 @@
           "highlight": [
             "loop-to-permission",
             "permission-check",
-            "permission-asks-you",
+            "you-decide",
             "you"
           ]
         },

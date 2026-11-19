@@ -17,14 +17,24 @@
   },
   "groups": [
     {
+      "id": "input",
+      "label": "Your prompt goes in",
+      "description": "Turning your text into tokens and holding them in the window."
+    },
+    {
       "id": "transformer",
       "label": "Inside the transformer",
-      "description": "The layers that turn those pieces into a prediction. A real model repeats them many times."
+      "description": "The layers that turn those tokens into a prediction. A real model repeats them many times."
     },
     {
       "id": "writing",
       "label": "Writing the answer",
       "description": "Picking one token at a time, and reaching outside the model."
+    },
+    {
+      "id": "outside",
+      "label": "Outside the model",
+      "description": "The app and tools that act on what the model writes."
     },
     {
       "id": "making",
@@ -36,7 +46,7 @@
     {
       "id": "tokenizer",
       "label": "Tokenizer",
-      "summary": "Cuts your text into tokens, which are short pieces of words, and turns each one into a number.",
+      "summary": "Cuts your text into tokens, short pieces of words, and numbers each one.",
       "explanation": "A model never reads letters. It reads **tokens**. A common word is often one token, and a rare word may be several.\n\nThe size of the window is counted in tokens. For Opus 5.5, Anthropic says 1M tokens is roughly 555k words.",
       "inputs": [
         "Your text"
@@ -53,12 +63,13 @@
             "note": "Words per token on the current tokenizer."
           }
         ]
-      }
+      },
+      "group": "input"
     },
     {
       "id": "context-window",
       "label": "Context window",
-      "summary": "The model's working memory: your prompt, the earlier conversation, tool results, and the answer so far.",
+      "summary": "The model's working memory: your prompt, the chat so far, and the answer so far.",
       "explanation": "The window holds everything the model can use for the next token, including the answer it is writing. It is **not** the training data. The model does not look anything up in that.\n\nOpus 5.5 has a 1M-token window. When a conversation grows past what fits, an app has to shorten it, for example by summarizing the older parts.",
       "inputs": [
         "Tokens from the tokenizer",
@@ -77,12 +88,13 @@
             "note": "Everything in the request counts, including the output."
           }
         ]
-      }
+      },
+      "group": "input"
     },
     {
       "id": "embeddings",
       "label": "Embeddings",
-      "summary": "Turns each token number into a long list of numbers (a vector) that the model can do arithmetic on.",
+      "summary": "Turns each token number into a vector, a list of numbers that can be compared.",
       "explanation": "The vector for a token starts out the same wherever the token appears, and learning during training put similar words near each other. The model also adds information about each token's **position**, because order matters.",
       "group": "transformer",
       "inputs": [
@@ -98,7 +110,7 @@
     {
       "id": "attention",
       "label": "Attention",
-      "summary": "Lets each token look at the earlier tokens and decide which ones matter for its meaning here.",
+      "summary": "Lets each token look at earlier tokens and weigh which ones matter.",
       "explanation": "In the sentence \"The dog chased the cat because it was fast\", attention helps decide what \"it\" refers to. Each token mixes in information from the tokens that score as relevant.\n\nA model usually runs many attention \"heads\" side by side, and each head can focus on a different kind of link.",
       "group": "transformer",
       "inputs": [
@@ -114,7 +126,7 @@
     {
       "id": "feed-forward",
       "label": "Feed-forward layers",
-      "summary": "Process each token's vector on its own, to transform what attention gathered. Then the next layer starts.",
+      "summary": "Transforms each token's vector on its own. The pair then repeats in the next layer.",
       "explanation": "A transformer stacks the same pair many times: attention, then feed-forward. Each pass refines the vectors. Early layers tend to capture simple patterns, and later layers more abstract ones.\n\nMuch of what the model knows is stored in the numbers (weights) of these layers, but nobody can point to one fact in one place.",
       "group": "transformer",
       "inputs": [
@@ -130,7 +142,7 @@
     {
       "id": "next-token",
       "label": "Next-token prediction",
-      "summary": "Turns the final vector into a score for every token in the vocabulary: how likely is each one to come next?",
+      "summary": "Gives every possible next token a score: how likely is it to come next?",
       "explanation": "The model does exactly one job: given the tokens so far, rate every possible next token. Writing an essay, a function, or an answer is that one job, repeated.",
       "group": "writing",
       "inputs": [
@@ -146,8 +158,8 @@
     {
       "id": "sampling",
       "label": "Sampling",
-      "summary": "Picks one token from those probabilities. A setting called temperature makes the pick more or less random.",
-      "explanation": "Always taking the top token gives the same text every time. Sampling takes a likely token, sometimes not the top one, so the same prompt can give different answers.",
+      "summary": "Picks one token from those scores. Temperature sets how random the pick is.",
+      "explanation": "A setting called temperature makes the pick more or less random. Always taking the top token gives the same text every time. Sampling takes a likely token, sometimes not the top one, so the same prompt can give different answers.",
       "group": "writing",
       "inputs": [
         "Probabilities for the next token",
@@ -163,8 +175,8 @@
     {
       "id": "generation-loop",
       "label": "Generation loop",
-      "summary": "Adds the chosen token to the context window and runs the whole pass again, until the model writes a stop token.",
-      "explanation": "The answer is written **one token at a time**. After each token the model reads the longer context again. Production systems reuse work from earlier passes so that this is fast, but the idea stays the same.\n\nThe loop also stops when the output limit is reached. Opus 5.5 can write up to 128K tokens in one answer.",
+      "summary": "Adds the chosen token to the context and runs the pass again, until a stop token.",
+      "explanation": "The loop adds the token to the context window and runs the whole pass again, until the model writes a stop token. The answer is written **one token at a time**. After each token the model reads the longer context again. Production systems reuse work from earlier passes so that this is fast, but the idea stays the same.\n\nThe loop also stops when the output limit is reached. Opus 5.5 can write up to 128K tokens in one answer.",
       "group": "writing",
       "inputs": [
         "The chosen token"
@@ -187,9 +199,9 @@
     {
       "id": "tool-use",
       "label": "Tool use",
-      "summary": "The model writes a structured tool call. The app runs it and adds the result to the context window.",
+      "summary": "The model writes a tool call, the app runs it, and the result joins the context.",
       "explanation": "Tool use is ordinary text generation that follows a format. The model does not run anything. It stops with a request such as \"call this tool with these arguments\".\n\nFor tools that you define, your application runs the call and sends back the result. The model then continues with that result in its context.",
-      "group": "writing",
+      "group": "outside",
       "inputs": [
         "A tool call written by the model"
       ],
@@ -210,8 +222,8 @@
     {
       "id": "pretraining",
       "label": "Pretraining",
-      "summary": "The model reads a huge amount of text and learns to predict the next token. This stage builds most of what it knows.",
-      "explanation": "At first the model's numbers are random. The training run shows it text, checks its guesses against the real next token, and nudges millions or billions of numbers to guess better. Then it repeats this at enormous scale.\n\nWhat a model learns here is language, facts, and patterns of reasoning. It does not yet follow instructions well.",
+      "summary": "The model reads a huge amount of text and learns to predict the next token.",
+      "explanation": "At first the model's numbers are random. The training run shows it text, checks its guesses against the real next token, and nudges millions or billions of numbers to guess better. Then it repeats this at enormous scale.\n\nThis stage builds most of what the model knows. It learns language, facts, and patterns of reasoning. It does not yet follow instructions well.",
       "group": "making",
       "inputs": [
         "A very large body of text"
@@ -226,8 +238,8 @@
     {
       "id": "fine-tuning",
       "label": "Fine-tuning with feedback",
-      "summary": "Further training with human and AI feedback teaches the model to follow instructions and to be helpful and honest.",
-      "explanation": "People and AI models compare answers and say which is better. Training then pushes the model toward the preferred kind of answer. Anthropic has described methods such as learning from human feedback and Constitutional AI, where an AI model applies written principles.\n\nThe weights that come out of this stage are what you talk to.",
+      "summary": "Feedback from people and AI teaches it to follow instructions and be helpful.",
+      "explanation": "People and AI models compare answers and say which is better. Training then pushes the model toward the preferred kind of answer. Anthropic has described methods such as learning from human feedback and Constitutional AI, where an AI model applies written principles.\n\nThe weights that come out of this stage are the numbers that every layer uses when you send a prompt.",
       "group": "making",
       "inputs": [
         "The pretrained model",
@@ -336,17 +348,6 @@
       "to": "fine-tuning",
       "kind": "sends-data-to",
       "label": "a model that continues text",
-      "source": {
-        "kind": "agent-explanation"
-      }
-    },
-    {
-      "id": "fine-tuning-to-layers",
-      "from": "fine-tuning",
-      "to": "embeddings",
-      "kind": "sends-data-to",
-      "label": "the learned weights",
-      "explanation": "Embeddings, attention, and feed-forward layers all use the weights that training produced. One line stands for all three.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -503,7 +504,6 @@
         {
           "caption": "The final weights are what the layers use for every prompt you send.",
           "highlight": [
-            "fine-tuning-to-layers",
             "embeddings",
             "attention",
             "feed-forward"
