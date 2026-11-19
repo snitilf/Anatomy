@@ -76,6 +76,18 @@ export function arrowOf(pair: Pick<Pair, 'ab' | 'ba'>, points: readonly Point[])
   return { at: tip, angle: (Math.atan2(tip.y - from.y, tip.x - from.x) * 180) / Math.PI }
 }
 
+/** The middle of the longest straight run of a line: where a tag goes when no count was placed. */
+export function middleOf(points: readonly Point[]): Point {
+  let best: { p: Point; q: Point; length: number } | undefined
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i - 1] as Point
+    const q = points[i] as Point
+    const length = Math.abs(q.x - p.x) + Math.abs(q.y - p.y)
+    if (!best || length > best.length) best = { p, q, length }
+  }
+  return best ? { x: (best.p.x + best.q.x) / 2, y: (best.p.y + best.q.y) / 2 } : (points[0] ?? { x: 0, y: 0 })
+}
+
 /** Arrowheads closer than this on screen, at the same side of the same block, read as a ladder. */
 export const ARROW_GAP_PX = 6
 

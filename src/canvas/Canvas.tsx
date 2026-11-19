@@ -44,8 +44,12 @@ import { assembleGraph, computeGeometry, editedId, geometrySteps, GraphCache, MA
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
-import { bundleGroups } from './bundles'
-import { computeBundles } from './bundleRoutes'
+import { bundleSelection } from '../app/state'
+import { usePhone } from '../app/usePhone'
+import { frameConnection } from './bundleFrame'
+import { bundleWords, type BundleWords } from './bundleWords'
+import { bundleGroups, connectionsOf } from './bundles'
+import { computeBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup } from './FarLayer'
 import { CardNode } from './CardNode'
@@ -537,7 +541,7 @@ export function Canvas() {
     [far, board, geometryNow],
   )
   const farTiles = useMemo<Rect[]>(() => (far && rectsNow ? Object.values(rectsNow) : []), [far, rectsNow])
-  const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link')
+  const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link' || selection?.type === 'bundle')
   /** Frames a group, at a zoom where its cards show their text. */
   const pickGroup = useCallback(
     (id: string) => {
@@ -548,6 +552,27 @@ export function Canvas() {
       if (area) frameArea(camera, area)
     },
     [camera],
+  )
+  /** How a bundle reads, for its tag and its button. */
+  const describeBundle = useCallback(
+    (b: Bundle): BundleWords => (board ? bundleWords(board, proposals ?? [], b) : { first: '', second: '', way: 'both', title: '', tag: '', spoken: '' }),
+    [board, proposals],
+  )
+  const phone = usePhone()
+  /** A bundle opens as a bundle, and one that holds a single connection opens that connection, at a zoom where it reads. */
+  const openBundle = useCallback(
+    (b: Bundle) => {
+      if (!board) return
+      const only = b.count === 1 ? connectionsOf(board, links ?? [], reconnects ?? []).find((c) => c.id === b.connectionIds[0]) : undefined
+      if (!only) {
+        dispatch({ type: 'select', selection: bundleSelection(b.a, b.b) })
+        return
+      }
+      dispatch({ type: 'select', selection: { type: only.mine ? 'link' : 'relationship', id: only.id } })
+      // The sheet of a phone covers the lower half of the map.
+      requestAnimationFrame(() => frameConnection(camera, camera.rectOf(only.from), camera.rectOf(only.to), phone ? 0.5 : 0))
+    },
+    [board, links, reconnects, dispatch, camera, phone],
   )
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
@@ -1046,7 +1071,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <FarMode onChange={setFar} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} onPick={pickGroup} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}

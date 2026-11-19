@@ -105,7 +105,7 @@
 }
 
 /* A selection is a spotlight, on the bundles too. */
-.canvas[data-spot] [data-bundle] {
+.canvas[data-spot] [data-bundle]:not([data-on]) {
   opacity: var(--spot-line);
 }
 
