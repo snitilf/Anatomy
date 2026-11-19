@@ -85,7 +85,14 @@ describe.each([
     }
     for (const edge of first.edges) {
       const again = second.edges.find((e) => e.id === edge.id)!
-      expect(again === edge).toBe(!mine.has(edge.id))
+      if (mine.has(edge.id) || again === edge) {
+        expect(again === edge).toBe(!mine.has(edge.id))
+        continue
+      }
+      // A label near the edge of the moved card's group sees that group change size: only its tint differs.
+      expect(group).toBeDefined()
+      expect({ ...again.data, tint: '' }).toEqual({ ...edge.data, tint: '' })
+      expect(again.data!.tint).not.toBe(edge.data!.tint)
     }
   })
 
