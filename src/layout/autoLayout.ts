@@ -327,9 +327,15 @@ function flowAndPack(
   return { at, width, height }
 }
 
+/** Lighter than any one connection, so ranking gives up this edge first. */
+const LOOP_WEIGHT = 0.1
+
 /**
  * Merges the connections between two nodes into one edge, with the count as its weight. Connections in both directions
  * become one edge from the node the board lists first: a reply that comes back does not turn the flow around.
+ * A connection that only runs backward keeps its own direction, so the card it comes from sits on the left. The exception
+ * is a connection that closes a loop: it is turned to follow the file and given the lightest weight, so ranking breaks
+ * the loop at its closing connection and the cards keep the order of the board.
  */
 function oriented(pairs: readonly { from: string; to: string; label: number }[], order: ReadonlyMap<string, number>): Edge[] {
   const out = new Map<string, Edge & { back: number }>()
@@ -344,7 +350,42 @@ function oriented(pairs: readonly { from: string; to: string; label: number }[],
     else e.back++
     out.set(key, e)
   }
-  return [...out.values()].map((e) => (e.weight === 0 ? { from: e.to, to: e.from, weight: e.back, label: e.label } : { from: e.from, to: e.to, weight: e.weight + e.back, label: e.label }))
+  const all = [...out.values()]
+  // The edges that follow the file never form a loop, so a back-only edge closes one when its target already leads to its source.
+  const next = new Map<string, string[]>()
+  const link = (from: string, to: string) => next.set(from, [...(next.get(from) ?? []), to])
+  for (const e of all) if (e.weight > 0) link(e.from, e.to)
+  const reaches = (from: string, to: string) => {
+    const seen = new Set([from])
+    const stack = [from]
+    while (stack.length > 0) {
+      const at = stack.pop() as string
+      if (at === to) return true
+      for (const n of next.get(at) ?? []) {
+        if (!seen.has(n)) {
+          seen.add(n)
+          stack.push(n)
+        }
+      }
+    }
+    return false
+  }
+  const result: Edge[] = []
+  const lone = all.filter((e) => e.weight === 0)
+  for (const e of all) if (e.weight > 0) result.push({ from: e.from, to: e.to, weight: e.weight + e.back, label: e.label })
+  for (const e of lone) {
+    // e runs from the earlier card; its real direction is e.to -> e.from.
+    // The turned edge points forward like the rest, so no loop is left for the acyclic step to break by reversing some
+    // edge of the chain. Its low weight keeps this shortcut from pulling its two ends close together.
+    if (reaches(e.from, e.to)) {
+      result.push({ from: e.from, to: e.to, weight: LOOP_WEIGHT, label: e.label })
+      link(e.from, e.to)
+    } else {
+      result.push({ from: e.to, to: e.from, weight: e.back, label: e.label })
+      link(e.to, e.from)
+    }
+  }
+  return result
 }
 
 /** The shapes tried for a layout: the ratio a group is packed toward, and the ratio of the whole. */

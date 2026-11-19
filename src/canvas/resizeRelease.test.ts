@@ -67,7 +67,17 @@ describe.each([...allBoards(), sixty()].map((b) => [b.title, b] as const))('rele
       // A line whose cards did not change and that no changed card reaches is the very same line.
       const old = solved.edges.get(edgeId)!
       const reached = [...changed].some((k) => old.points.some((p) => p.x > after[k]!.x - 16 && p.x < after[k]!.x + after[k]!.width + 16 && p.y > after[k]!.y - 16 && p.y < after[k]!.y + after[k]!.height + 16))
-      if (!changed.has(shape.from) && !changed.has(shape.to) && !reached) expect(shape.path).toBe(old.path)
+      // Lines that end on the same card side share its slots, so one that meets a solved-again line may shift along the side.
+      const solvedAgain = (e: { from: string; to: string; points: readonly { x: number; y: number }[] }) =>
+        changed.has(e.from) || changed.has(e.to) || [...changed].some((k) => e.points.some((p) => p.x > after[k]!.x - 16 && p.x < after[k]!.x + after[k]!.width + 16 && p.y > after[k]!.y - 16 && p.y < after[k]!.y + after[k]!.height + 16))
+      const shares = [...solved.edges.values()].some((e) => e.id !== edgeId && solvedAgain(e) && (e.from === shape.from || e.to === shape.from || e.from === shape.to || e.to === shape.to))
+      if (!changed.has(shape.from) && !changed.has(shape.to) && !reached && !shares) expect(shape.path).toBe(old.path)
+      // Even when it shifts, a line whose cards did not change leaves each card by the side it left by before.
+      if (!changed.has(shape.from) && !changed.has(shape.to)) {
+        const sideOf = (p: { x: number; y: number }, r: Rect) => (Math.abs(p.x - r.x) < 1 ? 'left' : Math.abs(p.x - (r.x + r.width)) < 1 ? 'right' : Math.abs(p.y - r.y) < 1 ? 'top' : Math.abs(p.y - (r.y + r.height)) < 1 ? 'bottom' : 'inside')
+        expect(sideOf(shape.points[0]!, after[shape.from]!)).toBe(sideOf(old.points[0]!, after[shape.from]!))
+        expect(sideOf(shape.points.at(-1)!, after[shape.to]!)).toBe(sideOf(old.points.at(-1)!, after[shape.to]!))
+      }
     }
   })
 })

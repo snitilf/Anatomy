@@ -256,7 +256,10 @@ describe.each([
     const far = drop({ x: 6000, y: 6000 })
     for (const [edgeId, shape] of far.solved.edges) {
       if (mine.has(edgeId)) continue
-      expect(far.after.edges.get(edgeId)).toBe(shape)
+      // The line stays where it was. Its label may move off a spot that a re-routed line of the moved card now crosses.
+      const kept = far.after.edges.get(edgeId)!
+      expect(kept.path).toBe(shape.path)
+      expect(kept.points).toEqual(shape.points)
     }
   })
 
