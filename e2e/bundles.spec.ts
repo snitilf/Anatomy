@@ -16,7 +16,7 @@ async function onLine(unit: Locator): Promise<{ x: number; y: number }> {
     const total = path.getTotalLength()
     const m = path.getScreenCTM()!
     const unit = path.closest('[data-unit]')!
-    for (const t of [0.25, 0.75, 0.4, 0.6, 0.1, 0.9, 0.5]) {
+    for (const t of [0.25, 0.75, 0.4, 0.6, 0.1, 0.9, 0.5, 0.05, 0.15, 0.2, 0.3, 0.35, 0.45, 0.55, 0.65, 0.7, 0.8, 0.85, 0.95]) {
       const p = path.getPointAtLength(total * t)
       const x = p.x * m.a + m.e
       const y = p.y * m.d + m.f
@@ -77,6 +77,20 @@ test.describe('bundles in the far view', () => {
     expect(await page.locator('g[data-active]').count()).toBeGreaterThanOrEqual(count)
     const other = units(page).nth(5)
     expect(await other.locator('path[data-bundle]').evaluate((p) => Number.parseFloat(getComputedStyle(p).opacity))).toBeLessThan(0.3)
+  })
+
+  test('a line is as wide on screen as it is meant to be, at any zoom', async ({ page }) => {
+    await open(page, SIXTY)
+    const zoom = await zoomOf(page)
+    const { unit, at } = await pickMany(page)
+    const hit = await unit.locator('path[data-hit]').evaluate((p) => Number.parseFloat(getComputedStyle(p).strokeWidth))
+    expect(hit * zoom).toBeGreaterThan(11)
+    await page.mouse.click(at.x, at.y)
+    const widths = await page.locator('g[data-active] .react-flow__edge-path').evaluateAll((all) => all.map((p) => Number.parseFloat(getComputedStyle(p).strokeWidth)))
+    expect(widths.length).toBeGreaterThan(0)
+    for (const w of widths) expect(w * zoom).toBeGreaterThan(1.8)
+    const bundle = await unit.locator('path[data-bundle]').evaluate((p) => Number.parseFloat(getComputedStyle(p).strokeWidth))
+    expect(bundle * zoom).toBeGreaterThan(3)
   })
 
   test('a row opens its connection and leaves the far view', async ({ page }) => {
@@ -219,11 +233,22 @@ test.describe('on a phone', () => {
 
   test('a bundle whose head was dropped still shows its direction', async ({ page }) => {
     await open(page, SIXTY)
-    const dropped = page.locator('[data-unit]:has(div[data-dropped])').first()
-    await expect(dropped).toBeAttached()
-    const opacity = await dropped.locator('div[data-dropped]').evaluate((el) => getComputedStyle(el).opacity)
-    expect(opacity).toBe('0')
-    const at = await onLine(dropped)
+    const all = page.locator('[data-unit]:has(div[data-dropped])')
+    await expect(all.first()).toBeAttached()
+    // Crowded lines overlap on a phone: take the first one a pointer can reach.
+    let dropped = all.first()
+    let at: { x: number; y: number } | undefined
+    for (const candidate of await all.all()) {
+      try {
+        at = await onLine(candidate)
+        dropped = candidate
+        break
+      } catch {
+        // Covered by a neighbor.
+      }
+    }
+    if (!at) throw new Error('no dropped head can be reached')
+    expect(await dropped.locator('div[data-dropped]').evaluate((el) => getComputedStyle(el).opacity)).toBe('0')
     await page.mouse.move(at.x, at.y)
     await expect(tag(page)).toHaveText(/(→|←)/)
     await expect(dropped.locator('div[data-dropped]')).toHaveCSS('opacity', '1')

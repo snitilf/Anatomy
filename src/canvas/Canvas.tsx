@@ -60,7 +60,7 @@ import { ManualEdge } from './ManualEdge'
 import { RelationshipEdge } from './RelationshipEdge'
 import { inView, SNAP_PX, SnapTargets } from './snap'
 import { SnapGuides, type GuideLines } from './SnapGuides'
-import { stepBackRules } from './emphasis'
+import { partRules, stepBackRules } from './emphasis'
 import { ZoomBar } from './ZoomBar'
 import { partStates, type ItemState } from '../status/state'
 
@@ -553,6 +553,15 @@ export function Canvas() {
     },
     [camera],
   )
+  /** The parts a selected bundle's connections touch, lifted like a spotlighted card. One rule, so the map does not render again. */
+  const bundleLift = useMemo(() => {
+    if (selection?.type !== 'bundle' || !board || step) return ''
+    const pair = bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? []).find((p) => p.a === selection.a && p.b === selection.b)
+    const ids = new Set(pair?.connectionIds)
+    const parts = new Set<string>()
+    for (const c of connectionsOf(board, links ?? [], reconnects ?? [])) if (ids.has(c.id)) parts.add(c.from).add(c.to)
+    return parts.size > 0 ? partRules([...parts]) : ''
+  }, [selection, board, links, reconnects, proposals, step])
   /** How a bundle reads, for its tag and its button. */
   const describeBundle = useCallback(
     (b: Bundle): BundleWords => (board ? bundleWords(board, proposals ?? [], b) : { first: '', second: '', way: 'both', title: '', tag: '', spoken: '' }),
@@ -825,7 +834,7 @@ export function Canvas() {
     if (farRef.current) {
       // The far view: the lines are out of the picture, so only the part's own come in, solid, and the bundles step back.
       style.textContent = `[data-hover-scope][data-far] g[data-ends~="${id}"] { opacity: 1 !important; --line-ink: var(--fg-2); }
-[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: none !important; stroke-width: 2px !important; }
+[data-hover-scope][data-far] g[data-ends~="${id}"] .react-flow__edge-path { stroke-dasharray: none !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
 [data-hover-scope] [data-bundle] { opacity: var(--spot-line); }`
       return
     }
@@ -1023,6 +1032,7 @@ export function Canvas() {
       data-hover-scope=""
     >
       <style ref={hoverStyle} />
+      {bundleLift && <style>{bundleLift}</style>}
       <CameraContext.Provider value={camera}>
         <ReactFlow
           key={board.id}
@@ -1071,7 +1081,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <FarMode onChange={setFar} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selection?.type === 'bundle' ? [selection.a, selection.b] : undefined} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}

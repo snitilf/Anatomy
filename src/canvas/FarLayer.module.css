@@ -34,7 +34,8 @@
 .bundle {
   fill: none;
   stroke: var(--line-strong);
-  stroke-width: calc(var(--w, 1.5) * 1px);
+  /* Drawn on the board and scaled with it, so the width is multiplied back to screen pixels. */
+  stroke-width: calc(var(--w, 1.5) * 1px * var(--label-scale, 1));
   stroke-linecap: butt;
   vector-effect: non-scaling-stroke;
   transition: opacity 120ms var(--ease-out);
@@ -48,7 +49,7 @@
 .hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 12px;
+  stroke-width: calc(12px * var(--label-scale, 1));
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
   pointer-events: stroke;
@@ -58,7 +59,7 @@
 /* A finger is not a pointer: a touch that lands within a few pixels of a thin stroke is given to the map behind it. */
 @media (pointer: coarse) {
   .hit {
-    stroke-width: 24px;
+    stroke-width: calc(24px * var(--label-scale, 1));
   }
 }
 
@@ -67,7 +68,7 @@
 .unit:has(:focus-visible) .bundle,
 .unit[data-on] .bundle {
   stroke: var(--lift-ink);
-  stroke-width: calc(var(--w, 1.5) * 1px + 1.5px);
+  stroke-width: calc((var(--w, 1.5) * 1px + 1.5px) * var(--label-scale, 1));
   opacity: 1 !important;
 }
 
@@ -265,4 +266,9 @@
   color: var(--fg-3);
   font-weight: var(--weight-regular);
   font-variant-numeric: tabular-nums;
+}
+
+/* A bundle is selected: the names of its two groups keep full ink and the others step back. */
+.name[data-quiet] {
+  color: var(--fg-3);
 }

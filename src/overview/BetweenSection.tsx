@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowLeftRight, ChevronRight, Link2, Map as MapIcon, MoveRight } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, ArrowRight, ChevronRight, Link2, Map as MapIcon, MoveRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { bundleSelection, type Selection } from '../app/state'
 import { Tip } from '../app/Tip'
@@ -8,7 +8,7 @@ import { endsOf } from '../inspector/flowRows'
 import { partName } from '../inspector/names'
 import type { Layer } from '../layer/model'
 import type { OverviewActions } from './actions'
-import { endName as nameOf, endRank } from '../canvas/bundleWords'
+import { bundleWords, endName as nameOf, endRank } from '../canvas/bundleWords'
 import { bundleGroups } from '../canvas/bundles'
 import { innerConnections, type Bundle } from './innerConnections'
 import { overviewMemory } from './memory'
@@ -102,6 +102,9 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
           const first = endRank(board, b.a) <= endRank(board, b.b)
           const a = endName(board, layer, first ? b.a : b.b)
           const z = endName(board, layer, first ? b.b : b.a)
+          // The arrow is the way the connections run, as the far view's tag says it.
+          const words = bundleWords(board, layer.proposals, b)
+          const Way = words.way === 'forward' ? ArrowRight : words.way === 'backward' ? ArrowLeft : ArrowLeftRight
           return (
             <li key={key} className={styles.pairItem}>
               <button
@@ -110,13 +113,13 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
                 data-row={`between:${key}`}
                 data-yours={b.mine || undefined}
                 aria-expanded={open}
-                aria-label={`${a} and ${z}, ${b.count} ${b.count === 1 ? 'connection' : 'connections'}`}
+                aria-label={words.spoken}
                 onClick={() => toggle(key, open)}
               >
                 <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
                 <span className={styles.pairEnds}>
                   <span>{a}</span>
-                  <ArrowLeftRight className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                  <Way className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
                   <span>{z}</span>
                 </span>
                 <span className={styles.end}>

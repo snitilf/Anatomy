@@ -36,6 +36,7 @@ export const FarLayer = memo(function FarLayer({
   bundles,
   tiles,
   selected,
+  selectedEnds,
   words,
   onPick,
   onOpen,
@@ -46,6 +47,8 @@ export const FarLayer = memo(function FarLayer({
   tiles: readonly Rect[]
   /** The key of the selected bundle. */
   selected?: string | undefined
+  /** The two ends of the selected bundle. The names of the other groups step back. */
+  selectedEnds?: readonly string[] | undefined
   /** How a bundle reads, for its tag and its button. */
   words: (bundle: Bundle) => BundleWords
   onPick: (id: string) => void
@@ -152,7 +155,7 @@ export const FarLayer = memo(function FarLayer({
       <div ref={layer} className={styles.layer} onPointerOver={onOver} onPointerOut={onOut} onPointerDown={onPress} onFocus={onFocus} onBlur={onBlur} onClick={onClick}>
         {groups.map((g) => (
           <div key={g.id} className={styles.anchor} style={{ left: g.area.x, top: g.area.y }}>
-            <button type="button" className={styles.name} data-far-label="" title={g.label} aria-label={`${g.label}, ${g.count} ${g.count === 1 ? 'part' : 'parts'}. Zoom to this group.`} onClick={() => onPick(g.id)}>
+            <button type="button" className={styles.name} data-far-label="" data-quiet={selectedEnds && !selectedEnds.includes(`group:${g.id}`) ? '' : undefined} title={g.label} aria-label={`${g.label}, ${g.count} ${g.count === 1 ? 'part' : 'parts'}. Zoom to this group.`} onClick={() => onPick(g.id)}>
               <span className={styles.text}>{g.label}</span>
               <span className={styles.number}>{g.count}</span>
             </button>

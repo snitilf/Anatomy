@@ -113,5 +113,6 @@
 .canvas[data-far] g[data-active] :global(.react-flow__edge-path),
 .canvas[data-far] g[data-selected] :global(.react-flow__edge-path) {
   stroke-dasharray: none !important;
-  stroke-width: 2.5px !important;
+  /* The map's own scale takes the line down with the board, so the width is multiplied back to screen pixels. */
+  stroke-width: calc(2px * var(--label-scale, 1)) !important;
 }

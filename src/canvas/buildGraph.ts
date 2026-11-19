@@ -528,9 +528,11 @@ export function assembleGraph(
   const touching = new Set<string>()
   if (softening && bundle) {
     const clusters = clusterOf(board, user.proposals)
-    for (const [id, cluster] of clusters) if (cluster === bundle.a || cluster === bundle.b) touching.add(id)
-    const pair = countPairs(clusters, connectionsOf(board, links, user.reconnects)).find((p) => p.a === bundle.a && p.b === bundle.b)
+    const all = connectionsOf(board, links, user.reconnects)
+    const pair = countPairs(clusters, all).find((p) => p.a === bundle.a && p.b === bundle.b)
     for (const id of pair?.connectionIds ?? []) bundled.add(id)
+    // The parts the connections touch stay. The rest of the two groups steps back with everything else.
+    for (const c of all) if (bundled.has(c.id)) touching.add(c.from).add(c.to)
   } else if (softening) {
     if (selectedPart !== undefined) {
       touching.add(selectedPart)

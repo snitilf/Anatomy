@@ -34,7 +34,7 @@ const edgeIds = (edges: readonly string[]) => edges.flatMap((id) => (id.startsWi
 const each = (ids: readonly string[], scope: string, tag: string, after = '') => ids.map((id) => `${scope} ${tag}[data-edge="${CSS.escape(id)}"]${after}`).join(',\n')
 
 /** The look of selection, lighter: an accent edge and a thin ring, where selection has a thicker one. A selected card keeps its own. */
-function partRules(parts: readonly string[]): string {
+export function partRules(parts: readonly string[]): string {
   const nodes = parts.map((id) => `[data-hover-scope] .react-flow__node[data-id="${CSS.escape(id)}"] [data-card]:not([data-selected])`)
   // A tile in the far view has no edge to speak of, so it takes a tint of the accent.
   const tiles = parts.map((id) => `[data-hover-scope][data-far] .react-flow__node[data-id="${CSS.escape(id)}"] [data-card]:not([data-selected])`)
@@ -57,7 +57,7 @@ function edgeRules(edges: readonly string[]): string {
 ${each(ids, '[data-hover-scope]', 'g')} { opacity: 1; }
 ${each(ids, '[data-hover-scope]', 'g', ' .react-flow__edge-path')} { stroke: var(--accent-line) !important; stroke-width: 1.75px !important; }
 ${each(ids, far, 'g')} { opacity: 1 !important; }
-${each(ids, far, 'g', ' .react-flow__edge-path')} { stroke-dasharray: none !important; stroke-width: 2px !important; }
+${each(ids, far, 'g', ' .react-flow__edge-path')} { stroke-dasharray: none !important; stroke-width: calc(2px * var(--label-scale, 1)) !important; }
 ${each(ids, '[data-hover-scope]', '[data-label]')} { color: var(--accent-line); }
 ${each(ids, quiet, '[data-label]')} { visibility: visible !important; opacity: 1 !important; }`
 }
