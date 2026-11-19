@@ -19,7 +19,7 @@ Rules:
 - Use 6 to 12 parts. Group them as Frontend, Backend, Infrastructure, or similar, one level only.
 - Give every part and connection an honest source: user-stated for what I told you, agent-explanation for what you understood, agent-proposal for what you suggest, documented-intent only with a cited document.
 - Never claim that you checked code or saw it running. Cited paths are shown as "cited, not checked".
-- If a consequential detail is unknown, ask me first. Record what stays unknown as "unknown" or "question" items.
+- Before you write, ask me a few plain questions, with your recommended answer for each. Record what stays unknown as "unknown" or "question" items.
 - Add 1 to 4 walkthroughs. Highlights name parts and connections only.
 - Every ID is unique across the whole board, and every reference must point at something that exists.
 - Write the board to .anatomy/board.json in this repository. If you cannot write files, return only the JSON.
@@ -104,7 +104,7 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
             Give your agent the guide and the schema.
           </li>
           <li>
-            Paste the prompt below and say what you want explained.
+            Paste the prompt below and say what you want explained. The agent asks a few questions first.
           </li>
           <li>
             Save the JSON it writes, then open that file here.
