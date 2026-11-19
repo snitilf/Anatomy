@@ -1,0 +1,32 @@
+{
+  "format": "anatomy-feedback",
+  "schemaVersion": 1,
+  "id": "feedback-clear0000001",
+  "boardId": "taskly",
+  "baseRevision": 2,
+  "createdAt": "2026-11-14T10:02:00.000Z",
+  "items": [
+    { "id": "note-aaaaaaaaaa01", "type": "note", "text": "Name the three routes in the summary.", "about": { "type": "component", "id": "api", "label": "API" }, "snapshot": { "type": "component", "label": "API", "summary": "Three routes: list tasks, add a task, toggle a task." } },
+    { "id": "question-aaaaaaaa02", "type": "question", "text": "Can two people share one task list?", "about": { "type": "component", "id": "database", "label": "Database" }, "snapshot": { "type": "component", "label": "Database", "summary": "A SQLite file with a users table and a tasks table." } },
+    {
+      "id": "edit-aaaaaaaaaaa03",
+      "type": "reconnect",
+      "connection": { "id": "reminders-to-store", "label": "due tasks", "kind": "reads-from" },
+      "was": { "from": { "type": "component", "id": "reminders", "label": "Email reminders" }, "to": { "type": "component", "id": "task-store", "label": "Task store" } },
+      "now": { "from": { "type": "component", "id": "reminders", "label": "Email reminders" }, "to": { "type": "component", "id": "database", "label": "Database" } }
+    },
+    {
+      "id": "part-aaaaaaaaaaa04",
+      "type": "new-part",
+      "label": "Audit log",
+      "summary": "Records who added or toggled a task.",
+      "links": [{ "id": "link-aaaaaaaaaa05", "direction": "from", "part": { "type": "component", "id": "api", "label": "API" }, "label": "writes entries" }],
+      "near": [{ "type": "component", "id": "task-store", "label": "Task store" }]
+    },
+    { "id": "link-aaaaaaaaaa05", "type": "link", "from": { "type": "component", "id": "api", "label": "API" }, "to": { "type": "new-part", "id": "part-aaaaaaaaaaa04", "label": "Audit log" }, "label": "writes entries" },
+    { "id": "draw-aaaaaaaaaaa06", "type": "drawing", "note": "Call these two the security layer.", "encloses": [{ "type": "component", "id": "session-check", "label": "Session check" }, { "type": "component", "id": "api", "label": "API" }], "touches": [] },
+    { "id": "text-aaaaaaaaaaa07", "type": "text", "text": "Show what the page does while tasks load.", "on": [{ "type": "component", "id": "web-page", "label": "Web page" }] },
+    { "id": "sticky-aaaaaaaaaa08", "type": "sticky", "text": "Is the password stored in plain text?", "on": [{ "type": "component", "id": "database", "label": "Database" }] }
+  ],
+  "withdrawn": []
+}
