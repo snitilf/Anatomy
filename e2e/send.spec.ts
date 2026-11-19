@@ -1,5 +1,9 @@
 /// <reference lib="dom" />
-import { readFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { mkdir, mkdtemp, readFile, rm, writeFile as writeDiskFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { promisify } from 'node:util'
 import { expect, test, type Page } from '@playwright/test'
 
 // The key src/workspace/testFolder.ts reads: a stand-in repository folder kept in localStorage.
@@ -18,6 +22,24 @@ const fileText = (page: Page, name: string) =>
     ([key, file]) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string }> }).files[file]?.text,
     [KEY, name] as const,
   )
+
+/** Copies the stand-in folder to disk and runs the `anatomy.mjs` that the app wrote there, as an agent would. */
+async function runTool(page: Page, args: string[]): Promise<{ code: number; stdout: string }> {
+  const files = await page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string }> }).files, KEY)
+  const dir = await mkdtemp(join(tmpdir(), 'anatomy-e2e-'))
+  try {
+    await mkdir(join(dir, '.anatomy'))
+    for (const [name, file] of Object.entries(files)) await writeDiskFile(join(dir, '.anatomy', name), file.text)
+    try {
+      return { code: 0, stdout: (await promisify(execFile)(process.execPath, ['.anatomy/anatomy.mjs', ...args], { cwd: dir })).stdout }
+    } catch (error) {
+      const failed = error as { code: number; stdout: string }
+      return { code: failed.code, stdout: failed.stdout }
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
 
 const feedback = async (page: Page) => JSON.parse((await fileText(page, 'feedback.json')) ?? 'null') as FeedbackFile
 
@@ -130,6 +152,9 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   expect(reconnect.now?.to.id).toBe(other.id)
   expect(first.items.find((i) => i.type === 'shape')?.encloses?.map((x) => x.id)).toEqual(expect.arrayContaining([a.id, b.id]))
   expect(await fileText(page, 'README.md')).toContain('### The responses block')
+  // The script the README names is there too, and it checks the board the agent is about to revise.
+  expect(await fileText(page, 'anatomy.mjs')).toMatch(/^\/\/ Written by Anatomy/)
+  expect(await runTool(page, ['validate'])).toEqual({ code: 0, stdout: '.anatomy/board.json: valid, revision 1\n' })
   await page.keyboard.press('Escape')
   await expect(sendButton(page)).toHaveAccessibleName('Send to agent')
 
@@ -159,6 +184,10 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
     ],
   }
   await writeFile(page, 'board.json', JSON.stringify(next, null, 2))
+  // The agent left the second note unanswered, and the script says so before the user would notice.
+  const checked = await runTool(page, ['validate'])
+  expect(checked.code).toBe(0)
+  expect(checked.stdout).toMatch(/^\.anatomy\/board\.json: valid, revision 2, 1 warning\nresponses\.items: Feedback item "[a-z0-9-]+" has no answer\.\n$/)
 
   // The poll picks it up. The adopted move leaves the map, and the agent's own line now has the new end.
   await expect(page.getByRole('complementary').getByText('Revision', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText('2', { timeout: 15_000 })

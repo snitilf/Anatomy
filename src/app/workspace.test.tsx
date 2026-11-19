@@ -98,6 +98,8 @@ describe('folder mode', () => {
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
       fireEvent.click(main.getByRole('button', { name: 'Copy prompt' }))
       await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^<!-- Written by Anatomy[^]*# Authoring an Anatomy board/))
+      // It also writes the anatomy tool that the README tells the agent to run.
+      await waitFor(() => expect(folder.files.get(FILES.script)?.text).toMatch(/^\/\/ Written by Anatomy[^]*node:fs/))
       expect(writeText).toHaveBeenCalledWith('Read .anatomy/README.md, then write .anatomy/board.json that explains: ')
       await folder.write(FILES.board, refundRaw)
       await act(() => vi.advanceTimersByTimeAsync(4100))

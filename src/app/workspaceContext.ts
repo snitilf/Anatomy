@@ -51,7 +51,7 @@ export interface WorkspaceApi {
    * `onlyIfMissing` leaves any existing file alone, and `keep` leaves an existing file alone when it returns true.
    */
   writeFolderFile: (
-    file: Extract<FileName, 'feedback.json' | 'README.md'>,
+    file: Extract<FileName, 'feedback.json' | 'README.md' | 'anatomy.mjs'>,
     text: string,
     options?: { onlyIfMissing?: boolean; keep?: (existing: string) => boolean },
   ) => Promise<boolean>

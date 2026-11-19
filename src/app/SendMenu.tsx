@@ -10,7 +10,8 @@ import { buildFeedback, serializeFeedback, unsentCount, type FeedbackDraft } fro
 import { summarize } from '../feedback/summary'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { newId } from '../layer/edits'
-import { agentReadme, downloadedPrompt, keepReadme, SEND_PROMPT } from './agentReadme'
+import { writeAgentFiles } from './agentFiles'
+import { downloadedPrompt, SEND_PROMPT } from './agentReadme'
 import buttons from './buttons.module.css'
 import { copyText } from './clipboard'
 import { downloadText } from './download'
@@ -125,7 +126,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
         return
       }
     } else {
-      await writeFolderFile('README.md', agentReadme(), { keep: keepReadme })
+      await writeAgentFiles(writeFolderFile)
       if (!(await writeFolderFile('feedback.json', json))) {
         setOutcome({ kind: 'failed', draft: ready, prompt: text })
         return
