@@ -1,0 +1,23 @@
+{
+  "id": "plan-only",
+  "kind": "first-board",
+  "components": [
+    { "name": "Services", "aliases": ["monitored services", "failing service", "event source"] },
+    { "name": "Intake endpoint", "aliases": ["intake", "HTTP intake", "http endpoint", "intake API"] },
+    { "name": "Queue", "aliases": ["event queue", "alert queue"] },
+    { "name": "Router", "aliases": ["alert router", "routing"] },
+    { "name": "On-call schedule", "aliases": ["schedule", "on call schedule"] },
+    { "name": "Sender", "aliases": ["alert sender", "delivery", "SMS sender"] },
+    { "name": "Email fallback", "aliases": ["email", "fallback"] }
+  ],
+  "edges": [
+    { "from": "Services", "to": "Intake endpoint" },
+    { "from": "Intake endpoint", "to": "Queue" },
+    { "from": "Router", "to": "Queue" },
+    { "from": "Router", "to": "On-call schedule" },
+    { "from": "Router", "to": "Sender" }
+  ],
+  "minUnknowns": 3,
+  "needsDocumentedIntent": true,
+  "notes": "Every decided item is documented-intent with a reference to spec.md. The three undecided points must appear as unknown or question items. Nothing is described as built."
+}

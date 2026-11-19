@@ -1,0 +1,26 @@
+{
+  "id": "monorepo",
+  "kind": "first-board",
+  "components": [
+    { "name": "Web storefront", "aliases": ["web", "storefront", "web package", "checkout"] },
+    { "name": "API", "aliases": ["api package", "orders API", "HTTP API", "orders"] },
+    { "name": "Worker", "aliases": ["worker package", "email worker", "emails"] },
+    { "name": "Shared library", "aliases": ["shared", "shared package", "shop shared"] },
+    { "name": "Database", "aliases": ["orders table", "orders database", "db"] },
+    { "name": "Job queue", "aliases": ["queue", "redis", "redis queue"] },
+    { "name": "Mail relay", "aliases": ["SMTP relay", "mailer", "SMTP", "email relay"] }
+  ],
+  "edges": [
+    { "from": "Web storefront", "to": "API" },
+    { "from": "Web storefront", "to": "Shared library" },
+    { "from": "API", "to": "Shared library" },
+    { "from": "Worker", "to": "Shared library" },
+    { "from": "API", "to": "Database" },
+    { "from": "API", "to": "Job queue" },
+    { "from": "Worker", "to": "Job queue" },
+    { "from": "Worker", "to": "Mail relay" }
+  ],
+  "minUnknowns": 1,
+  "needsDocumentedIntent": false,
+  "notes": "The code has stubs: the database and queue calls are comments. A good board says what the comments claim and does not invent more."
+}

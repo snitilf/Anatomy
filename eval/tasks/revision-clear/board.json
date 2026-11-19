@@ -1,0 +1,41 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "id": "taskly",
+  "revision": 2,
+  "title": "How Taskly stores a task",
+  "goal": "Understand how a task goes from the web page into the database, and how a user stays signed in.",
+  "scope": {
+    "includes": ["The path from the web page to the database"],
+    "excludes": ["Email reminders, which are planned and not built"]
+  },
+  "components": [
+    { "id": "web-page", "label": "Web page", "summary": "Lists tasks and sends new ones to the API.", "source": { "kind": "agent-explanation" } },
+    { "id": "api", "label": "API", "summary": "Three routes: list tasks, add a task, toggle a task.", "source": { "kind": "agent-explanation" } },
+    { "id": "session-check", "label": "Session check", "summary": "Reads the session cookie and rejects the request when it is not valid.", "source": { "kind": "agent-explanation" } },
+    { "id": "task-store", "label": "Task store", "summary": "Runs the three task queries for one user.", "source": { "kind": "agent-explanation" } },
+    { "id": "database", "label": "Database", "summary": "A SQLite file with a users table and a tasks table.", "source": { "kind": "agent-explanation" } },
+    { "id": "reminders", "label": "Email reminders", "summary": "Planned. Would email a user about tasks that are due.", "source": { "kind": "documented-intent", "references": [{ "label": "README", "path": "README.md" }] } }
+  ],
+  "relationships": [
+    { "id": "web-to-api", "from": "web-page", "to": "api", "kind": "calls", "label": "fetch tasks", "source": { "kind": "agent-explanation" } },
+    { "id": "api-to-session", "from": "api", "to": "session-check", "kind": "depends-on", "label": "checks cookie", "source": { "kind": "agent-explanation" } },
+    { "id": "api-to-store", "from": "api", "to": "task-store", "kind": "calls", "label": "list, add, toggle", "source": { "kind": "agent-explanation" } },
+    { "id": "store-to-db", "from": "task-store", "to": "database", "kind": "stores-in", "label": "tasks table", "source": { "kind": "agent-explanation" } },
+    { "id": "reminders-to-store", "from": "reminders", "to": "task-store", "kind": "reads-from", "label": "due tasks", "source": { "kind": "documented-intent", "references": [{ "label": "README", "path": "README.md" }] } }
+  ],
+  "items": [
+    { "id": "unknown-cookie-expiry", "kind": "unknown", "text": "The fixture does not show how long a session cookie lasts.", "about": "session-check" }
+  ],
+  "scenarios": [
+    {
+      "id": "add-task",
+      "title": "Add a task",
+      "steps": [
+        { "caption": "The page posts the new title.", "highlight": ["web-page", "web-to-api"] },
+        { "caption": "The API checks the cookie, then hands the title to the task store.", "highlight": ["api", "api-to-session", "api-to-store"] },
+        { "caption": "The task store inserts a row in the tasks table.", "highlight": ["task-store", "store-to-db", "database"] }
+      ]
+    }
+  ]
+}

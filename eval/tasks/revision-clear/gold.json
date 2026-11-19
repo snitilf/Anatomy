@@ -1,0 +1,26 @@
+{
+  "id": "revision-clear",
+  "kind": "revision",
+  "components": [
+    { "name": "Web page", "aliases": [] },
+    { "name": "API", "aliases": [] },
+    { "name": "Session check", "aliases": [] },
+    { "name": "Task store", "aliases": [] },
+    { "name": "Database", "aliases": [] },
+    { "name": "Email reminders", "aliases": ["reminders"] },
+    { "name": "Audit log", "aliases": ["audit"] }
+  ],
+  "edges": [
+    { "from": "Web page", "to": "API" },
+    { "from": "API", "to": "Task store" },
+    { "from": "Task store", "to": "Database" },
+    { "from": "API", "to": "Audit log" },
+    { "from": "Email reminders", "to": "Database" }
+  ],
+  "minUnknowns": 1,
+  "needsDocumentedIntent": false,
+  "startRevision": 2,
+  "feedbackId": "feedback-clear0000001",
+  "unclearItems": [],
+  "notes": "The password and sharing questions cannot be fully answered from the fixture: the code hashes passwords by column name only, and has no sharing. A good answer says what the files show and what they do not."
+}
