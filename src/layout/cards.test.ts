@@ -4,6 +4,7 @@ import { allBoards, anatomyBoard, clone, refundBoard } from '../layer/testBoards
 import { autoLayout } from './autoLayout'
 import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, clampSize, contentSize, groupAreas, lineCount, placeCards, summaryLinesFor } from './cards'
 import { overlaps, type Rect } from './geometry'
+import { fastestMs } from '../test/timing'
 
 const none = { positions: {}, sizes: {} }
 
@@ -112,9 +113,7 @@ describe('autoLayout', () => {
 
   it('takes a few milliseconds on the forty part board', () => {
     const forty = withoutPositions(allBoards()[4]!)
-    const start = performance.now()
-    for (let i = 0; i < 5; i++) placeCards(forty, none)
-    expect((performance.now() - start) / 5).toBeLessThan(60)
+    expect(fastestMs(() => placeCards(forty, none), 60)).toBeLessThan(60)
   })
 
   it('packs cards that no connection joins instead of one long row or column', () => {

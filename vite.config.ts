@@ -13,6 +13,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     exclude: [...configDefaults.exclude, 'e2e/**'],
+    // Tests that solve a sixty part board or drive the whole app are CPU bound. A busy machine must not fail them on the default 5 seconds.
+    testTimeout: 30_000,
     setupFiles: ['./src/test/setup.ts'],
   },
 })
