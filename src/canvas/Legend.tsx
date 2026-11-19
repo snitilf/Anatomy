@@ -2,7 +2,7 @@ import { Popover } from '@base-ui/react/popover'
 import { CircleHelp } from 'lucide-react'
 import { Tip } from '../app/Tip'
 import { useUi, useUiApi } from '../app/ui'
-import { MANUAL_STYLE, TONE_COLOR } from './kinds'
+import { MANUAL_STYLE, LINE_INK } from './kinds'
 import { lineKeyRows } from './lineKey'
 import styles from './Legend.module.css'
 
@@ -32,7 +32,7 @@ export function LineKey() {
                       y1="5"
                       x2="30"
                       y2="5"
-                      stroke={TONE_COLOR[s.tone]}
+                      stroke={LINE_INK}
                       strokeWidth={s.width}
                       strokeDasharray={s.dash || undefined}
                       strokeLinecap={s.dash.startsWith('1.5') ? 'round' : 'butt'}

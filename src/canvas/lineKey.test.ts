@@ -19,12 +19,10 @@ describe('the line key', () => {
     expect(rows.flatMap((r) => r.kinds)).toEqual([...KIND_ORDER])
     expect(rows[0]?.words).toBe(`${KIND_WORDS.calls}; ${KIND_WORDS.triggers}; ${KIND_WORDS['sends-data-to']}`)
     expect(rows[rows.length - 1]?.words).toBe(`${KIND_WORDS['depends-on']}; ${KIND_WORDS.unknown}`)
-    // Each swatch is the strongest ink of its group.
-    expect(rows.map((r) => r.style.tone)).toEqual(['strong', 'light', 'light'])
   })
 
   it('regroups by itself when a style changes', () => {
-    const same: KindStyle = { dash: '', width: 1.25, tone: 'strong' }
+    const same: KindStyle = { dash: '', width: 1.25 }
     const all = Object.fromEntries(KIND_ORDER.map((k) => [k, same])) as Record<RelationshipKind, KindStyle>
     const one = lineKeyRows(all)
     expect(one).toHaveLength(1)

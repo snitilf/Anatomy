@@ -4,7 +4,7 @@ import { memo, useState, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
-import { KIND_STYLE, SELECTED_WIDTH, TONE_COLOR } from './kinds'
+import { KIND_STYLE, SELECTED_WIDTH, LINE_INK } from './kinds'
 import styles from './RelationshipEdge.module.css'
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
@@ -17,18 +17,18 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
   const style = KIND_STYLE[data.kind]
   const ends = `${source} ${target}`
   const emphasized = selected || data.active || data.highlighted
-  const ink = data.edited ? 'var(--yours)' : `var(--line-ink, ${TONE_COLOR[style.tone]})`
+  const ink = data.edited ? 'var(--yours)' : `var(--line-ink, ${LINE_INK})`
   return (
     <>
       {data.ghost && (
         <path
           className={styles.ghost}
           d={data.ghost}
-          style={{ stroke: TONE_COLOR[style.tone], strokeWidth: style.width, strokeDasharray: style.dash || undefined }}
+          style={{ stroke: LINE_INK, strokeWidth: style.width, strokeDasharray: style.dash || undefined }}
           aria-hidden="true"
         />
       )}
-      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-tone={style.tone} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-active={emphasized || undefined} data-ends={ends} data-edge={id}>
+      <g className={styles.line} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)} data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} data-highlighted={data.highlighted || undefined} data-active={emphasized || undefined} data-ends={ends} data-edge={id}>
         <BaseEdge
           id={id}
           path={data.path}
