@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { open } from './helpers.ts'
+import { open, viewport } from './helpers.ts'
 
 const BOARDS = [
   'e2e/fixtures/refund-approval.board.json',
@@ -18,7 +18,8 @@ async function cutouts(page: Page) {
     const areas = [...document.querySelectorAll('.react-flow__node-group-area')].map((n) => n.firstElementChild!.getBoundingClientRect())
     const near = (a: number, b: number) => Math.abs(a - b) < 1.5
     return [...document.querySelectorAll<HTMLElement>('[data-label]')]
-      .filter((l) => getComputedStyle(l).opacity !== '0' && l.getBoundingClientRect().width > 0)
+      // A label that is still fading in or out is not on show yet.
+      .filter((l) => getComputedStyle(l).opacity === '1' && l.getBoundingClientRect().width > 0)
       .map((l) => {
         const lines = [...l.querySelectorAll('[data-cutout]')].map((c) => c.getBoundingClientRect())
         let matched = true
@@ -36,16 +37,34 @@ async function cutouts(page: Page) {
   })
 }
 
+/** The camera has stopped and no transition is running, so the map and the labels are at rest. */
+async function settle(page: Page) {
+  let last = ''
+  await expect
+    .poll(async () => {
+      const now = await viewport(page)
+      const idle = await page.evaluate(() => document.getAnimations().length === 0)
+      const still = now === last
+      last = now
+      return idle && still
+    })
+    .toBe(true)
+}
+
 test.describe.serial('the cutout under a label', () => {
   let straddling = 0
 
   for (const file of BOARDS) {
     test(`matches the group areas under it, at every zoom (${file})`, async ({ page }) => {
       await open(page, file)
-      for (const step of ['start', 'in', 'in', 'out', 'out', 'out']) {
+      await settle(page)
+      for (const step of ['start', 'in', 'in', 'out', 'out', 'out', 'out']) {
         if (step !== 'start') {
-          await page.getByRole('button', { name: step === 'in' ? /zoom in/i : /zoom out/i }).click()
-          await page.waitForTimeout(350)
+          const button = page.getByRole('button', { name: step === 'in' ? /zoom in/i : /zoom out/i })
+          // At the end of the zoom range the button is off: there is no step to take.
+          if (!(await button.isEnabled())) continue
+          await button.click()
+          await settle(page)
         }
         for (const c of await cutouts(page)) {
           const where = `${c.text} after ${step}`

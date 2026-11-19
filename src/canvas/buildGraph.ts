@@ -708,7 +708,7 @@ export function assembleGraph(
           labelLines: shape.labelLines,
           labelHidden: shape.labelHidden === true,
           moving: shape.cheap === true,
-          tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true),
+          tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true, far && selected),
           edited: moved !== undefined,
           ...(moved ? { ghost: original.path } : {}),
         },
@@ -748,7 +748,7 @@ export function assembleGraph(
           labelLines: shape.labelLines,
           labelHidden: shape.labelHidden === true,
           moving: shape.cheap === true,
-          tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true),
+          tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true, far && selected),
         },
       } satisfies Edge<ManualEdgeData>),
     )

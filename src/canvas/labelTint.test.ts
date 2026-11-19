@@ -24,7 +24,7 @@ describe('labelTint', () => {
   })
 
   it('leaves out an area only just out of reach', () => {
-    expect(labelTint([group], 200 + 50 + 20, 50, 100, 1, false)).toBe('')
+    expect(labelTint([group], 200 + 90, 50, 100, 1, false)).toBe('')
   })
 
   it('reads a held-back label at its widest', () => {
@@ -33,5 +33,14 @@ describe('labelTint', () => {
 
   it('is the same text when nothing moved', () => {
     expect(labelTint([group], 200, 50, 100, 1, false)).toBe(labelTint([{ ...group }], 200, 50, 100, 1, false))
+  })
+
+  it('reaches further as the label is drawn larger, up to the zoom where the far view starts', () => {
+    // A label 100 wide drawn at 1.5 times is 75 either side of its middle, so an area 70 from the middle is under it, though the label is only 50 either side on the map.
+    expect(labelTint([group], 200 + 70, 50, 100, 1, false)).not.toBe('')
+  })
+
+  it('takes every area for the selected label in the far view', () => {
+    expect(labelTint([group], 5000, 5000, 100, 1, false, true)).not.toBe('')
   })
 })

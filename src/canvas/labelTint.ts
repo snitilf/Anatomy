@@ -1,3 +1,4 @@
+import { FAR_ENTER, farLabelScale } from './far'
 import { pillHeight } from './labelPlacement'
 
 interface Box {
@@ -9,20 +10,24 @@ interface Box {
 
 /** A held-back label takes its own width on hover, up to this much. The same as `max-width` of `.pill[data-hidden]` in RelationshipEdge.module.css. */
 const HELD_BACK_WIDTH = 260
+/** Away from the far view a label is drawn at most this much larger than its size on the map: its words keep their size on screen. */
+const SCALE_MAX = farLabelScale(FAR_ENTER)
 /** The label grows a little when selected: a margin so a group at its edge is still counted. */
 const MARGIN = 8
 
 /**
  * The group areas under a label, as text, each one placed from the middle of the label: `dx,dy,width,height` in map units, areas joined with `;`.
+ * `anyZoom` takes every area: the selected label in the far view, which is drawn as large as the zoom makes it.
  * A text keeps the edge data equal from one build to the next when nothing moved.
  * The label paints these areas again under its words, so the cutout matches the map under it on every side of a group edge.
  */
-export function labelTint(groups: readonly Box[], x: number, y: number, width: number, lines: number, heldBack: boolean): string {
-  const halfW = (heldBack ? HELD_BACK_WIDTH : width) / 2 + MARGIN
-  const halfH = pillHeight(heldBack ? 2 : lines) / 2 + MARGIN
+export function labelTint(groups: readonly Box[], x: number, y: number, width: number, lines: number, heldBack: boolean, anyZoom = false): string {
+  // The label is drawn larger as the map zooms out, so its reach on the map grows with it. In the far view only the selected label shows, at any size.
+  const halfW = ((heldBack ? HELD_BACK_WIDTH : width) / 2) * SCALE_MAX + MARGIN
+  const halfH = (pillHeight(heldBack ? 2 : lines) / 2) * SCALE_MAX + MARGIN
   const under: string[] = []
   for (const g of groups) {
-    if (g.x >= x + halfW || g.x + g.width <= x - halfW || g.y >= y + halfH || g.y + g.height <= y - halfH) continue
+    if (!anyZoom && (g.x >= x + halfW || g.x + g.width <= x - halfW || g.y >= y + halfH || g.y + g.height <= y - halfH)) continue
     under.push([g.x - x, g.y - y, g.width, g.height].map((n) => Math.round(n * 10) / 10).join(','))
   }
   return under.join(';')
