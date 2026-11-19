@@ -55,12 +55,12 @@
         "A list of token numbers"
       ],
       "source": {
-        "kind": "documented-intent",
+        "kind": "agent-explanation",
         "references": [
           {
             "label": "Claude Opus 5.5 overview",
             "path": "Claude API docs: Models, Claude Opus 5.5",
-            "note": "Words per token on the current tokenizer."
+            "note": "Documented: 1M tokens is roughly 555k words. The tokenizer description is this board's explanation."
           }
         ]
       },
@@ -186,12 +186,17 @@
         "A finished answer"
       ],
       "source": {
-        "kind": "documented-intent",
+        "kind": "agent-explanation",
         "references": [
           {
             "label": "Context windows",
             "path": "Claude API docs: Context windows",
-            "note": "Each response becomes part of the input for the next turn."
+            "note": "Documented: each response becomes part of the next input."
+          },
+          {
+            "label": "Claude Opus 5.5 overview",
+            "path": "Claude API docs: Models, Claude Opus 5.5",
+            "note": "Documented: up to 128K output tokens. The loop mechanism is this board's explanation."
           }
         ]
       }
@@ -223,7 +228,7 @@
       "id": "pretraining",
       "label": "Pretraining",
       "summary": "The model reads a huge amount of text and learns to predict the next token.",
-      "explanation": "At first the model's numbers are random. The training run shows it text, checks its guesses against the real next token, and nudges millions or billions of numbers to guess better. Then it repeats this at enormous scale.\n\nThis stage builds most of what the model knows. It learns language, facts, and patterns of reasoning. It does not yet follow instructions well.",
+      "explanation": "At first the model's numbers are random. The training run shows it text, checks its guesses against the real next token, and nudges a very large number of weights to guess better. Then it repeats this at enormous scale.\n\nThis stage builds most of what the model knows. It learns language, facts, and patterns of reasoning. It does not yet follow instructions well.",
       "group": "making",
       "inputs": [
         "A very large body of text"
@@ -374,7 +379,7 @@
     {
       "id": "u-training-data",
       "kind": "unknown",
-      "text": "The mix of training data is not published. Anthropic states only a training data cutoff of June 2026.",
+      "text": "The mix of training data is not published. The docs list only cutoff dates (June 2026).",
       "about": "pretraining"
     },
     {

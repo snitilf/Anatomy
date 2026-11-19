@@ -11,7 +11,7 @@
       "The permission check, the context and memory files, and the extension points: hooks, subagents, MCP servers, and skills"
     ],
     "excludes": [
-      "Anything the public Claude Code documentation does not state, such as the system prompt text and the exact compaction rules",
+      "The system prompt text and the per-model compaction thresholds, which change often",
       "Settings, flags, and version differences, which change often. Check the current documentation before you rely on a detail"
     ]
   },
@@ -75,12 +75,12 @@
         "The final reply to you"
       ],
       "source": {
-        "kind": "documented-intent",
+        "kind": "agent-explanation",
         "references": [
           {
             "label": "How Claude Code works",
             "path": "Claude Code docs: How Claude Code works",
-            "note": "Section: The agentic loop."
+            "note": "Documented: the three phases. The step-by-step mechanism is this board's explanation."
           }
         ]
       }
@@ -91,12 +91,12 @@
       "summary": "Reads the context and proposes the next step. It does not run anything itself.",
       "explanation": "The model reasons about your task and decides which tool to use. The harness provides the tools and manages what the model sees.\n\nThe model only **proposes**. Nothing happens on your machine until the harness runs the call.",
       "source": {
-        "kind": "documented-intent",
+        "kind": "agent-explanation",
         "references": [
           {
             "label": "How Claude Code works",
             "path": "Claude Code docs: How Claude Code works",
-            "note": "Section: Models."
+            "note": "Documented: models reason, tools act. The proposes-then-runs split is this board's explanation."
           }
         ]
       },
@@ -137,7 +137,7 @@
       "id": "permission-check",
       "label": "Permission check",
       "summary": "Decides before each tool runs: run it, ask you, or refuse.",
-      "explanation": "Deny rules, ask rules, and allow rules are checked in that order. The result also depends on the **permission mode** and on your rules.\n\n- **Manual**: asks before file edits and shell commands.\n- **Accept edits**: edits files and runs common filesystem commands without asking.\n- **Plan**: explores and proposes a plan without editing your source files.\n- **Auto**: a classifier reviews actions and blocks the risky ones.\n\nThe prompt shows the exact action. If you choose \"don't ask again\", Claude Code saves a rule for that command, and that record stops the question from coming back. The lesson shows why an approval must belong to one exact version of an action.",
+      "explanation": "Deny rules, ask rules, and allow rules are checked in that order. The result also depends on the **permission mode** and on your rules.\n\n- **Manual**: asks before file edits and shell commands.\n- **Accept edits**: edits files and runs common filesystem commands without asking.\n- **Plan**: explores and proposes a plan without editing your source files.\n- **Auto**: a second AI check reviews actions and blocks the risky ones.\n\nThe prompt shows the exact action. If you choose \"don't ask again\", Claude Code remembers that choice. For shell commands it is kept per project. For file edits it lasts until the session ends. A remembered choice stops the same question from coming back. The lesson shows why an approval must belong to one exact version of an action.",
       "group": "harness",
       "inputs": [
         "A proposed tool call",
@@ -212,7 +212,7 @@
       "id": "hooks",
       "label": "Hooks",
       "summary": "Your own scripts that run at set moments. A hook can block a tool call.",
-      "explanation": "A hook is a handler that runs at an event, for example `PreToolUse` or `Stop`. A command hook reads the event as JSON and can block the action with exit code 2.\n\nA hook can deny a call, but a hook that says nothing does not approve it.",
+      "explanation": "A hook is a handler that runs at an event, such as before a tool runs (`PreToolUse`) or when Claude finishes replying (`Stop`). A command hook reads the event as structured data (JSON) and can block the action by exiting with code 2, a signal that means stop.\n\nA hook can deny a call, but a hook that says nothing does not approve it.",
       "group": "extensions",
       "inputs": [
         "Event details such as the tool name and its input"
@@ -281,6 +281,11 @@
             "label": "Extend Claude with skills",
             "path": "Claude Code docs: Skills",
             "note": "Descriptions load at start. Full content loads when used."
+          },
+          {
+            "label": "How Claude Code works",
+            "path": "Claude Code docs: How Claude Code works",
+            "note": "Section: The context window. MCP tool definitions load on demand."
           }
         ]
       }
@@ -398,7 +403,7 @@
       "to": "agent-loop",
       "kind": "unknown",
       "label": "compaction when nearly full",
-      "explanation": "The documentation says Claude Code compacts the conversation into a summary as it nears the limit. It does not say here how it picks the moment or what the summary keeps beyond key requests and code.",
+      "explanation": "The documentation says Claude Code compacts the conversation into a summary near the limit, and reads the project CLAUDE.md again afterwards. How the summary is written is not shown, so what this connection hands back to the loop stays unknown.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -465,7 +470,7 @@
     {
       "id": "u-compaction-rules",
       "kind": "unknown",
-      "text": "The exact point where compaction starts, and what the summary keeps, are not stated in the pages this board draws on.",
+      "text": "How the summary is written is not shown. The docs list what is loaded again afterwards, such as the project CLAUDE.md, but not the choices the summary makes.",
       "about": "context-to-loop"
     },
     {
@@ -612,7 +617,7 @@
           ]
         },
         {
-          "caption": "Rules in a CLAUDE.md file are context that Claude Code loads at the start of a session, so put persistent rules there.",
+          "caption": "After compaction, Claude Code reads the project CLAUDE.md again, so the rules in it survive. Put persistent rules there.",
           "highlight": [
             "context-window"
           ]
