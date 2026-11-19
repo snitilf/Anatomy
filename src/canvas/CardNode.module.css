@@ -356,15 +356,60 @@
   }
 }
 
-/* A part the user proposed has the user's color on its edge. Selection still wins. */
-.card[data-yours] {
-  border-color: var(--yours);
+/*
+ * A part the user proposed: its edge is the user's dash and dot, in their color (YoursEdge). The card's own border stays
+ * clear under it, in every state, so the two never draw together. Selection keeps the dash and dot, in the accent.
+ */
+:global(.react-flow__node) .card[data-yours],
+:global(.react-flow__node) .card[data-yours]:hover,
+:global(.react-flow__node:focus-visible) .card[data-yours] {
+  border-color: transparent;
 }
 
-.card[data-yours]:hover {
-  border-color: color-mix(in srgb, var(--yours) 80%, var(--fg));
+.yoursEdge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  /* The width of the edge, on the board. The far view holds it on screen. */
+  --edge: 1.25px;
 }
 
-.card[data-yours][data-selected] {
-  border-color: var(--accent);
+.yoursEdge rect {
+  x: calc(var(--edge) / 2);
+  y: calc(var(--edge) / 2);
+  width: calc(100% - var(--edge));
+  height: calc(100% - var(--edge));
+  rx: calc(var(--radius-md) - var(--edge) / 2);
+  fill: none;
+  stroke: var(--yours);
+  stroke-width: var(--edge);
+  stroke-dasharray: var(--dash);
+  stroke-linecap: round;
+  transition: stroke 120ms var(--ease-out);
+}
+
+:global(.react-flow__node:hover) .yoursEdge rect {
+  stroke: color-mix(in srgb, var(--yours) 80%, var(--fg));
+}
+
+.yoursEdge[data-selected] rect,
+:global(.react-flow__node:focus-visible) .yoursEdge rect {
+  stroke: var(--accent);
+}
+
+/* The far view: a tile in the user's tint, edged with their dash and dot at its size on screen. */
+:global([data-far]) .yoursEdge {
+  --edge: calc(1.25px * var(--label-scale, 1));
+}
+
+:global([data-far]) .yoursEdge rect {
+  stroke-dasharray: var(--far-dash);
+}
+
+/* A selected tile is filled with the accent, so its edge turns to the ink on the accent. */
+:global([data-far]) .yoursEdge[data-selected] rect {
+  stroke: var(--on-accent);
 }

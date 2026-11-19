@@ -4,6 +4,7 @@ import { CARD_SIZE } from '../layout/cards'
 import type { Size } from '../layout/geometry'
 import { LAYER_LIMITS } from '../layer/model'
 import cards from '../canvas/CardNode.module.css'
+import { YoursEdge } from '../canvas/YoursEdge'
 import { STICKY_SIZE } from './sizes'
 import type { Editing } from './tools'
 import styles from './Editor.module.css'
@@ -80,25 +81,28 @@ export function Editor({
         onPointerDown={(e) => e.stopPropagation()}
       >
         {editing.kind === 'part' ? (
-          <div className={cards.card} data-yours="">
-            <input
-              ref={first}
-              className={styles.label}
-              name="part-name"
-              aria-label="Name"
-              placeholder="Name"
-              value={label}
-              maxLength={LAYER_LIMITS.partLabel}
-              onChange={(e) => setLabel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-                  e.preventDefault()
-                  root.current?.querySelector('textarea')?.focus()
-                }
-              }}
-            />
-            <textarea className={styles.summary} name="part-summary" aria-label="Summary" placeholder="Summary" value={summary} maxLength={LAYER_LIMITS.partSummary} onChange={(e) => setSummary(e.target.value)} />
-          </div>
+          <>
+            <div className={cards.card} data-yours="">
+              <input
+                ref={first}
+                className={styles.label}
+                name="part-name"
+                aria-label="Name"
+                placeholder="Name"
+                value={label}
+                maxLength={LAYER_LIMITS.partLabel}
+                onChange={(e) => setLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+                    e.preventDefault()
+                    root.current?.querySelector('textarea')?.focus()
+                  }
+                }}
+              />
+              <textarea className={styles.summary} name="part-summary" aria-label="Summary" placeholder="Summary" value={summary} maxLength={LAYER_LIMITS.partSummary} onChange={(e) => setSummary(e.target.value)} />
+            </div>
+            <YoursEdge selected />
+          </>
         ) : (
           <textarea
             ref={first}

@@ -6,6 +6,7 @@ import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
 import { nameLines } from '../canvas/far'
+import { YoursEdge } from '../canvas/YoursEdge'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
 
@@ -38,7 +39,7 @@ function Grip({ min, max }: { min: { width: number; height: number }; max: { wid
   )
 }
 
-/** A part the user proposed: a card in the user's color, linked and moved like any part. */
+/** A part the user proposed: a card edged in the user's dash and dot, linked and moved like any part. */
 export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeProps<Node<ProposalData>>) {
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   return (
@@ -75,6 +76,7 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
           {data.label}
         </div>
       )}
+      <YoursEdge selected={selected} />
       <Grip min={CARD_MIN} max={CARD_MAX} />
     </>
   )

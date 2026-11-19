@@ -67,10 +67,10 @@
   line-height: var(--leading-md) !important;
 }
 
-/* A new part is a card while it is typed. */
+/* A new part is a card while it is typed, edged in the user's dash and dot in the accent, as when it is selected. */
 .editor[data-kind='part'] > div {
   cursor: text;
-  border-color: var(--accent);
+  border-color: transparent;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
