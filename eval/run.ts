@@ -17,16 +17,52 @@ const HELP = `Usage:
                                      Revision tasks use their own feedback.json unless you pass --feedback.
 Tasks: ${taskIds.join(', ')}`
 
-const { values, positionals } = parseArgs({
-  allowPositionals: true,
-  options: {
-    board: { type: 'string' },
-    first: { type: 'string' },
-    feedback: { type: 'string' },
-    usage: { type: 'string' },
-    help: { type: 'boolean' },
-  },
-})
+function parseFeedback(text: string): FeedbackFile {
+  try {
+    return JSON.parse(text) as FeedbackFile
+  } catch {
+    return fail('The feedback file is not valid JSON')
+  }
+}
+
+function fail(message: string): never {
+  console.error(message)
+  process.exit(2)
+}
+
+let args: ReturnType<typeof parseArgs<{ allowPositionals: true; options: { board: { type: 'string' }; first: { type: 'string' }; feedback: { type: 'string' }; usage: { type: 'string' }; help: { type: 'boolean' } } }>>
+try {
+  args = parseArgs({
+    allowPositionals: true,
+    options: {
+      board: { type: 'string' },
+      first: { type: 'string' },
+      feedback: { type: 'string' },
+      usage: { type: 'string' },
+      help: { type: 'boolean' },
+    },
+  })
+} catch (error) {
+  fail(`${error instanceof Error ? error.message : String(error)}\nRun "npm run eval -- --help" for usage.`)
+}
+const { values, positionals } = args
+
+/** Reads a file, or stops with one line when it cannot be read. */
+function readFile(path: string): string {
+  try {
+    return readFileSync(path, 'utf8')
+  } catch {
+    return fail(`Cannot read ${path}`)
+  }
+}
+
+function readJson<T>(path: string): T {
+  try {
+    return JSON.parse(readFile(path)) as T
+  } catch {
+    return fail(`${path} is not valid JSON`)
+  }
+}
 
 function printPrompt(id: string): void {
   console.log(`=== ${id} ===\n${readTask(id, 'task.md').trim()}\n`)
@@ -47,16 +83,17 @@ if (values.help) {
     printPrompt(id)
   } else {
     const gold = JSON.parse(readTask(id, 'gold.json')) as Gold
-    const feedbackText = values.feedback !== undefined ? readFileSync(values.feedback, 'utf8') : gold.kind === 'revision' ? readTask(id, 'feedback.json') : undefined
+    const feedbackText = values.feedback !== undefined ? readFile(values.feedback) : gold.kind === 'revision' ? readTask(id, 'feedback.json') : undefined
     const parse = await withAppModules(['/src/board/validate.ts'], ([module]) => (module as { parseBoard: Parse }).parseBoard)
     const scores = scoreBoard({
       gold,
       parse,
-      boardText: readFileSync(values.board, 'utf8'),
-      ...(values.first !== undefined ? { firstWriteText: readFileSync(values.first, 'utf8') } : {}),
-      ...(feedbackText !== undefined ? { feedback: JSON.parse(feedbackText) as FeedbackFile } : {}),
-      ...(values.usage !== undefined ? { usage: JSON.parse(readFileSync(values.usage, 'utf8')) as Usage } : {}),
+      boardText: readFile(values.board),
+      ...(values.first !== undefined ? { firstWriteText: readFile(values.first) } : {}),
+      ...(feedbackText !== undefined ? { feedback: parseFeedback(feedbackText) } : {}),
+      ...(values.usage !== undefined ? { usage: readJson<Usage>(values.usage) } : {}),
     })
     console.log(formatScores(scores))
+    if (!scores.validFinal) process.exitCode = 1
   }
 }

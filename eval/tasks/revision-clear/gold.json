@@ -7,8 +7,8 @@
     { "name": "Session check", "aliases": [] },
     { "name": "Task store", "aliases": [] },
     { "name": "Database", "aliases": [] },
-    { "name": "Email reminders", "aliases": ["reminders"] },
-    { "name": "Audit log", "aliases": ["audit"] }
+    { "name": "Email reminders", "aliases": ["reminder job"] },
+    { "name": "Audit log", "aliases": [] }
   ],
   "edges": [
     { "from": "Web page", "to": "API" },

@@ -2,12 +2,12 @@
   "id": "cli-plugins",
   "kind": "first-board",
   "components": [
-    { "name": "CLI entry", "aliases": ["cli", "command line", "main", "entry point"] },
-    { "name": "Config", "aliases": ["configuration", "arguments", "argument parsing", "options"] },
-    { "name": "Plugin loader", "aliases": ["loader", "plugins loader"] },
-    { "name": "Converter", "aliases": ["convert", "conversion", "convert step"] },
-    { "name": "CSV plugin", "aliases": ["csv", "built-in csv", "csv reader and writer"] },
-    { "name": "JSON plugin", "aliases": ["json", "built-in json", "json reader and writer"] },
+    { "name": "CLI entry", "aliases": ["cli entry point", "command line entry", "main entry"] },
+    { "name": "Config", "aliases": ["configuration", "argument parsing", "config loader"] },
+    { "name": "Plugin loader", "aliases": ["plugins loader", "plugin loading"] },
+    { "name": "Converter", "aliases": ["convert step", "conversion step", "convert function"] },
+    { "name": "CSV plugin", "aliases": ["built-in csv", "csv reader and writer"] },
+    { "name": "JSON plugin", "aliases": ["built-in json", "json reader and writer"] },
     { "name": "User plugins", "aliases": ["custom plugins", "plugin directory", "user plugin folder", "external plugins"] }
   ],
   "edges": [

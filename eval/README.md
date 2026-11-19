@@ -38,6 +38,8 @@ Pass `--usage usage.json` to print the agent's own numbers next to the scores.
 The file looks like this: `{ "tokensIn": 9000, "tokensOut": 6000, "toolCalls": 12, "turns": 5 }`.
 Take the numbers from the usage report of your agent.
 
+The command exits with 0 when the board is valid, 1 when it is not, and 2 when an input file is missing or a flag is wrong.
+
 Agent output varies. Run each task three times and compare the spread, not one run.
 
 ## What the scores mean
@@ -51,8 +53,11 @@ Agent output varies. Run each task three times and compare the spread, not one r
 - documented-intent without a reference: the goal is zero.
 - Feedback answered: every feedback item has a response, `changed` lists only IDs on the board, and an unclear item is never adopted.
 
+The unknown and question count, and the check that an item is answered, are simple proxies. A person still reads the board.
+
 Labels match when their words are the same, or when every word of the shorter label is in the longer one.
 The match ignores case, punctuation, plurals, and the words "the", "a", "an", "of", and "and".
+A label matches the first gold component it fits, so keep aliases specific.
 Add an alias to `gold.json` when a good board uses another name for the same part.
 
 ## Token sizes

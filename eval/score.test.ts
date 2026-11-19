@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { parseBoard } from '../src/board/validate.ts'
 import { labelsMatch, normalizeLabel, scoreBoard, type FeedbackFile, type Gold } from './score.ts'
 
-const task = (id: string, file: string) => readFileSync(join(process.cwd(), 'eval', 'tasks', id, file), 'utf8')
+const task = (id: string, file: string) => readFileSync(join(import.meta.dirname, 'tasks', id, file), 'utf8')
 const gold = (id: string) => JSON.parse(task(id, 'gold.json')) as Gold
 
 function board(overrides: Record<string, unknown> = {}): string {

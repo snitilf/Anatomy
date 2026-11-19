@@ -3,12 +3,12 @@
   "kind": "first-board",
   "components": [
     { "name": "Services", "aliases": ["monitored services", "failing service", "event source"] },
-    { "name": "Intake endpoint", "aliases": ["intake", "HTTP intake", "http endpoint", "intake API"] },
+    { "name": "Intake endpoint", "aliases": ["HTTP intake", "http endpoint", "intake API"] },
     { "name": "Queue", "aliases": ["event queue", "alert queue"] },
-    { "name": "Router", "aliases": ["alert router", "routing"] },
-    { "name": "On-call schedule", "aliases": ["schedule", "on call schedule"] },
-    { "name": "Sender", "aliases": ["alert sender", "delivery", "SMS sender"] },
-    { "name": "Email fallback", "aliases": ["email", "fallback"] }
+    { "name": "Router", "aliases": ["alert router", "routing step"] },
+    { "name": "On-call schedule", "aliases": ["on call schedule"] },
+    { "name": "Sender", "aliases": ["alert sender", "SMS sender", "alert delivery"] },
+    { "name": "Email fallback", "aliases": ["email delivery fallback"] }
   ],
   "edges": [
     { "from": "Services", "to": "Intake endpoint" },

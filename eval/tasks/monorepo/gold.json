@@ -2,13 +2,13 @@
   "id": "monorepo",
   "kind": "first-board",
   "components": [
-    { "name": "Web storefront", "aliases": ["web", "storefront", "web package", "checkout"] },
-    { "name": "API", "aliases": ["api package", "orders API", "HTTP API", "orders"] },
-    { "name": "Worker", "aliases": ["worker package", "email worker", "emails"] },
-    { "name": "Shared library", "aliases": ["shared", "shared package", "shop shared"] },
-    { "name": "Database", "aliases": ["orders table", "orders database", "db"] },
-    { "name": "Job queue", "aliases": ["queue", "redis", "redis queue"] },
-    { "name": "Mail relay", "aliases": ["SMTP relay", "mailer", "SMTP", "email relay"] }
+    { "name": "Web storefront", "aliases": ["web package", "storefront app", "checkout flow"] },
+    { "name": "API", "aliases": ["api package", "orders API", "HTTP API"] },
+    { "name": "Worker", "aliases": ["worker package", "email worker"] },
+    { "name": "Shared library", "aliases": ["shared package", "shop shared", "shared types"] },
+    { "name": "Database", "aliases": ["orders table", "orders database"] },
+    { "name": "Job queue", "aliases": ["redis queue", "order email queue"] },
+    { "name": "Mail relay", "aliases": ["SMTP relay", "email relay", "mailer module"] }
   ],
   "edges": [
     { "from": "Web storefront", "to": "API" },

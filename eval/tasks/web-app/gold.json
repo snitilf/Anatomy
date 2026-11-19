@@ -2,9 +2,9 @@
   "id": "web-app",
   "kind": "first-board",
   "components": [
-    { "name": "Web page", "aliases": ["web app", "frontend", "task list page", "App"] },
-    { "name": "API", "aliases": ["tasks API", "API server", "server", "routes"] },
-    { "name": "Session check", "aliases": ["session", "sign in", "authentication", "auth"] },
+    { "name": "Web page", "aliases": ["web app", "frontend", "task list page"] },
+    { "name": "API", "aliases": ["tasks API", "API server", "API routes"] },
+    { "name": "Session check", "aliases": ["session cookie", "sign in", "authentication"] },
     { "name": "Task store", "aliases": ["tasks module", "task queries", "task functions"] },
     { "name": "Database", "aliases": ["SQLite", "SQLite database", "taskly sqlite"] }
   ],

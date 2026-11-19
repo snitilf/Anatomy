@@ -82,7 +82,7 @@ const STOP_WORDS = new Set(['the', 'a', 'an', 'of', 'and'])
 export function normalizeLabel(label: string): string[] {
   return label
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .split(' ')
@@ -111,6 +111,7 @@ const GUARANTEE = /\b(always|guarantee[ds]?|secure[sd]?|never fails?|cannot fail
 
 /** Text fields of a board file, read from the raw JSON so the scan also works when the file is invalid. */
 export function boardTexts(data: unknown): string[] {
+  // These keys hold IDs, file paths, or enum values, so a word like "always" in them is not a claim.
   const skipKeys = new Set(['id', 'from', 'to', 'about', 'group', 'feedbackId', 'respondsTo', 'changed', 'highlight', 'format', 'kind', 'path', 'lesson'])
   const out: string[] = []
   const walk = (value: unknown, key?: string) => {
@@ -143,7 +144,7 @@ function countDocumentedWithoutReference(data: unknown): number {
 
 function safeJson(text: string): unknown {
   try {
-    return JSON.parse(text.replace(/^﻿/, ''))
+    return JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch {
     return undefined
   }
