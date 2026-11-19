@@ -1,0 +1,2 @@
+CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, password_hash TEXT);
+CREATE TABLE tasks (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, done INTEGER DEFAULT 0);

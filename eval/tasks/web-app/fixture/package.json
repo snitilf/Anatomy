@@ -1,0 +1,1 @@
+{ "name": "taskly", "scripts": { "dev": "node api/server.js", "web": "vite web" } }

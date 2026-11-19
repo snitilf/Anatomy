@@ -103,6 +103,10 @@ Do this only when the user asks you to change Anatomy.
 - `npm run test:e2e` builds the app and runs the browser tests in Google Chrome.
 - `npm run schema` rewrites `schema/board.v1.schema.json` from the Zod schema.
   Run it after every change to the board schema.
+- `npm run tokens` prints the size of the generated README, each guide section, and each example board.
+  A unit test fails when the README grows more than 5 percent over `tokens.baseline.json`.
+  Edit the baseline only when the growth is intended.
+- `npm run eval` prints the evaluation tasks in `eval/` and scores a board file. See `eval/README.md`.
 - `docs/board-format.md` explains every field of a board file.
 - `docs/authoring-guide.md` holds the rules for writing a board.
   Anatomy copies it into the `.anatomy/README.md` of each project, so edit it with care.
