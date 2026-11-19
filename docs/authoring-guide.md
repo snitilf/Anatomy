@@ -17,15 +17,99 @@ Each connection says what passes between two parts.
 Open questions show what is unknown.
 Scenarios show how a journey works.
 
-## 2. Before writing
+## 2. Ask before you write
+
+Before you write a board, ask the user a few questions.
+A board built on guesses teaches the wrong thing.
+Your aim is a shared understanding with the user.
+Then you write the board once.
+
+### The decision tree
+
+A decision is a choice that the user must make.
+Some decisions depend on others, so you ask them in order.
+This list shows the order and the board field that each decision settles:
+
+1. Audience and goal. Who will read the board, and what must they understand afterwards? This settles `goal`.
+2. Scope. What is in, what is out, and does the board describe what is built, a plan, or both? This settles `scope.includes` and `scope.excludes`.
+3. Material. Which files and notes can you read? This limits your reading, as section 3 explains.
+4. Depth. How many parts, from 6 to 12, and how much detail in each? This settles the number of components and the length of the summaries.
+5. Groups. How do the parts sort into groups, for example Frontend and Backend? This settles `groups`.
+6. Journeys. Which journeys deserve a walkthrough? This settles `scenarios`.
+7. Unknowns. What is already known to be uncertain or undecided? This settles the items of kind `unknown` and `question`.
+
+A decision waits until the decisions that it depends on have answers.
+For example, you cannot ask about groups before you know the depth.
+The frontier is every decision that you can ask now, because the decisions that it depends on have answers.
+
+### Rounds
+
+A round is one message to the user that holds the whole frontier.
+Number the questions Q1, Q2, and so on.
+Give each question a short title and a plain question.
+Give choices when they help.
+On its own line, write your recommended answer, which starts with "Recommended:".
+Word each question so that the answer "yes" accepts your recommendation.
+After you send a round, wait for the answers.
+The answers open the next frontier, and you send the next round.
+
+This is an example round for a made-up project, a shop that sells plants:
+
+```text
+Q1. Audience and goal
+Is this board for a new developer who must learn how an order moves through the shop?
+Recommended: Yes, a new developer, with the goal "understand how an order moves through the shop".
+
+Q2. Built or planned
+Does the board describe only what is built today?
+Recommended: Yes, only what is built today. I will mark anything else as planned.
+
+Q3. Material
+Can I read only the folder `src/orders` and the file `docs/shop.md`?
+Recommended: Yes, only those two.
+```
+
+### Facts and decisions
+
+A fact is something that the authorized material states.
+Find each fact yourself and never ask the user for it.
+If your harness can start a helper agent with a fresh context, you can use one for a lookup.
+If it cannot, look yourself.
+Do not wait for a lookup before you ask the questions that do not depend on it.
+A decision is a choice about the board, and only the user can make it.
+
+### Plain English for the user
+
+The user can be a newcomer.
+Do not use a technical word without a short definition.
+Ask one idea in each question.
+Ask at most 5 questions in a round.
+
+### When to stop
+
+Stop when the frontier is empty and the user says that the understanding is shared.
+Then write the board.
+If the user leaves a decision open, record it as an item of kind `question` or `unknown`.
+Never fill the gap with a silent assumption.
+
+### When to skip or shorten
+
+If the user tells you to skip the questions, do not ask them.
+If the request already settles every decision, do not ask them either.
+In both cases, list your assumptions in one short list in your reply.
+Also record each assumption as an item on the board.
+Then write the board.
+If you answer `feedback.json`, ask only about the feedback items that are unclear.
+
+## 3. Before writing
 
 Read only the material that the user authorized.
 Do not search for other files and do not open them, even if they seem related.
-If an unknown can change the result, ask the user before you write.
+If an unknown can change the result, ask the user before you write, as section 2 explains.
 Record what you cannot confirm as items of kind `unknown` or `question`.
 Do not guess.
 
-## 3. Honesty rules
+## 4. Honesty rules
 
 A source kind says how you know a claim.
 For each claim, choose the source kind that matches how you know it:
@@ -42,7 +126,7 @@ Mark anything that is not built yet as planned, either in `scope.excludes` or in
 If the whole board describes a plan, one statement in `scope` is enough.
 Do not promise a guarantee that the material does not state, such as "never fails" or "is secure".
 
-## 4. Writing rules
+## 5. Writing rules
 
 Write plain English with short, active sentences.
 Keep each `label` at most 60 characters.
@@ -65,7 +149,7 @@ Groups have one level only.
 Give every relationship one `kind`: `calls`, `sends-data-to`, `stores-in`, `reads-from`, `depends-on`, `triggers`, or `unknown`.
 Do not write the `lesson` field, unless the user names a built-in lesson.
 
-## 5. Scenarios
+## 6. Scenarios
 
 A scenario is a teaching sequence.
 It does not run anything.
@@ -79,7 +163,7 @@ Never write the ID of an item, a group, or a scenario there.
 If it helps the learner, show a failure path or an edge case.
 Label any part of the path that is not built as planned.
 
-## 6. Updating a board and answering feedback
+## 7. Updating a board and answering feedback
 
 A board lives in the repository at `.anatomy/board.json`.
 Anatomy opens each new revision as soon as you write it.
@@ -99,7 +183,7 @@ For each adopted item, list in `changed` the IDs that you added or changed.
 Do not edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
 See [Responses](board-format.md#responses).
 
-## 7. Checklist before you hand over the file
+## 8. Checklist before you hand over the file
 
 Before you reply, make sure that every item in this list is true.
 
@@ -114,7 +198,7 @@ Before you reply, make sure that every item in this list is true.
 9. No text promises a guarantee that the material does not state.
 10. If you answer feedback, `revision` is higher than before and every feedback item has a response.
 
-## 8. Prompt to paste into your agent
+## 9. Prompt to paste into your agent
 
 Copy this block, replace the placeholders, and send it to your agent.
 
@@ -124,7 +208,7 @@ Write an Anatomy board file that explains: <WHAT TO EXPLAIN>.
 Follow the guide at <PATH TO authoring-guide.md>.
 Validate the file against <PATH TO board.v1.schema.json>.
 Read only this material: <MATERIAL YOU AUTHORIZE>.
-If a consequential detail is unknown, ask me before you write.
+Before you write, ask me the questions that section 2 of the guide describes.
 Record what you cannot confirm as "unknown" or "question" items instead of guessing.
 Write the board to .anatomy/board.json in the repository, and do not edit any other file.
 ```
@@ -142,7 +226,7 @@ After the user sends feedback, Anatomy copies this prompt:
 Read .anatomy/feedback.json and answer every item in the next revision of .anatomy/board.json. The format is in .anatomy/README.md.
 ```
 
-## 9. Minimal valid example
+## 10. Minimal valid example
 
 This example is the smallest board that passes the schema, so it has 2 components.
 A real board has 6 to 12 components.
