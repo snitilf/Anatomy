@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { allBoards, clone, exampleBoard } from '../layer/testBoards'
 import { emptyLayer } from '../layer/model'
+import { bundleWords } from '../canvas/bundleWords'
+import { bundleGroups } from '../canvas/bundles'
 import { trailOf } from './crumbs'
+import { bundleSelection } from './state'
 
 describe('trailOf', () => {
   it('names the group and the part of a selected part', () => {
@@ -38,5 +41,12 @@ describe('trailOf', () => {
       for (const c of board.components) expect(trailOf(board, undefined, { type: 'component', id: c.id })?.last.label).toBe(c.label)
       for (const r of board.relationships) expect(trailOf(board, undefined, { type: 'relationship', id: r.id })?.last.label).toBe(r.label)
     }
+  })
+
+  it('names the pair of a selected bundle, and has nothing when the pair is gone', () => {
+    const board = exampleBoard()
+    const pair = bundleGroups(board)[0]!
+    expect(trailOf(board, undefined, bundleSelection(pair.a, pair.b))).toEqual({ last: { label: bundleWords(board, [], pair).title, kind: 'bundle' } })
+    expect(trailOf(board, undefined, bundleSelection('group:nope', 'group:nada'))).toBeUndefined()
   })
 })

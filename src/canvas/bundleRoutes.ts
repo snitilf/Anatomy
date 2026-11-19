@@ -16,11 +16,12 @@ export interface Bundle extends Pair {
   arrow?: { at: Point; angle: number } | undefined
 }
 
-export const BUNDLE_MIN_WIDTH = 1.5
-export const BUNDLE_MAX_WIDTH = 6
+export const BUNDLE_MIN_WIDTH = 1.25
+export const BUNDLE_MAX_WIDTH = 2.5
 
 export function bundleWidth(count: number): number {
-  return Math.min(BUNDLE_MAX_WIDTH, BUNDLE_MIN_WIDTH + Math.log2(Math.max(1, count)))
+  // One or two connections draw at the minimum. Each doubling after that adds half a pixel.
+  return Math.min(BUNDLE_MAX_WIDTH, BUNDLE_MIN_WIDTH + 0.5 * Math.log2(Math.max(1, count / 2)))
 }
 
 /** The blocks the bundles join: each group area, each part that has no group, and each proposed part. Solved once per layout. */
@@ -74,6 +75,18 @@ export function arrowOf(pair: Pick<Pair, 'ab' | 'ba'>, points: readonly Point[])
   const tip = forward ? (points[points.length - 1] as Point) : (points[0] as Point)
   const from = forward ? (points[points.length - 2] as Point) : (points[1] as Point)
   return { at: tip, angle: (Math.atan2(tip.y - from.y, tip.x - from.x) * 180) / Math.PI }
+}
+
+/** The middle of the longest straight run of a line: where a tag goes when no count was placed. */
+export function middleOf(points: readonly Point[]): Point {
+  let best: { p: Point; q: Point; length: number } | undefined
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i - 1] as Point
+    const q = points[i] as Point
+    const length = Math.abs(q.x - p.x) + Math.abs(q.y - p.y)
+    if (!best || length > best.length) best = { p, q, length }
+  }
+  return best ? { x: (best.p.x + best.q.x) / 2, y: (best.p.y + best.q.y) / 2 } : (points[0] ?? { x: 0, y: 0 })
 }
 
 /** Arrowheads closer than this on screen, at the same side of the same block, read as a ladder. */

@@ -2,19 +2,12 @@ import { Popover } from '@base-ui/react/popover'
 import { CircleHelp } from 'lucide-react'
 import { Tip } from '../app/Tip'
 import { useUi, useUiApi } from '../app/ui'
-import { KIND_ORDER, KIND_WORDS } from '../app/labels'
-import { KIND_STYLE, MANUAL_STYLE, TONE_COLOR } from './kinds'
+import { MANUAL_STYLE, TONE_COLOR } from './kinds'
+import { lineKeyRows } from './lineKey'
 import styles from './Legend.module.css'
 
-const SHORT: Record<(typeof KIND_ORDER)[number], string> = {
-  calls: 'Calls',
-  triggers: 'Triggers',
-  'sends-data-to': 'Sends data to',
-  'stores-in': 'Stores data in',
-  'reads-from': 'Reads data from',
-  'depends-on': 'Depends on',
-  unknown: 'Not known',
-}
+/** The rows are the same until a style changes, so they are worked out once. */
+const ROWS = lineKeyRows()
 
 /** What each kind of line means, behind a small button next to the zoom bar. */
 export function LineKey() {
@@ -31,10 +24,8 @@ export function LineKey() {
         <Popover.Positioner className={styles.positioner} side="top" align="start" sideOffset={6} collisionPadding={8}>
           <Popover.Popup className={styles.list} aria-label="Line key" data-dismissible>
             <ul className={styles.rows}>
-            {KIND_ORDER.map((kind) => {
-              const s = KIND_STYLE[kind]
-              return (
-                <li key={kind} className={styles.row} title={KIND_WORDS[kind]}>
+              {ROWS.map(({ kinds, style: s, label, words }) => (
+                <li key={kinds.join('|')} className={styles.row} title={words}>
                   <svg width="32" height="10" viewBox="0 0 32 10" aria-hidden="true">
                     <line
                       x1="2"
@@ -47,16 +38,15 @@ export function LineKey() {
                       strokeLinecap={s.dash.startsWith('1.5') ? 'round' : 'butt'}
                     />
                   </svg>
-                  <span>{SHORT[kind]}</span>
+                  <span>{label}</span>
                 </li>
-              )
-            })}
-            <li className={styles.row}>
-              <svg width="32" height="10" viewBox="0 0 32 10" aria-hidden="true">
-                <line x1="2" y1="5" x2="30" y2="5" stroke="var(--yours)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={MANUAL_STYLE.dash} strokeLinecap="round" />
-              </svg>
-              <span>Your link</span>
-            </li>
+              ))}
+              <li className={styles.row}>
+                <svg width="32" height="10" viewBox="0 0 32 10" aria-hidden="true">
+                  <line x1="2" y1="5" x2="30" y2="5" stroke="var(--yours)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={MANUAL_STYLE.dash} strokeLinecap="round" />
+                </svg>
+                <span>Your link</span>
+              </li>
             </ul>
           </Popover.Popup>
         </Popover.Positioner>

@@ -16,10 +16,26 @@
   overflow: visible;
 }
 
+/* One bundle: its line, head and button. It adds no box of its own, so the pointer on any part of it lifts all of it. */
+.unit {
+  display: contents;
+  --lift-ink: var(--fg);
+}
+
+.unit[data-mine] {
+  --lift-ink: var(--yours);
+}
+
+.unit[data-on] {
+  --lift-ink: var(--accent-line);
+}
+
 /* The width is in screen pixels at every zoom. */
 .bundle {
   fill: none;
   stroke: var(--line-strong);
+  /* Drawn on the board and scaled with it, so the width is multiplied back to screen pixels. */
+  stroke-width: calc(var(--w, 1.25) * 1px * var(--label-scale, 1));
   stroke-linecap: butt;
   vector-effect: non-scaling-stroke;
   transition: opacity 120ms var(--ease-out);
@@ -29,6 +45,53 @@
   stroke: var(--yours);
 }
 
+/* The pointer's room: a stroke 12px wide on screen, whatever the zoom, which draws nothing. */
+.hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: calc(12px * var(--label-scale, 1));
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+/* A finger is not a pointer: a touch that lands within a few pixels of a thin stroke is given to the map behind it. */
+@media (pointer: coarse) {
+  .hit {
+    stroke-width: calc(24px * var(--label-scale, 1));
+  }
+}
+
+/* Something is selected: the bundles that are not part of it step back to a hairline, at their dim opacity. */
+:global([data-spot]) .bundle:not([data-on]) {
+  stroke-width: calc(min(var(--w, 1.25), 1) * 1px * var(--label-scale, 1));
+}
+
+/* The pointer or the keyboard on a bundle, or the bundle selected: thicker, in full ink, and nothing else in the way. */
+.unit:hover .bundle,
+.unit:has(:focus-visible) .bundle,
+.unit[data-on] .bundle {
+  stroke: var(--lift-ink);
+  stroke-width: calc((var(--w, 1.25) * 1px + 1.5px) * var(--label-scale, 1));
+  opacity: 1 !important;
+}
+
+.unit:hover .arrow,
+.unit:has(:focus-visible) .arrow,
+.unit[data-on] .arrow,
+.unit:hover .count,
+.unit:has(:focus-visible) .count,
+.unit[data-on] .count {
+  opacity: 1 !important;
+}
+
+.unit:hover .arrow svg,
+.unit:has(:focus-visible) .arrow svg,
+.unit[data-on] .arrow svg {
+  fill: var(--lift-ink);
+}
+
 /* The arrowhead is the size of a screen arrowhead at every zoom, in the ink of its line. */
 .arrow {
   position: absolute;
@@ -36,6 +99,11 @@
   height: 0;
   overflow: visible;
   transition: opacity 120ms var(--ease-out);
+}
+
+/* A head that would pile into a ladder is not drawn, until the bundle is lifted: direction shows where it is asked for. */
+.arrow[data-dropped] {
+  opacity: 0;
 }
 
 .arrow svg {
@@ -53,28 +121,103 @@
   fill: var(--yours);
 }
 
-/* The count sits on a cutout in the color of the map, like the label of a line. */
+/* The count sits on a cutout in the color of the map, like the label of a line. It is the bundle's button. */
 .count {
+  appearance: none;
   position: absolute;
-  transition: opacity 120ms var(--ease-out);
   z-index: 1;
-}
-
-.count span {
-  display: block;
-  transform: translate(-50%, -50%) scale(var(--label-scale, 1));
+  margin: 0;
   padding: 1px 5px;
+  border: 0;
   border-radius: var(--radius-xs);
   background: var(--bg);
   color: var(--fg-2);
+  font: inherit;
   font-size: var(--text-xs);
   line-height: var(--leading-xs);
   font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(var(--label-scale, 1));
+  transition: opacity 120ms var(--ease-out);
+}
+
+.unit:hover .count,
+.unit[data-on] .count {
+  color: var(--fg);
+}
+
+.unit[data-on] .count {
+  color: var(--accent-text);
+}
+
+.count:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* A bundle with no room for a count, or one connection, is still a button for the keyboard. Focus shows on its line. */
+.reach {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* The tag: the same look as the name of a tile, and one for the whole layer. */
+.tipAnchor {
+  position: absolute;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  left: 0;
+  top: 0;
+}
+
+.tip {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: calc(14px * var(--label-scale, 1));
+  transform: translateX(calc(-50% + var(--tip-dx, 0px))) scale(var(--label-scale, 1));
+  transform-origin: 50% 100%;
+  width: max-content;
+  max-width: 480px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.tip[data-show] {
+  display: block;
+}
+
+/* Flipped below the pointer when the top would be cut off by the map's edge. */
+.tip[data-flip] {
+  bottom: auto;
+  top: calc(14px * var(--label-scale, 1));
+  transform-origin: 50% 0;
 }
 
 .anchor {
   position: absolute;
+  z-index: 2;
   width: 0;
   height: 0;
 }
@@ -128,4 +271,14 @@
   color: var(--fg-3);
   font-weight: var(--weight-regular);
   font-variant-numeric: tabular-nums;
+}
+
+/* A bundle is selected: the names of its two groups keep full ink and the others step back. */
+.name[data-quiet] {
+  color: var(--fg-3);
+}
+
+/* The selected bundle is a pixel wider than its own width. */
+.unit[data-on] .bundle {
+  stroke-width: calc((var(--w, 1.25) * 1px + 1px) * var(--label-scale, 1));
 }

@@ -417,3 +417,24 @@ test.describe('first open on a phone', () => {
     await expect(page.getByTestId('overview')).toHaveCount(0)
   })
 })
+
+test('a pair row shows the way its connections run', async ({ page }) => {
+  await open(page, 'e2e/fixtures/sixty-parts.board.json')
+  await tab(page, 'Overview').click()
+  const pairs = page.getByTestId('overview').locator('[data-row^="between:"]:not([data-row="between:more"]):not([data-row^="between:inside:"])')
+  const n = await pairs.count()
+  expect(n).toBeGreaterThan(2)
+  let one = 0
+  for (let i = 0; i < n; i++) {
+    const pair = pairs.nth(i)
+    const label = (await pair.getAttribute('aria-label')) ?? ''
+    const both = (await pair.locator('.lucide-arrow-left-right').count()) === 1
+    expect(both).toBe(label.includes(' and '))
+    if (!both) {
+      one++
+      await expect(pair.locator('.lucide-arrow-right, .lucide-arrow-left')).toHaveCount(1)
+      expect(label).toMatch(/ to /)
+    }
+  }
+  expect(one).toBeGreaterThan(0)
+})

@@ -39,7 +39,7 @@ export function useOverviewActions(boardId: string): OverviewActions {
         if (phone) return
         // After the map is in front and has drawn the selection.
         requestAnimationFrame(() => {
-          if (store.getState().selection) run(commandById('zoom.selection'))
+          if (store.getState().selection) run(commandById(selection.type === 'bundle' ? 'zoom.bundle' : 'zoom.selection'))
         })
       },
       openReview(groupTitle, row) {

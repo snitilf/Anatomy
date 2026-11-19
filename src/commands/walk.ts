@@ -59,7 +59,7 @@ function endOf(board: Board, layer: Parts, selection: Selection, side: 'from' | 
  * From a connection or a link, `target` and `source` select the part at its end.
  */
 export function walkStep(board: Board, layer: Parts, selection: Selection | undefined, trail: Trail | undefined, move: Walk): Step | undefined {
-  if (!selection || selection.type === 'board' || selection.type === 'mark') return undefined
+  if (!selection || selection.type === 'board' || selection.type === 'mark' || selection.type === 'bundle') return undefined
   if (selection.type === 'relationship' || selection.type === 'link') {
     if (move === 'next' || move === 'previous') return undefined
     const here = endOf(board, layer, selection, move === 'target' ? 'to' : 'from')

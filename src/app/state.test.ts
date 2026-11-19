@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { clone, exampleBoard } from '../layer/testBoards'
 import { emptyLayer, type Mark } from '../layer/model'
 import { HISTORY_LIMIT } from './history'
-import { initialState, reducer, type Action, type AppState } from './state'
+import { bundleGroups } from '../canvas/bundles'
+import { bundleSelection, initialState, reducer, type Action, type AppState } from './state'
 
 const opened = (): AppState => reducer(initialState, { type: 'boardOpened', board: exampleBoard(), warnings: [] })
 const run = (state: AppState, ...actions: Action[]) => actions.reduce(reducer, state)
@@ -259,5 +260,48 @@ describe('reducer: scenarios', () => {
     other.id = 'another-board'
     expect(reducer(playing(), { type: 'boardOpened', board: other, warnings: [] }).scenario).toBeUndefined()
     expect(reducer(playing(), { type: 'boardOpened', board: exampleBoard(), warnings: [] }).scenario).toBeUndefined()
+  })
+
+  describe('a selected bundle', () => {
+    const pairOf = (board: ReturnType<typeof exampleBoard>) => bundleGroups(board)[0]!
+
+    it('is kept when the same board is opened again with its pair still there', () => {
+      const board = exampleBoard()
+      const pair = pairOf(board)
+      let state = run(opened(), { type: 'select', selection: bundleSelection(pair.a, pair.b) })
+      state = reducer(state, { type: 'boardOpened', board: { ...clone(board), revision: board.revision + 1 }, warnings: [] })
+      expect(state.selection).toEqual(bundleSelection(pair.a, pair.b))
+    })
+
+    it('is keyed by its two ends, not by where it is in the list', () => {
+      const pair = pairOf(exampleBoard())
+      expect(bundleSelection(pair.a, pair.b)).toEqual({ type: 'bundle', id: `${pair.a}|${pair.b}`, a: pair.a, b: pair.b })
+    })
+
+    it('is cleared when a reimport leaves nothing between its ends', () => {
+      const board = exampleBoard()
+      const pair = pairOf(board)
+      const without = { ...clone(board), revision: board.revision + 1, relationships: board.relationships.filter((r) => !pair.connectionIds.includes(r.id)) }
+      let state = run(opened(), { type: 'select', selection: bundleSelection(pair.a, pair.b) })
+      state = reducer(state, { type: 'boardOpened', board: without, warnings: [] })
+      expect(state.selection).toBeUndefined()
+    })
+
+    it('is cleared when the last link between its ends is deleted, and kept while one is left', () => {
+      const board = { ...clone(exampleBoard()), relationships: [] }
+      const [a, b] = [board.components.find((c) => c.group !== undefined)!, board.components.find((c) => c.group !== undefined && c.group !== board.components[0]?.group)!]
+      let state = reducer(initialState, { type: 'boardOpened', board, warnings: [] })
+      state = run(
+        state,
+        { type: 'linkAdded', from: a.id, to: b.id, label: 'one', id: 'link-aaaaaa', now },
+        { type: 'linkAdded', from: b.id, to: a.id, label: 'two', id: 'link-bbbbbb', now },
+      )
+      const pair = bundleGroups(board, state.layer!.links)[0]!
+      expect(pair.count).toBe(2)
+      state = run(state, { type: 'select', selection: bundleSelection(pair.a, pair.b) }, { type: 'linkDeleted', id: 'link-aaaaaa' })
+      expect(state.selection).toEqual(bundleSelection(pair.a, pair.b))
+      state = run(state, { type: 'linkDeleted', id: 'link-bbbbbb' })
+      expect(state.selection).toBeUndefined()
+    })
   })
 })
