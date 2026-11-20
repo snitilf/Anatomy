@@ -1,5 +1,15 @@
 {
-  "readme": { "characters": 29696, "tokens": 8472 },
+  "readme": { "characters": 30718, "tokens": 8727 },
   "hardCap": { "characters": 32000, "tokens": 9200 },
-  "allowedGrowth": 0.05
+  "allowedGrowth": 0.05,
+  "cli": {
+    "anatomy help": { "characters": 573, "tokens": 144 },
+    "anatomy validate, valid example": { "characters": 38, "tokens": 10 },
+    "anatomy validate, one broken reference": { "characters": 173, "tokens": 44 },
+    "anatomy validate, four faults": { "characters": 377, "tokens": 95 },
+    "anatomy validate, five feedback warnings": { "characters": 500, "tokens": 125 },
+    "anatomy validate, over 25 errors": { "characters": 2795, "tokens": 699 },
+    "anatomy validate --json, over 25 errors": { "characters": 4159, "tokens": 1387 }
+  },
+  "cliHardCap": { "characters": 6000, "tokens": 2000 }
 }

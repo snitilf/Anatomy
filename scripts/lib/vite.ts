@@ -1,7 +1,9 @@
 // Loads app modules the way Vite does, so a script can import files that use `?raw` imports.
+import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
-const root = new URL('../../', import.meta.url).pathname
+// fileURLToPath decodes the URL, so a folder name with a space stays a real path.
+const root = fileURLToPath(new URL('../../', import.meta.url))
 
 /** Loads the given modules (paths from the repository root), runs the callback, and closes the loader. */
 export async function withAppModules<T>(

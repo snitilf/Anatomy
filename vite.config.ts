@@ -2,10 +2,12 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
+import { anatomyCli } from './scripts/lib/cliBundle.ts'
 
 // Anatomy is a local tool. The dev and preview servers listen on loopback only.
 export default defineConfig({
-  plugins: [react()],
+  // anatomyCli bundles the `anatomy` tool that the app writes into a project as `.anatomy/anatomy.mjs`.
+  plugins: [react(), anatomyCli()],
   server: { host: '127.0.0.1', strictPort: true },
   preview: { host: '127.0.0.1', strictPort: true },
   // The app loads from the local machine, so one main chunk of React, React Flow, and Zod is fine.

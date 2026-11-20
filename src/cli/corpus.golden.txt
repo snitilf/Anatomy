@@ -1,0 +1,337 @@
+## base board
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3
+
+## compact JSON with a byte order mark
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3
+
+## unknown lesson
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 1 warning
+components[0].lesson: Component "cart" names the lesson "flux-capacitor", which this version of Anatomy does not have.
+
+## part with no connection
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 1 warning
+components[6]: Component "mailer" has no connection.
+
+## guarantee words
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 2 warnings
+components[3].summary: "never fails" promises a guarantee. Keep it only if the material states it.
+relationships[1].explanation: "bulletproof" promises a guarantee. Keep it only if the material states it.
+
+## changed ID not on the board
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 1 warning
+responses.items[0].changed[0]: The answer to "note-x1" says it changed "api-to-paymnt", which is not a component or relationship on this board. Did you mean "api-to-payment"?
+
+## adopted with no changed IDs
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 1 warning
+responses.items[0].changed: The answer to "note-x1" is adopted but lists no changed IDs, so Anatomy keeps the user's mark on the map. List the components and relationships you changed.
+
+## feedback answered in full
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4
+
+## feedback not answered yet
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3
+
+## feedback forgotten in the next revision
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 1 warning
+(file): The board does not answer feedback.json ("feedback-k2m9x0q4z7ab", 3 items). Set responses.respondsTo to "feedback-k2m9x0q4z7ab" and answer every item.
+
+## feedback with old respondsTo
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 1 warning
+responses.respondsTo: The board does not answer feedback.json ("feedback-k2m9x0q4z7ab", 3 items). Set responses.respondsTo to "feedback-k2m9x0q4z7ab" and answer every item.
+
+## feedback partly answered, revision not raised
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 5 warnings
+revision: The feedback was made on revision 3, so the answer must have a higher revision. Set revision to 4.
+responses.items: Feedback item "edit-0p9o8i7u6y5t" has no answer.
+responses.items: Feedback item "part-9z8y7x6w5v4u" has no answer.
+responses.items[1].feedbackId: The user withdrew "note-old000000001". Remove this answer.
+responses.items[2].feedbackId: "edit-0p9o8i7u6y5u" is not an item in feedback.json. Did you mean "edit-0p9o8i7u6y5t"?
+
+## more warnings than the report shows
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 33 warnings
+responses.items: Feedback item "note-a1b2c3d4e5f6" has no answer.
+responses.items: Feedback item "edit-0p9o8i7u6y5t" has no answer.
+responses.items: Feedback item "part-9z8y7x6w5v4u" has no answer.
+responses.items[0].feedbackId: "zz-0" is not an item in feedback.json.
+responses.items[1].feedbackId: "zz-1" is not an item in feedback.json.
+responses.items[2].feedbackId: "zz-2" is not an item in feedback.json.
+responses.items[3].feedbackId: "zz-3" is not an item in feedback.json.
+responses.items[4].feedbackId: "zz-4" is not an item in feedback.json.
+responses.items[5].feedbackId: "zz-5" is not an item in feedback.json.
+responses.items[6].feedbackId: "zz-6" is not an item in feedback.json.
+responses.items[7].feedbackId: "zz-7" is not an item in feedback.json.
+responses.items[8].feedbackId: "zz-8" is not an item in feedback.json.
+responses.items[9].feedbackId: "zz-9" is not an item in feedback.json.
+responses.items[10].feedbackId: "zz-10" is not an item in feedback.json.
+responses.items[11].feedbackId: "zz-11" is not an item in feedback.json.
+responses.items[12].feedbackId: "zz-12" is not an item in feedback.json.
+responses.items[13].feedbackId: "zz-13" is not an item in feedback.json.
+responses.items[14].feedbackId: "zz-14" is not an item in feedback.json.
+responses.items[15].feedbackId: "zz-15" is not an item in feedback.json.
+responses.items[16].feedbackId: "zz-16" is not an item in feedback.json.
+responses.items[17].feedbackId: "zz-17" is not an item in feedback.json.
+responses.items[18].feedbackId: "zz-18" is not an item in feedback.json.
+responses.items[19].feedbackId: "zz-19" is not an item in feedback.json.
+responses.items[20].feedbackId: "zz-20" is not an item in feedback.json.
+responses.items[21].feedbackId: "zz-21" is not an item in feedback.json.
+8 more warnings are not shown.
+
+## huge feedback item IDs
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 2 warnings
+responses.items: Feedback item "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…" (300,000 characters) has no answer.
+responses.items[0].feedbackId: "note-a1b2c3d4e5f6" is not an item in feedback.json.
+
+## feedback for another board
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4
+
+## feedback file that is not feedback
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 4, 1 warning
+(file): feedback.json is not a feedback file, so the answers were not checked against it.
+
+## empty file
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+(file): The file is not valid JSON: <parser message>
+
+## truncated JSON
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+(file): The file is not valid JSON: <parser message>
+
+## JSON array
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+(file): A board file must contain one JSON object.
+
+## another JSON file
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+format: This is not an Anatomy board. Expected "format": "anatomy-board".
+
+## schema version 2
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+schemaVersion: This board uses schema version 2. This app supports version 1.
+
+## file over the size limit
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+(file): The file is 1,002,296 bytes. The limit is 1,000,000 bytes.
+
+## missing title
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+title: Invalid input: expected string, received undefined. The field is missing.
+
+## revision as text
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+revision: Invalid input: expected number, received string
+
+## revision zero
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+revision: Too small: expected number to be >=1
+
+## label too long
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[1].label: Too big: expected string to have <=60 characters. It has 65.
+
+## summary of spaces
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[2].summary: must not be empty
+
+## misspelled key
+$ validate (exit 1)
+.anatomy/board.json: invalid, 2 errors
+components[0].summary: Invalid input: expected string, received undefined. The field is missing.
+components[0]: Unrecognized key: "summery". Did you mean "summary"?
+
+## unknown key with no near match
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+relationships[0]: Unrecognized key: "color"
+
+## unknown key of 900,000 characters
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[0]: Unrecognized key: "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk…" (900,000 characters)
+
+## ID with capitals and spaces
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+groups[0].id: must use lowercase letters, digits, and single hyphens, for example "rule-check". Try "front-end".
+
+## duplicate component ID
+$ validate (exit 1)
+.anatomy/board.json: invalid, 2 errors
+components[5].id: The ID "payment" is already used at components[3].id. IDs must be unique. Use a new ID, for example "payment-2".
+relationships[4].to: Relationship "api-to-warehouse" points to "warehouse", which is not a component on this board.
+
+## item ID equal to a component ID
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+items[0].id: The ID "api" is already used at components[2].id. IDs must be unique. Use a new ID, for example "api-2".
+
+## relationship to a misspelled component
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+relationships[2].to: Relationship "api-to-payment" points to "paymnt", which is not a component on this board. Did you mean "payment"?
+
+## relationship from a missing component
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+relationships[0].from: Relationship "cart-to-checkout" points from "basket-service", which is not a component on this board.
+
+## group that does not exist
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[0].group: Component "cart" is in group "fronted", which is not a group on this board. Did you mean "frontend"?
+
+## item about a missing part
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+items[0].about: The question "q-timeout" is about "payments", which is not a component or relationship on this board. Did you mean "payment"?
+
+## highlight names a group
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+scenarios[0].steps[0].highlight[2]: Step 1 of scenario "place-order" highlights "frontend", which is not a component or relationship on this board.
+
+## highlight names an item
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+scenarios[0].steps[2].highlight[2]: Step 3 of scenario "place-order" highlights "q-timeout", which is not a component or relationship on this board.
+
+## relationship kind misspelled
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+relationships[0].kind: Invalid option: expected one of "calls"|"sends-data-to"|"stores-in"|"reads-from"|"depends-on"|"triggers"|"unknown". Did you mean "sends-data-to"?
+
+## source kind from version 2
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[0].source.kind: Invalid option: expected one of "agent-explanation"|"agent-proposal"|"documented-intent"|"user-stated"
+
+## documented intent without a reference
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[5].source.references: a documented-intent source needs at least one reference
+
+## no components
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components: needs at least one component
+
+## scenario with no steps
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+scenarios[0].steps: needs at least one step
+
+## too many groups
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+groups: Too big: expected array to have <=12 items. It has 13.
+
+## reference with a URL key
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[5].source.references[0]: Unrecognized key: "url"
+
+## position out of range
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[0].position.x: Too big: expected number to be <=100000
+
+## response with a wrong status
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+responses.items[0].status: Invalid option: expected one of "adopted"|"declined"|"answered"
+
+## explanation over the limit
+$ validate (exit 1)
+.anatomy/board.json: invalid, 1 error
+components[0].explanation: Too big: expected string to have <=4000 characters. It has 4199.
+
+## several faults at once
+$ validate (exit 1)
+.anatomy/board.json: invalid, 4 errors
+goal: Invalid input: expected string, received undefined. The field is missing.
+components[1].label: must not be empty
+relationships[3].kind: Invalid option: expected one of "calls"|"sends-data-to"|"stores-in"|"reads-from"|"depends-on"|"triggers"|"unknown"
+items[0].kind: Invalid option: expected one of "assumption"|"unknown"|"question"
+
+## broken references everywhere
+$ validate (exit 1)
+.anatomy/board.json: invalid, 11 errors
+components[0].group: Component "cart" is in group "core", which is not a group on this board.
+components[1].group: Component "checkout" is in group "core", which is not a group on this board.
+components[2].group: Component "api" is in group "core", which is not a group on this board.
+components[3].group: Component "payment" is in group "core", which is not a group on this board.
+components[4].group: Component "database" is in group "core", which is not a group on this board.
+components[5].group: Component "warehouse" is in group "core", which is not a group on this board.
+relationships[0].to: Relationship "cart-to-checkout" points to "checkout-old", which is not a component on this board. Did you mean "checkout"?
+relationships[1].to: Relationship "checkout-to-api" points to "api-old", which is not a component on this board.
+relationships[2].to: Relationship "api-to-payment" points to "payment-old", which is not a component on this board.
+relationships[3].to: Relationship "api-to-database" points to "database-old", which is not a component on this board. Did you mean "database"?
+relationships[4].to: Relationship "api-to-warehouse" points to "warehouse-old", which is not a component on this board. Did you mean "warehouse"?
+
+## more problems than the report shows
+$ validate (exit 1)
+.anatomy/board.json: invalid, 40 errors
+relationships[5].to: Relationship "extra-0" points to "service-0", which is not a component on this board.
+relationships[6].to: Relationship "extra-1" points to "service-1", which is not a component on this board.
+relationships[7].to: Relationship "extra-2" points to "service-2", which is not a component on this board.
+relationships[8].to: Relationship "extra-3" points to "service-3", which is not a component on this board.
+relationships[9].to: Relationship "extra-4" points to "service-4", which is not a component on this board.
+relationships[10].to: Relationship "extra-5" points to "service-5", which is not a component on this board.
+relationships[11].to: Relationship "extra-6" points to "service-6", which is not a component on this board.
+relationships[12].to: Relationship "extra-7" points to "service-7", which is not a component on this board.
+relationships[13].to: Relationship "extra-8" points to "service-8", which is not a component on this board.
+relationships[14].to: Relationship "extra-9" points to "service-9", which is not a component on this board.
+relationships[15].to: Relationship "extra-10" points to "service-10", which is not a component on this board.
+relationships[16].to: Relationship "extra-11" points to "service-11", which is not a component on this board.
+relationships[17].to: Relationship "extra-12" points to "service-12", which is not a component on this board.
+relationships[18].to: Relationship "extra-13" points to "service-13", which is not a component on this board.
+relationships[19].to: Relationship "extra-14" points to "service-14", which is not a component on this board.
+relationships[20].to: Relationship "extra-15" points to "service-15", which is not a component on this board.
+relationships[21].to: Relationship "extra-16" points to "service-16", which is not a component on this board.
+relationships[22].to: Relationship "extra-17" points to "service-17", which is not a component on this board.
+relationships[23].to: Relationship "extra-18" points to "service-18", which is not a component on this board.
+relationships[24].to: Relationship "extra-19" points to "service-19", which is not a component on this board.
+relationships[25].to: Relationship "extra-20" points to "service-20", which is not a component on this board.
+relationships[26].to: Relationship "extra-21" points to "service-21", which is not a component on this board.
+relationships[27].to: Relationship "extra-22" points to "service-22", which is not a component on this board.
+relationships[28].to: Relationship "extra-23" points to "service-23", which is not a component on this board.
+relationships[29].to: Relationship "extra-24" points to "service-24", which is not a component on this board.
+15 more errors are not shown.
+
+## base board
+$ validate --json (exit 0)
+{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"omittedErrors":0,"warnings":[],"omittedWarnings":0}
+
+## guarantee words
+$ validate --json (exit 0)
+{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"omittedErrors":0,"warnings":[{"path":"components[3].summary","code":"guarantee","message":"\"never fails\" promises a guarantee. Keep it only if the material states it."},{"path":"relationships[1].explanation","code":"guarantee","message":"\"bulletproof\" promises a guarantee. Keep it only if the material states it."}],"omittedWarnings":0}
+
+## relationship to a misspelled component
+$ validate --json (exit 1)
+{"file":".anatomy/board.json","valid":false,"errors":[{"path":"relationships[2].to","code":"unknown-component","message":"Relationship \"api-to-payment\" points to \"paymnt\", which is not a component on this board.","hint":"Did you mean \"payment\"?"}],"omittedErrors":0,"warnings":[],"omittedWarnings":0}

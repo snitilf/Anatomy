@@ -13,6 +13,8 @@ export const FILES = {
   feedback: 'feedback.json',
   /** The format notes for agents. */
   readme: 'README.md',
+  /** The bundled `anatomy` tool that checks a board the way the app does. */
+  script: 'anatomy.mjs',
 } as const
 export type FileName = (typeof FILES)[keyof typeof FILES]
 
