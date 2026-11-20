@@ -146,6 +146,24 @@
   transition: opacity 120ms var(--ease-out);
 }
 
+/* The user's mark on a count: one dash and dot in their color, the same length as on the map, on the count's line. */
+.count:has(.yoursTick) {
+  white-space: nowrap;
+}
+
+.yoursTick {
+  display: inline-block;
+  margin-right: 3px;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.yoursTick line {
+  stroke: var(--yours);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+}
+
 .unit:hover .count,
 .unit[data-on] .count {
   color: var(--fg);
