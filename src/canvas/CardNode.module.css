@@ -414,3 +414,26 @@
 :global([data-far]) .yoursEdge[data-selected] rect {
   stroke: var(--on-accent);
 }
+
+/*
+ * Forced colors paint every border in the text color, which would show through the gaps of the dash and dot and make
+ * the edge read solid. The user's part draws no border there, and keeps its size with one more pixel of padding.
+ * Its edge takes the system colors: the text color at rest, Highlight when selected or focused.
+ */
+@media (forced-colors: active) {
+  :global(.react-flow__node) .card[data-yours] {
+    border: 0;
+    padding: calc(var(--space-3) + 1px) 15px;
+  }
+
+  .yoursEdge rect,
+  :global(.react-flow__node:hover:not(:focus-visible)) .yoursEdge:not([data-selected]) rect {
+    stroke: CanvasText;
+  }
+
+  .yoursEdge[data-selected] rect,
+  :global(.react-flow__node:focus-visible) .yoursEdge rect,
+  :global([data-far]) .yoursEdge[data-selected] rect {
+    stroke: Highlight;
+  }
+}

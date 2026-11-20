@@ -91,3 +91,11 @@
   line-height: 18px !important;
   color: var(--fg-2) !important;
 }
+
+/* Forced colors would paint the clear border in the text color, under the dash and dot. The new part draws none there. */
+@media (forced-colors: active) {
+  .editor[data-kind='part'] > div {
+    border: 0;
+    padding: calc(var(--space-3) + 1px) 15px;
+  }
+}
