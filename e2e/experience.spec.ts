@@ -109,6 +109,17 @@ test('a part picked by name in the command menu takes focus to its sidebar headi
   expect(presses).toBeLessThan(15)
 })
 
+test('on a phone, a part picked by name in the command menu takes focus to the heading of the sheet', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page, 'src/examples/claude-code-harness.board.json')
+  await page.getByRole('button', { name: 'Search' }).click()
+  const menu = page.getByRole('dialog', { name: 'Command menu' })
+  await menu.getByRole('combobox').fill('Permission check')
+  await menu.getByRole('option', { name: /^Permission check/ }).first().click()
+  const sheet = page.getByRole('region', { name: 'Sidebar' })
+  await expect(sheet.getByRole('heading', { level: 2, name: 'Permission check' })).toBeFocused()
+})
+
 test('the map hint can be closed with its button', async ({ page }) => {
   await open(page, REFUND)
   await page.getByRole('button', { name: 'Dismiss hint' }).click()

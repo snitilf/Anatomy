@@ -43,21 +43,27 @@ function filter(_value: string, search: string, keywords?: string[]): number {
   return 0
 }
 
+/** How long focus waits for the sidebar to show the chosen item, before it goes to the item on the map. */
+const FOCUS_WAIT_MS = 600
+
 /**
- * After a part or a connection is picked by name, focus goes to what now describes it: the heading of the sidebar, or the
- * item on the map when the sidebar is closed. A menu opened from the keyboard has no control to give focus back to, so
- * focus would otherwise fall to the page and the next Tab would start from the top.
- * The panel and the map render the new selection a frame or two later, so focus is tried, and checked, over a few frames.
+ * After a part or a connection is picked by name, focus goes to what now describes it: the heading of the sidebar (the
+ * sheet on a phone), or the item on the map when that heading does not come on screen. A menu opened from the keyboard
+ * has no control to give focus back to, so focus would otherwise fall to the page and the next Tab would start from the top.
+ * The panel renders the new selection a few frames later, and a phone raises its sheet, so the heading is waited for.
  */
-function focusChosen(id: string | undefined, tries = 0) {
-  if (tries > 12) return
+function focusChosen(id: string | undefined, since = performance.now()) {
   const active = document.activeElement
   if (active && active !== document.body) return
-  const heading = document.querySelector<HTMLElement>('aside[aria-label="Sidebar"]:not([inert]) h2[tabindex="-1"]')
-  const onMap = id === undefined ? null : document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"], .react-flow__edge[data-id="${CSS.escape(id)}"]`)
-  const target = heading !== null && heading.getClientRects().length > 0 ? heading : onMap
-  if (tries >= 1) target?.focus({ preventScroll: true })
-  requestAnimationFrame(() => focusChosen(id, tries + 1))
+  // The sidebar is an aside on a wide screen and the sheet on a phone. Its heading counts only while it is on screen.
+  const heading = document.querySelector<HTMLElement>('[aria-label="Sidebar"]:not([inert]) h2[tabindex="-1"]')
+  const box = heading?.getBoundingClientRect()
+  const shown = box !== undefined && box.height > 0 && box.bottom > 0 && box.top < window.innerHeight
+  const late = performance.now() - since > FOCUS_WAIT_MS
+  if (shown) heading?.focus({ preventScroll: true })
+  else if (late && id !== undefined) document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"], .react-flow__edge[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true })
+  // Checked again on the next frame: the heading can be replaced as the panel renders, which drops focus to the page.
+  if (performance.now() - since < FOCUS_WAIT_MS * 2) requestAnimationFrame(() => focusChosen(id, since))
 }
 
 function MenuBody({ onClose }: { onClose: () => void }) {
@@ -80,7 +86,8 @@ function MenuBody({ onClose }: { onClose: () => void }) {
       run(command)
       if (command.group === 'Go to') {
         const chosen = store.getState().selection
-        focusChosen(chosen && chosen.type !== 'board' ? chosen.id : undefined)
+        // A frame later, once the panel shows the chosen item rather than what was there before.
+        requestAnimationFrame(() => focusChosen(chosen && chosen.type !== 'board' ? chosen.id : undefined))
       }
     })
   }
