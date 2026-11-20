@@ -38,6 +38,7 @@ The path is `.anatomy/board.json`.
    If the user says to skip them, list your assumptions and record them as items.
 5. Write the whole file.
    Raise `revision` by one each time you write it.
+   Once a board exists, revise it with `node .anatomy/anatomy.mjs apply` instead, which raises `revision` for you (see "Answer feedback").
 
 The rules that matter most:
 
@@ -72,11 +73,12 @@ Read .anatomy/feedback.json and answer every item in the next revision of .anato
 ```
 
 1. Read `.anatomy/feedback.json`.
-2. Write the next revision of `.anatomy/board.json` with `revision` raised by one.
-3. Add a `responses` block with `respondsTo` set to the feedback `id`.
-4. Answer every item by its `id` with the status `adopted`, `declined`, or `answered`.
-   List the IDs that you added or changed in `changed`.
-5. Run the check again. It also warns about an item with no answer.
+2. Write a short patch and run `node .anatomy/anatomy.mjs apply patch.json`.
+   Edits address list items by ID, `for` ties an edit to a feedback item, and one `respond` operation per item answers it with the status `adopted`, `declined`, or `answered`.
+   The script raises `revision` by one, writes `responses` and `changed`, and writes the board only when it is valid.
+   Pass `--base N` with the revision you read, `--dry-run` to preview, and `--cascade` to drop what refers to a removed part.
+3. For a first board or a big restructure, write the whole file instead, with `revision` raised by one and a `responses` block that has `respondsTo` set to the feedback `id` and an answer for every item.
+4. Run the check again. It also warns about an item with no answer.
 
 The full format is in `.anatomy/README.md`.
 Anatomy opens the new revision on its own.
@@ -85,7 +87,7 @@ Never edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
 They hold the working state of the user.
 
 Commit `.anatomy/board.json` with the code that it explains.
-Add `.anatomy/layer.json`, `.anatomy/feedback.json`, and `.anatomy/anatomy.mjs` to the `.gitignore` of the project.
+Add `.anatomy/layer.json`, `.anatomy/feedback.json`, `.anatomy/anatomy.mjs`, and `.anatomy/board.prev.json` to the `.gitignore` of the project.
 Tell the user before you change their `.gitignore`.
 
 ## Rules

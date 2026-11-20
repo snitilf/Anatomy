@@ -8,7 +8,7 @@ export const SCRIPT_MARK = '// Written by Anatomy, which replaces this file when
  * tell the project's linter and type checker to skip a file that the project did not write.
  */
 export const SCRIPT_BANNER = `${SCRIPT_MARK}
-// It checks .anatomy/board.json the way Anatomy does. Run it, there is no need to read it: node .anatomy/anatomy.mjs help
+// It checks and edits .anatomy/board.json the way Anatomy does. Run it, there is no need to read it: node .anatomy/anatomy.mjs help
 /* eslint-disable */
 // @ts-nocheck
 `
