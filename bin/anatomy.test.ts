@@ -244,6 +244,15 @@ describe('fmt in the bundled tool', () => {
     expect(readFileSync(join(dir, 'boards', 'shop.json'), 'utf8')).toBe(pretty)
   })
 
+  it('writes through a link to a file whose name starts with two dots', async () => {
+    const dir = join(root, 'fmt-link-dots')
+    mkdirSync(dir)
+    writeFileSync(join(dir, '..e.json'), compact)
+    symlinkSync('..e.json', join(dir, 'board.json'))
+    expect((await node(['fmt', 'board.json'], dir)).code).toBe(0)
+    expect(readFileSync(join(dir, '..e.json'), 'utf8')).toBe(pretty)
+  })
+
   it('refuses a link to a file outside the board folder', async () => {
     const dir = join(root, 'fmt-link-outside')
     mkdirSync(join(dir, 'project'), { recursive: true })

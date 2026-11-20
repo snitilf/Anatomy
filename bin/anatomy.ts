@@ -4,7 +4,7 @@
 // Must stay first. See src/cli/jitless.ts.
 import '../src/cli/jitless.ts'
 import { chmodSync, closeSync, constants, fstatSync, lstatSync, openSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runAnatomy, type ReadResult } from '../src/cli/anatomy.ts'
 
@@ -19,7 +19,7 @@ const cwd = process.cwd()
 
 function display(path: string): string {
   const shown = relative(cwd, path)
-  return shown === '' || shown.startsWith('..') || isAbsolute(shown) ? path : shown
+  return shown === '' || shown === '..' || shown.startsWith(`..${sep}`) || isAbsolute(shown) ? path : shown
 }
 
 const NOT_REGULAR = 'it is not a regular file'
@@ -64,7 +64,8 @@ function target(path: string): string {
   if (!lstatSync(path).isSymbolicLink()) return path
   const real = realpathSync(path)
   const inside = relative(realpathSync(dirname(path)), real)
-  if (inside.startsWith('..') || isAbsolute(inside)) throw new Error('it is a link to a file outside its folder')
+  // A name like "..e.json" is inside: only ".." as a whole first segment leaves the folder.
+  if (inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)) throw new Error('it is a link to a file outside its folder')
   return real
 }
 
