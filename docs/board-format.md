@@ -262,13 +262,21 @@ They do not stop the board from opening:
 With `--json`, each problem has a `code` that stays the same when a message changes, for example `unknown-component`, `duplicate-id`, or `unanswered-feedback`.
 The full list is the `ProblemCode` type in `src/board/validate.ts`.
 
-The tool lists at most 25 warnings and counts the rest.
-It cuts a quoted value longer than 80 characters, and a line longer than 1,000 characters, so a huge key or ID cannot flood the output.
+The tool lists at most 25 errors and 25 warnings.
+The text output ends with a line that counts the rest, and `--json` gives the counts as `omittedErrors` and `omittedWarnings`.
+The feedback warnings come first, so the limit never hides them.
+Hints are worked out only for the problems that are listed, so a huge file stays fast.
+
+In the text output and in `--json`, a quoted value longer than 80 characters is cut and ends with its length, for example `"xxxx…" (900,000 characters)`.
+A message or line longer than 1,000 characters is cut too.
+So a huge key or ID cannot flood the output.
+Characters here are Unicode code points, so a cut never splits an emoji.
 
 The tool reads only the board and the `feedback.json` next to it, and only when each is a regular file of at most 16,000,000 bytes.
 It writes only the board, and only for `fmt`.
 `fmt` writes a new file next to the board and renames it over the board, so the board keeps its permissions and is never half written.
 It leaves a read-only board alone.
-When the board is a link, `fmt` writes the file the link points to, if that file is in the board's folder or below it, and keeps the link.
+When the board file itself is a link, `fmt` writes the file the link points to, if that file is in the board's folder or below it, and keeps the link.
 It refuses a link to a file anywhere else.
+Links among the folders of the path you name are followed, as for any path you name: the board's folder is the folder that path leads to.
 It never runs anything from the board and makes no network calls.
