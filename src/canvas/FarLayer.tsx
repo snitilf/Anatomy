@@ -198,13 +198,13 @@ export const FarLayer = memo(function FarLayer({
               )}
               {at ? (
                 <button type="button" className={styles.count} data-bundle="" data-mine={mine} data-on={on} aria-label={label} style={{ left: at.x, top: at.y }}>
-                  {/* A bundle that holds a link of the user's among the agent's lines: one dash and dot of theirs before the count. */}
+                  {b.count}
+                  {/* A bundle that holds a link of the user's among the agent's lines: one dash and dot of theirs under the count. */}
                   {isMixed(b) && (
                     <svg className={styles.yoursTick} width="13" height="4" viewBox="0 0 13 4" aria-hidden="true">
                       <line x1="0.75" y1="2" x2="12.5" y2="2" strokeDasharray={YOURS_DASH} />
                     </svg>
                   )}
-                  {b.count}
                 </button>
               ) : (
                 <button type="button" className={styles.reach} aria-label={label} style={{ left: middleOf(b.points).x, top: middleOf(b.points).y }} />

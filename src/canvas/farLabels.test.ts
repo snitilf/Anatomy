@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bundle } from './bundleRoutes'
-import { countWidth, groupNameRect, isMixed, placeCounts, YOURS_TICK } from './farLabels'
+import { countHeight, countWidth, groupNameRect, isMixed, placeCounts, YOURS_TICK } from './farLabels'
 
 const bundle = (id: string, count: number, points: { x: number; y: number }[]): Bundle => ({ id, a: 'a', b: 'b', count, ab: count, ba: 0, connectionIds: [], mine: false, yours: 0, d: '', points, width: 2 })
 const hit = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
@@ -51,6 +51,8 @@ describe("the user's mark on a count", () => {
     expect(isMixed({ mine: false, yours: 0 })).toBe(false)
     // A bundle of only their links is drawn in their dash and dot already.
     expect(isMixed({ mine: true, yours: 2 })).toBe(false)
-    expect(countWidth({ count: 12, mine: false, yours: 1 }) - countWidth({ count: 12, mine: false, yours: 0 })).toBe(YOURS_TICK)
+    // The mark sits under the number: the count is taller, and as wide as before, which leaves room for the mark's 13 px.
+    expect(countHeight({ mine: false, yours: 1 }) - countHeight({ mine: false, yours: 0 })).toBe(YOURS_TICK)
+    expect(countWidth({ count: 2 })).toBeGreaterThanOrEqual(13)
   })
 })

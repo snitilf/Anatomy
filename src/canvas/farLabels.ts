@@ -16,14 +16,17 @@ export function groupNameRect(area: Rect, label: string, count: number, scale: n
   return { x: area.x, y: area.y - (NAME_LIFT + NAME_LINE) * scale, width: natural * scale, height: NAME_LINE * scale }
 }
 
-/** The room the user's mark takes in a count: one dash and dot, and the gap to the number. */
-export const YOURS_TICK = 16
+/** The room the user's mark takes under the number of a count: one dash and dot, and the gap above it. */
+export const YOURS_TICK = 6
 
 /** Whether a bundle mixes the user's links with the agent's lines, so its count carries the user's mark. */
 export const isMixed = (b: Pick<Bundle, 'mine' | 'yours'>) => b.yours > 0 && !b.mine
 
-/** The width of a count on the board at scale 1: its digits, its padding, and the user's mark on a mixed bundle. */
-export const countWidth = (b: Pick<Bundle, 'count' | 'mine' | 'yours'>) => String(b.count).length * 7 + 12 + (isMixed(b) ? YOURS_TICK : 0)
+/** The width of a count on the board at scale 1: its digits and its padding. The user's mark sits under the number, within it. */
+export const countWidth = (b: Pick<Bundle, 'count'>) => String(b.count).length * 7 + 12
+
+/** The height of a count on the board at scale 1, taller by the user's mark on a mixed bundle. */
+export const countHeight = (b: Pick<Bundle, 'mine' | 'yours'>) => CHIP_HEIGHT + (isMixed(b) ? YOURS_TICK : 0)
 
 /**
  * Where the count of each bundle sits: on a straight run of its line, nearest the middle of the longest run, sliding
@@ -35,7 +38,7 @@ export function placeCounts(bundles: readonly Bundle[], avoid: readonly Rect[], 
   for (const b of bundles) {
     if (b.count < 2) continue
     const width = countWidth(b) * scale
-    const height = CHIP_HEIGHT * scale
+    const height = countHeight(b) * scale
     const runs = b.points
       .slice(1)
       .map((q, i) => [b.points[i] as Point, q] as const)
