@@ -91,6 +91,24 @@ test('an example chosen from the start screen moves focus to the sidebar heading
   await expect(page.getByRole('complementary', { name: 'Sidebar' }).getByRole('heading', { level: 2 }).first()).toBeFocused()
 })
 
+test('a part picked by name in the command menu takes focus to its sidebar heading, so Tab goes on into its panel', async ({ page }) => {
+  await open(page, 'src/examples/claude-code-harness.board.json')
+  await page.keyboard.press('ControlOrMeta+k')
+  const menu = page.getByRole('dialog', { name: 'Command menu' })
+  await menu.getByRole('combobox').fill('Permission check')
+  await menu.getByRole('option', { name: /^Permission check/ }).first().click()
+  const heading = page.getByRole('complementary', { name: 'Sidebar' }).getByRole('heading', { level: 2, name: 'Permission check' })
+  await expect(heading).toBeFocused()
+  // The part's lesson is a few presses away, not a walk through the whole page.
+  let presses = 0
+  while (presses < 15) {
+    await page.keyboard.press('Tab')
+    presses++
+    if (await page.evaluate(() => /^Approval gate/.test(document.activeElement?.textContent?.trim() ?? ''))) break
+  }
+  expect(presses).toBeLessThan(15)
+})
+
 test('the map hint can be closed with its button', async ({ page }) => {
   await open(page, REFUND)
   await page.getByRole('button', { name: 'Dismiss hint' }).click()

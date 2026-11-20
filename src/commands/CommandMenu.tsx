@@ -1,7 +1,7 @@
 import { Command as Cmdk } from 'cmdk'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useAppStore } from '../app/store'
+import { useAppStore, useAppStoreApi } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import { formatKeys } from './keys'
 import { boardCommands, COMMANDS, isEnabled, isListed } from './list'
@@ -43,8 +43,26 @@ function filter(_value: string, search: string, keywords?: string[]): number {
   return 0
 }
 
+/**
+ * After a part or a connection is picked by name, focus goes to what now describes it: the heading of the sidebar, or the
+ * item on the map when the sidebar is closed. A menu opened from the keyboard has no control to give focus back to, so
+ * focus would otherwise fall to the page and the next Tab would start from the top.
+ * The panel and the map render the new selection a frame or two later, so focus is tried, and checked, over a few frames.
+ */
+function focusChosen(id: string | undefined, tries = 0) {
+  if (tries > 12) return
+  const active = document.activeElement
+  if (active && active !== document.body) return
+  const heading = document.querySelector<HTMLElement>('aside[aria-label="Sidebar"]:not([inert]) h2[tabindex="-1"]')
+  const onMap = id === undefined ? null : document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"], .react-flow__edge[data-id="${CSS.escape(id)}"]`)
+  const target = heading !== null && heading.getClientRects().length > 0 ? heading : onMap
+  if (tries >= 1) target?.focus({ preventScroll: true })
+  requestAnimationFrame(() => focusChosen(id, tries + 1))
+}
+
 function MenuBody({ onClose }: { onClose: () => void }) {
   const { context, run } = useCommands()
+  const store = useAppStoreApi()
   const [search, setSearch] = useState('')
   // The menu reads the state as it opens, and again when it changes under it, such as a command that was run a frame ago.
   const state = useAppStore((s) => s)
@@ -58,7 +76,13 @@ function MenuBody({ onClose }: { onClose: () => void }) {
   const go = (command: Command) => {
     onClose()
     // After the dialog has given focus back, so a command that moves focus keeps it.
-    requestAnimationFrame(() => run(command))
+    requestAnimationFrame(() => {
+      run(command)
+      if (command.group === 'Go to') {
+        const chosen = store.getState().selection
+        focusChosen(chosen && chosen.type !== 'board' ? chosen.id : undefined)
+      }
+    })
   }
   return (
     <>
