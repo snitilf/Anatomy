@@ -391,7 +391,8 @@
   transition: stroke 120ms var(--ease-out);
 }
 
-:global(.react-flow__node:hover) .yoursEdge rect {
+/* The pointer on a part that is not selected deepens its edge. A selected part keeps the accent under the pointer. */
+:global(.react-flow__node:hover:not(:focus-visible)) .yoursEdge:not([data-selected]) rect {
   stroke: color-mix(in srgb, var(--yours) 80%, var(--fg));
 }
 
