@@ -193,12 +193,13 @@ export const INVALID_CASES: readonly CorpusCase[] = [
 export const CORPUS: readonly CorpusCase[] = [...VALID_CASES, ...INVALID_CASES]
 
 /** Files in memory for the tool, with posix paths. `written` records each write. */
-export function memoryIo(files: Map<string, string>, invocation = 'node .anatomy/anatomy.mjs'): CliIo & { written: string[] } {
+export function memoryIo(files: Map<string, string>, invocation = 'node .anatomy/anatomy.mjs', stdin?: string): CliIo & { written: string[] } {
   const written: string[] = []
   return {
     defaultBoard: '.anatomy/board.json',
     invocation,
     written,
+    stdin: () => (stdin === undefined ? { ok: false, missing: true, reason: 'nothing was piped in' } : { ok: true, text: stdin }),
     read: (path) => {
       const text = files.get(path)
       return text === undefined ? { ok: false, missing: true, reason: 'no such file' } : { ok: true, text }
