@@ -51,6 +51,11 @@ function sideMiddle(r: Rect, side: Side): Point {
   return { x: r.x + r.width / 2, y: r.y + r.height }
 }
 
+/** The plan for a connection between two cards that leaves and arrives at the given sides, each at the middle of its side. */
+export function planThrough(from: Rect, to: Rect, out: Side, into: Side): Plan {
+  return { out, in: into, a: sideMiddle(from, out), b: sideMiddle(to, into) }
+}
+
 export interface EdgeEnds {
   id: string
   from: string

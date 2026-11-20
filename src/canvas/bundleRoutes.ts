@@ -2,7 +2,7 @@ import type { Board } from '../board/schema'
 import { groupAreas } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
 import { clusterOf, type Pair } from './bundles'
-import { Drawn, Obstacles, planEdges, routeConnection, type EdgeEnds } from './routing'
+import { Drawn, Obstacles, planEdges, planThrough, routeConnection, type EdgeEnds, type Plan, type Route, type Side } from './routing'
 
 export interface Bundle extends Pair {
   id: string
@@ -124,6 +124,33 @@ export function visibleArrows(bundles: readonly Bundle[], pixel: number): Set<st
   return shown
 }
 
+const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left']
+
+/** True when a straight run passes through the inside of the rectangle. */
+const runsThrough = (p: Point, q: Point, r: Rect): boolean =>
+  Math.max(p.x, q.x) > r.x && Math.min(p.x, q.x) < r.x + r.width && Math.max(p.y, q.y) > r.y && Math.min(p.y, q.y) < r.y + r.height
+
+/** Whether a route passes through the inside of any of the rectangles. */
+function crossesAny(route: Route, rects: readonly Rect[]): boolean {
+  const runs = route.runs ?? route.points.slice(1).map((q, i) => [route.points[i] as Point, q] as [Point, Point])
+  return runs.some(([p, q]) => rects.some((r) => runsThrough(p, q, r)))
+}
+
+/**
+ * The side pairs a connection may use, the planned one first, then the others with the shortest reach first. A pair
+ * the planner chose is only a preference: when the room in front of that side is shut, another side may be open.
+ */
+function alternatives(plan: Plan, from: Rect, to: Rect): Plan[] {
+  const others: Plan[] = []
+  for (const out of SIDES)
+    for (const into of SIDES) {
+      if (out === plan.out && into === plan.in) continue
+      others.push(planThrough(from, to, out, into))
+    }
+  const reach = (q: Plan) => Math.abs(q.a.x - q.b.x) + Math.abs(q.a.y - q.b.y)
+  return [plan, ...others.sort((p, q) => reach(p) - reach(q))]
+}
+
 /**
  * The second step of bundling, after `bundleGroups`: one orthogonal line for each pair of blocks, drawn in the gaps
  * between them with the router of the map: the blocks are what the lines keep out of. Pairs go shortest first, then by
@@ -141,6 +168,7 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
     .map(([, r]) => ({ x: r.x / ROUTE_SHRINK, y: (r.y - NAME_ROOM) / ROUTE_SHRINK, width: (r.width * NAME_SHARE) / ROUTE_SHRINK, height: NAME_ROOM / ROUTE_SHRINK }))
   const all = [...Object.values(rectOf), ...names]
   const obstacles = new Obstacles(all)
+  const blocksOnly = new Obstacles(Object.values(rectOf))
   const drawn = new Drawn()
   const reach = (p: Pair) => {
     const plan = plans.get(`${p.a}|${p.b}`)
@@ -152,7 +180,27 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
     const id = `${p.a}|${p.b}`
     const plan = plans.get(id)
     if (!plan) continue
-    const route = routeConnection(plan, all, drawn, obstacles)
+    // Keep out of every block the pair does not join. The planned sides come first. When they leave no way through, the
+    // other sides are tried, and then the same again with the room taken by the group names left free.
+    const keepOut = Object.entries(rectOf).filter(([k]) => k !== p.a && k !== p.b).map(([, r]) => r)
+    let route = routeConnection(plan, all, drawn, obstacles)
+    if (crossesAny(route, keepOut)) {
+      const from = rectOf[p.a] as Rect
+      const to = rectOf[p.b] as Rect
+      const tries = [
+        ...alternatives(plan, from, to).map((q) => ({ q, cards: all, grid: obstacles })),
+        ...alternatives(plan, from, to).map((q) => ({ q, cards: blocksOnly.cards, grid: blocksOnly })),
+      ]
+      let clear: Route | undefined
+      for (const t of tries) {
+        const attempt = routeConnection(t.q, t.cards, drawn, t.grid)
+        if (!crossesAny(attempt, keepOut)) {
+          clear = attempt
+          break
+        }
+      }
+      if (clear) route = clear
+    }
     if (route.runs) drawn.add(route.runs)
     const grow = (q: Point): Point => ({ x: q.x * ROUTE_SHRINK, y: q.y * ROUTE_SHRINK })
     const runs = route.runs?.map(([q, r]) => [grow(q), grow(r)] as [Point, Point])

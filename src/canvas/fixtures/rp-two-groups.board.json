@@ -1,0 +1,84 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "revision": 1,
+  "goal": "Show how a loop back edge changes the layout.",
+  "scope": {
+    "includes": [
+      "A loop"
+    ],
+    "excludes": []
+  },
+  "id": "rp-two-groups",
+  "title": "rp-two-groups",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one"
+    },
+    {
+      "id": "g2",
+      "label": "Group two"
+    }
+  ],
+  "components": [
+    {
+      "id": "a",
+      "label": "Input",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "b",
+      "label": "Think",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "group": "g1"
+    },
+    {
+      "id": "c",
+      "label": "Act",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "group": "g2"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r1",
+      "from": "a",
+      "to": "b",
+      "kind": "sends-data-to",
+      "label": "one",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r2",
+      "from": "b",
+      "to": "c",
+      "kind": "sends-data-to",
+      "label": "two",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r3",
+      "from": "c",
+      "to": "a",
+      "kind": "sends-data-to",
+      "label": "loop back",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
+  ]
+}
