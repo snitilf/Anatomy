@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -272,6 +272,128 @@ describe('fmt in the bundled tool', () => {
     expect((await node(['fmt', 'board.json'], dir)).code).toBe(0)
     expect(readFileSync(join(dir, 'victim.txt'), 'utf8')).toBe('keep me')
     expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(pretty)
+  })
+})
+
+describe('apply in the bundled tool', () => {
+  const board = baseBoard()
+  const pretty = `${JSON.stringify(board, null, 2)}\n`
+  const patch = JSON.stringify([{ op: 'test', path: '/revision', value: 3 }, { op: 'replace', path: '/components/payment/summary', value: 'Charges the card and retries twice.' }])
+
+  /** Runs the bundled tool with `input` on stdin. */
+  function piped(args: string[], cwd: string, input: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
+    return new Promise((resolve) => {
+      const child = spawn(process.execPath, [tool, ...args], { cwd })
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', (d) => (stdout += d))
+      child.stderr.on('data', (d) => (stderr += d))
+      child.on('close', (code) => resolve({ code, stdout, stderr }))
+      // The tool stops reading at the limit, so a huge input meets a closed pipe.
+      child.stdin.on('error', () => {})
+      child.stdin.end(input)
+    })
+  }
+
+  function folder(name: string, text = pretty): string {
+    const dir = join(root, name)
+    mkdirSync(dir)
+    writeFileSync(join(dir, 'board.json'), text)
+    return dir
+  }
+
+  it('writes the new board and board.prev.json, reading the patch from stdin, and leaves no temporary file', async () => {
+    const dir = folder('apply-stdin')
+    const result = await piped(['apply', '-', '--board', 'board.json'], dir, patch)
+    expect(result).toEqual({ code: 0, stdout: 'board.json: applied, revision 3 to 4\n~ components/payment.summary\n', stderr: '' })
+    expect(readdirSync(dir).sort()).toEqual(['board.json', 'board.prev.json'])
+    expect(readFileSync(join(dir, 'board.prev.json'), 'utf8')).toBe(pretty)
+    expect(JSON.parse(readFileSync(join(dir, 'board.json'), 'utf8')).revision).toBe(4)
+    expect((await node(['fmt', 'board.json'], dir)).stdout).toBe('board.json: already formatted, valid, revision 4\n')
+  })
+
+  it('reads patch.json next to the board by default and gives the same output as the source', async () => {
+    const dir = folder('apply-file')
+    writeFileSync(join(dir, 'patch.json'), patch)
+    const files = new Map([['board.json', pretty], ['patch.json', patch]])
+    const local = runAnatomy(['apply', '--board', 'board.json'], memoryIo(files))
+    expect(await node(['apply', '--board', 'board.json'], dir)).toEqual({ code: local.code, stdout: local.stdout, stderr: local.stderr })
+    expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(files.get('board.json'))
+  })
+
+  it('changes nothing when the patch is wrong, and exits with 1', async () => {
+    const dir = folder('apply-wrong')
+    const result = await piped(['apply', '-', '--board', 'board.json', '--base', '2'], dir, patch)
+    expect(result.code).toBe(1)
+    expect(result.stdout).toContain('stale-revision')
+    expect(readdirSync(dir)).toEqual(['board.json'])
+    expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(pretty)
+  })
+
+  it('keeps the permissions of the board and writes the old board with the usual ones', async () => {
+    const dir = folder('apply-mode')
+    chmodSync(join(dir, 'board.json'), 0o640)
+    expect((await piped(['apply', '-', '--board', 'board.json'], dir, patch)).code).toBe(0)
+    expect(statSync(join(dir, 'board.json')).mode & 0o777).toBe(0o640)
+    expect(statSync(join(dir, 'board.prev.json')).mode & 0o200).not.toBe(0)
+  })
+
+  it('does not write a dry run', async () => {
+    const dir = folder('apply-dry')
+    const result = await piped(['apply', '-', '--board', 'board.json', '--dry-run'], dir, patch)
+    expect(result.stdout).toContain('dry run, nothing written')
+    expect(readdirSync(dir)).toEqual(['board.json'])
+  })
+
+  it('leaves a read-only board alone, and a link to a file outside its folder', async () => {
+    const dir = folder('apply-read-only')
+    chmodSync(join(dir, 'board.json'), 0o444)
+    const locked = await piped(['apply', '-', '--board', 'board.json'], dir, patch)
+    expect(locked).toEqual({ code: 2, stdout: '', stderr: 'Cannot write board.json: it is read-only. It is unchanged.\n' })
+    expect(readFileSync(join(dir, 'board.json'), 'utf8')).toBe(pretty)
+
+    const outer = join(root, 'apply-link')
+    mkdirSync(join(outer, 'project'), { recursive: true })
+    writeFileSync(join(outer, 'elsewhere.json'), pretty)
+    symlinkSync(join('..', 'elsewhere.json'), join(outer, 'project', 'board.json'))
+    const linked = await piped(['apply', '-', '--board', 'board.json'], join(outer, 'project'), patch)
+    expect(linked.code).toBe(2)
+    expect(linked.stderr).toContain('it is a link to a file outside its folder')
+    expect(readFileSync(join(outer, 'elsewhere.json'), 'utf8')).toBe(pretty)
+  })
+
+  it('never follows a link planted where board.prev.json goes', async () => {
+    const dir = folder('apply-planted')
+    writeFileSync(join(dir, 'victim.txt'), 'keep me')
+    symlinkSync('victim.txt', join(dir, 'board.prev.json'))
+    // The link points into the same folder, so the tool writes through it to its target, as for the board.
+    expect((await piped(['apply', '-', '--board', 'board.json'], dir, patch)).code).toBe(0)
+    expect(lstatSync(join(dir, 'board.prev.json')).isSymbolicLink()).toBe(true)
+    const outer = join(root, 'apply-planted-out')
+    mkdirSync(join(outer, 'project'), { recursive: true })
+    writeFileSync(join(outer, 'victim.txt'), 'keep me')
+    writeFileSync(join(outer, 'project', 'board.json'), pretty)
+    symlinkSync(join('..', 'victim.txt'), join(outer, 'project', 'board.prev.json'))
+    expect((await piped(['apply', '-', '--board', 'board.json'], join(outer, 'project'), patch)).code).toBe(2)
+    expect(readFileSync(join(outer, 'victim.txt'), 'utf8')).toBe('keep me')
+    expect(readFileSync(join(outer, 'project', 'board.json'), 'utf8')).toBe(pretty)
+  })
+
+  it('refuses a patch that is a folder, and a patch that never ends is cut at the limit', async () => {
+    const dir = folder('apply-refuse')
+    mkdirSync(join(dir, 'patch.json'))
+    expect((await node(['apply', '--board', 'board.json'], dir)).stderr).toBe('Cannot read patch.json: it is a folder.\n')
+    const huge = await piped(['apply', '-', '--board', 'board.json'], dir, `[{"op":"replace","path":"/goal","value":"${'x'.repeat(2_000_000)}"}]`)
+    expect(huge.code).toBe(1)
+    expect(huge.stdout).toContain('too-big')
+  })
+
+  it('never builds code with Function while it applies a patch', async () => {
+    const dir = folder('apply-function')
+    writeFileSync(join(dir, 'patch.json'), patch)
+    const result = await node(['apply', '--board', 'board.json'], dir, ['--import', functionTrap(false)])
+    expect(result.stderr).toBe('Function calls: 0\n')
+    expect(result.code).toBe(0)
   })
 })
 
