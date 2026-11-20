@@ -8,6 +8,13 @@ describe('editDistance', () => {
     expect(editDistance('', 'abc')).toBe(3)
     expect(editDistance('kitten', 'sitting')).toBe(3)
   })
+
+  it('stops early past a limit', () => {
+    expect(editDistance('kitten', 'sitting', 3)).toBe(3)
+    expect(editDistance('kitten', 'sitting', 2)).toBe(3)
+    expect(editDistance('a'.repeat(64), 'b'.repeat(64), 5)).toBe(6)
+    expect(editDistance('abc', 'abcdefgh', 2)).toBe(3)
+  })
 })
 
 describe('nearest', () => {
@@ -24,11 +31,12 @@ describe('nearest', () => {
   it('skips huge values and candidates, and stays fast with many candidates', () => {
     expect(nearest('a'.repeat(201), ['a'.repeat(200)])).toBeUndefined()
     expect(nearest('note-1', ['n'.repeat(2_000_000), 'note-2x'])).toBe('note-2x')
-    const many = Array.from({ length: 4000 }, (_, i) => `item-${i}-${'x'.repeat(40)}`)
+    const many = Array.from({ length: 500 }, (_, i) => `${String(i).padStart(4, '0')}-${'x'.repeat(59)}`)
+    // The tool asks for at most 25 hints, each against at most 500 candidates.
     const start = performance.now()
-    for (let i = 0; i < 300; i++) nearest(`zz-${i}`, many)
-    expect(performance.now() - start).toBeLessThan(2000)
-    expect(nearest('note-1', Array.from({ length: 5001 }, (_, i) => `note-${i + 2}`))).toBeUndefined()
+    for (let i = 0; i < 25; i++) nearest(`${'y'.repeat(59)}-${i}`, many)
+    expect(performance.now() - start).toBeLessThan(1000)
+    expect(nearest('note-1', Array.from({ length: 501 }, (_, i) => `note-${i + 2}`))).toBeUndefined()
   })
 
   it('gives nothing when no candidate is close', () => {

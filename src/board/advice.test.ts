@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { baseBoard } from '../cli/corpus'
-import { boardAdvice, readFeedback, type FeedbackSummary } from './advice'
+import { boardAdvice, feedbackAdvice, readFeedback, type FeedbackSummary } from './advice'
 import { parseBoard } from './validate'
 import type { Board } from './schema'
 
@@ -29,7 +29,8 @@ const feedback = (extra: Partial<FeedbackSummary> = {}): FeedbackSummary => ({
   ...extra,
 })
 
-const codes = (b: Board, f?: FeedbackSummary | 'unreadable') => boardAdvice(b, f).map((p) => p.code)
+const advice = (b: Board, f?: FeedbackSummary | 'unreadable') => [...feedbackAdvice(b, f), ...boardAdvice(b)]
+const codes = (b: Board, f?: FeedbackSummary | 'unreadable') => advice(b, f).map((p) => p.code)
 
 describe('boardAdvice on real boards', () => {
   it.each(Object.entries(examples))('stays quiet on %s', (_path, text) => {
@@ -109,12 +110,12 @@ describe('boardAdvice with a feedback file', () => {
       d.revision = 6
       d.responses = { respondsTo: 'feedback-old', items: [answer('note-1')] }
     })
-    expect(boardAdvice(b, feedback())).toEqual([expect.objectContaining({ path: 'responses.respondsTo', code: 'responds-to-other', hint: 'Set responses.respondsTo to "feedback-a" and answer every item.' })])
+    expect(advice(b, feedback())).toEqual([expect.objectContaining({ path: 'responses.respondsTo', code: 'responds-to-other', hint: 'Set responses.respondsTo to "feedback-a" and answer every item.' })])
   })
 
   it('flags a missing answer, an unknown item, a withdrawn item, and a revision that did not rise', () => {
     const b = board((d) => (d.responses = { respondsTo: 'feedback-a', items: [answer('note-1'), answer('note-0'), answer('nte-1')] }))
-    expect(boardAdvice(b, feedback())).toEqual([
+    expect(advice(b, feedback())).toEqual([
       expect.objectContaining({ path: 'revision', code: 'revision-not-raised', hint: 'Set revision to 4.' }),
       expect.objectContaining({ path: 'responses.items', code: 'unanswered-feedback', message: 'Feedback item "note-2" has no answer.' }),
       expect.objectContaining({ path: 'responses.items[1].feedbackId', code: 'withdrawn-answered' }),

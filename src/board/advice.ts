@@ -6,6 +6,9 @@ import type { BoardProblem } from './validate.ts'
 // agent can fix them before it hands the board over. The app does not show them: the board opens either way.
 // Each rule must stay quiet on the bundled example boards, so a warning always points at a likely mistake.
 
+/** Warnings past this many are not listed, so they get no hint. The tool lists at most 25. */
+const HINT_LIMIT = 25
+
 /** The parts of `.anatomy/feedback.json` that the checks need. */
 export interface FeedbackSummary {
   id: string
@@ -143,7 +146,8 @@ function feedbackAnswers(board: Board, feedback: FeedbackSummary): BoardProblem[
     if (withdrawn.has(r.feedbackId)) {
       problems.push({ path, code: 'withdrawn-answered', message: `The user withdrew "${r.feedbackId}". Remove this answer.` })
     } else if (!items.has(r.feedbackId)) {
-      const near = nearest(r.feedbackId, items)
+      // Only the warnings that are listed get a hint, so a huge feedback file stays fast.
+      const near = problems.length < HINT_LIMIT ? nearest(r.feedbackId, items) : undefined
       problems.push({
         path,
         code: 'unknown-feedback-item',
@@ -156,15 +160,19 @@ function feedbackAnswers(board: Board, feedback: FeedbackSummary): BoardProblem[
 }
 
 /**
- * Warnings for a board that passed `parseBoard`. Pass the feedback file next to the board when there is one, or
- * `'unreadable'` when it exists but cannot be read.
+ * Warnings about the answers to the feedback file next to the board, for a board that passed `parseBoard`. Pass
+ * `'unreadable'` when the file exists but cannot be read. Callers list these first, because they are what a revision
+ * is for.
  */
-export function boardAdvice(board: Board, feedback?: FeedbackSummary | 'unreadable'): BoardProblem[] {
-  const problems = [...unconnected(board), ...guarantees(board), ...adoptedWithoutChanges(board)]
+export function feedbackAdvice(board: Board, feedback: FeedbackSummary | 'unreadable' | undefined): BoardProblem[] {
+  if (feedback === undefined) return []
   if (feedback === 'unreadable') {
-    problems.push({ path: '', code: 'feedback-unreadable', message: 'feedback.json is not a feedback file, so the answers were not checked against it.' })
-  } else if (feedback !== undefined) {
-    problems.push(...feedbackAnswers(board, feedback))
+    return [{ path: '', code: 'feedback-unreadable', message: 'feedback.json is not a feedback file, so the answers were not checked against it.' }]
   }
-  return problems
+  return feedbackAnswers(board, feedback)
+}
+
+/** The other warnings for a board that passed `parseBoard`. */
+export function boardAdvice(board: Board): BoardProblem[] {
+  return [...unconnected(board), ...guarantees(board), ...adoptedWithoutChanges(board)]
 }

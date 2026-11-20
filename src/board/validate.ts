@@ -59,7 +59,13 @@ export interface BoardProblem {
 
 export type ParseResult =
   | { ok: true; board: Board; warnings: BoardProblem[] }
-  | { ok: false; errors: BoardProblem[] }
+  | {
+      ok: false
+      /** At most 25 problems. When there are more, the last entry says how many are left out. */
+      errors: BoardProblem[]
+      /** How many problems the list leaves out. */
+      omitted?: number
+    }
 
 const MAX_REPORTED_ERRORS = 25
 
@@ -96,11 +102,14 @@ export function parseBoard(fileText: string, options: ParseOptions = {}): ParseR
 
   const parsed = boardSchema.safeParse(data)
   if (!parsed.success) {
-    return { ok: false, errors: limit(parsed.error.issues.map((issue) => fromIssue(issue, data))) }
+    // Hints are computed only for the problems that are reported, so a file with thousands of problems stays fast.
+    const ids = once(() => idsIn(data))
+    const issues = parsed.error.issues
+    return limit(issues.slice(0, MAX_REPORTED_ERRORS).map((issue) => fromIssue(issue, data, ids)), issues.length)
   }
 
   const errors = checkReferences(parsed.data)
-  if (errors.length > 0) return { ok: false, errors: limit(errors) }
+  if (errors.length > 0) return limit(errors.slice(0, MAX_REPORTED_ERRORS), errors.length)
 
   return { ok: true, board: parsed.data, warnings: collectWarnings(parsed.data, options) }
 }
@@ -158,6 +167,8 @@ function checkReferences(board: Board): BoardProblem[] {
   const relationships = new Set(board.relationships.map((r) => r.id))
   const targets = new Set([...components, ...relationships])
   const isTarget = (id: string) => targets.has(id)
+  // Only problems that will be reported get a hint.
+  const didYouMean = (value: string, candidates: ReadonlySet<string>) => (errors.length < MAX_REPORTED_ERRORS ? hintFor(value, candidates) : {})
 
   board.components.forEach((c, i) => {
     if (c.group !== undefined && !groups.has(c.group)) {
@@ -233,7 +244,7 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
         warnings.push({
           path: `responses.items[${i}].changed[${j}]`,
           code: 'changed-not-on-board',
-          ...didYouMean(changedId, targets),
+          ...(warnings.length < MAX_REPORTED_ERRORS ? hintFor(changedId, targets) : {}),
           message: `The answer to "${r.feedbackId}" says it changed "${changedId}", which is not a component or relationship on this board.`,
         })
       }
@@ -243,7 +254,7 @@ function collectWarnings(board: Board, options: ParseOptions): BoardProblem[] {
 }
 
 /** A hint that names the nearest existing ID, when the value looks like a typo of one. */
-function didYouMean(value: string, candidates: Iterable<string>): { hint?: string } {
+function hintFor(value: string, candidates: ReadonlySet<string>): { hint?: string } {
   const near = nearest(value, candidates)
   return near === undefined ? {} : { hint: `Did you mean "${near}"?` }
 }
@@ -275,7 +286,13 @@ function idsIn(data: unknown): Set<string> {
   return ids
 }
 
-function fromIssue(issue: z.core.$ZodIssue, data: unknown): BoardProblem {
+/** Computes a value on first use and keeps it. */
+function once<T>(make: () => T): () => T {
+  let made: { value: T } | undefined
+  return () => (made ??= { value: make() }).value
+}
+
+function fromIssue(issue: z.core.$ZodIssue, data: unknown, ids: () => Set<string>): BoardProblem {
   const problem = { path: formatPath(issue.path), message: issue.message }
   const value = valueAt(data, issue.path)
   const withHint = (code: ProblemCode, hint?: string): BoardProblem => (hint === undefined ? { ...problem, code } : { ...problem, code, hint })
@@ -293,7 +310,7 @@ function fromIssue(issue: z.core.$ZodIssue, data: unknown): BoardProblem {
     case 'invalid_format': {
       const slug = typeof value === 'string' ? slugify(value).slice(0, LIMITS.id).replace(/-+$/, '') : ''
       if (slug === '') return withHint('bad-id')
-      const taken = idsIn(data)
+      const taken = ids()
       return withHint('bad-id', `Try "${taken.has(slug) ? freeId(slug, taken, LIMITS.id) : slug}".`)
     }
     case 'invalid_value': {
@@ -327,12 +344,11 @@ function fail(path: string, code: ProblemCode, message: string): ParseResult {
   return { ok: false, errors: [{ path, code, message }] }
 }
 
-function limit(errors: BoardProblem[]): BoardProblem[] {
-  if (errors.length <= MAX_REPORTED_ERRORS) return errors
-  return [
-    ...errors.slice(0, MAX_REPORTED_ERRORS),
-    { path: '', code: 'more-problems', message: `${errors.length - MAX_REPORTED_ERRORS} more problems are not shown.` },
-  ]
+/** The first problems of `total`, with a last entry that counts the rest. */
+function limit(shown: BoardProblem[], total: number): ParseResult {
+  const omitted = total - shown.length
+  if (omitted <= 0) return { ok: false, errors: shown }
+  return { ok: false, errors: [...shown, { path: '', code: 'more-problems', message: `${omitted} more problems are not shown.` }], omitted }
 }
 
 function formatBytes(bytes: number): string {

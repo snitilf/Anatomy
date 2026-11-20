@@ -1,4 +1,4 @@
-import { boardAdvice, readFeedback } from '../board/advice.ts'
+import { boardAdvice, feedbackAdvice, readFeedback } from '../board/advice.ts'
 import { inSchemaOrder } from '../board/shape.ts'
 import { parseBoard, type BoardProblem } from '../board/validate.ts'
 import { LESSON_IDS } from '../lessons/ids.ts'
@@ -77,13 +77,28 @@ const MAX_LINE = 1000
 /** Warnings past this many are counted, not listed, as the app does with errors. */
 const MAX_WARNINGS = 25
 
-/** Cuts long quoted values to `"start…" (N characters)`, then cuts the line itself if it is still too long. */
+/**
+ * `text` cut to `max` characters with "…" as the last one, or undefined when it fits. Counts code points, so an emoji
+ * stays whole, and a cut text fits, so cutting twice changes nothing.
+ */
+function head(text: string, max: number): { start: string; length: number } | undefined {
+  if (text.length <= max) return undefined
+  const points = Array.from(text)
+  return points.length <= max ? undefined : { start: `${points.slice(0, max - 1).join('')}…`, length: points.length }
+}
+
+/**
+ * Cuts long quoted values to `"start…" (N characters)`, then cuts the text itself if it is still too long.
+ * Characters are Unicode code points.
+ */
 export function clip(text: string): string {
   // Quotes pair up from the left, so text between two quoted values is never taken for a value.
-  const quoted = text.replace(/"([^"]*)"/g, (match, value: string) =>
-    value.length <= MAX_QUOTED ? match : `"${value.slice(0, MAX_QUOTED)}…" (${value.length.toLocaleString('en-US')} characters)`,
-  )
-  return quoted.length <= MAX_LINE ? quoted : `${quoted.slice(0, MAX_LINE)}…`
+  const quoted = text.replace(/"([^"]*)"/g, (match, value: string) => {
+    const cut = head(value, MAX_QUOTED)
+    return cut === undefined ? match : `"${cut.start}" (${cut.length.toLocaleString('en-US')} characters)`
+  })
+  const cut = head(quoted, MAX_LINE)
+  return cut === undefined ? quoted : cut.start
 }
 
 function line(problem: BoardProblem): string {
@@ -97,9 +112,11 @@ function count(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`
 }
 
+/** A problem for --json, cut like a printed line. */
 function plain(problem: BoardProblem) {
-  const { path, code, message, hint } = problem
-  return hint === undefined ? { path, code, message } : { path, code, message, hint }
+  const { path, code } = problem
+  const message = clip(problem.message)
+  return problem.hint === undefined ? { path, code, message } : { path, code, message, hint: clip(problem.hint) }
 }
 
 export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
@@ -129,22 +146,25 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
     }
   }
 
+  // Both lists hold real problems only. The counts of what they leave out are kept apart.
   let errors: BoardProblem[] = []
+  let omittedErrors = 0
   let warnings: BoardProblem[] = []
   if (result.ok) {
     const feedbackPath = io.sibling(file, 'feedback.json')
     const feedbackFile = feedbackPath === file ? undefined : io.read(feedbackPath)
     const feedback = feedbackFile === undefined || (!feedbackFile.ok && feedbackFile.missing) ? undefined : feedbackFile.ok ? (readFeedback(feedbackFile.text) ?? 'unreadable') : 'unreadable'
-    warnings = [...result.warnings, ...boardAdvice(result.board, feedback)]
+    // Feedback warnings come first, so the cap below never hides them.
+    warnings = [...feedbackAdvice(result.board, feedback), ...result.warnings, ...boardAdvice(result.board)]
   } else {
-    errors = result.errors
+    errors = result.errors.filter((e) => e.code !== 'more-problems')
+    omittedErrors = result.omitted ?? 0
   }
 
   const code = errors.length > 0 || (options.strict && warnings.length > 0) ? 1 : 0
   const warningCount = warnings.length
-  if (warningCount > MAX_WARNINGS) {
-    warnings = [...warnings.slice(0, MAX_WARNINGS), { path: '', code: 'more-problems', message: `${warningCount - MAX_WARNINGS} more warnings are not shown.` }]
-  }
+  const omittedWarnings = Math.max(0, warningCount - MAX_WARNINGS)
+  warnings = warnings.slice(0, MAX_WARNINGS)
   if (options.json) {
     const report = {
       file: shown,
@@ -152,7 +172,9 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
       ...(result.ok ? { revision: result.board.revision } : {}),
       ...(formatted === undefined ? {} : { formatted }),
       errors: errors.map(plain),
+      omittedErrors,
       warnings: warnings.map(plain),
+      omittedWarnings,
     }
     return { code, stdout: `${JSON.stringify(report)}\n`, stderr: '' }
   }
@@ -163,10 +185,12 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
     status.push(`valid, revision ${result.board.revision}`)
     if (warningCount > 0) status.push(count(warningCount, 'warning'))
   } else {
-    const more = errors.some((e) => e.code === 'more-problems')
-    const real = errors.filter((e) => e.code !== 'more-problems').length
-    status.push(more ? `invalid, more than ${real} errors` : `invalid, ${count(real, 'error')}`)
+    status.push(`invalid, ${count(errors.length + omittedErrors, 'error')}`)
   }
-  const lines = [`${shown}: ${status.join(', ')}`, ...[...errors, ...warnings].map(line)]
+  const more = [
+    ...(omittedErrors > 0 ? [`${omittedErrors} more errors are not shown.`] : []),
+    ...(omittedWarnings > 0 ? [`${omittedWarnings} more warnings are not shown.`] : []),
+  ]
+  const lines = [`${shown}: ${status.join(', ')}`, ...[...errors, ...warnings].map(line), ...more]
   return { code, stdout: `${lines.join('\n')}\n`, stderr: '' }
 }

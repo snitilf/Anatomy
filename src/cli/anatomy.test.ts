@@ -40,8 +40,10 @@ describe('validate', () => {
     expect(app.ok).toBe(false)
     if (app.ok) return
     const lines = result.stdout.trimEnd().split('\n')
-    expect(lines).toHaveLength(app.errors.length + 1)
-    app.errors.forEach((e, i) => expect(lines[i + 1]).toContain(clip(`${e.path || '(file)'}: ${e.message}`)))
+    const real = app.errors.filter((e) => e.code !== 'more-problems')
+    expect(lines).toHaveLength(real.length + 1 + (app.omitted ? 1 : 0))
+    real.forEach((e, i) => expect(lines[i + 1]).toContain(clip(`${e.path || '(file)'}: ${e.message}`)))
+    if (app.omitted) expect(lines.at(-1)).toBe(`${app.omitted} more errors are not shown.`)
   })
 
   it('gives every problem in the corpus a code', () => {
@@ -75,7 +77,9 @@ describe('validate', () => {
       file: '.anatomy/board.json',
       valid: false,
       errors: [{ path: 'relationships[2].to', code: 'unknown-component', message: expect.any(String), hint: 'Did you mean "payment"?' }],
+      omittedErrors: 0,
       warnings: [],
+      omittedWarnings: 0,
     })
   })
 
@@ -90,16 +94,25 @@ describe('validate', () => {
 
 describe('long output', () => {
   it('cuts long quoted values and long lines', () => {
-    expect(clip(`a: "${'x'.repeat(81)}" and "short"`)).toBe(`a: "${'x'.repeat(80)}…" (81 characters) and "short"`)
+    expect(clip(`a: "${'x'.repeat(81)}" and "short"`)).toBe(`a: "${'x'.repeat(79)}…" (81 characters) and "short"`)
     expect(clip(`a: "${'x'.repeat(80)}"`)).toBe(`a: "${'x'.repeat(80)}"`)
+    const once = clip(`a: "${'x'.repeat(900)}"`)
+    expect(clip(once)).toBe(once)
     const between = `The ID "api" is already used. ${'Text between two values. '.repeat(5)}Use "api-2".`
     expect(clip(between)).toBe(between)
-    expect(clip('y'.repeat(5000))).toBe(`${'y'.repeat(1000)}…`)
+    expect(clip('y'.repeat(5000))).toBe(`${'y'.repeat(999)}…`)
+  })
+
+  it('cuts on whole characters and counts them, so an emoji is never split', () => {
+    const emoji = '😀'.repeat(100)
+    expect(clip(`a: "${emoji}"`)).toBe(`a: "${'😀'.repeat(79)}…" (100 characters)`)
+    expect(clip(`a: "${'😀'.repeat(80)}"`)).toBe(`a: "${'😀'.repeat(80)}"`)
+    expect(Array.from(clip('😀'.repeat(2000)))).toHaveLength(1000)
   })
 
   it('keeps every printed line short, whatever the board holds', () => {
     for (const c of CORPUS) {
-      for (const text of runCase(c).stdout.split('\n')) expect(text.length, c.name).toBeLessThanOrEqual(1001)
+      for (const text of runCase(c).stdout.split('\n')) expect(Array.from(text).length, c.name).toBeLessThanOrEqual(1000)
     }
   })
 
@@ -108,7 +121,48 @@ describe('long output', () => {
     const lines = result.stdout.trimEnd().split('\n')
     expect(lines[0]).toBe('.anatomy/board.json: valid, revision 4, 33 warnings')
     expect(lines).toHaveLength(27)
-    expect(lines.at(-1)).toBe('(file): 8 more warnings are not shown.')
+    expect(lines.at(-1)).toBe('8 more warnings are not shown.')
+    const report = JSON.parse(runCase(CORPUS.find((c) => c.name === 'more warnings than the report shows')!, ['validate', '--json']).stdout) as { warnings: unknown[]; omittedWarnings: number }
+    expect(report.warnings).toHaveLength(25)
+    expect(report.omittedWarnings).toBe(8)
+  })
+})
+
+describe('speed', () => {
+  /** Distinct 64-character IDs that look random but are the same on every run (a seeded mulberry32 generator). */
+  function ids(count: number, seed: number): string[] {
+    let state = seed
+    const next = () => {
+      state = (state + 0x6d2b79f5) | 0
+      let t = Math.imul(state ^ (state >>> 15), 1 | state)
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+    const letters = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    return Array.from({ length: count }, () => Array.from({ length: 64 }, () => letters[Math.floor(next() * 36)]).join(''))
+  }
+
+  it('checks 300 unknown answers against 5,000 feedback items quickly', () => {
+    const board = { ...baseBoard(), revision: 4, responses: { respondsTo: 'feedback-big', items: ids(300, 1).map((feedbackId) => ({ feedbackId, status: 'answered', text: 'Yes.' })) } }
+    const feedback = { format: 'anatomy-feedback', schemaVersion: 1, id: 'feedback-big', boardId: 'shop', baseRevision: 3, items: ids(5000, 2).map((id) => ({ id, type: 'note' })), withdrawn: [] }
+    const files = new Map([['.anatomy/board.json', JSON.stringify(board)], ['.anatomy/feedback.json', JSON.stringify(feedback)]])
+    const start = performance.now()
+    const result = runAnatomy(['validate', '--json'], memoryIo(files))
+    expect(performance.now() - start).toBeLessThan(3000)
+    const report = JSON.parse(result.stdout) as { warnings: { code: string }[]; omittedWarnings: number }
+    expect(report.warnings).toHaveLength(25)
+    expect(report.warnings[0]?.code).toBe('unanswered-feedback')
+    expect(report.omittedWarnings).toBe(5300 - 25)
+  })
+
+  it('suggests only for listed problems when hundreds of references are broken', () => {
+    const board = baseBoard()
+    const targets = ids(400, 3)
+    board.scenarios[0].steps = Array.from({ length: 50 }, (_, i) => ({ caption: `Step ${i}.`, highlight: targets.slice(0, 30) }))
+    const start = performance.now()
+    const result = runAnatomy(['validate'], memoryIo(new Map([['.anatomy/board.json', JSON.stringify(board)]])))
+    expect(performance.now() - start).toBeLessThan(3000)
+    expect(result.stdout.split('\n')[0]).toBe('.anatomy/board.json: invalid, 1500 errors')
   })
 })
 

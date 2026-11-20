@@ -87,12 +87,12 @@ responses.items[18].feedbackId: "zz-18" is not an item in feedback.json.
 responses.items[19].feedbackId: "zz-19" is not an item in feedback.json.
 responses.items[20].feedbackId: "zz-20" is not an item in feedback.json.
 responses.items[21].feedbackId: "zz-21" is not an item in feedback.json.
-(file): 8 more warnings are not shown.
+8 more warnings are not shown.
 
 ## huge feedback item IDs
 $ validate (exit 0)
 .anatomy/board.json: valid, revision 4, 2 warnings
-responses.items: Feedback item "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…" (300,000 characters) has no answer.
+responses.items: Feedback item "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…" (300,000 characters) has no answer.
 responses.items[0].feedbackId: "note-a1b2c3d4e5f6" is not an item in feedback.json.
 
 ## feedback for another board
@@ -173,7 +173,7 @@ relationships[0]: Unrecognized key: "color"
 ## unknown key of 900,000 characters
 $ validate (exit 1)
 .anatomy/board.json: invalid, 1 error
-components[0]: Unrecognized key: "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk…" (900,000 characters)
+components[0]: Unrecognized key: "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk…" (900,000 characters)
 
 ## ID with capitals and spaces
 $ validate (exit 1)
@@ -296,7 +296,7 @@ relationships[4].to: Relationship "api-to-warehouse" points to "warehouse-old", 
 
 ## more problems than the report shows
 $ validate (exit 1)
-.anatomy/board.json: invalid, more than 25 errors
+.anatomy/board.json: invalid, 40 errors
 relationships[5].to: Relationship "extra-0" points to "service-0", which is not a component on this board.
 relationships[6].to: Relationship "extra-1" points to "service-1", which is not a component on this board.
 relationships[7].to: Relationship "extra-2" points to "service-2", which is not a component on this board.
@@ -322,16 +322,16 @@ relationships[26].to: Relationship "extra-21" points to "service-21", which is n
 relationships[27].to: Relationship "extra-22" points to "service-22", which is not a component on this board.
 relationships[28].to: Relationship "extra-23" points to "service-23", which is not a component on this board.
 relationships[29].to: Relationship "extra-24" points to "service-24", which is not a component on this board.
-(file): 15 more problems are not shown.
+15 more errors are not shown.
 
 ## base board
 $ validate --json (exit 0)
-{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"warnings":[]}
+{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"omittedErrors":0,"warnings":[],"omittedWarnings":0}
 
 ## guarantee words
 $ validate --json (exit 0)
-{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"warnings":[{"path":"components[3].summary","code":"guarantee","message":"\"never fails\" promises a guarantee. Keep it only if the material states it."},{"path":"relationships[1].explanation","code":"guarantee","message":"\"bulletproof\" promises a guarantee. Keep it only if the material states it."}]}
+{"file":".anatomy/board.json","valid":true,"revision":3,"errors":[],"omittedErrors":0,"warnings":[{"path":"components[3].summary","code":"guarantee","message":"\"never fails\" promises a guarantee. Keep it only if the material states it."},{"path":"relationships[1].explanation","code":"guarantee","message":"\"bulletproof\" promises a guarantee. Keep it only if the material states it."}],"omittedWarnings":0}
 
 ## relationship to a misspelled component
 $ validate --json (exit 1)
-{"file":".anatomy/board.json","valid":false,"errors":[{"path":"relationships[2].to","code":"unknown-component","message":"Relationship \"api-to-payment\" points to \"paymnt\", which is not a component on this board.","hint":"Did you mean \"payment\"?"}],"warnings":[]}
+{"file":".anatomy/board.json","valid":false,"errors":[{"path":"relationships[2].to","code":"unknown-component","message":"Relationship \"api-to-payment\" points to \"paymnt\", which is not a component on this board.","hint":"Did you mean \"payment\"?"}],"omittedErrors":0,"warnings":[],"omittedWarnings":0}

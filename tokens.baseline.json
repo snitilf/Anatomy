@@ -8,8 +8,8 @@
     "anatomy validate, one broken reference": { "characters": 173, "tokens": 44 },
     "anatomy validate, four faults": { "characters": 377, "tokens": 95 },
     "anatomy validate, five feedback warnings": { "characters": 500, "tokens": 125 },
-    "anatomy validate, over 25 errors": { "characters": 2815, "tokens": 704 },
-    "anatomy validate --json, over 25 errors": { "characters": 4199, "tokens": 1400 }
+    "anatomy validate, over 25 errors": { "characters": 2795, "tokens": 699 },
+    "anatomy validate --json, over 25 errors": { "characters": 4159, "tokens": 1387 }
   },
   "cliHardCap": { "characters": 6000, "tokens": 2000 }
 }

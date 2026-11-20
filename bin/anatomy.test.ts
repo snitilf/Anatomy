@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 import script from 'virtual:anatomy-cli'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { parseBoard } from '../src/board/validate.ts'
-import { runAnatomy } from '../src/cli/anatomy.ts'
+import { clip, runAnatomy } from '../src/cli/anatomy.ts'
 import { baseBoard, CORPUS, memoryIo, type CorpusCase } from '../src/cli/corpus.ts'
 import { keepScript, SCRIPT_BANNER, SCRIPT_MARK } from '../src/cli/script.ts'
 import { LESSON_IDS } from '../src/lessons/ids.ts'
@@ -98,12 +98,19 @@ describe('the bundled tool', () => {
     for (const { c, text, json } of results) {
       expect(text.bundled, c.name).toEqual(text.local)
       expect(json.bundled, c.name).toEqual(json.local)
-      const report = JSON.parse(json.bundled.stdout) as { valid: boolean; errors: { path: string; message: string }[]; warnings: { path: string; message: string }[] }
+      const report = JSON.parse(json.bundled.stdout) as { valid: boolean; errors: { path: string; message: string }[]; omittedErrors: number; warnings: { path: string; message: string }[]; omittedWarnings: number }
       const app = parseBoard(c.text, { knownLessons: LESSON_IDS })
-      const pick = (list: { path: string; message: string }[]) => list.map(({ path, message }) => ({ path, message }))
+      // The tool cuts long quoted values, so the app side is cut the same way before the comparison.
+      const pick = (list: { path: string; message: string; code?: string }[]) =>
+        list.filter((p) => p.code !== 'more-problems').map(({ path, message }) => ({ path, message: clip(message) }))
       expect(report.valid, c.name).toBe(app.ok)
-      if (app.ok) expect(pick(report.warnings).slice(0, app.warnings.length), c.name).toEqual(pick(app.warnings))
-      else expect(pick(report.errors), c.name).toEqual(pick(app.errors))
+      if (app.ok) {
+        // Feedback warnings come first, and the tool lists at most 25, so every app warning is there unless the list is cut.
+        if (report.omittedWarnings === 0) expect(pick(report.warnings), c.name).toEqual(expect.arrayContaining(pick(app.warnings)))
+      } else {
+        expect(pick(report.errors), c.name).toEqual(pick(app.errors))
+        expect(report.omittedErrors, c.name).toBe(app.omitted ?? 0)
+      }
     }
   })
 
