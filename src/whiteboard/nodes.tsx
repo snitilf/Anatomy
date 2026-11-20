@@ -46,9 +46,6 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
     <>
       <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={cards.handle} />
       <Handle id={EDGE_OUT_HANDLE} type="source" position={Position.Top} isConnectable={false} className={cards.handle} />
-      {SIDES.map((side) => (
-        <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
-      ))}
       <div className={cards.card} data-yours="" data-selected={selected || undefined}>
         {data.far && data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
         {lines > 0 && (
@@ -71,12 +68,16 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
           </div>
         )}
       </div>
+      {/* The edge is drawn over the card and under the dots that draw a link. */}
+      <YoursEdge selected={selected} />
+      {SIDES.map((side) => (
+        <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
+      ))}
       {data.far && (
         <div className={cards.tip} aria-hidden="true">
           {data.label}
         </div>
       )}
-      <YoursEdge selected={selected} />
       <Grip min={CARD_MIN} max={CARD_MAX} />
     </>
   )

@@ -11,7 +11,8 @@ const DASHES = { '--dash': YOURS_DASH, '--far-dash': YOURS_FAR_DASH } as CSSProp
 export function YoursEdge({ selected = false }: { selected?: boolean }) {
   return (
     <svg className={styles.yoursEdge} data-selected={selected || undefined} style={DASHES} aria-hidden="true">
-      <rect />
+      {/* The geometry is set in CSS from the edge width; these attributes stand in where CSS geometry is not supported. */}
+      <rect width="100%" height="100%" rx="8" />
     </svg>
   )
 }

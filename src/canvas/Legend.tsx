@@ -1,6 +1,7 @@
 import { Popover } from '@base-ui/react/popover'
 import { CircleHelp } from 'lucide-react'
 import { Tip } from '../app/Tip'
+import { SOURCE_LABEL } from '../app/labels'
 import { useUi, useUiApi } from '../app/ui'
 import { MANUAL_STYLE, LINE_INK, YOURS_DASH } from './kinds'
 import { lineKeyRows } from './lineKey'
@@ -43,9 +44,9 @@ export function LineKey() {
               ))}
               <li className={styles.row}>
                 <svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true">
-                  <rect className={styles.proposal} x="4.5" y="0.5" width="23" height="11" rx="2.5" />
+                  <rect className={styles.proposal} x="6.5" y="0.5" width="19" height="11" rx="1.5" />
                 </svg>
-                <span>Proposal, not decided</span>
+                <span>{SOURCE_LABEL['agent-proposal']}</span>
               </li>
             </ul>
             {/* What the user added, apart from what the agent drew: their links and their parts share one dash and dot. */}
@@ -58,7 +59,8 @@ export function LineKey() {
               </li>
               <li className={styles.row}>
                 <svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true">
-                  <rect className={styles.yours} x="4.625" y="0.625" width="22.75" height="10.75" rx="2.5" strokeDasharray={YOURS_DASH} />
+                  {/* Four whole rounds of the dash and dot, started so that every dot falls on a straight side and shows at 1x. */}
+                  <rect className={styles.yours} x="6.355" y="0.5" width="19.29" height="11" rx="1.5" strokeDasharray={YOURS_DASH} strokeDashoffset="2.6" />
                 </svg>
                 <span>Your new part</span>
               </li>

@@ -59,11 +59,11 @@
 .proposal,
 .yours {
   fill: var(--raised);
-  stroke-width: 1;
 }
 
 .proposal {
   stroke: var(--card-edge);
+  stroke-width: 1;
   stroke-dasharray: 2.5 2.5;
 }
 

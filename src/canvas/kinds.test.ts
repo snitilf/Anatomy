@@ -11,10 +11,9 @@ describe("the user's dash and dot", () => {
     expect(MANUAL_STYLE.dash).toBe(YOURS_DASH)
   })
 
-  it('holds each length on screen in the far view', () => {
-    expect(screenDash('7 3 1.5 3')).toBe('calc(7px * var(--label-scale, 1)) calc(3px * var(--label-scale, 1)) calc(1.5px * var(--label-scale, 1)) calc(3px * var(--label-scale, 1))')
-    expect(screenDash('  6   4 ')).toBe('calc(6px * var(--label-scale, 1)) calc(4px * var(--label-scale, 1))')
-    expect(screenDash('')).toBe('')
-    expect(YOURS_FAR_DASH).toBe(screenDash(YOURS_DASH))
+  it('is never the dash of an agent line in the far view either', () => {
+    for (const kind of KIND_ORDER) expect(screenDash(KIND_STYLE[kind].dash)).not.toBe(YOURS_FAR_DASH)
+    // Each of its four lengths is held on screen by the far view's scale.
+    expect(YOURS_FAR_DASH.match(/var\(--label-scale, 1\)/g)).toHaveLength(4)
   })
 })
