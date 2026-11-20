@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Bundle } from './bundleRoutes'
-import { groupNameRect, placeCounts } from './farLabels'
+import { countHeight, countWidth, groupNameRect, isMixed, placeCounts, YOURS_TICK } from './farLabels'
 
-const bundle = (id: string, count: number, points: { x: number; y: number }[]): Bundle => ({ id, a: 'a', b: 'b', count, ab: count, ba: 0, connectionIds: [], mine: false, d: '', points, width: 2 })
+const bundle = (id: string, count: number, points: { x: number; y: number }[]): Bundle => ({ id, a: 'a', b: 'b', count, ab: count, ba: 0, connectionIds: [], mine: false, yours: 0, d: '', points, width: 2 })
 const hit = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
 describe('counts on bundled lines', () => {
@@ -42,5 +42,17 @@ describe('the room of a group name', () => {
     const large = groupNameRect(area, 'Backend', 15, 6)
     expect(small.y + small.height).toBeLessThan(300)
     expect(large.width).toBeGreaterThan(small.width * 2.5)
+  })
+})
+
+describe("the user's mark on a count", () => {
+  it('is on a bundle that mixes their links with the agent lines, and the count makes room for it', () => {
+    expect(isMixed({ mine: false, yours: 1 })).toBe(true)
+    expect(isMixed({ mine: false, yours: 0 })).toBe(false)
+    // A bundle of only their links is drawn in their dash and dot already.
+    expect(isMixed({ mine: true, yours: 2 })).toBe(false)
+    // The mark sits under the number: the count is taller, and as wide as before, which leaves room for the mark's 13 px.
+    expect(countHeight({ mine: false, yours: 1 }) - countHeight({ mine: false, yours: 0 })).toBe(YOURS_TICK)
+    expect(countWidth({ count: 2 })).toBeGreaterThanOrEqual(13)
   })
 })

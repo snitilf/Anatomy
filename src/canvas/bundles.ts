@@ -41,6 +41,8 @@ export interface Pair {
   connectionIds: string[]
   /** Every connection of the pair is one the user drew. */
   mine: boolean
+  /** How many of the connections are links the user drew. */
+  yours: number
 }
 
 /** Counts the connections between each two clusters. A connection inside one cluster, or to a part that is not on the map, is not counted. */
@@ -57,8 +59,9 @@ export function countPairs(clusters: ReadonlyMap<string, string>, connections: r
       pair.count++
       pair.connectionIds.push(c.id)
       pair.mine = pair.mine && c.mine
+      if (c.mine) pair.yours++
     } else {
-      pair = { a, b, count: 1, ab: 0, ba: 0, connectionIds: [c.id], mine: c.mine }
+      pair = { a, b, count: 1, ab: 0, ba: 0, connectionIds: [c.id], mine: c.mine, yours: c.mine ? 1 : 0 }
       pairs.set(key, pair)
     }
     if (x === a) pair.ab++

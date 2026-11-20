@@ -48,13 +48,15 @@ export interface BundleWords {
  * How a bundle reads: its ends in the order of the board's groups, with an arrow for the way its connections run
  * (→ from the first to the second, ← the other way, ↔ both ways).
  */
-export function bundleWords(board: Board, proposals: Proposals, pair: Pick<Pair, 'a' | 'b' | 'ab' | 'ba' | 'count'>): BundleWords {
+export function bundleWords(board: Board, proposals: Proposals, pair: Pick<Pair, 'a' | 'b' | 'ab' | 'ba' | 'count'> & Partial<Pick<Pair, 'yours'>>): BundleWords {
   const swap = endRank(board, pair.a) > endRank(board, pair.b)
   const [one, two] = swap ? [pair.b, pair.a] : [pair.a, pair.b]
   const way = wayOf(swap ? pair.ba : pair.ab, swap ? pair.ab : pair.ba)
   const first = endName(board, proposals, one)
   const second = endName(board, proposals, two)
-  const count = connectionsWord(pair.count)
+  // A bundle that mixes the user's links with the agent's lines says how many are theirs. One of only theirs already shows it in its line.
+  const yours = pair.yours ?? 0
+  const count = `${connectionsWord(pair.count)}${yours > 0 && yours < pair.count ? `, ${yours} yours` : ''}`
   const spokenWay = way === 'both' ? `${first} and ${second}` : way === 'forward' ? `${first} to ${second}` : `${second} to ${first}`
   return {
     first,

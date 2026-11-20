@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowLeft, ArrowRight, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Link2, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
@@ -20,7 +20,8 @@ import { spotProps } from './spotlight'
 /** One connection at a part: the part at the other end is the name, and the connection's label is the quiet text at the right. */
 function Row({ row, side, names }: { row: FlowRow & { part: string }; side: Side; names: (id: string) => string | undefined }) {
   const { choose } = usePanel()
-  const Arrow = side === 'in' ? ArrowLeft : ArrowRight
+  // A link of the user's takes the link glyph it has on the Overview and in Yours, so it is told apart by shape. The group says which way it goes.
+  const Glyph = row.yours === 'link' ? Link2 : side === 'in' ? ArrowLeft : ArrowRight
   const name = names(row.part)
   const what = row.unlabeled ? 'Link' : row.what
   const select = row.select
@@ -32,12 +33,12 @@ function Row({ row, side, names }: { row: FlowRow & { part: string }; side: Side
     >
       {name === undefined ? (
         <span className={clsx(styles.part, styles.gone)}>
-          <Arrow className={styles.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
+          <Glyph className={styles.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
           <span className={styles.name}>{row.part}</span>
         </span>
       ) : (
         <button type="button" className={styles.part} onClick={() => choose({ type: row.part.startsWith('part-') ? 'proposal' : 'component', id: row.part })}>
-          <Arrow className={styles.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
+          <Glyph className={styles.arrow} size={14} strokeWidth={1.5} aria-hidden="true" />
           <span className={styles.name}>{name}</span>
           {row.was !== undefined && (
             <>

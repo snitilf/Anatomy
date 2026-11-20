@@ -41,8 +41,11 @@
   transition: opacity 120ms var(--ease-out);
 }
 
+/* A bundle of only the user's links: their color and their dash and dot, held at its size on screen. */
 .bundle[data-mine] {
   stroke: var(--yours);
+  stroke-dasharray: var(--far-dash);
+  stroke-linecap: round;
 }
 
 /* The pointer's room: a stroke 12px wide on screen, whatever the zoom, which draws nothing. */
@@ -141,6 +144,26 @@
   pointer-events: auto;
   transform: translate(-50%, -50%) scale(var(--label-scale, 1));
   transition: opacity 120ms var(--ease-out);
+}
+
+/* The user's mark on a count: one dash and dot in their color, the same length as on the map, under the number. Beside it, it read as a minus sign. */
+.count:has(.yoursTick) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 3px;
+}
+
+.yoursTick {
+  display: block;
+  margin-top: 1px;
+  overflow: visible;
+}
+
+.yoursTick line {
+  stroke: var(--yours);
+  stroke-width: 1.25;
+  stroke-linecap: round;
 }
 
 .unit:hover .count,

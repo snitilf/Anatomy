@@ -266,6 +266,9 @@ describe('your links', () => {
     selectPart('payout-preview')
     const row = within(flow()).getByRole('button', { name: 'I would check this' }).closest('li')!
     expect(row).toHaveAttribute('data-yours', 'link')
+    // Told apart by shape, not only by color: the link glyph, where a connection of the agent's has an arrow.
+    expect(row.querySelector('.lucide-link-2')).not.toBeNull()
+    expect(row.querySelector('.lucide-arrow-right')).toBeNull()
     expect(within(row).getByRole('button', { name: 'Payout ledger' })).toBeInTheDocument()
     fireEvent.click(within(row).getByRole('button', { name: 'I would check this' }))
 

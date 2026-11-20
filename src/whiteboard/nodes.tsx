@@ -6,6 +6,7 @@ import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
 import { nameLines } from '../canvas/far'
+import { YoursEdge } from '../canvas/YoursEdge'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
 
@@ -38,16 +39,13 @@ function Grip({ min, max }: { min: { width: number; height: number }; max: { wid
   )
 }
 
-/** A part the user proposed: a card in the user's color, linked and moved like any part. */
+/** A part the user proposed: a card edged in the user's dash and dot, linked and moved like any part. */
 export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeProps<Node<ProposalData>>) {
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   return (
     <>
       <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={cards.handle} />
       <Handle id={EDGE_OUT_HANDLE} type="source" position={Position.Top} isConnectable={false} className={cards.handle} />
-      {SIDES.map((side) => (
-        <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
-      ))}
       <div className={cards.card} data-yours="" data-selected={selected || undefined}>
         {data.far && data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
         {lines > 0 && (
@@ -70,6 +68,11 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
           </div>
         )}
       </div>
+      {/* The edge is drawn over the card and under the dots that draw a link. */}
+      <YoursEdge selected={selected} />
+      {SIDES.map((side) => (
+        <Handle key={`out-${side}`} id={`out-${side}`} type="source" position={SIDE_POSITION[side]} className={cards.drawHandle} />
+      ))}
       {data.far && (
         <div className={cards.tip} aria-hidden="true">
           {data.label}

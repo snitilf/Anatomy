@@ -5,7 +5,8 @@ import { type BundleWords } from './bundleWords'
 import { middleOf, visibleArrows, type Bundle } from './bundleRoutes'
 import { spotlight } from './emphasis'
 import { farLabelScale } from './far'
-import { groupNameRect, placeCounts } from './farLabels'
+import { YOURS_DASH, YOURS_FAR_DASH } from './kinds'
+import { groupNameRect, isMixed, placeCounts } from './farLabels'
 import { clampTip } from './useTipClamp'
 import styles from './FarLayer.module.css'
 
@@ -177,7 +178,7 @@ export const FarLayer = memo(function FarLayer({
           return (
             <div key={b.id} className={styles.unit} data-unit={b.id} data-mine={mine} data-on={on}>
               <svg className={styles.lines} width="1" height="1" aria-hidden="true">
-                <path d={b.d} className={styles.bundle} data-bundle="" data-mine={mine} data-on={on} style={{ '--w': b.width } as CSSProperties} />
+                <path d={b.d} className={styles.bundle} data-bundle="" data-mine={mine} data-on={on} style={{ '--w': b.width, ...(mine ? { '--far-dash': YOURS_FAR_DASH } : {}) } as CSSProperties} />
                 <path d={b.d} className={styles.hit} data-hit="" />
               </svg>
               {head && (
@@ -198,6 +199,12 @@ export const FarLayer = memo(function FarLayer({
               {at ? (
                 <button type="button" className={styles.count} data-bundle="" data-mine={mine} data-on={on} aria-label={label} style={{ left: at.x, top: at.y }}>
                   {b.count}
+                  {/* A bundle that holds a link of the user's among the agent's lines: one dash and dot of theirs under the count. */}
+                  {isMixed(b) && (
+                    <svg className={styles.yoursTick} width="13" height="4" viewBox="0 0 13 4" aria-hidden="true">
+                      <line x1="0.75" y1="2" x2="12.5" y2="2" strokeDasharray={YOURS_DASH} />
+                    </svg>
+                  )}
                 </button>
               ) : (
                 <button type="button" className={styles.reach} aria-label={label} style={{ left: middleOf(b.points).x, top: middleOf(b.points).y }} />

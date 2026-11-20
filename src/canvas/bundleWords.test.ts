@@ -25,6 +25,23 @@ describe('the way a pair runs', () => {
   })
 })
 
+describe("the user's links in a bundle", () => {
+  const board = sixty()
+  const [first, second] = board.groups
+  const pair = { a: `group:${first!.id}`, b: `group:${second!.id}`, ab: 3, ba: 0, count: 3 }
+
+  it('says how many are theirs when they share the bundle with the agent', () => {
+    const words = bundleWords(board, [], { ...pair, yours: 1 })
+    expect(words.tag).toBe(`${first!.label} → ${second!.label}, 3 connections, 1 yours`)
+    expect(words.spoken).toBe(`${first!.label} to ${second!.label}, 3 connections, 1 yours`)
+  })
+
+  it('says nothing more when none are theirs, or all are', () => {
+    expect(bundleWords(board, [], { ...pair, yours: 0 }).tag).toBe(`${first!.label} → ${second!.label}, 3 connections`)
+    expect(bundleWords(board, [], { ...pair, yours: 3 }).tag).toBe(`${first!.label} → ${second!.label}, 3 connections`)
+  })
+})
+
 describe('naming a bundle', () => {
   const board = sixty()
   const [first, second] = board.groups

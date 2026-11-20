@@ -1,7 +1,7 @@
 import { Command as Cmdk } from 'cmdk'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useAppStore } from '../app/store'
+import { useAppStore, useAppStoreApi } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import { formatKeys } from './keys'
 import { boardCommands, COMMANDS, isEnabled, isListed } from './list'
@@ -43,8 +43,32 @@ function filter(_value: string, search: string, keywords?: string[]): number {
   return 0
 }
 
+/** How long focus waits for the sidebar to show the chosen item, before it goes to the item on the map. */
+const FOCUS_WAIT_MS = 600
+
+/**
+ * After a part or a connection is picked by name, focus goes to what now describes it: the heading of the sidebar (the
+ * sheet on a phone), or the item on the map when that heading does not come on screen. A menu opened from the keyboard
+ * has no control to give focus back to, so focus would otherwise fall to the page and the next Tab would start from the top.
+ * The panel renders the new selection a few frames later, and a phone raises its sheet, so the heading is waited for.
+ */
+function focusChosen(id: string | undefined, since = performance.now()) {
+  const active = document.activeElement
+  if (active && active !== document.body) return
+  // The sidebar is an aside on a wide screen and the sheet on a phone. Its heading counts only while it is on screen.
+  const heading = document.querySelector<HTMLElement>('[aria-label="Sidebar"]:not([inert]) h2[tabindex="-1"]')
+  const box = heading?.getBoundingClientRect()
+  const shown = box !== undefined && box.height > 0 && box.bottom > 0 && box.top < window.innerHeight
+  const late = performance.now() - since > FOCUS_WAIT_MS
+  if (shown) heading?.focus({ preventScroll: true })
+  else if (late && id !== undefined) document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"], .react-flow__edge[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true })
+  // Checked again on the next frame: the heading can be replaced as the panel renders, which drops focus to the page.
+  if (performance.now() - since < FOCUS_WAIT_MS * 2) requestAnimationFrame(() => focusChosen(id, since))
+}
+
 function MenuBody({ onClose }: { onClose: () => void }) {
   const { context, run } = useCommands()
+  const store = useAppStoreApi()
   const [search, setSearch] = useState('')
   // The menu reads the state as it opens, and again when it changes under it, such as a command that was run a frame ago.
   const state = useAppStore((s) => s)
@@ -58,7 +82,14 @@ function MenuBody({ onClose }: { onClose: () => void }) {
   const go = (command: Command) => {
     onClose()
     // After the dialog has given focus back, so a command that moves focus keeps it.
-    requestAnimationFrame(() => run(command))
+    requestAnimationFrame(() => {
+      run(command)
+      if (command.group === 'Go to') {
+        const chosen = store.getState().selection
+        // A frame later, once the panel shows the chosen item rather than what was there before.
+        requestAnimationFrame(() => focusChosen(chosen && chosen.type !== 'board' ? chosen.id : undefined))
+      }
+    })
   }
   return (
     <>

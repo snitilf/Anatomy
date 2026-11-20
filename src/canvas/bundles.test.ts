@@ -35,7 +35,7 @@ describe('counting pairs', () => {
       { id: 'r3', from: 'x1', to: 'x2', mine: false },
       { id: 'r4', from: 'x1', to: 'missing', mine: false },
     ])
-    expect(pairs).toEqual([{ a: 'group:g', b: 'group:h', count: 2, ab: 1, ba: 1, connectionIds: ['r1', 'r2'], mine: false }])
+    expect(pairs).toEqual([{ a: 'group:g', b: 'group:h', count: 2, ab: 1, ba: 1, connectionIds: ['r1', 'r2'], mine: false, yours: 0 }])
   })
 
   it('counts which way each connection of a pair runs', () => {
@@ -84,6 +84,17 @@ describe('counting pairs', () => {
     const pair = pairs.find((p) => p.connectionIds.includes('link-2'))!
     expect([pair.a, pair.b].sort()).toEqual(['group:g-1', 'part-new'])
     expect(pair.mine).toBe(true)
+    expect(pair.yours).toBe(1)
+  })
+
+  it("counts the user's links in a bundle they share with the agent's lines", () => {
+    const map = new Map([['p', 'group:g'], ['q', 'group:h']])
+    const [pair] = countPairs(map, [
+      { id: 'r1', from: 'p', to: 'q', mine: false },
+      { id: 'link-1', from: 'p', to: 'q', mine: true },
+      { id: 'r2', from: 'q', to: 'p', mine: false },
+    ])
+    expect(pair).toMatchObject({ count: 3, mine: false, yours: 1 })
   })
 
   it('uses the ends the user moved a connection to', () => {
@@ -163,6 +174,7 @@ describe('arrowheads at a crowded edge', () => {
     count: 1,
     connectionIds: [],
     mine,
+    yours: mine ? 1 : 0,
     d: '',
     points: [],
     width: 1.5,
