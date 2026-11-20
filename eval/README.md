@@ -62,7 +62,7 @@ Add an alias to `gold.json` when a good board uses another name for the same par
 
 ## Token sizes
 
-Run `npm run tokens` to print the size of the generated README, each guide section, and each example board.
+Run `npm run tokens` to print the size of the generated README, each guide section, each example board, and the output of the `anatomy` tool.
 The estimate is characters divided by 4 for prose and by 3 for JSON.
-A unit test fails when the README grows more than 5 percent over `tokens.baseline.json`, or passes the hard cap in that file.
+A unit test fails when the README or a tool output grows more than 5 percent over `tokens.baseline.json`, or passes the hard cap in that file.
 To let the README grow on purpose, edit the baseline in the same change.

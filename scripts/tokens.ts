@@ -1,6 +1,7 @@
 // Prints the size of what an agent reads and writes: characters and estimated tokens.
 // Run with: npm run tokens
 import { readdirSync, readFileSync } from 'node:fs'
+import { cliOutputs } from './lib/cliOutputs.ts'
 import { estimateReadmeTokens, estimateTokens, guideSections, type TextKind } from './lib/estimate.ts'
 import { withAppModules } from './lib/vite.ts'
 
@@ -34,14 +35,16 @@ async function measure(): Promise<Row[]> {
   ]
 
   const exampleDir = new URL('src/examples/', rootUrl)
+  const examples: Record<string, string> = {}
   for (const name of readdirSync(exampleDir).filter((file) => file.endsWith('.board.json')).sort()) {
     const text = readFileSync(new URL(name, exampleDir), 'utf8')
+    examples[name] = text
     rows.push(row(`example board ${name}`, text, 'json'))
     rows.push(row(`  same, minified`, JSON.stringify(JSON.parse(text)), 'json'))
   }
 
-  // CLI commands do not exist yet. When they do, add one row per command and example board here,
-  // for example `anatomy validate` and `anatomy outline`, so tokenBudget.test.ts can guard their output too.
+  // The output of the anatomy tool. tokenBudget.test.ts guards these rows too.
+  for (const output of cliOutputs(examples)) rows.push(row(output.name, output.text, output.kind))
   return rows
 }
 
@@ -51,7 +54,7 @@ function printTable(rows: Row[]): void {
   console.log(line('Artifact', 'Characters', 'Est. tokens'))
   console.log(line('-'.repeat(width), '-'.repeat(10), '-'.repeat(10)))
   for (const r of rows) console.log(line(r.artifact, r.characters.toLocaleString('en-US'), r.tokens.toLocaleString('en-US')))
-  console.log('\nEstimate: characters / 4 for prose, characters / 3 for JSON. The README counts its schema as JSON.')
+  console.log('\nEstimate: characters / 4 for prose, characters / 3 for JSON. The README counts its schema as JSON.\nThe anatomy rows count its text output as prose and its --json output as JSON.')
 }
 
 printTable(await measure())

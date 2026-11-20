@@ -23,7 +23,7 @@ In other browsers, the user can open a board file or a built-in example.
 
 Tell the user to click **Open folder** and pick their project.
 When the project has no board yet, the user can click **How to make a board** to read the steps.
-The user then clicks **Copy prompt**, which copies the first prompt and writes `.anatomy/README.md` into the project.
+The user then clicks **Copy prompt**, which copies the first prompt and writes `.anatomy/README.md` and `.anatomy/anatomy.mjs` into the project.
 
 ## Write a board
 
@@ -55,10 +55,11 @@ The rules that matter most:
   The schema allows more, but short walkthroughs read better.
   A `highlight` list holds component IDs and relationship IDs only.
 
-This repository has no command that validates a board file outside the app.
-Anatomy checks the file when it opens it, and it lists every problem with its location, for example `relationships[2].to`.
-It keeps the previous board open when a file is invalid.
-Ask the user to read the error list, or use the checklist in `docs/authoring-guide.md`.
+Check the board before you hand it over.
+Run `node .anatomy/anatomy.mjs validate` in the user's project, or `npm run anatomy -- validate <path to board.json>` in this repository.
+It runs the same checks as the app and prints one line per problem with its location, for example `relationships[2].to`.
+Exit code 0 means valid, 1 means problems, and 2 means the file could not be read.
+Fix the errors and run it again, because some checks run only once the earlier ones pass.
 The JSON Schema checks only shapes and limits, so Anatomy can reject a file that passes it.
 
 ## Answer feedback
@@ -75,6 +76,7 @@ Read .anatomy/feedback.json and answer every item in the next revision of .anato
 3. Add a `responses` block with `respondsTo` set to the feedback `id`.
 4. Answer every item by its `id` with the status `adopted`, `declined`, or `answered`.
    List the IDs that you added or changed in `changed`.
+5. Run the check again. It also warns about an item with no answer.
 
 The full format is in `.anatomy/README.md`.
 Anatomy opens the new revision on its own.
@@ -83,7 +85,7 @@ Never edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
 They hold the working state of the user.
 
 Commit `.anatomy/board.json` with the code that it explains.
-Add `.anatomy/layer.json` and `.anatomy/feedback.json` to the `.gitignore` of the project.
+Add `.anatomy/layer.json`, `.anatomy/feedback.json`, and `.anatomy/anatomy.mjs` to the `.gitignore` of the project.
 Tell the user before you change their `.gitignore`.
 
 ## Rules
@@ -103,8 +105,11 @@ Do this only when the user asks you to change Anatomy.
 - `npm run test:e2e` builds the app and runs the browser tests in Google Chrome.
 - `npm run schema` rewrites `schema/board.v1.schema.json` from the Zod schema.
   Run it after every change to the board schema.
-- `npm run tokens` prints the size of the generated README, each guide section, and each example board.
-  A unit test fails when the README grows more than 5 percent over `tokens.baseline.json`.
+- `npm run anatomy -- <command>` runs the `anatomy` tool from `bin/anatomy.ts`.
+  The app writes the same tool, bundled, as `.anatomy/anatomy.mjs`.
+  `src/cli/corpus.golden.txt` holds its output on the broken boards in `src/cli/corpus.ts`; update it with `npx vitest run src/cli -u` when the output changes on purpose.
+- `npm run tokens` prints the size of the generated README, each guide section, each example board, and the output of the `anatomy` tool.
+  A unit test fails when the README or a tool output grows more than 5 percent over `tokens.baseline.json`.
   Edit the baseline only when the growth is intended.
 - `npm run eval` prints the evaluation tasks in `eval/` and scores a board file. See `eval/README.md`.
 - `docs/board-format.md` explains every field of a board file.
