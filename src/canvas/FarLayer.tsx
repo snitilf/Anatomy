@@ -2,7 +2,7 @@ import { useStore, useStoreApi, ViewportPortal } from '@xyflow/react'
 import { memo, useCallback, useEffect, useMemo, useRef, type CSSProperties, type FocusEvent, type MouseEvent, type PointerEvent } from 'react'
 import type { Point, Rect } from '../layout/geometry'
 import { type BundleWords } from './bundleWords'
-import { middleOf, visibleArrows, type Bundle } from './bundleRoutes'
+import { middleOf, nearestBundle, visibleArrows, type Bundle } from './bundleRoutes'
 import { spotlight } from './emphasis'
 import { farLabelScale } from './far'
 import { YOURS_DASH, YOURS_FAR_DASH } from './kinds'
@@ -19,6 +19,9 @@ export interface FarGroup {
 
 /** How far a press may travel and still count as a click, in screen pixels. Past it, the map was being dragged. */
 const CLICK_SLOP = 4
+
+/** How far from a line a tap still picks it, in screen pixels: half the width of its touch target. */
+const TOUCH_REACH = 12
 
 const unitOf = (target: EventTarget | null): HTMLElement | null => (target instanceof Element ? target.closest<HTMLElement>('[data-unit]') : null)
 
@@ -144,8 +147,15 @@ export const FarLayer = memo(function FarLayer({
     pressed.current = { x: event.clientX, y: event.clientY }
   }
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
-    const id = unitOf(event.target)?.dataset.unit
+    let id = unitOf(event.target)?.dataset.unit
     if (!id) return
+    // A finger covers several lines at once and the browser gives the touch to the one drawn last. Give it to the line nearest the finger.
+    // A count is a button of its own, and a tap on it stays with its bundle.
+    if ((event.nativeEvent as globalThis.PointerEvent).pointerType === 'touch' && !(event.target instanceof Element && event.target.closest('button'))) {
+      const origin = layer.current?.getBoundingClientRect()
+      const zoom = flow.getState().transform[2]
+      if (origin && zoom > 0) id = nearestBundle(bundles, { x: (event.clientX - origin.left) / zoom, y: (event.clientY - origin.top) / zoom }, TOUCH_REACH / zoom) ?? id
+    }
     // A click on a bundle is not a click on the map behind it, which would clear the selection.
     event.stopPropagation()
     const start = pressed.current

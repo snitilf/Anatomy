@@ -89,6 +89,57 @@ export function middleOf(points: readonly Point[]): Point {
   return best ? { x: (best.p.x + best.q.x) / 2, y: (best.p.y + best.q.y) / 2 } : (points[0] ?? { x: 0, y: 0 })
 }
 
+/** The line as it is drawn: the corners of `roundedPath` sampled along their curves, so a distance is measured to the ink and not to a corner that was cut. */
+export function drawnPoints(points: readonly Point[], radius = CORNER): Point[] {
+  const out: Point[] = []
+  const first = points[0]
+  if (!first) return out
+  out.push(first)
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i - 1] as Point
+    const c = points[i] as Point
+    const n = points[i + 1] as Point
+    const before = Math.hypot(c.x - p.x, c.y - p.y)
+    const after = Math.hypot(n.x - c.x, n.y - c.y)
+    const r = Math.min(radius, before / 2, after / 2)
+    if (r <= 0) continue
+    const a = { x: c.x + ((p.x - c.x) / before) * r, y: c.y + ((p.y - c.y) / before) * r }
+    const b = { x: c.x + ((n.x - c.x) / after) * r, y: c.y + ((n.y - c.y) / after) * r }
+    for (let k = 0; k <= 8; k++) {
+      const t = k / 8
+      out.push({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y })
+    }
+  }
+  out.push(points[points.length - 1] as Point)
+  return out
+}
+
+/** The distance from a point to a straight run. */
+function distanceToRun(at: Point, p: Point, q: Point): number {
+  const dx = q.x - p.x
+  const dy = q.y - p.y
+  const length = dx * dx + dy * dy
+  const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((at.x - p.x) * dx + (at.y - p.y) * dy) / length))
+  return Math.hypot(at.x - (p.x + t * dx), at.y - (p.y + t * dy))
+}
+
+/**
+ * The bundle whose line lies nearest a point, within `reach`, or undefined. Where lines lie closer together than a
+ * finger is wide, their touch targets overlap and the browser gives a touch to whichever is drawn last, so a tap is
+ * resolved by distance instead: it always picks the line the finger is closest to. Ties go to the earlier bundle.
+ */
+export function nearestBundle(bundles: readonly Pick<Bundle, 'id' | 'points'>[], at: Point, reach: number): string | undefined {
+  let best: { id: string; distance: number } | undefined
+  for (const b of bundles) {
+    const drawn = drawnPoints(b.points)
+    for (let i = 1; i < drawn.length; i++) {
+      const d = distanceToRun(at, drawn[i - 1] as Point, drawn[i] as Point)
+      if (d <= reach && (!best || d < best.distance)) best = { id: b.id, distance: d }
+    }
+  }
+  return best?.id
+}
+
 /** Arrowheads closer than this on screen, at the same side of the same block, read as a ladder. */
 export const ARROW_GAP_PX = 6
 
