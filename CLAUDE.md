@@ -73,7 +73,7 @@ Read .anatomy/feedback.json and answer every item in the next revision of .anato
 ```
 
 1. Read `.anatomy/feedback.json`.
-2. Write a short patch and run `node .anatomy/anatomy.mjs apply patch.json`.
+2. Write a short patch to `.anatomy/patch.json` and run `node .anatomy/anatomy.mjs apply`.
    Edits address list items by ID, `for` ties an edit to a feedback item, and one `respond` operation per item answers it with the status `adopted`, `declined`, or `answered`.
    The script raises `revision` by one, writes `responses` and `changed`, and writes the board only when it is valid.
    Pass `--base N` with the revision you read, `--dry-run` to preview, and `--cascade` to drop what refers to a removed part.
@@ -87,7 +87,7 @@ Never edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
 They hold the working state of the user.
 
 Commit `.anatomy/board.json` with the code that it explains.
-Add `.anatomy/layer.json`, `.anatomy/feedback.json`, `.anatomy/anatomy.mjs`, and `.anatomy/board.prev.json` to the `.gitignore` of the project.
+Add `.anatomy/layer.json`, `.anatomy/feedback.json`, `.anatomy/anatomy.mjs`, `.anatomy/patch.json`, and `.anatomy/board.prev.json` to the `.gitignore` of the project.
 Tell the user before you change their `.gitignore`.
 
 ## Rules

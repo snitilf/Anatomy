@@ -77,7 +77,7 @@ The user sends their marks to you in \`.anatomy/feedback.json\`, and you answer 
 | \`anatomy.mjs\` | Anatomy | A script that checks and edits \`board.json\`. Run it, do not read it. |
 
 Commit \`board.json\` with the code it explains.
-Add \`.anatomy/layer.json\`, \`.anatomy/feedback.json\`, \`.anatomy/anatomy.mjs\`, and \`.anatomy/board.prev.json\` to \`.gitignore\`: the first two are the user's working state, and Anatomy writes the script again.
+Add \`.anatomy/layer.json\`, \`.anatomy/feedback.json\`, \`.anatomy/anatomy.mjs\`, \`.anatomy/patch.json\`, and \`.anatomy/board.prev.json\` to \`.gitignore\`: the first two are the user's working state, and Anatomy writes the script again.
 
 ## Check the board
 
@@ -92,7 +92,7 @@ Without it, use the checklist in section 8.
 
 ## Revise with a patch
 
-Once a board exists, change it with \`node .anatomy/anatomy.mjs apply patch.json\` instead of writing the file again.
+Once a board exists, write the edits to \`.anatomy/patch.json\` and run \`node .anatomy/anatomy.mjs apply\` instead of writing the board again.
 A patch is a JSON array of \`test\`, \`add\`, \`remove\`, \`replace\`, and \`respond\` operations.
 Paths name list items by ID: \`/components/payment/summary\`, \`/relationships\` to add one, \`/relationships/api-to-queue\` to remove one.
 Lists without IDs (\`inputs\`, \`steps\`) are replaced whole, and \`add\` takes an optional \`before\` ID.

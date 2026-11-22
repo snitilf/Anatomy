@@ -45,7 +45,7 @@ Your agent does the thinking, and Anatomy shows it.
 
 Commit `.anatomy/board.json` with the code it explains.
 Add `.anatomy/layer.json` and `.anatomy/feedback.json` to `.gitignore`, because they hold your own working state.
-Add `.anatomy/anatomy.mjs` and `.anatomy/board.prev.json` as well, because Anatomy writes the first again and the second is the board before the last patch.
+Add `.anatomy/anatomy.mjs`, `.anatomy/patch.json`, and `.anatomy/board.prev.json` as well: Anatomy writes the script again, and the other two are the last patch and the board before it.
 
 No agent at hand?
 Open a built-in example: How the Claude Code harness works, Anatomy itself, or How a large language model like Opus 5.5 works.
