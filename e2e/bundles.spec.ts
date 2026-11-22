@@ -336,6 +336,77 @@ test('a pair on the Overview opens its bundle on the map', async ({ page }) => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
+  test('a tap on a crowded line picks the line the finger is nearest to', async ({ page }) => {
+    test.setTimeout(120_000)
+    const crowded = async (): Promise<{ x: number; y: number; id: string }[]> => {
+    await open(page, SIXTY)
+    await expect(farOn(page)).toBeAttached()
+    await page.waitForTimeout(600)
+    // Points on lines that lie within 8px of another line, and the line that is nearest each, found by distance on screen.
+    return page.evaluate(() => {
+      const paths = [...document.querySelectorAll<SVGPathElement>('[data-unit] path[data-hit]')]
+      const sample = (path: SVGPathElement, step: number) => {
+        const m = path.getScreenCTM()!
+        const total = path.getTotalLength()
+        const out: { x: number; y: number }[] = []
+        const scale = Math.abs(m.a) || 1
+        for (let l = 0; l <= total; l += Math.max(0.5, step / scale)) {
+          const p = path.getPointAtLength(l)
+          out.push({ x: p.x * m.a + m.e, y: p.y * m.d + m.f })
+        }
+        return out
+      }
+      const lines = paths.map((path) => ({ id: path.closest('[data-unit]')!.getAttribute('data-unit')!, points: sample(path, 2) }))
+      // Points of every line in cells of 10px, so the nearest other line is found without comparing every pair.
+      const cells = new Map<string, { id: string; x: number; y: number }[]>()
+      for (const l of lines)
+        for (const q of l.points) {
+          const key = `${Math.floor(q.x / 10)},${Math.floor(q.y / 10)}`
+          const list = cells.get(key) ?? []
+          list.push({ id: l.id, ...q })
+          cells.set(key, list)
+        }
+      const nearest = (at: { x: number; y: number }, skip: string) => {
+        let best = Infinity
+        for (let i = -1; i <= 1; i++)
+          for (let j = -1; j <= 1; j++)
+            for (const q of cells.get(`${Math.floor(at.x / 10) + i},${Math.floor(at.y / 10) + j}`) ?? []) if (q.id !== skip) best = Math.min(best, Math.hypot(q.x - at.x, q.y - at.y))
+        return best
+      }
+      const found: { x: number; y: number; id: string }[] = []
+      for (const l of lines) {
+        // A bundle that holds one connection opens that connection, which this check cannot read back.
+        if (!document.querySelector(`[data-unit="${l.id}"] button[aria-label$="Show them."]`)) continue
+        // The map is 390px wide, and a point under the sheet or the controls is not reachable.
+        for (const at of l.points) {
+          if (at.x < 8 || at.x > 382 || at.y < 60 || at.y > 520) continue
+          const d = nearest(at, l.id)
+          if (d < 1 || d > 8) continue
+          // A count is a button of its own, and a tap on it stays with its bundle.
+          const top = document.elementFromPoint(at.x, at.y)
+          if (!top?.closest('[data-unit]') || top.closest('button')) continue
+          found.push({ ...at, id: l.id })
+          break
+        }
+      }
+      return found
+    })
+    }
+    const spots = await crowded()
+    expect(spots.length).toBeGreaterThan(2)
+    let wrong = 0
+    for (const spot of spots.slice(0, 6)) {
+      // The map opens the same every time, so the spots hold on a fresh page.
+      await open(page, SIXTY)
+      await expect(farOn(page)).toBeAttached()
+      await page.waitForTimeout(600)
+      await page.touchscreen.tap(spot.x, spot.y)
+      await expect(page.getByTestId('inspector')).toHaveAttribute('data-stop', '1')
+      if ((await page.evaluate(() => document.querySelector('[data-unit][data-on]')?.getAttribute('data-unit') ?? null)) !== spot.id) wrong++
+    }
+    expect(wrong).toBe(0)
+  })
+
   test('a bundle whose head was dropped still shows its direction', async ({ page }) => {
     await open(page, SIXTY)
     const all = page.locator('[data-unit]:has(div[data-dropped])')

@@ -1,0 +1,140 @@
+{
+  "format": "anatomy-board",
+  "schemaVersion": 1,
+  "revision": 1,
+  "goal": "Show how a loop back edge changes the layout.",
+  "scope": {
+    "includes": [
+      "A loop"
+    ],
+    "excludes": []
+  },
+  "id": "rp-loop",
+  "title": "rp-loop",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Read"
+    },
+    {
+      "id": "g2",
+      "label": "Write"
+    }
+  ],
+  "components": [
+    {
+      "id": "x",
+      "label": "Prompt",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "ctx",
+      "label": "Memory",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "a",
+      "label": "Read A",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "group": "g1"
+    },
+    {
+      "id": "b",
+      "label": "Read B",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "group": "g1"
+    },
+    {
+      "id": "c",
+      "label": "Write C",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "group": "g2"
+    },
+    {
+      "id": "d",
+      "label": "Write D",
+      "summary": "A step in the loop.",
+      "source": {
+        "kind": "agent-explanation"
+      },
+      "group": "g2"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r1",
+      "from": "x",
+      "to": "ctx",
+      "kind": "sends-data-to",
+      "label": "one",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r2",
+      "from": "ctx",
+      "to": "a",
+      "kind": "sends-data-to",
+      "label": "two",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r3",
+      "from": "a",
+      "to": "b",
+      "kind": "sends-data-to",
+      "label": "three",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r4",
+      "from": "b",
+      "to": "c",
+      "kind": "sends-data-to",
+      "label": "four",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r5",
+      "from": "c",
+      "to": "d",
+      "kind": "sends-data-to",
+      "label": "five",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    },
+    {
+      "id": "r6",
+      "from": "d",
+      "to": "ctx",
+      "kind": "sends-data-to",
+      "label": "append",
+      "source": {
+        "kind": "agent-explanation"
+      }
+    }
+  ]
+}

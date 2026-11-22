@@ -4,7 +4,7 @@ import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
 import { placeCards } from '../layout/cards'
 import { bundleGroups, clusterOf, connectionsOf, countPairs } from './bundles'
-import { arrowOf, type Bundle, visibleArrows, blocksOf, bundleWidth, BUNDLE_MAX_WIDTH, computeBundles, roundedPath } from './bundleRoutes'
+import { arrowOf, nearestBundle, type Bundle, visibleArrows, blocksOf, bundleWidth, BUNDLE_MAX_WIDTH, computeBundles, roundedPath } from './bundleRoutes'
 
 const sixty = (): Board => {
   const r = parseBoard(sixtyText)
@@ -191,5 +191,24 @@ describe('arrowheads at a crowded edge', () => {
   it('keeps the head of a bundle that is yours', () => {
     const list = [bundle('a', 'g', 0), bundle('b', 'g', 10, true)]
     expect([...visibleArrows(list, 12)].sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('resolving a tap to a line', () => {
+  const line = (id: string, y: number) => ({ id, points: [{ x: 0, y }, { x: 100, y }] })
+  const lines = [line('late', 5), line('early', 0)]
+
+  it('picks the line nearest the point, whatever order the lines are drawn in', () => {
+    expect(nearestBundle(lines, { x: 50, y: 1 }, 12)).toBe('early')
+    expect(nearestBundle(lines, { x: 50, y: 4 }, 12)).toBe('late')
+  })
+
+  it('measures to the corners of a line as well as its straight runs', () => {
+    const bent = { id: 'bent', points: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 80 }] }
+    expect(nearestBundle([bent, line('flat', 30)], { x: 38, y: 60 }, 12)).toBe('bent')
+  })
+
+  it('picks nothing when no line is within reach', () => {
+    expect(nearestBundle(lines, { x: 50, y: 40 }, 12)).toBeUndefined()
   })
 })

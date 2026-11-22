@@ -2,7 +2,7 @@ import type { Board } from '../board/schema'
 import { groupAreas } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
 import { clusterOf, type Pair } from './bundles'
-import { Drawn, Obstacles, planEdges, routeConnection, type EdgeEnds } from './routing'
+import { Drawn, Obstacles, planEdges, planThrough, routeConnection, type EdgeEnds, type Plan, type Route, type Side } from './routing'
 
 export interface Bundle extends Pair {
   id: string
@@ -89,6 +89,57 @@ export function middleOf(points: readonly Point[]): Point {
   return best ? { x: (best.p.x + best.q.x) / 2, y: (best.p.y + best.q.y) / 2 } : (points[0] ?? { x: 0, y: 0 })
 }
 
+/** The line as it is drawn: the corners of `roundedPath` sampled along their curves, so a distance is measured to the ink and not to a corner that was cut. */
+export function drawnPoints(points: readonly Point[], radius = CORNER): Point[] {
+  const out: Point[] = []
+  const first = points[0]
+  if (!first) return out
+  out.push(first)
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i - 1] as Point
+    const c = points[i] as Point
+    const n = points[i + 1] as Point
+    const before = Math.hypot(c.x - p.x, c.y - p.y)
+    const after = Math.hypot(n.x - c.x, n.y - c.y)
+    const r = Math.min(radius, before / 2, after / 2)
+    if (r <= 0) continue
+    const a = { x: c.x + ((p.x - c.x) / before) * r, y: c.y + ((p.y - c.y) / before) * r }
+    const b = { x: c.x + ((n.x - c.x) / after) * r, y: c.y + ((n.y - c.y) / after) * r }
+    for (let k = 0; k <= 8; k++) {
+      const t = k / 8
+      out.push({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y })
+    }
+  }
+  out.push(points[points.length - 1] as Point)
+  return out
+}
+
+/** The distance from a point to a straight run. */
+function distanceToRun(at: Point, p: Point, q: Point): number {
+  const dx = q.x - p.x
+  const dy = q.y - p.y
+  const length = dx * dx + dy * dy
+  const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((at.x - p.x) * dx + (at.y - p.y) * dy) / length))
+  return Math.hypot(at.x - (p.x + t * dx), at.y - (p.y + t * dy))
+}
+
+/**
+ * The bundle whose line lies nearest a point, within `reach`, or undefined. Where lines lie closer together than a
+ * finger is wide, their touch targets overlap and the browser gives a touch to whichever is drawn last, so a tap is
+ * resolved by distance instead: it always picks the line the finger is closest to. Ties go to the earlier bundle.
+ */
+export function nearestBundle(bundles: readonly Pick<Bundle, 'id' | 'points'>[], at: Point, reach: number): string | undefined {
+  let best: { id: string; distance: number } | undefined
+  for (const b of bundles) {
+    const drawn = drawnPoints(b.points)
+    for (let i = 1; i < drawn.length; i++) {
+      const d = distanceToRun(at, drawn[i - 1] as Point, drawn[i] as Point)
+      if (d <= reach && (!best || d < best.distance)) best = { id: b.id, distance: d }
+    }
+  }
+  return best?.id
+}
+
 /** Arrowheads closer than this on screen, at the same side of the same block, read as a ladder. */
 export const ARROW_GAP_PX = 6
 
@@ -124,6 +175,33 @@ export function visibleArrows(bundles: readonly Bundle[], pixel: number): Set<st
   return shown
 }
 
+const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left']
+
+/** True when a straight run passes through the inside of the rectangle. */
+const runsThrough = (p: Point, q: Point, r: Rect): boolean =>
+  Math.max(p.x, q.x) > r.x && Math.min(p.x, q.x) < r.x + r.width && Math.max(p.y, q.y) > r.y && Math.min(p.y, q.y) < r.y + r.height
+
+/** Whether a route passes through the inside of any of the rectangles. */
+function crossesAny(route: Route, rects: readonly Rect[]): boolean {
+  const runs = route.runs ?? route.points.slice(1).map((q, i) => [route.points[i] as Point, q] as [Point, Point])
+  return runs.some(([p, q]) => rects.some((r) => runsThrough(p, q, r)))
+}
+
+/**
+ * The side pairs a connection may use, the planned one first, then the others with the shortest reach first. A pair
+ * the planner chose is only a preference: when the room in front of that side is shut, another side may be open.
+ */
+function alternatives(plan: Plan, from: Rect, to: Rect): Plan[] {
+  const others: Plan[] = []
+  for (const out of SIDES)
+    for (const into of SIDES) {
+      if (out === plan.out && into === plan.in) continue
+      others.push(planThrough(from, to, out, into))
+    }
+  const reach = (q: Plan) => Math.abs(q.a.x - q.b.x) + Math.abs(q.a.y - q.b.y)
+  return [plan, ...others.sort((p, q) => reach(p) - reach(q))]
+}
+
 /**
  * The second step of bundling, after `bundleGroups`: one orthogonal line for each pair of blocks, drawn in the gaps
  * between them with the router of the map: the blocks are what the lines keep out of. Pairs go shortest first, then by
@@ -141,6 +219,7 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
     .map(([, r]) => ({ x: r.x / ROUTE_SHRINK, y: (r.y - NAME_ROOM) / ROUTE_SHRINK, width: (r.width * NAME_SHARE) / ROUTE_SHRINK, height: NAME_ROOM / ROUTE_SHRINK }))
   const all = [...Object.values(rectOf), ...names]
   const obstacles = new Obstacles(all)
+  const blocksOnly = new Obstacles(Object.values(rectOf))
   const drawn = new Drawn()
   const reach = (p: Pair) => {
     const plan = plans.get(`${p.a}|${p.b}`)
@@ -152,7 +231,27 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
     const id = `${p.a}|${p.b}`
     const plan = plans.get(id)
     if (!plan) continue
-    const route = routeConnection(plan, all, drawn, obstacles)
+    // Keep out of every block the pair does not join. The planned sides come first. When they leave no way through, the
+    // other sides are tried, and then the same again with the room taken by the group names left free.
+    const keepOut = Object.entries(rectOf).filter(([k]) => k !== p.a && k !== p.b).map(([, r]) => r)
+    let route = routeConnection(plan, all, drawn, obstacles)
+    if (crossesAny(route, keepOut)) {
+      const from = rectOf[p.a] as Rect
+      const to = rectOf[p.b] as Rect
+      const tries = [
+        ...alternatives(plan, from, to).map((q) => ({ q, cards: all, grid: obstacles })),
+        ...alternatives(plan, from, to).map((q) => ({ q, cards: blocksOnly.cards, grid: blocksOnly })),
+      ]
+      let clear: Route | undefined
+      for (const t of tries) {
+        const attempt = routeConnection(t.q, t.cards, drawn, t.grid)
+        if (!crossesAny(attempt, keepOut)) {
+          clear = attempt
+          break
+        }
+      }
+      if (clear) route = clear
+    }
     if (route.runs) drawn.add(route.runs)
     const grow = (q: Point): Point => ({ x: q.x * ROUTE_SHRINK, y: q.y * ROUTE_SHRINK })
     const runs = route.runs?.map(([q, r]) => [grow(q), grow(r)] as [Point, Point])
