@@ -41,6 +41,11 @@ const FEEDBACK_EXAMPLE = `{
   "withdrawn": []
 }`
 
+const PATCH_EXAMPLE = `[
+  { "op": "replace", "path": "/components/payment/summary", "value": "Charges the card and retries twice.", "for": "note-a1b2c3d4e5f6" },
+  { "op": "respond", "for": "note-a1b2c3d4e5f6", "status": "answered", "text": "It retries twice." }
+]`
+
 const RESPONSES_EXAMPLE = `"responses": {
   "respondsTo": "feedback-k2m9x0q4z7ab",
   "items": [
@@ -69,27 +74,43 @@ The user sends their marks to you in \`.anatomy/feedback.json\`, and you answer 
 | \`layer.json\` | Anatomy | The user's own layer: positions, notes, drawings, and proposed changes. Do not edit it. |
 | \`feedback.json\` | Anatomy, when the user sends | What the user wants you to answer. Do not edit it. |
 | \`README.md\` | Anatomy | This file. |
-| \`anatomy.mjs\` | Anatomy | A script that checks \`board.json\`. Run it, do not read it. |
+| \`anatomy.mjs\` | Anatomy | A script that checks and edits \`board.json\`. Run it, do not read it. |
 
 Commit \`board.json\` with the code it explains.
-Add \`.anatomy/layer.json\`, \`.anatomy/feedback.json\`, and \`.anatomy/anatomy.mjs\` to \`.gitignore\`: the first two are the user's working state, and Anatomy writes the script again.
+Add \`.anatomy/layer.json\`, \`.anatomy/feedback.json\`, \`.anatomy/anatomy.mjs\`, \`.anatomy/patch.json\`, and \`.anatomy/board.prev.json\` to \`.gitignore\`: the first two are the user's working state, and Anatomy writes the script again.
 
 ## Check the board
 
 Before you hand over \`board.json\`, run \`node .anatomy/anatomy.mjs validate\`.
 It runs the same checks as Anatomy and prints one line per problem, with its path and often a fix.
-Exit code 0 means valid, 1 means problems, and 2 means the file could not be read.
-Fix the errors and run it again, because some checks run only once the earlier ones pass.
+Exit code 0 means valid, 1 means problems, and 2 means a file could not be read.
+Fix the errors and run it again, because some checks wait for the earlier ones.
 Warnings do not stop the board from opening, but read them.
 \`node .anatomy/anatomy.mjs fmt\` also orders the keys and indents the file, so you can write compact JSON.
 The script needs Node.js 24 or later, and running it is optional.
 Without it, use the checklist in section 8.
 
+## Revise with a patch
+
+Once a board exists, write the edits to \`.anatomy/patch.json\` and run \`node .anatomy/anatomy.mjs apply\` instead of writing the board again.
+A patch is a JSON array of \`test\`, \`add\`, \`remove\`, \`replace\`, and \`respond\` operations.
+Paths name list items by ID: \`/components/payment/summary\`, \`/relationships\` to add one, \`/relationships/api-to-queue\` to remove one.
+Lists without IDs (\`inputs\`, \`steps\`) are replaced whole, and \`add\` takes an optional \`before\` ID.
+\`for\` ties an edit to a feedback item, and \`respond\` answers it: the script writes \`responses\` and \`changed\`.
+It raises \`revision\`, validates, and writes only a valid board, keeping the old one as \`board.prev.json\`.
+
+\`\`\`json
+${PATCH_EXAMPLE}
+\`\`\`
+
+\`--base N\` (the revision you read) stops a stale patch, \`--dry-run\` writes nothing, and \`--cascade\` drops what refers to a removed part.
+For a first board or a big restructure, write the file and run \`validate\`.
+
 ## Answering feedback
 
 1. Read \`feedback.json\`. Each item has an \`id\` and a \`type\`.
-2. Decide what to do with each item, then write the next revision of \`board.json\`.
-3. Raise \`revision\` by one, and add a \`responses\` block that answers every item.
+2. Decide what to do with each item.
+3. Run \`apply\` with the edits and one \`respond\` per item, or write the revision yourself: raise \`revision\` and add a \`responses\` block that answers every item.
 4. Run \`node .anatomy/anatomy.mjs validate\`. It also checks that every item has an answer.
 
 Anatomy notices the new revision on its own.

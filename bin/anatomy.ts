@@ -1,12 +1,14 @@
 // The `anatomy` command line tool on Node. The app bundles this file, with everything it imports, into
 // `.anatomy/anatomy.mjs`. In this repository, run it with `npm run anatomy -- <command>`.
-// It reads only the board and the feedback.json next to it, writes only the board (fmt), and imports no network module.
+// It reads the board, the feedback.json next to it, and a patch, writes only the board and its previous version
+// (fmt and apply), and imports no network module.
 // Must stay first. See src/cli/jitless.ts.
 import '../src/cli/jitless.ts'
-import { chmodSync, closeSync, constants, fstatSync, lstatSync, openSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runAnatomy, type ReadResult } from '../src/cli/anatomy.ts'
+import { PATCH_LIMITS } from '../src/cli/apply.ts'
 
 /** Larger files are not read. The board limit is 1,000,000 bytes, so this only stops a wrong path from filling memory. */
 const MAX_READ_BYTES = 16_000_000
@@ -56,6 +58,28 @@ function read(path: string): ReadResult {
   }
 }
 
+/** What was piped in, a regular file or a pipe, read to the size of the largest patch and one byte more. */
+function stdin(): ReadResult {
+  try {
+    const buffer = Buffer.allocUnsafe(PATCH_LIMITS.bytes + 1)
+    let length = 0
+    while (length < buffer.length) {
+      let count: number
+      try {
+        count = readSync(0, buffer, length, buffer.length - length, null)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EOF') break
+        throw error
+      }
+      if (count === 0) break
+      length += count
+    }
+    return { ok: true, text: buffer.toString('utf8', 0, length) }
+  } catch (error) {
+    return { ok: false, missing: false, reason: (error as NodeJS.ErrnoException).code ?? String(error) }
+  }
+}
+
 /**
  * The file to replace. A link is followed only to a file in the same folder or below it, so fmt never writes outside
  * the board's folder. Writing through the link keeps the link.
@@ -69,16 +93,26 @@ function target(path: string): string {
   return real
 }
 
+/** True for a link, even one that points at nothing. */
+function isLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
 /**
  * Writes a new temporary file next to the target and renames it over the target, so a reader never sees half a board.
  * The temporary file must not exist yet ('wx'), so it never follows a planted link. The board keeps its permissions,
  * and a read-only board is left alone.
  */
-function write(path: string, text: string): void {
-  const real = target(path)
-  const info = statSync(real)
-  if (!info.isFile()) throw new Error(NOT_REGULAR)
-  const mode = info.mode & 0o777
+function write(path: string, text: string, create = false): void {
+  const missing = create && !existsSync(path) && !isLink(path)
+  const real = missing ? path : target(path)
+  const info = missing ? undefined : statSync(real)
+  if (info !== undefined && !info.isFile()) throw new Error(NOT_REGULAR)
+  const mode = info === undefined ? 0o644 : info.mode & 0o777
   if ((mode & 0o200) === 0) throw new Error('it is read-only')
   const temporary = join(dirname(real), `.${basename(real)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`)
   let created = false
@@ -97,7 +131,8 @@ const result = runAnatomy(process.argv.slice(2), {
   defaultBoard: bundled ? join(here, 'board.json') : join(cwd, '.anatomy', 'board.json'),
   invocation: bundled ? `node ${display(self)}` : 'npm run anatomy --',
   read: (path) => read(resolve(cwd, path)),
-  write: (path, text) => write(resolve(cwd, path), text),
+  stdin,
+  write: (path, text, options) => write(resolve(cwd, path), text, options?.create === true),
   sibling: (path, name) => join(dirname(resolve(cwd, path)), name),
   display: (path) => display(resolve(cwd, path)),
 })

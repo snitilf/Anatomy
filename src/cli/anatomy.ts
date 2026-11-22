@@ -2,33 +2,15 @@ import { boardAdvice, feedbackAdvice, readFeedback } from '../board/advice.ts'
 import { inSchemaOrder } from '../board/shape.ts'
 import { parseBoard, type BoardProblem } from '../board/validate.ts'
 import { LESSON_IDS } from '../lessons/ids.ts'
+import { runApply, type ApplyOptions } from './applyCommand.ts'
+import { clip, count, line, MAX_WARNINGS, plain, type CliIo, type CliResult } from './output.ts'
+
+export { clip }
+export type { CliIo, CliResult, ReadResult } from './output.ts'
 
 // The `anatomy` command line tool, without any file system access: the caller passes the files in and takes the output.
 // `bin/anatomy.ts` connects it to Node, and the app ships the same code bundled as `.anatomy/anatomy.mjs`.
 // It reads a board as data. It never runs anything from the board and never uses the network.
-
-export type ReadResult = { ok: true; text: string } | { ok: false; missing: boolean; reason: string }
-
-export interface CliIo {
-  /** The board file when the command names none. */
-  defaultBoard: string
-  /** How the user starts the tool, for the help text, for example `node .anatomy/anatomy.mjs`. */
-  invocation: string
-  read(path: string): ReadResult
-  /** Replaces the whole file. Throws when it cannot. */
-  write(path: string, text: string): void
-  /** A file in the same folder as `path`. */
-  sibling(path: string, name: string): string
-  /** A short form of the path for messages. */
-  display(path: string): string
-}
-
-export interface CliResult {
-  /** 0: valid. 1: problems found. 2: a file could not be read or written, or the command was wrong. */
-  code: 0 | 1 | 2
-  stdout: string
-  stderr: string
-}
 
 export function usage(invocation: string): string {
   return `Usage: ${invocation} <command> [file] [options]
@@ -36,93 +18,73 @@ export function usage(invocation: string): string {
 Commands:
   validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
   fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
   help             Show this text.
 
 Options:
-  --json    Print the result as one JSON object.
-  --strict  Exit with 1 when there are warnings.
+  --json         Print the result as one JSON object.
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
 
-Exit codes: 0 valid, 1 problems found, 2 file not readable or wrong usage.
-It reads the board and the feedback.json next to it. Only fmt writes, and only to the board.
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
 `
 }
 
 interface Options {
-  command: 'validate' | 'fmt' | 'help'
+  command: 'validate' | 'fmt' | 'apply' | 'help'
   file: string | undefined
   json: boolean
   strict: boolean
+  board: string | undefined
+  base: number | undefined
+  cascade: boolean
+  dryRun: boolean
 }
+
+const APPLY_ONLY = ['--board', '--base', '--cascade', '--dry-run']
 
 function parseArgs(args: readonly string[]): Options | string {
   const [first, ...rest] = args
-  if (first === undefined || first === 'help' || first === '--help' || first === '-h') return { command: 'help', file: undefined, json: false, strict: false }
-  if (first !== 'validate' && first !== 'fmt') return `Unknown command "${first}".`
-  const options: Options = { command: first, file: undefined, json: false, strict: false }
-  for (const arg of rest) {
+  const options: Options = { command: 'help', file: undefined, json: false, strict: false, board: undefined, base: undefined, cascade: false, dryRun: false }
+  if (first === undefined || first === 'help' || first === '--help' || first === '-h') return options
+  if (first !== 'validate' && first !== 'fmt' && first !== 'apply') return `Unknown command "${first}".`
+  options.command = first
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i]!
+    const [name, inline] = arg.startsWith('--') && arg.includes('=') ? [arg.slice(0, arg.indexOf('=')), arg.slice(arg.indexOf('=') + 1)] : [arg, undefined]
+    if (APPLY_ONLY.includes(name) && first !== 'apply') return `"${name}" works only with apply.`
     if (arg === '--json') options.json = true
-    else if (arg === '--strict') options.strict = true
-    else if (arg === '--help' || arg === '-h') return { ...options, command: 'help' }
-    else if (arg.startsWith('-')) return `Unknown option "${arg}".`
-    else if (options.file !== undefined) return 'Give at most one file.'
+    else if (arg === '--strict') {
+      if (first === 'apply') return '"--strict" works only with validate and fmt.'
+      options.strict = true
+    } else if (arg === '--cascade') options.cascade = true
+    else if (arg === '--dry-run') options.dryRun = true
+    else if (name === '--board' || name === '--base') {
+      const value = inline ?? rest[++i]
+      if (value === undefined) return `"${name}" needs a value.`
+      if (name === '--board') options.board = value
+      else if (/^[1-9]\d{0,9}$/.test(value)) options.base = Number(value)
+      else return '"--base" needs a revision, a whole number of 1 or more.'
+    } else if (arg === '--help' || arg === '-h') return { ...options, command: 'help' }
+    else if (arg.startsWith('-') && arg !== '-') return `Unknown option "${arg}".`
+    else if (options.file !== undefined) return first === 'apply' ? 'Give at most one patch.' : 'Give at most one file.'
     else options.file = arg
   }
   return options
-}
-
-/** Quoted values longer than this are cut in printed lines, so one huge key or ID cannot flood the output. */
-const MAX_QUOTED = 80
-/** No printed line is longer than this. */
-const MAX_LINE = 1000
-/** Warnings past this many are counted, not listed, as the app does with errors. */
-const MAX_WARNINGS = 25
-
-/**
- * `text` cut to `max` characters with "…" as the last one, or undefined when it fits. Counts code points, so an emoji
- * stays whole, and a cut text fits, so cutting twice changes nothing.
- */
-function head(text: string, max: number): { start: string; length: number } | undefined {
-  if (text.length <= max) return undefined
-  const points = Array.from(text)
-  return points.length <= max ? undefined : { start: `${points.slice(0, max - 1).join('')}…`, length: points.length }
-}
-
-/**
- * Cuts long quoted values to `"start…" (N characters)`, then cuts the text itself if it is still too long.
- * Characters are Unicode code points.
- */
-export function clip(text: string): string {
-  // Quotes pair up from the left, so text between two quoted values is never taken for a value.
-  const quoted = text.replace(/"([^"]*)"/g, (match, value: string) => {
-    const cut = head(value, MAX_QUOTED)
-    return cut === undefined ? match : `"${cut.start}" (${cut.length.toLocaleString('en-US')} characters)`
-  })
-  const cut = head(quoted, MAX_LINE)
-  return cut === undefined ? quoted : cut.start
-}
-
-function line(problem: BoardProblem): string {
-  const where = problem.path === '' ? '(file)' : problem.path
-  if (problem.hint === undefined) return clip(`${where}: ${problem.message}`)
-  const stop = /[.?!]$/.test(problem.message) ? '' : '.'
-  return clip(`${where}: ${problem.message}${stop} ${problem.hint}`)
-}
-
-function count(n: number, word: string): string {
-  return `${n} ${word}${n === 1 ? '' : 's'}`
-}
-
-/** A problem for --json, cut like a printed line. */
-function plain(problem: BoardProblem) {
-  const { path, code } = problem
-  const message = clip(problem.message)
-  return problem.hint === undefined ? { path, code, message } : { path, code, message, hint: clip(problem.hint) }
 }
 
 export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
   const options = parseArgs(args)
   if (typeof options === 'string') return { code: 2, stdout: '', stderr: `${options}\n\n${usage(io.invocation)}` }
   if (options.command === 'help') return { code: 0, stdout: usage(io.invocation), stderr: '' }
+  if (options.command === 'apply') {
+    const apply: ApplyOptions = { patch: options.file, board: options.board, base: options.base, cascade: options.cascade, dryRun: options.dryRun, json: options.json }
+    return runApply(apply, io)
+  }
 
   const file = options.file ?? io.defaultBoard
   const shown = io.display(file)

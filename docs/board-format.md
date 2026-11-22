@@ -230,10 +230,11 @@ In this repository, `npm run anatomy -- <command>` runs the same tool from the s
 | --- | --- |
 | `node .anatomy/anatomy.mjs validate [file]` | Checks the board the way Anatomy does. The file is `.anatomy/board.json` unless you name one. |
 | `node .anatomy/anatomy.mjs fmt [file]` | Validates the board and, when it is valid, puts the keys in schema order and indents with two spaces. It writes only when the text changes. |
+| `node .anatomy/anatomy.mjs apply [patch \| -]` | Edits the board with a list of operations. See [Revise a board with a patch](#revise-a-board-with-a-patch). |
 | `node .anatomy/anatomy.mjs help` | Shows the commands. |
 
 `--json` prints the result as one JSON object, and `--strict` makes warnings count as problems.
-The exit code is 0 when the board is valid, 1 when it has problems, and 2 when the file cannot be read or the command is wrong.
+The exit code is 0 when the board is valid (or the patch was applied), 1 when it has problems (or the patch was not applied), and 2 when a file cannot be read or written or the command is wrong.
 
 The output has one line for the file, then one line per problem:
 
@@ -273,10 +274,98 @@ So a huge key or ID cannot flood the output.
 Characters here are Unicode code points, so a cut never splits an emoji.
 
 The tool reads only the board and the `feedback.json` next to it, and only when each is a regular file of at most 16,000,000 bytes.
-It writes only the board, and only for `fmt`.
-`fmt` writes a new file next to the board and renames it over the board, so the board keeps its permissions and is never half written.
+It writes only the board, for `fmt` and `apply`, and for `apply` also `board.prev.json` next to it.
+`fmt` and `apply` write a new file next to the board and rename it over the board, so the board keeps its permissions and is never half written.
 It leaves a read-only board alone.
-When the board file itself is a link, `fmt` writes the file the link points to, if that file is in the board's folder or below it, and keeps the link.
+When the board file itself is a link, they write the file the link points to, if that file is in the board's folder or below it, and keeps the link.
 It refuses a link to a file anywhere else.
 Links among the folders of the path you name are followed, as for any path you name: the board's folder is the folder that path leads to.
 It never runs anything from the board and makes no network calls.
+
+## Revise a board with a patch
+
+`node .anatomy/anatomy.mjs apply [patch.json | -]` reads a JSON array of operations from a file or from stdin.
+Without an argument it reads `patch.json` next to the board.
+Use `--board <file>` to name another board.
+A patch is data: nothing in it is run, and a patch of more than 500 operations or 1,000,000 bytes is refused.
+
+```json
+[
+  { "op": "test", "path": "/revision", "value": 3 },
+  { "op": "replace", "path": "/components/payment/summary", "value": "Charges the card and retries twice.", "for": "note-a1b2c3d4e5f6" },
+  { "op": "add", "path": "/relationships", "value": { "id": "api-to-queue", "from": "api", "to": "queue", "kind": "sends-data-to", "label": "charge jobs", "source": { "kind": "agent-explanation" } }, "for": "edit-0p9o8i7u6y5t" },
+  { "op": "remove", "path": "/relationships/api-to-payment" },
+  { "op": "respond", "for": "note-a1b2c3d4e5f6", "status": "answered", "text": "It retries twice." }
+]
+```
+
+### Paths
+
+A path starts with `/`.
+The lists `groups`, `components`, `relationships`, `items`, and `scenarios` hold items with an `id`, and a path names an item by that ID: `/components/payment`, `/components/payment/summary`.
+A position is never a path part.
+Every other list has no IDs (`inputs`, `outputs`, `scope.includes`, `steps`, `highlight`, `references`), so a patch can only replace such a list whole, for example `/scenarios/checkout/steps`.
+`/` inside an ID would be written `~1`, and `~` as `~0`, as in JSON Pointer.
+The parts `__proto__`, `constructor`, and `prototype` are refused anywhere in a path.
+
+### Operations
+
+| `op` | Path | What it does |
+| --- | --- | --- |
+| `test` | any | Stops the patch unless the value there equals `value`. |
+| `add` | a list such as `/components` | Appends `value`, an item with a new `id`, or puts it before the item that `before` names. |
+| `add` | a field such as `/components/payment/explanation` | Sets the field. |
+| `replace` | an item, a field, or a whole list | Replaces what is there. The new item keeps its `id`. |
+| `remove` | an item or a field | Removes it. A whole list cannot be removed this way. |
+| `respond` | none; it takes `for`, `status`, and `text` | Answers one feedback item. |
+
+Operations run in order, each on the result of the one before.
+`format`, `schemaVersion`, `id`, `revision`, and `responses` cannot be edited, and no `id` ever changes, because the notes of the user stay attached by ID.
+
+### Feedback
+
+`for` on an edit names an item of `.anatomy/feedback.json`.
+The components and relationships that edit touches go into `changed` of the answer to that item, and every `for` needs a `respond` for the same item, in the patch or from an earlier `apply` of the same feedback.
+`respond` writes the `responses` block with `respondsTo` taken from `feedback.json`.
+Answers to the same feedback that the board already has stay, and answers to older feedback are dropped when new feedback is answered.
+
+### The revision and the result
+
+`apply` raises `revision` by exactly one.
+A `test` on `/revision`, or `--base N` with the revision you read, stops the patch when the board is at another revision.
+The new board is checked with the same `parseBoard` as the app before anything is written, then written in the format of `fmt`, so a later `fmt` changes nothing.
+The old board is kept first, byte for byte, as `board.prev.json` in the same folder (`<name>.prev.json` for a board with another name).
+Anatomy reads only the files it knows in `.anatomy/`, so it ignores that file.
+A board that does not validate can still be patched, so a patch can repair it, but the result must validate.
+A patch that changes nothing is refused, so running the same patch twice changes the board once.
+
+When a patch cannot be applied, nothing changes on disk.
+The output lists each operation that cannot apply, then the problems of the patched board:
+
+```text
+.anatomy/board.json: not changed, 1 patch error, 1 board error
+ops[1] not-found /components/paymnt/summary: There is no component with the ID "paymnt" in components. Did you mean "payment"?
+relationships[2].to: Relationship "api-to-payment" points to "paymnt", which is not a component on this board. Did you mean "payment"?
+```
+
+With `--json`, each patch error has an `op` index, a `path`, a `code`, a `message`, and sometimes a `hint`.
+The codes are the `OpCode` type in `src/cli/apply.ts`: `not-found`, `not-addressable`, `ambiguous-id`, `reserved-path`, `id-immutable`, `id-mismatch`, `duplicate-id`, `missing-id`, `unknown-sibling`, `bad-target`, `test-failed`, `stale-revision`, `dangling-reference`, `for-unanswered`, `unknown-feedback-item`, `withdrawn-item`, and more.
+The tool lists at most 25 patch errors and 25 board errors, and counts the rest.
+
+### Removing a part
+
+Without `--cascade`, removing a component, a relationship, or a group that something still refers to is an error (`dangling-reference`).
+With it, the tool also drops the relationships of a removed component, the items that are about a removed part, and the highlights that name it, and it takes a removed group off the components that were in it.
+The output marks each of those lines with `(cascade, with <part>)`.
+
+### Dry run
+
+`--dry-run` prints the same lines and writes nothing.
+Each line is one ID: `+` added, `-` removed, `~` changed with the field name, and `~ components (order)` when parts changed their order.
+
+```text
+.anatomy/board.json: dry run, nothing written, would raise revision 3 to 4
+~ components/payment.summary
++ relationships/api-to-queue
+- relationships/api-to-payment
+```
