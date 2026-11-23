@@ -29,7 +29,11 @@ const save = (stored: Stored) => localStorage.setItem(TEST_FOLDER_KEY, JSON.stri
 export function testFolderAccess(): FolderAccess | undefined {
   const first = read()
   if (!first) return undefined
-  const file = (name: FileName) => read()?.files[name]
+  const file = (name: FileName) => {
+    filePath(name)
+    const files = read()?.files
+    return files !== undefined && Object.hasOwn(files, name) ? files[name] : undefined
+  }
   const stampOf = (f: MemoryFile) => ({ lastModified: f.lastModified, size: new TextEncoder().encode(f.text).length })
   const folder: Folder = {
     name: first.name,

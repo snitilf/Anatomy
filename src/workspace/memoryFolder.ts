@@ -32,11 +32,13 @@ export function createMemoryFolder(
     },
     async stat(file: FileName) {
       check()
+      filePath(file)
       const f = files.get(file)
       return f ? stampOf(f) : undefined
     },
     async read(file: FileName) {
       check()
+      filePath(file)
       const f = files.get(file)
       return f ? { text: f.text, stamp: stampOf(f) } : undefined
     },

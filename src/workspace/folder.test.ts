@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { browserFolderAccess, type FileName, type Folder } from './folder'
+import { browserFolderAccess, FILES, filePath, type FileName, type Folder } from './folder'
 import { createMemoryFolder } from './memoryFolder'
 import { TEST_FOLDER_KEY, testFolderAccess } from './testFolder'
 
@@ -60,7 +60,10 @@ async function browserFolder(): Promise<{ folder: Folder; root: FakeDir }> {
   return { folder: folder!, root }
 }
 
-const outside = ['../escape.md', 'guide/../../escape.md', 'guide/../README.md', '/etc/escape.md', 'other/escape.md', 'guide/sub/escape.md', 'guide/', '.', '..', '', 'guide/.hidden.md', 'guide\\escape.md']
+// Names inside .anatomy that are still not Anatomy's: the guide folder itself, unknown files, names an object already
+// has, and topic names that are not lowercase words.
+const unknown = ['guide', 'notes.txt', 'CON', 'toString', 'constructor', '__proto__', 'foo.exe', 'Board.json', 'guide/ASK.md', 'guide/a.b.md', 'guide/ask.txt', 'guide/ask-.md']
+const outside = [...unknown, '../escape.md', 'guide/../../escape.md', 'guide/../README.md', '/etc/escape.md', 'other/escape.md', 'guide/sub/escape.md', 'guide/', '.', '..', '', 'guide/.hidden.md', 'guide\\escape.md']
 
 describe('the browser folder', () => {
   it('writes a topic into .anatomy/guide and reads it back', async () => {
@@ -76,6 +79,28 @@ describe('the browser folder', () => {
     const { folder, root } = await browserFolder()
     await expect(folder.write(name as FileName, 'x')).rejects.toThrow()
     expect(root.paths()).toEqual([])
+  })
+})
+
+describe('filePath', () => {
+  it('takes every file Anatomy writes, and topic files', () => {
+    for (const name of Object.values(FILES)) expect(filePath(name)).toEqual({ dir: undefined, file: name })
+    expect(filePath('guide/feedback-format.md')).toEqual({ dir: 'guide', file: 'feedback-format.md' })
+  })
+
+  it.each(outside)('refuses "%s"', (name) => {
+    expect(() => filePath(name)).toThrow(/refused/)
+  })
+})
+
+describe('reading a name that is not Anatomy\'s', () => {
+  it.each(['toString', '../escape.md', 'guide', 'guide/ASK.md'])('throws for "%s" in every folder', async (name) => {
+    localStorage.setItem(TEST_FOLDER_KEY, JSON.stringify({ name: 'shop', files: {}, remembered: false }))
+    const folders = [(await browserFolder()).folder, createMemoryFolder('shop'), (await testFolderAccess()!.pick())!]
+    for (const folder of folders) {
+      await expect(folder.read(name as FileName)).rejects.toThrow(/refused/)
+      await expect(folder.stat(name as FileName)).rejects.toThrow(/refused/)
+    }
   })
 })
 

@@ -25,17 +25,19 @@ export const GUIDE_DIR = 'guide'
 export type GuideFile = `${typeof GUIDE_DIR}/${string}.md`
 export type FileName = (typeof FILES)[keyof typeof FILES] | GuideFile
 
-/** One plain name: lowercase letters and digits, joined by single dots or hyphens. No path, no "..", no hidden file. */
-const PLAIN_NAME = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/i
+/** The files straight inside `.anatomy`. */
+const TOP_FILES = new Set<string>(Object.values(FILES))
+/** A topic file name: lowercase words joined by single hyphens, then `.md`. */
+const TOPIC_FILE = /^[a-z0-9]+(?:-[a-z0-9]+)*\.md$/
 
 /**
- * Where a file goes inside `.anatomy`: straight in it, or in its `guide` folder. Throws for any other name, so no
- * caller can reach a file outside `.anatomy`, whatever name it passes.
+ * Where a file goes inside `.anatomy`: straight in it when it is one of `FILES`, or in its `guide` folder when it is a
+ * topic file. Throws for any other name, so no caller can reach a file outside `.anatomy`, whatever name it passes.
  */
 export function filePath(name: string): { dir: typeof GUIDE_DIR | undefined; file: string } {
-  const [first, second, ...rest] = name.split('/')
-  if (rest.length === 0 && second === undefined && first !== undefined && PLAIN_NAME.test(first)) return { dir: undefined, file: first }
-  if (rest.length === 0 && first === GUIDE_DIR && second !== undefined && PLAIN_NAME.test(second) && second.endsWith('.md')) return { dir: GUIDE_DIR, file: second }
+  if (TOP_FILES.has(name)) return { dir: undefined, file: name }
+  const slash = name.indexOf('/')
+  if (slash !== -1 && name.slice(0, slash) === GUIDE_DIR && TOPIC_FILE.test(name.slice(slash + 1))) return { dir: GUIDE_DIR, file: name.slice(slash + 1) }
   throw new StorageError('folder', `Anatomy writes only inside .anatomy, so it refused the name "${name}".`)
 }
 
