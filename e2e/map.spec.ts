@@ -4,6 +4,8 @@ import { expect, test, type Page } from '@playwright/test'
 import { cardTransform, grabbable, nextFrame, open, viewport } from './helpers.ts'
 
 const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
+/** An example too large to read whole on a laptop window, so it opens at the start of its flow. */
+const ANATOMY = 'src/examples/anatomy.board.json'
 const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
 
@@ -53,7 +55,7 @@ async function slowDrag(page: Page, from: { x: number; y: number }, to: { x: num
 test.describe('zoom bar', () => {
   test('steps, resets to 100%, and fits, from the buttons and the keys', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await open(page, SHORTENER)
+    await open(page, ANATOMY)
     const bar = page.getByRole('toolbar', { name: 'Zoom' })
     const start = await zoomOf(page)
     await expect(level(page)).toHaveText(`${Math.round(start * 100)}%`)
