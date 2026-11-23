@@ -29,7 +29,7 @@ Your agent does the thinking, and Anatomy shows it.
   The JSON Schema is generated from it, and CI fails when the checked-in copy is out of date.
 - Command line: a bundled Node tool (`bin/anatomy.ts`) validates boards and applies patches.
   Anatomy writes it into your project as `.anatomy/anatomy.mjs`.
-- No network: the built app ships a Content Security Policy (`connect-src 'none'`) that blocks fetch, WebSocket, and every request to another origin, so the page cannot reach the network.
+- No network: the built app ships a Content Security Policy (`connect-src 'none'`) that blocks fetch, WebSocket, and every request to another origin, so the page can load only its own files.
 - State: undo and redo for the last 100 steps.
   Your marks are saved to IndexedDB, or to `.anatomy/layer.json` when a folder is open.
 - Tests: 1,500+ unit tests with Vitest and 300+ browser tests with Playwright in Chrome.
