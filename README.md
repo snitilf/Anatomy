@@ -8,6 +8,8 @@
 
 </div>
 
+Anatomy is a local web app that shows an AI coding agent's explanation of a codebase as an interactive architecture diagram.
+
 Your agent reads a codebase in seconds.
 You get a wall of text back.
 
@@ -19,6 +21,17 @@ The map gets better each round.
 It runs on your machine, in your browser.
 No accounts, no cloud, no telemetry, and no AI inside the app.
 Your agent does the thinking, and Anatomy shows it.
+
+## Under the hood
+
+- Layout: dagre computes the layers, and a custom orthogonal edge router draws the lines (`src/layout/autoLayout.ts`, `src/canvas/routing.ts`).
+- Board format: the board is a Zod schema (`src/board/schema.ts`).
+  The JSON Schema is generated from it, and CI fails when the checked-in copy is out of date.
+- Command line: a bundled Node tool (`bin/anatomy.ts`) validates boards and applies patches.
+  Anatomy writes it into your project as `.anatomy/anatomy.mjs`.
+- No network: the built app ships a Content Security Policy with `connect-src 'none'`, so the browser blocks every network request from the page.
+- State: undo and redo for the last 100 steps, and your work stays in IndexedDB in your browser.
+- Tests: 1,500+ unit tests with Vitest and 300+ browser tests with Playwright in Chrome.
 
 ## How it works
 
