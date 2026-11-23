@@ -76,10 +76,15 @@ It aims at a fixed shape: the free map area of a 1440x900 and a 1280x800 window 
 A gap between two stacked cards holds one track of lines and its margins, and a gap between columns opens to the room its lines and its widest label need.
 A label that is too wide for one line counts at its two-line width.
 The layout tries several shapes for the groups and for the whole, and lifts each box into room that a wrapped row leaves above it.
+Inside a group the flow keeps its reading order: a branching flow is never wrapped into rows, and only a chain of single cards may become a stack.
+The pieces of a group share one grid of columns, so the cards of a column line up, and a wrapped row of a group never rises beside the row before it.
+A group keeps room above it for its name, which the far view draws larger.
 On a board of up to 16 parts, the layouts that fit within 30 percent of the smallest one are drawn.
 Of those that read about as clean as the cleanest, the smallest wins: clean means few crossings, few connections that run right to left, and every label placed.
 A cleaner layout never costs a level of detail on the reference window.
 Where a label still finds no place, the gap it needs opens a step.
+A board of more than 16 parts is not drawn while it is laid out.
+Instead, a gap between its columns holds a track for each line through it past four, so its labels have room.
 A connection that closes a loop never counts in these choices, so closing a loop never moves its cards.
 A board of more than 24 parts is read in the far view, so it keeps roomier gaps and group areas.
 
@@ -126,6 +131,8 @@ A connection keeps its route and label when its cards did not move or change siz
 The camera in `src/canvas/camera.ts` keeps the map inside limits.
 The app works out the limits from the content: cards, group areas, marks, and proposed parts.
 When a fit would land in the far view, the content also includes the routes of the far-view lines, which run around the outside of the cards.
+In the far view a group's name sits just above its block, cut short of the next name and of the right edge of the content.
+When another block sits too close above, the name sits just inside the top of its own block instead.
 The fit asks for those routes only then.
 The app solves them off the frame that commits a new layout, except in the far view and when a board opens.
 Fit, every zoom out, the wheel, and framing a connection or a bundle solve them at once when they are not ready yet, so they never frame the last layout's lines.
