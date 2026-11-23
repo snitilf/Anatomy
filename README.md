@@ -107,8 +107,7 @@ In other browsers, open a board file or a built-in example.
 
 To try it without installing anything, open the [hosted copy](https://snitilf.github.io/Anatomy/).
 It is the same app.
-Open a built-in example, or open a project folder in Chrome or Edge.
-Nothing leaves your machine: the page makes no request after it loads, and your work stays in your browser or in your folder.
+Nothing leaves your machine: the page loads only its own files, and your work stays in your browser or in your folder.
 See [the hosted copy](docs/architecture.md#the-hosted-copy) for what it does.
 
 ## Documentation

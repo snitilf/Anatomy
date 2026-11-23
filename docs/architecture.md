@@ -544,7 +544,7 @@ Its jobs run only while the repository is public.
 Once, after the repository is public, set Source to GitHub Actions under Settings, Pages.
 
 Nothing in the app assumes that it sits at the root of the site.
-Vite writes the base path into `index.html`, the theme script, the stylesheet, and the font files.
+Vite writes the base path into `index.html`, the font addresses in the stylesheet, and the entry script's preload helper.
 The map and the example boards load as scripts, by a path relative to the script that asks for them.
 The app keeps the path of its own page when it changes the address.
 The Content Security Policy is the same, so the page requests only its own files, and every one of them is under `/Anatomy/`.
@@ -555,7 +555,8 @@ For each example, the test fails on a console error, on a policy violation, on a
 
 What works on the hosted copy, checked in Chrome:
 
-- **Examples and files.** Every example opens. So does a board file you pick.
+- **Examples and files.** Every example opens.
+  So does a board file you pick.
   Notes, links, drawings, undo and redo, and your layer are kept in this browser, as with a local copy.
 - **Open folder.** Chrome and Edge open the project folder from the https page.
   Anatomy reads the folder and writes only inside `.anatomy`.
