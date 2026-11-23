@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { sameRects, solve } from './solve'
 import { currentStep } from '../scenarios/step'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
@@ -40,7 +41,7 @@ import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
-import { assembleGraph, computeGeometry, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
+import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
@@ -106,35 +107,10 @@ interface UserLines {
 /** A build with no previous geometry, from the cards where they are now: nothing in motion or unsaved moves. */
 const rebuildFromRects = (v: View): View => fullView(v.board, v.base, v, v.rects, undefined, next(v.interaction, { type: 'rebuilt' }))
 
-/** The last solve. React may render the same change twice, and the second render must not solve again. */
-let lastSolve: { board: Board; links: UserLines['links']; reconnects: UserLines['reconnects']; previous: Geometry | undefined; rects: Record<string, Rect>; geometry: Geometry } | undefined
-
-export function solve(board: Board, rects: Record<string, Rect>, links: UserLines['links'], previous: Geometry | undefined, reconnects: UserLines['reconnects']): Geometry {
-  // Only a solve that builds on a previous one is repeated by React. A solve from scratch, such as the one after the fonts
-  // load, is never taken from the last one, because the text sizes may have changed since.
-  const last = previous ? lastSolve : undefined
-  if (last && last.board === board && last.links === links && last.reconnects === reconnects && last.previous === previous && sameRects(last.rects, rects)) return last.geometry
-  const geometry = computeGeometry(board, rects, links ?? [], previous, reconnects ?? [])
-  lastSolve = { board, links, reconnects, previous, rects, geometry }
-  return geometry
-}
-
 /** `previous` is the map of the same board and links. Lines that nothing has moved into keep their place. */
 function fullView(board: Board, base: CardPlacement | undefined, user: UserLines, rects = placeAll(board, base, user.proposals), previous?: Geometry, interaction: Interaction = IDLE): View {
   const { links, proposals, reconnects } = user
   return { board, links, proposals, reconnects, base, rects, geometry: solve(board, rects, links, previous, reconnects), interaction }
-}
-
-function sameRects(a: Record<string, Rect>, b: Record<string, Rect>): boolean {
-  const keys = Object.keys(a)
-  return (
-    keys.length === Object.keys(b).length &&
-    keys.every((k) => {
-      const p = a[k]
-      const q = b[k]
-      return p !== undefined && q !== undefined && p.x === q.x && p.y === q.y && p.width === q.width && p.height === q.height
-    })
-  )
 }
 
 /** The cheap update for one card that moved or changed size: its lines are hidden and its group area follows. */

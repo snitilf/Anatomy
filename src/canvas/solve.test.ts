@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { placeCards } from '../layout/cards'
 import { refundBoard } from '../layer/testBoards'
-import { solve } from './Canvas'
+import { solve } from './solve'
 
 const text = vi.hoisted(() => ({ scale: 1 }))
 vi.mock('./textMeasure', async (original) => {
