@@ -1,0 +1,1724 @@
+## base board: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## compact JSON with a byte order mark: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## unknown lesson: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## part with no connection: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## guarantee words: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## changed ID not on the board: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## adopted with no changed IDs: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback answered in full: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback answered in full: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback not answered yet: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback not answered yet: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback forgotten in the next revision: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback forgotten in the next revision: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback with old respondsTo: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback with old respondsTo: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback partly answered, revision not raised: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback partly answered, revision not raised: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## more warnings than the report shows: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## more warnings than the report shows: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## huge feedback item IDs: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## huge feedback item IDs: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback for another board: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback for another board: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback file that is not feedback: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## feedback file that is not feedback: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## empty file: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## truncated JSON: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## JSON array: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## another JSON file: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## schema version 2: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## file over the size limit: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## missing title: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## revision as text: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## revision zero: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## label too long: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## summary of spaces: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## misspelled key: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## unknown key with no near match: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## unknown key of 900,000 characters: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## ID with capitals and spaces: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## duplicate component ID: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## item ID equal to a component ID: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## relationship to a misspelled component: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## relationship from a missing component: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## group that does not exist: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## item about a missing part: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## highlight names a group: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## highlight names an item: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## relationship kind misspelled: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## source kind from version 2: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## documented intent without a reference: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## no components: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## scenario with no steps: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## too many groups: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## reference with a URL key: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## position out of range: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## response with a wrong status: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## explanation over the limit: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## several faults at once: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## broken references everywhere: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## more problems than the report shows: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## base board: show a part, a connection, an item, a group, a scenario
+(exit 2)
+Unknown command "show".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## base board: show with unknown IDs
+(exit 2)
+Unknown command "show".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## base board: show --json
+(exit 2)
+Unknown command "show".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## base board: outline --json
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## example board: outline
+(exit 2)
+Unknown command "outline".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## example board: feedback
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## example board: feedback --json
+(exit 2)
+Unknown command "feedback".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
+
+## example board: show
+(exit 2)
+Unknown command "show".
+
+Usage: node .anatomy/anatomy.mjs <command> [file] [options]
+
+Commands:
+  validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
+  fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
+  apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
+  schema           Print every field of a board with its limits.
+  help             Show this text.
+
+Options:
+  --json         Print the result as one JSON object (validate, fmt, apply).
+  --strict       Exit with 1 when there are warnings (validate, fmt).
+  --base N       Stop unless the board is at revision N (apply).
+  --cascade      Drop what refers to a removed part (apply).
+  --dry-run      Print the changes and write nothing (apply).
+  --board file   The board to edit (apply).
+
+Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
