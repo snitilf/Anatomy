@@ -404,7 +404,7 @@ export function Canvas() {
     () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
     [board, solved, proposals],
   )
-  const routes = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize))
+  const { box: routes } = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize))
   const bounds = useMemo(() => fitBounds(baseBounds, () => routes, mapSize), [baseBounds, routes, mapSize])
   const partsBounds = useMemo(() => fitBounds(basePartsBounds, () => routes, mapSize), [basePartsBounds, routes, mapSize])
   const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])

@@ -20,7 +20,7 @@ function whenIdle(work: () => void): () => void {
  * the browser is idle, and then it is replaced. `wanted` is false when the fit could not reach the far view anyway.
  * `compute` must change whenever its answer can, such as when the layout or the connections change.
  */
-export function useRouteBox(compute: Compute, far: boolean, wanted: boolean): Rect | undefined {
+export function useRouteBox(compute: Compute, far: boolean, wanted: boolean, _scope?: unknown): { box: Rect | undefined; resolveNow: () => Rect | undefined } {
   const [kept, setKept] = useState<{ compute: Compute; box: Rect | undefined } | undefined>()
   const fresh = kept?.compute === compute
   const now = wanted && !fresh && (far || kept === undefined)
@@ -31,5 +31,5 @@ export function useRouteBox(compute: Compute, far: boolean, wanted: boolean): Re
     if (!wanted || fresh || now) return
     return whenIdle(() => setKept({ compute, box: compute() }))
   }, [compute, wanted, fresh, now])
-  return box
+  return { box, resolveNow: () => box }
 }
