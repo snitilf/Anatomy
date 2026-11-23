@@ -50,6 +50,26 @@ async function addNote(text: string) {
   fireEvent.click(panel().getByRole('button', { name: 'Add' }))
 }
 
+describe('folder mode with a file that is too large', () => {
+  it('reports a board over the limit with the board check message, without reading it', async () => {
+    const folder = repo({ [FILES.board]: 'x'.repeat(1_200_000) })
+    const read = vi.spyOn(folder, 'read')
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    expect(await screen.findByText('The file is 1,200,000 bytes. The limit is 1,000,000 bytes.')).toBeInTheDocument()
+    expect(read).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not open the board when the layer is far over the limit, and keeps the file', async () => {
+    const folder = repo({ [FILES.board]: refundRaw, [FILES.layer]: 'x'.repeat(17_000_000) })
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    expect(await screen.findByText(/could not read layer\.json in shop/)).toBeInTheDocument()
+    expect(folder.files.get(FILES.layer)?.text.length).toBe(17_000_000)
+    expect(folder.files.has(FILES.layerBackup)).toBe(false)
+  })
+})
+
 describe('folder mode', () => {
   it('opens the board from the folder, saves the layer next to it, and opens it again after a reload', async () => {
     const folder = repo()

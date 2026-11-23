@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { browserFolderAccess, FILES, filePath, type FileName, type Folder } from './folder'
 import { createMemoryFolder } from './memoryFolder'
 import { TEST_FOLDER_KEY, testFolderAccess } from './testFolder'
@@ -11,6 +11,8 @@ class FakeDir {
   readonly dirs = new Map<string, FakeDir>()
   readonly files = new Map<string, string>()
   readonly name: string
+  /** Files that report a size and count reads of their content, instead of holding text. */
+  readonly huge = new Map<string, { size: number; text: ReturnType<typeof vi.fn> }>()
   constructor(name: string) {
     this.name = name
   }
@@ -31,7 +33,11 @@ class FakeDir {
       this.files.set(name, '')
     }
     return {
-      getFile: async () => new File([this.files.get(name)!], name, { lastModified: 1 }),
+      getFile: async () => {
+        const huge = this.huge.get(name)
+        if (huge) return { name, size: huge.size, lastModified: 1, text: huge.text } as unknown as File
+        return new File([this.files.get(name)!], name, { lastModified: 1 })
+      },
       createWritable: async () => {
         let text = ''
         return {
@@ -79,6 +85,51 @@ describe('the browser folder', () => {
     const { folder, root } = await browserFolder()
     await expect(folder.write(name as FileName, 'x')).rejects.toThrow()
     expect(root.paths()).toEqual([])
+  })
+})
+
+describe('reading a file that is too large', () => {
+  const never = () =>
+    vi.fn(async () => {
+      throw new Error('The content must not be read.')
+    })
+  const bigFile = async (name: FileName, size: number) => {
+    const { folder, root } = await browserFolder()
+    await folder.write(name, 'x')
+    const text = never()
+    const dir = root.dirs.get('.anatomy')!
+    ;(name.includes('/') ? dir.dirs.get('guide')! : dir).huge.set(name.replace('guide/', ''), { size, text })
+    return { folder, text }
+  }
+
+  it.each([
+    [FILES.board, 1_000_001],
+    [FILES.board, 300_000_000],
+    [FILES.layer, 300_000_000],
+    [FILES.readme, 2_000_000],
+    ['guide/ask.md', 2_000_000],
+    [FILES.script, 2_000_000],
+    [FILES.schema, 2_000_000],
+  ] as const)('does not read %s of %i bytes', async (name, size) => {
+    const { folder, text } = await bigFile(name, size)
+    await expect(folder.read(name)).rejects.toMatchObject({ name: 'FileTooLargeError', file: name, size })
+    expect(text).not.toHaveBeenCalled()
+    expect(await folder.stat(name)).toMatchObject({ size })
+  })
+
+  it('says how large the board is and what the limit is, as the board check does', async () => {
+    const { folder } = await bigFile(FILES.board, 1_234_567)
+    await expect(folder.read(FILES.board)).rejects.toThrow('The file is 1,234,567 bytes. The limit is 1,000,000 bytes.')
+  })
+
+  it('reads a board at its limit and a layer larger than a board', async () => {
+    const { folder, root } = await browserFolder()
+    root.dirs.set('.anatomy', new FakeDir('.anatomy'))
+    const dir = root.dirs.get('.anatomy')!
+    dir.files.set(FILES.board, 'b'.repeat(1_000_000))
+    dir.files.set(FILES.layer, 'l'.repeat(3_000_000))
+    expect((await folder.read(FILES.board))?.text.length).toBe(1_000_000)
+    expect((await folder.read(FILES.layer))?.text.length).toBe(3_000_000)
   })
 })
 

@@ -32,6 +32,25 @@ describe('watchBoard', () => {
 
   const revision = (n: number) => refundText.replace(/"revision": \d+/, `"revision": ${n}`)
 
+  it('does not read a board over the limit, and does not look at it again until it changes', async () => {
+    let time = 100
+    const folder = createMemoryFolder('shop', new Map([[FILES.board, { text: revision(1), lastModified: 100 }]]), { clock: () => ++time })
+    const seen = await folder.stat(FILES.board)
+    const onBoard = vi.fn()
+    const stop = watchBoard(folder, { seen, revision: () => 1, onBoard, intervalMs: 2000 })
+    const read = vi.spyOn(folder, 'read')
+
+    await folder.write(FILES.board, 'x'.repeat(1_000_001))
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(onBoard).not.toHaveBeenCalled()
+    expect(read.mock.calls.length).toBeLessThanOrEqual(1)
+
+    await folder.write(FILES.board, revision(2))
+    await vi.advanceTimersByTimeAsync(4000)
+    expect(onBoard).toHaveBeenCalledTimes(1)
+    stop()
+  })
+
   it('opens a higher revision after two quiet checks, and stays silent about a broken or older file', async () => {
     let time = 100
     const folder = createMemoryFolder('shop', new Map([[FILES.board, { text: revision(1), lastModified: 100 }]]), { clock: () => ++time })
