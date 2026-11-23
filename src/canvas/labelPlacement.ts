@@ -126,10 +126,6 @@ export interface LabelContext {
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
-/**
- * True when a pill box keeps clear of every card, every group name band, every other pill, and every line but its own
- * host run. `host` is the run it sits on or beside, `undefined` to count every run of its own line too.
- */
 /** Counts of the work label placement does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
 export const labelStats = { placements: 0, candidates: 0 }
 export function resetLabelStats(): void {
@@ -137,6 +133,10 @@ export function resetLabelStats(): void {
   labelStats.candidates = 0
 }
 
+/**
+ * True when a pill box keeps clear of every card, every group name band, every other pill, and every line but its own
+ * host run. `host` is the run it sits on or beside, `undefined` to count every run of its own line too.
+ */
 export function labelFits(box: Rect, ctx: LabelContext, host?: Run): boolean {
   return blocker(box, ctx, host) === undefined
 }

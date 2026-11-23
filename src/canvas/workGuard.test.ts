@@ -86,6 +86,8 @@ describe('work of the hot paths', () => {
 
   it('grows from 40 to 60 parts no faster than recorded', () => {
     const ratio = (get: (m: typeof small) => number) => get(large) / get(small)
+    // A ratio is compared without rounding, so the headroom stays 1.25 times.
+    const within = (value: number, recorded: number) => expect(value).toBeLessThanOrEqual(recorded * HEADROOM)
     within(ratio((m) => m.geo.expansions), RECORDED.sixty.expansions / RECORDED.forty.expansions)
     within(ratio((m) => m.geo.searches), RECORDED.sixty.searches / RECORDED.forty.searches)
     within(ratio((m) => m.geo.candidates), RECORDED.sixty.candidates / RECORDED.forty.candidates)
