@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import fieldsText from '../../schema/board.v1.fields.txt?raw'
 import { describe, expect, it } from 'vitest'
 import { runAnatomy } from '../cli/anatomy'
 import { memoryIo } from '../cli/corpus'
@@ -24,7 +24,7 @@ function names(node: Node, out = new Set<string>()): Set<string> {
 
 describe('the field sheet', () => {
   it('is the committed file, so `npm run schema` keeps it current', () => {
-    expect(readFileSync('schema/board.v1.fields.txt', 'utf8')).toBe(sheet)
+    expect(fieldsText).toBe(sheet)
   })
 
   it('names every field of the board', () => {

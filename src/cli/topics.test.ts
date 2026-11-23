@@ -1,14 +1,11 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { agentFiles } from '../app/agentReadme'
-import { README_MARK } from '../app/agentReadme'
+import guide from '../../docs/authoring-guide.md?raw'
+import { agentFiles, README_MARK } from '../app/agentReadme'
 import { runAnatomy } from './anatomy'
 import { memoryIo } from './corpus'
 import { EXCLUDED_SECTIONS, splitGuide, TOPICS } from './topics'
 
 // The topics an agent opens on demand come from docs/authoring-guide.md and nowhere else.
-// The file is read from disk here, not through the bundler, so the test sees exactly what is committed.
-const guide = readFileSync('docs/authoring-guide.md', 'utf8')
 const io = () => ({ ...memoryIo(new Map()), guide: () => guide })
 
 /** The `##` sections of the guide, with the number taken off the title. */

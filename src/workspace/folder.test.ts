@@ -10,7 +10,10 @@ class FakeDir {
   readonly kind = 'directory'
   readonly dirs = new Map<string, FakeDir>()
   readonly files = new Map<string, string>()
-  constructor(readonly name: string) {}
+  readonly name: string
+  constructor(name: string) {
+    this.name = name
+  }
   async getDirectoryHandle(name: string, options?: { create?: boolean }) {
     if (name.includes('/') || name === '..' || name === '.') throw new TypeError(`Bad name ${name}`)
     let dir = this.dirs.get(name)
