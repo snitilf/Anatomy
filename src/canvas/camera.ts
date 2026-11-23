@@ -76,6 +76,7 @@ export function contentBounds(
   groups: readonly Rect[] = [],
   marks: readonly Mark[] = [],
   proposals: readonly Proposal[] = [],
+  _routes: readonly Rect[] = [],
 ): Rect | undefined {
   const boxes: Rect[] = [...cards, ...groups, ...proposals.map((p) => ({ x: p.x, y: p.y, width: p.width, height: p.height }))]
   for (const m of marks) {
@@ -83,6 +84,10 @@ export function contentBounds(
     if (box) boxes.push(box)
   }
   return union(boxes)
+}
+
+export function fitBounds(base: Rect | undefined, _routes: () => Rect | undefined, _map: Size): Rect | undefined {
+  return base
 }
 
 /** The zoom that shows the whole box in an area, with some room around it. */

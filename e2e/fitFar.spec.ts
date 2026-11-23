@@ -1,0 +1,33 @@
+/// <reference lib="dom" />
+import { expect, test } from '@playwright/test'
+import { open } from './helpers.ts'
+
+const RP_LOOP = 'src/canvas/fixtures/rp-loop.board.json'
+
+for (const size of [
+  { width: 390, height: 844 },
+  { width: 1440, height: 900 },
+]) {
+  test(`Fit keeps every drawn line of the loop board inside the map at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size)
+    await open(page, RP_LOOP)
+    await page.getByRole('button', { name: 'Fit board' }).click()
+    await page.waitForTimeout(600)
+    const outside = await page.evaluate(() => {
+      const map = document.querySelector('.react-flow')!.getBoundingClientRect()
+      const far = document.querySelector('[data-hover-scope][data-far]') !== null
+      const paths = far
+        ? [...document.querySelectorAll<SVGPathElement>('[data-unit] path[data-hit]')]
+        : [...document.querySelectorAll<SVGPathElement>('.react-flow__edge-path')]
+      const cards = far ? [] : [...document.querySelectorAll<HTMLElement>('.react-flow__node-card')]
+      const bad: string[] = []
+      for (const el of [...paths, ...cards]) {
+        const r = el.getBoundingClientRect()
+        if (r.left < map.left - 1 || r.right > map.right + 1 || r.top < map.top - 1 || r.bottom > map.bottom + 1) bad.push(`${el.closest('[data-unit]')?.getAttribute('data-unit') ?? el.getAttribute('data-id') ?? el.id}`)
+      }
+      return { far, drawn: paths.length + cards.length, bad }
+    })
+    expect(outside.drawn).toBeGreaterThan(0)
+    expect(outside.bad).toEqual([])
+  })
+}
