@@ -328,7 +328,7 @@ describe('validate warns when the revision did not rise', () => {
 
   it('ignores a prev file that belongs to another board', () => {
     const other = { [PREV]: pretty({ ...baseBoard(), id: 'old-shop', revision: 5 }) }
-    expect(setup((b) => (b.revision = 1), other).run('validate', '--strict').code).toBe(0)
+    expect(setup((b) => (b.revision = 1), other).run('validate').stdout).not.toContain('not above')
     const s = setup((b) => (b.revision = 1), other)
     expect(s.run('fmt', '--bump').stdout).toContain('revision 1 to 2')
   })

@@ -1,4 +1,4 @@
-import { LIMITS } from '../board/schema.ts'
+import { BOARD_FORMAT, LIMITS } from '../board/schema.ts'
 import { freeId, slugify } from '../board/suggest.ts'
 
 // Making IDs and reading what a board already uses, for `anatomy id` and for `apply`, which gives an ID to an added
@@ -38,12 +38,16 @@ export function previousName(board: string): string {
   return `${name.replace(/\.json$/i, '')}.prev.json`
 }
 
-/** The revision in the text of a board, or undefined when the text is not JSON or has no revision of 1 or more. */
-export function revisionIn(text: string): number | undefined {
+/**
+ * The revision in the text of a board, or undefined when the text is not a board of the same `id`, or has no revision
+ * that is a safe whole number of 1 or more. A file that belongs to another board says nothing about this one.
+ */
+export function revisionIn(text: string, boardId: string): number | undefined {
   try {
-    const doc: unknown = JSON.parse(text.replace(/^﻿/, ''))
-    const revision = isObj(doc) ? doc.revision : undefined
-    return typeof revision === 'number' && Number.isInteger(revision) && revision >= 1 ? revision : undefined
+    const doc: unknown = JSON.parse(text.replace(/^\uFEFF/, ''))
+    if (!isObj(doc) || doc.format !== BOARD_FORMAT || doc.id !== boardId) return undefined
+    const revision = doc.revision
+    return typeof revision === 'number' && Number.isSafeInteger(revision) && revision >= 1 ? revision : undefined
   } catch {
     return undefined
   }

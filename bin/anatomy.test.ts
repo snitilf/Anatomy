@@ -63,8 +63,10 @@ async function both(c: CorpusCase, index: number, args: string[]) {
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'board.json'), c.text)
   if (c.feedback !== undefined) writeFileSync(join(dir, 'feedback.json'), c.feedback)
+  if (c.previous !== undefined) writeFileSync(join(dir, 'board.prev.json'), c.previous)
   const files = new Map([['board.json', c.text]])
   if (c.feedback !== undefined) files.set('feedback.json', c.feedback)
+  if (c.previous !== undefined) files.set('board.prev.json', c.previous)
   const local = runAnatomy([...args, 'board.json'], memoryIo(files))
   return { bundled: await node([...args, 'board.json'], dir), local }
 }

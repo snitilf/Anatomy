@@ -32,7 +32,7 @@ Commands:
   help             Show this text.
 
 Options:
-  --json         Print the result as one JSON object (validate, fmt, apply, feedback, outline, show).
+  --json         Print the result as one JSON object (validate, fmt, apply, id, feedback, outline, show).
   --bump         Raise revision by one, after a rewrite of the whole file (fmt).
   --strict       Exit with 1 when there are warnings (validate, fmt).
   --base N       Stop unless the board is at revision N (apply).
@@ -188,7 +188,7 @@ function runCommand(args: readonly string[], io: CliIo): CliResult {
   // The last version seen is the one `apply` kept as board.prev.json.
   const lastFile = previousName(file)
   const lastText = result.ok ? io.read(io.sibling(file, lastFile)) : undefined
-  const lastRevision = lastText?.ok ? revisionIn(lastText.text) : undefined
+  const lastRevision = lastText?.ok ? revisionIn(lastText.text, result.board.id) : undefined
   let board = result.ok ? result.board : undefined
   // fmt writes only a valid board. The schema bounds its depth and its numbers, so the rewrite keeps every value.
   if (options.command === 'fmt' && result.ok) {

@@ -310,7 +310,6 @@ function notFoundKey(parent: Obj, key: string, trail: readonly PropertyKey[], wh
   return fail('not-found', `${where} has no ${show(key.slice(0, 80))}.`, near === undefined ? undefined : `Did you mean "${near}"?`)
 }
 
-/** Every ID on the board, with the board's own. */
 /** The field that names an item of each list, and so gives it an ID when the patch has none. */
 const NAME_FIELD: Record<ListName, string> = { groups: 'label', components: 'label', relationships: 'label', items: 'text', scenarios: 'title' }
 
@@ -574,9 +573,11 @@ export function applyPatch(input: ApplyInput): ApplyResult {
         if (!isObj(value)) return fail('wrong-type', `The value added to ${op.path} must be an object.`)
         const taken = idsOn(doc)
         let id = idOf(value)
-        if (id === undefined) {
+        // An ID that is there but not text stays as it is, and the check of the board refuses it.
+        if (id === undefined && !Object.hasOwn(value, 'id')) {
           const source = nameFor(listName, value)
-          id = source === undefined ? undefined : makeId(source, taken)
+          // An ID that was on the board before the patch is never given again, even when the patch removed it: the notes of the user stay attached by ID.
+          id = source === undefined ? undefined : makeId(source, new Set([...taken, ...idsOn(original)]))
           if (id === undefined) {
             const example = `"id": "${listName === 'components' ? 'payment' : 'new-item'}"`
             if (source === undefined) return fail('missing-id', 'A new item needs an "id" or a label to make one from.', `Add one, for example ${example}.`)
@@ -585,7 +586,7 @@ export function applyPatch(input: ApplyInput): ApplyResult {
           value = { ...value, id }
           assigned.push({ op: index, id })
         }
-        if (taken.has(id)) return fail('duplicate-id', `The ID ${show(id.slice(0, 80))} is already used on the board. IDs are unique across the whole board.`, `Use a new ID, for example "${freeId(id, taken, LIMITS.id)}".`)
+        if (id !== undefined && taken.has(id)) return fail('duplicate-id', `The ID ${show(id.slice(0, 80))} is already used on the board. IDs are unique across the whole board.`, `Use a new ID, for example "${freeId(id, taken, LIMITS.id)}".`)
         let position = list.length
         if (op.before !== undefined) {
           position = list.findIndex((entry) => idOf(entry) === op.before)
@@ -593,7 +594,7 @@ export function applyPatch(input: ApplyInput): ApplyResult {
         }
         list.splice(position, 0, structuredClone(value))
         setOwn(doc, located.key, list)
-        removed.delete(id)
+        if (id !== undefined) removed.delete(id)
         touch(op, index, id)
         return
       }

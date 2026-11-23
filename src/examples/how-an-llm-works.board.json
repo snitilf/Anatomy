@@ -276,7 +276,7 @@
       "to": "embeddings",
       "kind": "sends-data-to",
       "label": "tokens in the window",
-      "explanation": "The tokens in the window are passed on, and each token number is looked up as a vector. Vectors can be compared, which numbers cannot.",
+      "explanation": "The tokens in the window are passed on, and each token number is looked up as a vector. Vectors can be compared, which token numbers cannot.",
       "source": {
         "kind": "agent-explanation"
       }

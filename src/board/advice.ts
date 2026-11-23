@@ -177,7 +177,7 @@ const EXPLAIN_NAMED = 3
 
 /**
  * One warning for all connections that have no `explanation`, so a large board does not print a line for each.
- * Kept apart from `boardAdvice`, because the boards that the app bundles and the test boards were written without them.
+ * Kept apart from `boardAdvice`, which stays quiet on every board of the test fixtures, and those have none.
  */
 export function explanationAdvice(board: Board): BoardProblem[] {
   const bare = board.relationships.filter((r) => r.explanation === undefined).map((r) => r.id)
