@@ -40,10 +40,21 @@ describe('README.md', () => {
 
   it('names only source files that exist', () => {
     const paths = [...readme.matchAll(/`((?:src|bin|scripts|e2e|docs|schema)\/[A-Za-z0-9_./-]+\.[a-z]+)`/g)].map((m) => m[1] ?? '')
+    expect(paths.length).toBeGreaterThan(0)
     for (const path of paths) expect(existsSync(join(root, path)), `${path} does not exist`).toBe(true)
   })
 
+  it('has the "Under the hood" section before "How it works", and it cites existing source files', () => {
+    const start = readme.indexOf('\n## Under the hood\n')
+    const end = readme.indexOf('\n## How it works\n')
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    const cited = [...readme.slice(start, end).matchAll(/`((?:src|bin)\/[A-Za-z0-9_./-]+\.[a-z]+)`/g)].map((m) => m[1] ?? '')
+    expect(cited.length).toBeGreaterThan(0)
+    for (const path of cited) expect(existsSync(join(root, path)), `${path} does not exist`).toBe(true)
+  })
+
   it('has no em dash', () => {
-    expect(readme).not.toContain('—')
+    expect(readme).not.toContain('\u2014')
   })
 })
