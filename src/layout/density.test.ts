@@ -165,20 +165,24 @@ describe('the layout is a pure function of the board', () => {
     ...Array.from({ length: GENERATED_BOARDS }, (_, i) => [`generated ${i + 1}`, generatedBoard(i + 1), () => generatedBoard(i + 1)] as [string, Board, () => Board]),
   ]
 
-  it('has no overlaps, keeps cards apart, and gives the same output twice', () => {
-    const problems: string[] = []
-    for (const [name, board, again] of all) {
-      const first = lay(board)
-      // A board read again is a new object, so nothing is taken from the last layout.
-      const second = lay(again())
-      if (JSON.stringify(first.cards) !== JSON.stringify(second.cards)) problems.push(`${name}: a second layout differs`)
-      for (const o of overlapsOf(board, first)) problems.push(`${name}: ${o}`)
-      const rects = Object.values(first.cards)
-      for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) if (clearGap(rects[i]!, rects[j]!) < MIN_GAP) problems.push(`${name}: two cards ${clearGap(rects[i]!, rects[j]!)} px apart`)
-    }
-    expect(problems.slice(0, 10)).toEqual([])
-    // About 330 layouts, each choosing between shapes: a busy machine needs more than the default.
-  }, 120_000)
+  // The boards in batches of 30, each with a generous timeout, so a busy machine slows a batch and never fails it.
+  const BATCH = 30
+  for (let first = 0; first < all.length; first += BATCH) {
+    const batch = all.slice(first, first + BATCH)
+    it(`has no overlaps, keeps cards apart, and gives the same output twice: ${batch[0]?.[0]} to ${batch.at(-1)?.[0]}`, { timeout: 120_000 }, () => {
+      const problems: string[] = []
+      for (const [name, board, again] of batch) {
+        const laid = lay(board)
+        // A board read again is a new object, so nothing is taken from the last layout.
+        const second = lay(again())
+        if (JSON.stringify(laid.cards) !== JSON.stringify(second.cards)) problems.push(`${name}: a second layout differs`)
+        for (const o of overlapsOf(board, laid)) problems.push(`${name}: ${o}`)
+        const rects = Object.values(laid.cards)
+        for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) if (clearGap(rects[i]!, rects[j]!) < MIN_GAP) problems.push(`${name}: two cards ${clearGap(rects[i]!, rects[j]!)} px apart`)
+      }
+      expect(problems.slice(0, 10)).toEqual([])
+    })
+  }
 
   it('never reads the size of the window', () => {
     const [, board] = boards.find(([n]) => n === 'claude-code-harness.board.json') as [string, Board]
