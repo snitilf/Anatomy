@@ -273,6 +273,13 @@
   transform-origin: 0 100%;
 }
 
+/* Another block sits too close above: the name sits just inside the top of its own block. */
+.name[data-inside] {
+  top: calc(5px * var(--label-scale, 1));
+  bottom: auto;
+  transform-origin: 0 0;
+}
+
 .name:hover .text {
   text-decoration: underline;
   text-underline-offset: 2px;

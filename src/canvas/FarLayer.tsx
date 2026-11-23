@@ -6,7 +6,7 @@ import { middleOf, nearestBundle, visibleArrows, type Bundle } from './bundleRou
 import { spotlight } from './emphasis'
 import { farLabelScale } from './far'
 import { YOURS_DASH, YOURS_FAR_DASH } from './kinds'
-import { groupNameRect, isMixed, placeCounts } from './farLabels'
+import { farNames, isMixed, placeCounts, type FarName } from './farLabels'
 import { clampTip } from './useTipClamp'
 import styles from './FarLayer.module.css'
 
@@ -61,10 +61,18 @@ export const FarLayer = memo(function FarLayer({
 }) {
   const scale = useStore((s) => farLabelScale(s.transform[2]))
   const flow = useStoreApi()
+  // The frame Fit shows: every group and every tile. A name never runs past its right edge.
+  const names = useMemo(() => {
+    const boxes = [...groups.map((g) => g.area), ...tiles]
+    const x = Math.min(...boxes.map((b) => b.x))
+    const y = Math.min(...boxes.map((b) => b.y))
+    const frame = { x, y, width: Math.max(...boxes.map((b) => b.x + b.width)) - x, height: Math.max(...boxes.map((b) => b.y + b.height)) - y }
+    return farNames(groups, tiles, frame, scale)
+  }, [groups, tiles, scale])
   const placed = useMemo(() => {
-    const groupNames = groups.map((g) => groupNameRect(g.area, g.label, g.count, scale))
+    const groupNames = groups.map((g) => (names.get(g.id) as FarName).rect)
     return placeCounts(bundles, [...tiles, ...groupNames], scale)
-  }, [groups, bundles, tiles, scale])
+  }, [groups, bundles, tiles, scale, names])
   // Heads that would pile into a ladder at a block's edge are dropped. This follows the quantized scale, so it runs on a
   // threshold crossing and never per frame.
   const heads = useMemo(() => visibleArrows(bundles, scale), [bundles, scale])
@@ -171,7 +179,7 @@ export const FarLayer = memo(function FarLayer({
       <div ref={layer} className={styles.layer} onPointerOver={onOver} onPointerOut={onOut} onPointerDown={onPress} onFocus={onFocus} onBlur={onBlur} onClick={onClick}>
         {groups.map((g) => (
           <div key={g.id} className={styles.anchor} style={{ left: g.area.x, top: g.area.y }}>
-            <button type="button" className={styles.name} data-far-label="" data-quiet={selectedEnds && !selectedEnds.includes(`group:${g.id}`) ? '' : undefined} title={g.label} aria-label={`${g.label}, ${g.count} ${g.count === 1 ? 'part' : 'parts'}. Zoom to this group.`} onClick={() => onPick(g.id)}>
+            <button type="button" className={styles.name} style={{ maxWidth: names.get(g.id)?.room }} data-inside={names.get(g.id)?.inside || undefined} data-far-label="" data-quiet={selectedEnds && !selectedEnds.includes(`group:${g.id}`) ? '' : undefined} title={g.label} aria-label={`${g.label}, ${g.count} ${g.count === 1 ? 'part' : 'parts'}. Zoom to this group.`} onClick={() => onPick(g.id)}>
               <span className={styles.text}>{g.label}</span>
               <span className={styles.number}>{g.count}</span>
             </button>

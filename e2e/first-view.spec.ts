@@ -73,12 +73,7 @@ const EXPECTED_FAILURES: Record<string, string> = {
   [cell('large language model', '1024x768', 'in view')]: '18.3',
   [cell('refund approval', '1280x800', 'in view')]: '18.3',
   [cell('refund approval', '1024x768', 'in view')]: '18.3',
-  [cell('url shortener', '1440x900', 'in view')]: '18.3',
-  [cell('url shortener', '1280x800', 'in view')]: '18.3',
   [cell('url shortener', '1024x768', 'in view')]: '18.3',
-  [cell('sixteen parts', '1440x900', 'in view')]: '18.3',
-  [cell('sixteen parts', '1280x800', 'in view')]: '18.3',
-  [cell('sixteen parts', '1024x768', 'in view')]: '18.3',
 
   // 18.3: titles and labels never under 11 px, the title level keeps every line and label, and the map carries `data-detail`.
   [cell('claude code harness', '1440x900', 'readable')]: '18.3',

@@ -7,9 +7,9 @@ import { overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
-import { labelFits, pillHeight, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
+import { LABEL_GROWTH, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { labelTint } from './labelTint'
-import { Drawn, lineHitsCards, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
+import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
 
@@ -196,19 +196,17 @@ export interface Geometry {
   solved: Readonly<Record<string, Rect>>
 }
 
-/** How many times lines that found no room are routed again first. */
-const RIP_UP_PASSES = 2
-
-/**
- * The room a pill keeps from other labels. A label grows on screen at low zoom (up to this share, see `LABEL_MAX_SCALE`),
- * and placement does not know the zoom, so each label holds back the room it may grow into.
- */
-export const LABEL_GROWTH = 1.3
+export { LABEL_GROWTH }
 
 function pillBox(shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>, room = 1): Rect {
-  const height = pillHeight(shape.labelLines) * room
-  const width = shape.labelWidth * room
-  return { x: shape.labelX - width / 2, y: shape.labelY - height / 2, width, height }
+  return pillRect({ x: shape.labelX, y: shape.labelY, width: shape.labelWidth, lines: shape.labelLines }, room)
+}
+
+/** The box around the cards and the group areas, which is what Fit frames. */
+function frameOf(rects: readonly Rect[]): Rect {
+  const x = Math.min(...rects.map((r) => r.x))
+  const y = Math.min(...rects.map((r) => r.y))
+  return { x, y, width: Math.max(...rects.map((r) => r.x + r.width)) - x, height: Math.max(...rects.map((r) => r.y + r.height)) - y }
 }
 
 const manualId = (id: string) => `${MANUAL_PREFIX}${id}`
@@ -364,7 +362,7 @@ export function* geometrySteps(
   const movedAreas = movedBoxes.map(textArea)
   const taken: Rect[] = []
   const edges = new Map<string, EdgeShape>()
-  const context: LabelContext = { cards: boxes, bands: groups.map(groupBand), taken, lines, own: -1 }
+  const context: LabelContext = { cards: boxes, bands: groups.map(groupBand), taken, lines, own: -1, ...(boxes.length > 0 ? { frame: frameOf([...boxes, ...groups]) } : {}) }
   const shapeOf = (r: (typeof routes)[number], label: { x: number; y: number; width: number; lines: number; hidden?: true }): EdgeShape => ({
     id: r.id,
     from: r.from,

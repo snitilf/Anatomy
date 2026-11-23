@@ -435,8 +435,11 @@ describe('a hidden label after room frees up', () => {
 
   it('stays held back, as the same object, when there is still no room', () => {
     const board = anatomyBoard()
-    const positions = placeCards(board, { positions: {}, sizes: {} })
+    const laid = placeCards(board, { positions: {}, sizes: {} })
+    // The agent and the board file it writes sit 60 px apart, away from the rest: no pill fits between them.
+    const positions = { ...laid, agent: { ...laid.agent!, x: -2000, y: -2000 }, 'board-file': { ...laid['board-file']!, x: -2000 + laid.agent!.width + 60, y: -2000 } }
     const before = computeGeometry(board, positions)
+    expect(before.edges.get('agent-writes-file')!.labelHidden).toBe(true)
     const next = computeGeometry(board, positions, [], before)
     expect(next.edges.get('agent-writes-file')).toBe(before.edges.get('agent-writes-file'))
     expect(next.edges.get('agent-writes-file')!.labelHidden).toBe(true)

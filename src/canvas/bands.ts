@@ -1,4 +1,4 @@
-import { GROUP_PADDING } from '../layout/cards'
+import { GROUP_PADDING } from '../layout/groupArea'
 import type { Rect } from '../layout/geometry'
 import { textWidth } from './textMeasure'
 

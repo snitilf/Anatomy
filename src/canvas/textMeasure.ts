@@ -106,12 +106,28 @@ function measured(text: string, style: TextStyle): number | undefined {
   return width
 }
 
+let tablesOnly = false
+
+/**
+ * Runs `work` with every width taken from the tables, never from the browser. The layout runs this way, so where the
+ * cards go depends on the board alone, and not on whether the font has loaded yet.
+ */
+export function measuringByTable<T>(work: () => T): T {
+  const was = tablesOnly
+  tablesOnly = true
+  try {
+    return work()
+  } finally {
+    tablesOnly = was
+  }
+}
+
 /**
  * The width of a string. In the browser it is measured whole in the loaded font, so wide letters and other scripts are
  * right too. Without a canvas, or before the font has loaded, the table and the average widths stand in.
  */
 export function textWidth(text: string, style: TextStyle): number {
-  const real = measured(text, style)
+  const real = tablesOnly ? undefined : measured(text, style)
   if (real !== undefined) return real * SLACK
   let total = 0
   for (const c of text) total += charWidth(c, style)

@@ -152,7 +152,79 @@ export function planEdges(rects: Readonly<Record<string, Rect>>, edges: readonly
       point[along] = Math.round(point[along] + (i - (n - 1) / 2) * gap)
     })
   }
+  straighten(rects, plans, uses)
   return plans
+}
+
+/** Where one end of a connection meets a card. */
+interface Anchor {
+  edge: string
+  end: 'a' | 'b'
+  card: string
+  side: Side
+  /** The card at the other end. */
+  other: Rect
+}
+
+/** Two ends that face each other this close to level are lined up, since so short a jog reads as a wobble, not a bend. */
+const MAX_JOG = 48
+
+/**
+ * Lines up the two ends of a connection between cards that face each other, when they are off by a short jog and one end
+ * can move there: inside its side, clear of the corners, a track from the other anchors on that side, and in the same
+ * order among them, so the lines leaving that side still do not cross. The line is then one straight run, which reads
+ * better and leaves its label a whole run to sit on.
+ */
+function straighten(
+  rects: Readonly<Record<string, Rect>>,
+  plans: ReadonlyMap<string, Plan>,
+  uses: ReadonlyMap<string, readonly Anchor[]>,
+): void {
+  const pointOf = (u: Anchor) => {
+    const plan = plans.get(u.edge) as Plan
+    return u.end === 'a' ? plan.a : plan.b
+  }
+  // Moves one end to `value` along its side when that keeps it on the side, apart from and in order with the others.
+  const moveTo = (u: Anchor, value: number): boolean => {
+    const card = rects[u.card]
+    if (!card) return false
+    const across = u.side === 'left' || u.side === 'right'
+    const along = across ? 'y' : 'x'
+    const lo = (across ? card.y : card.x) + EDGE_MARGIN
+    const hi = (across ? card.y + card.height : card.x + card.width) - EDGE_MARGIN
+    if (value < lo || value > hi) return false
+    const point = pointOf(u)
+    const now = point[along]
+    for (const other of uses.get(`${u.card}|${u.side}`) ?? []) {
+      if (other.edge === u.edge && other.end === u.end) continue
+      const at = pointOf(other)[along]
+      if (Math.abs(at - value) < MIN_SPREAD) return false
+      if (Math.sign(at - now) !== Math.sign(at - value)) return false
+    }
+    point[along] = value
+    return true
+  }
+  const ends = new Map<string, { a?: Anchor; b?: Anchor }>()
+  for (const list of uses.values()) {
+    for (const u of list) {
+      const entry = ends.get(u.edge) ?? {}
+      entry[u.end] = u
+      ends.set(u.edge, entry)
+    }
+  }
+  for (const [edge, plan] of plans) {
+    const facing = (plan.out === 'right' && plan.in === 'left') || (plan.out === 'left' && plan.in === 'right') || (plan.out === 'bottom' && plan.in === 'top') || (plan.out === 'top' && plan.in === 'bottom')
+    if (!facing) continue
+    const along = plan.out === 'left' || plan.out === 'right' ? 'y' : 'x'
+    const jog = Math.abs(plan.a[along] - plan.b[along])
+    if (jog === 0 || jog > MAX_JOG) continue
+    const { a, b } = ends.get(edge) ?? {}
+    if (!a || !b) continue
+    // The end on the side with fewer lines moves first: it has more room.
+    const sideCount = (u: Anchor) => uses.get(`${u.card}|${u.side}`)?.length ?? 0
+    const [first, second] = sideCount(b) <= sideCount(a) ? [b, a] : [a, b]
+    if (!moveTo(first, pointOf(second)[along])) moveTo(second, pointOf(first)[along])
+  }
 }
 
 const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
@@ -195,6 +267,8 @@ export function hitsAnyCard(route: Route, cards: readonly Rect[]): boolean {
   return route.points.some((p) => boxes.some((b) => inside(b, p)))
 }
 
+/** How many times lines that found no room are routed again first. */
+export const RIP_UP_PASSES = 2
 /** Lines keep this far from every card they pass. */
 const MARGIN = 16
 /** A line leaves a card straight out for at least this long, so its arrowhead never sits on a bend. */
