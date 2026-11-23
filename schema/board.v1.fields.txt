@@ -67,6 +67,6 @@ responses:
 
 Anatomy also checks what the schema cannot:
 - Every id is unique across the whole board.
-- Every from, to, about, and highlight names a component or relationship that exists, and every group names a group.
+- Every from and to names a component, every group names a group, and every about and highlight names a component or relationship.
 - A documented-intent source has at least one reference.
 Run validate to check all of it.

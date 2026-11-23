@@ -37,6 +37,11 @@ describe('the field sheet', () => {
     expect(sheet).toContain('anatomy-board')
   })
 
+  it('says that from and to name a component only', () => {
+    expect(sheet).toContain('Every from and to names a component,')
+    expect(sheet).not.toMatch(/\bfrom, to\b/)
+  })
+
   it('marks required fields', () => {
     expect(sheet).toMatch(/\bid\*/)
     expect(sheet).toMatch(/\bsummary\*/)
