@@ -71,6 +71,18 @@ The layout packs pieces that no connection joins in rows, toward the shape of a 
 The layout uses the text size of each card and never a size that the user set.
 For this reason, a resize never moves the other cards.
 
+The layout is a pure function of the board and never reads the window size.
+It aims at a fixed shape: the free map area of a 1440x900 and a 1280x800 window with the sidebar docked.
+A gap between two stacked cards holds one track of lines and its margins, and a gap between columns opens to the room its lines and its widest label need.
+A label that is too wide for one line counts at its two-line width.
+The layout tries several shapes for the groups and for the whole, and lifts each box into room that a wrapped row leaves above it.
+On a board of up to 16 parts, the layouts that fit within 30 percent of the smallest one are drawn.
+Of those that read about as clean as the cleanest, the smallest wins: clean means few crossings, few connections that run right to left, and every label placed.
+A cleaner layout never costs a level of detail on the reference window.
+Where a label still finds no place, the gap it needs opens a step.
+A connection that closes a loop never counts in these choices, so closing a loop never moves its cards.
+A board of more than 24 parts is read in the far view, so it keeps roomier gaps and group areas.
+
 If some cards have a board position, the layout places the other cards as a block to their right.
 A card that the layout placed never stays under a card with a fixed position.
 The function `pushApart` in `src/layout/push.ts` moves it aside.
@@ -88,7 +100,7 @@ Routing, labels, group areas, and the camera all read the card rects and never a
 Every connection has straight runs with rounded corners (`src/canvas/routing.ts`).
 The router picks the first of three shapes that fits:
 
-1. A straight run, when the two ends line up.
+1. A straight run, when the two ends line up. Two ends on facing sides that are off by a short jog are lined up first.
 2. An elbow on a free track of the gap between the cards.
 3. A path that A* finds around the cards.
 
@@ -104,7 +116,8 @@ A gap between cards holds as many lines as it has tracks, so parallel lines do n
 While the user drags or resizes a card, the app redraws only the connections of that card.
 It draws them as plain elbows and hides their labels.
 After the drop, one full layout pass routes the connections and places the labels.
-The labels keep off every card, every line, and every other label.
+The labels keep off every card, every line, and every other label, and stay inside the box that Fit frames.
+A label that has no place on one line tries two lines.
 A connection keeps its route and label when its cards did not move or change size and the route is still clear.
 
 ### The camera
