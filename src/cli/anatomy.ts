@@ -188,7 +188,7 @@ function runCommand(args: readonly string[], io: CliIo): CliResult {
   // The last version seen is the one `apply` kept as board.prev.json.
   const lastFile = previousName(file)
   const lastText = result.ok ? io.read(io.sibling(file, lastFile)) : undefined
-  const lastRevision = lastText?.ok ? revisionIn(lastText.text, result.board.id) : undefined
+  const lastRevision = result.ok && lastText?.ok ? revisionIn(lastText.text, result.board.id) : undefined
   let board = result.ok ? result.board : undefined
   // fmt writes only a valid board. The schema bounds its depth and its numbers, so the rewrite keeps every value.
   if (options.command === 'fmt' && result.ok) {
