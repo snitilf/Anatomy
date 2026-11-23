@@ -119,6 +119,24 @@ describe('the files Anatomy writes for an agent', () => {
   })
 })
 
+describe('owning board.schema.json', () => {
+  const schema = () => agentFiles().find((f) => f.name === 'board.schema.json')!
+  const mark = (JSON.parse(schema().text) as { $comment: string }).$comment
+
+  it('replaces an older file only when its own top-level $comment is the mark', () => {
+    expect(schema().keep(JSON.stringify({ $comment: mark, title: 'old' }))).toBe(false)
+  })
+
+  it('keeps a file that has the mark anywhere else, or that does not parse', () => {
+    expect(schema().keep(JSON.stringify({ title: 'mine', description: mark }))).toBe(true)
+    expect(schema().keep(JSON.stringify({ title: 'mine', properties: { note: { $comment: mark } } }))).toBe(true)
+    expect(schema().keep(JSON.stringify([{ $comment: mark }]))).toBe(true)
+    expect(schema().keep(`// my notes\n${JSON.stringify({ $comment: mark })}`)).toBe(true)
+    expect(schema().keep(`"${mark}"`)).toBe(true)
+    expect(schema().keep(JSON.stringify({ $comment: `${mark} Mine now.` }))).toBe(true)
+  })
+})
+
 describe('the prompt in How to make a board', () => {
   it('comes from agentReadme.ts, where every prompt lives', () => {
     expect(AGENT_PROMPT).toMatch(/^Write an Anatomy board file that explains: /)

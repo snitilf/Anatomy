@@ -144,7 +144,18 @@ const SCHEMA_MARK = 'Written by Anatomy, which replaces this file when the forma
 
 function schemaFile(): AgentFile {
   const text = `${JSON.stringify({ $comment: SCHEMA_MARK, ...(JSON.parse(schemaText) as object) }, null, 2)}\n`
-  return { name: 'board.schema.json', text, keep: (existing) => existing === text || !existing.includes(JSON.stringify(SCHEMA_MARK)) }
+  return { name: 'board.schema.json', text, keep: (existing) => existing === text || !markedSchema(existing) }
+}
+
+/** True when the file is a JSON object whose own top-level `$comment` is the mark. A file that does not parse is the user's. */
+function markedSchema(existing: string): boolean {
+  let data: unknown
+  try {
+    data = JSON.parse(existing)
+  } catch {
+    return false
+  }
+  return typeof data === 'object' && data !== null && !Array.isArray(data) && Object.hasOwn(data, '$comment') && (data as { $comment: unknown }).$comment === SCHEMA_MARK
 }
 
 /** A text file Anatomy writes into `.anatomy/`, and whether an existing file must stay as it is. */
