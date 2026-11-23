@@ -1,9 +1,10 @@
 import type { Board } from '../board/schema'
-import { autoLayout, GROUP_PADDING } from './autoLayout'
+import { autoLayout } from './autoLayout'
 import type { Point, Rect, Size } from './geometry'
+import { groupAreas } from './groupArea'
 import { pushApart } from './push'
 
-export { GROUP_PADDING }
+export { GROUP_PADDING, groupAreas } from './groupArea'
 
 /** Card sizes, all on the 8 px grid. A card the user has not resized is as tall as its text needs, within these. */
 export const CARD_WIDTH = 240
@@ -90,26 +91,6 @@ export function summaryLinesFor(c: { label: string; lesson?: string | undefined 
   const foot = c.lesson !== undefined || notes > 0 ? CARD_TEXT.gap + CARD_TEXT.foot : 0
   const room = size.height - CARD_TEXT.padY * 2 - title * CARD_TEXT.titleLine - CARD_TEXT.gap - foot
   return Math.max(1, Math.floor(room / CARD_TEXT.summaryLine))
-}
-
-/** The area of each group around the given card rects, keyed by group ID. */
-export function groupAreas(board: Board, rects: Readonly<Record<string, Rect>>): Record<string, Rect> {
-  const out: Record<string, Rect> = {}
-  for (const g of board.groups) {
-    const members = board.components.filter((c) => c.group === g.id && rects[c.id]).map((c) => rects[c.id] as Rect)
-    if (members.length === 0) continue
-    const minX = Math.min(...members.map((r) => r.x))
-    const minY = Math.min(...members.map((r) => r.y))
-    const maxX = Math.max(...members.map((r) => r.x + r.width))
-    const maxY = Math.max(...members.map((r) => r.y + r.height))
-    out[g.id] = {
-      x: minX - GROUP_PADDING.side,
-      y: minY - GROUP_PADDING.top,
-      width: maxX - minX + GROUP_PADDING.side * 2,
-      height: maxY - minY + GROUP_PADDING.top + GROUP_PADDING.bottom,
-    }
-  }
-  return out
 }
 
 /** The last layered layout. It depends only on the board and the natural sizes, and a resize or a drop leaves both alone. */

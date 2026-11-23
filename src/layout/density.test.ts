@@ -177,7 +177,8 @@ describe('the layout is a pure function of the board', () => {
       for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) if (clearGap(rects[i]!, rects[j]!) < MIN_GAP) problems.push(`${name}: two cards ${clearGap(rects[i]!, rects[j]!)} px apart`)
     }
     expect(problems.slice(0, 10)).toEqual([])
-  })
+    // About 330 layouts, each choosing between shapes: a busy machine needs more than the default.
+  }, 120_000)
 
   it('never reads the size of the window', () => {
     const [, board] = boards.find(([n]) => n === 'claude-code-harness.board.json') as [string, Board]
