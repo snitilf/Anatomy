@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { baseBoard } from '../cli/corpus'
-import { boardAdvice, feedbackAdvice, readFeedback, type FeedbackSummary } from './advice'
+import { boardAdvice, feedbackAdvice, firstBoardAdvice, readFeedback, type FeedbackSummary } from './advice'
 import { parseBoard } from './validate'
 import type { Board } from './schema'
 
@@ -143,5 +143,35 @@ describe('readFeedback', () => {
     expect(readFeedback('null')).toBeUndefined()
     expect(readFeedback('{"format":"anatomy-board"}')).toBeUndefined()
     expect(readFeedback(JSON.stringify({ format: 'anatomy-feedback', id: 'f', boardId: 'b', baseRevision: 2, items: [{}] }))).toBeUndefined()
+  })
+})
+
+describe('the notice for a first board with no recorded assumptions', () => {
+  const first = (items: { id: string; kind: string; text: string }[]) =>
+    board((b) => {
+      b.revision = 1
+      b.items = items
+    })
+
+  it('asks for assumptions and unknowns on a revision 1 board that has neither, and points to the ask topic', () => {
+    const notice = firstBoardAdvice(first([{ id: 'q-1', kind: 'question', text: 'Who reads it?' }]))
+    expect(notice).toHaveLength(1)
+    expect(notice[0]).toMatchObject({ path: 'items', code: 'no-assumptions' })
+    expect(`${notice[0]!.message} ${notice[0]!.hint}`).toMatch(/\bask\b/)
+  })
+
+  it('stays quiet when the board records an assumption or an unknown', () => {
+    expect(firstBoardAdvice(first([{ id: 'a-1', kind: 'assumption', text: 'Only the web app.' }]))).toEqual([])
+    expect(firstBoardAdvice(first([{ id: 'u-1', kind: 'unknown', text: 'The retry count.' }]))).toEqual([])
+  })
+
+  it('stays quiet on a later revision', () => {
+    expect(firstBoardAdvice(board((b) => (b.items = []))).length).toBe(0)
+  })
+
+  it.each(Object.entries(examples))('stays quiet on %s when it is a first board with open items', (_path, text) => {
+    const result = parseBoard(text)
+    if (!result.ok || result.board.items.length === 0) return
+    expect(firstBoardAdvice(result.board)).toEqual([])
   })
 })

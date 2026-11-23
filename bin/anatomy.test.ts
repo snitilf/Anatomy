@@ -9,6 +9,7 @@ import { parseBoard } from '../src/board/validate.ts'
 import { clip, runAnatomy } from '../src/cli/anatomy.ts'
 import { baseBoard, CORPUS, memoryIo, type CorpusCase } from '../src/cli/corpus.ts'
 import { keepScript, SCRIPT_BANNER, SCRIPT_MARK } from '../src/cli/script.ts'
+import { splitGuide, TOPICS } from '../src/cli/topics.ts'
 import { LESSON_IDS } from '../src/lessons/ids.ts'
 
 // These tests run the file the app writes, `.anatomy/anatomy.mjs`, in a real Node process, the way an agent does.
@@ -89,8 +90,22 @@ describe('the bundled tool', () => {
     expect(script).not.toMatch(/\bimport\s*\(|\brequire\s*\(|child_process|node:(?:http|https|net|dgram|tls|dns|worker_threads|vm)|\bfetch\s*\(|XMLHttpRequest|WebSocket|\beval\s*\(/)
   })
 
-  it('stays small', () => {
-    expect(script.length).toBeLessThan(150_000)
+  it('stays small, with the topics and the field sheet inside it', () => {
+    expect(Buffer.byteLength(script)).toBeLessThan(150_000)
+    expect(script).toContain('The decision tree')
+    expect(script).toContain('anatomy-board')
+  })
+
+  it('prints every topic as the guide splits it, and the field sheet, with no file but itself', async () => {
+    const dir = join(root, 'topics')
+    mkdirSync(dir)
+    for (const topic of splitGuide(readFileSync('docs/authoring-guide.md', 'utf8'))) {
+      expect(await node(['topic', topic.name], dir), topic.name).toEqual({ code: 0, stdout: topic.text, stderr: '' })
+    }
+    const list = await node(['topic'], dir)
+    expect(list.code).toBe(0)
+    for (const topic of TOPICS) expect(list.stdout).toContain(topic.when)
+    expect(await node(['schema'], dir)).toEqual({ code: 0, stdout: readFileSync('schema/board.v1.fields.txt', 'utf8'), stderr: '' })
   })
 
   it('agrees with the app on every board, in text and in JSON', async () => {
