@@ -41,6 +41,41 @@ export function nameRoom(groups: readonly { id: string; area: Rect }[], scale: n
   return out
 }
 
+/** Where a group's name goes in the far view, and how wide it may be at natural size. */
+export interface FarName {
+  rect: Rect
+  room: number
+  /** The name sits just inside the top of its own block, because another block is too close above it. */
+  inside: boolean
+}
+
+/**
+ * Where each group's name goes in the far view. A name sits just above its block, cut short of the next group's name
+ * to its right and of the right edge of the frame, so it never runs off a fitted map. When another block (a group, or
+ * a part outside it) sits so close above that the name would cover it, the name moves just inside the top of its own
+ * block instead.
+ */
+export function farNames(
+  groups: readonly { id: string; area: Rect; label: string; count: number }[],
+  tiles: readonly Rect[],
+  frame: Rect,
+  scale: number,
+): Map<string, FarName> {
+  const room = nameRoom(groups, scale)
+  const contains = (outer: Rect, inner: Rect) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height
+  const out = new Map<string, FarName>()
+  for (const g of groups) {
+    const edge = (frame.x + frame.width - g.area.x) / scale
+    const width = Math.max(0, Math.min(room.get(g.id) ?? NAME_MAX, edge))
+    const above = groupNameRect(g.area, g.label, g.count, scale, width)
+    const blocks = [...groups.filter((h) => h !== g).map((h) => h.area), ...tiles.filter((t) => !contains(g.area, t))]
+    const inside = blocks.some((b) => touches(above, b))
+    const rect = inside ? { ...above, y: g.area.y + NAME_LIFT * scale } : above
+    out.set(g.id, { rect, room: width, inside })
+  }
+  return out
+}
+
 /** The room the user's mark takes under the number of a count: one dash and dot, and the gap above it. */
 export const YOURS_TICK = 6
 
