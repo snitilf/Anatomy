@@ -38,8 +38,9 @@ describe('the page side of the recorder', () => {
 
   it('reports the directive, the blocked address, the sample, and the source file', async () => {
     block()
-    await browser().__anatomyFlush().catch(() => undefined)
+    const flush = browser().__anatomyFlush()
     await vi.advanceTimersByTimeAsync(0)
+    await flush
     expect(calls).toEqual([{ directive: 'connect-src', blocked: 'x', sample: '', source: '' }])
   })
 
