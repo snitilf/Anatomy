@@ -36,6 +36,7 @@ describe('fileForUrl', () => {
     expect(fileForUrl(base, '/Anatomy/assets/%2e%2e%2f%2e%2e%2fpackage.json')).toBeUndefined()
     expect(fileForUrl(base, '/Anatomy/..%5cpackage.json')).toBeUndefined()
     expect(fileForUrl(base, '/Anatomy/a%00b')).toBeUndefined()
+    expect(fileForUrl(base, '/Anatomy//etc/passwd')).toBeUndefined()
   })
 
   it('refuses a path that is not valid percent encoding', () => {
