@@ -5,7 +5,7 @@ import { editDistance } from '../board/suggest.ts'
 import { LESSON_IDS } from '../lessons/ids.ts'
 import { runApply, type ApplyOptions } from './applyCommand.ts'
 import { MAX_SHOW_IDS, runRead } from './readCommands.ts'
-import { clip, count, line, MAX_WARNINGS, plain, type CliIo, type CliResult } from './output.ts'
+import { clip, count, finalText, line, MAX_WARNINGS, plain, type CliIo, type CliResult } from './output.ts'
 import { splitGuide, topicIndex, TOPICS } from './topics.ts'
 
 export { clip }
@@ -119,6 +119,11 @@ function runTopic(name: string | undefined, io: CliIo): CliResult {
 }
 
 export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
+  const result = runCommand(args, io)
+  return { code: result.code, stdout: finalText(result.stdout), stderr: finalText(result.stderr) }
+}
+
+function runCommand(args: readonly string[], io: CliIo): CliResult {
   const [first, ...rest] = args
   if (first === 'topic' || first === 'schema') {
     const text = parseText(first, rest)

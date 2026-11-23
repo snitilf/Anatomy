@@ -15,7 +15,7 @@
     "anatomy apply, three changes": { "characters": 202, "tokens": 51 },
     "anatomy apply, a removed part that is still used": { "characters": 716, "tokens": 179 },
     "anatomy feedback, three items": { "characters": 385, "tokens": 97 },
-    "anatomy feedback --json, three items": { "characters": 389, "tokens": 130 },
+    "anatomy feedback --json, three items": { "characters": 402, "tokens": 134 },
     "anatomy outline, corpus board": { "characters": 650, "tokens": 163 },
     "anatomy outline, example board": { "characters": 2177, "tokens": 545 },
     "anatomy show, two parts": { "characters": 377, "tokens": 95 }

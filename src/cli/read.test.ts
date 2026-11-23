@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import guideText from '../../docs/authoring-guide.md?raw'
 import exampleFeedback from './fixtures/anatomy-example.feedback.json?raw'
 import exampleBoard from '../examples/anatomy.board.json?raw'
 import { runAnatomy } from './anatomy'
@@ -360,7 +361,7 @@ describe('every output path is safe', () => {
   it('escapes the file name in a read error and an echoed command or option', () => {
     expect(runAnatomy(['validate'], { ...memoryIo(new Map()), display: () => evilPath }).stderr).not.toMatch(CONTROL)
     for (const args of [['ev\u001b[2Jil'], ['validate', '--b\u009bad'], ['topic', 'x\u001b[2J']]) {
-      const result = runAnatomy(args, { ...memoryIo(new Map()), guide: () => '## 1. Ask before you write\n' })
+      const result = runAnatomy(args, { ...memoryIo(new Map()), guide: () => guideText })
       expect(result.code, args.join(' ')).toBe(2)
       expect(result.stdout + result.stderr, args.join(' ')).not.toMatch(CONTROL)
     }
@@ -369,7 +370,7 @@ describe('every output path is safe', () => {
   it('escapes the text of a topic and of the field list', () => {
     const io = { ...memoryIo(new Map()), schemaSheet: () => 'a\u001b[2Jb\tc\n' }
     const out = runAnatomy(['schema'], io).stdout
-    expect(out).not.toMatch(CONTROL)
+    expect(out.replace(/\t/g, ' ')).not.toMatch(CONTROL)
     expect(out).toContain('\tc\n')
   })
 })

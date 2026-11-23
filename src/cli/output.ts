@@ -57,6 +57,19 @@ function head(text: string, max: number): { start: string; length: number } | un
 // eslint-disable-next-line no-control-regex
 const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g
 
+/** Characters the last pass escapes: `UNSAFE` without the tab and the newline, which text output needs. */
+// eslint-disable-next-line no-control-regex
+const NOT_FINAL = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g
+
+/**
+ * The last pass over everything the tool prints, whatever put it there: each remaining unsafe character becomes a
+ * `\uXXXX` escape, which is also a valid escape inside a JSON string. `runAnatomy` applies it to every result, so no
+ * path, argument, or message can reach the terminal with a control character.
+ */
+export function finalText(text: string): string {
+  return text.replace(NOT_FINAL, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
+}
+
 /** What `UNSAFE` covers that JSON does not escape itself: everything but the C0 controls. */
 const BEYOND_JSON = /[\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g
 
@@ -95,10 +108,9 @@ export function shown(text: string, max: number, quote = false): string {
   return cut === undefined ? out : `${out} (${cut.length.toLocaleString('en-US')} characters)`
 }
 
-/** `text` with control characters escaped and cut at `max` characters, with "…" at the end when it was cut. For `--json`. */
+/** `text` cut at `max` characters, with "…" at the end when it was cut. For `--json`, where `jsonLine` does the escaping. */
 export function cutText(text: string, max: number): string {
-  const whole = safe(text)
-  return head(whole, max)?.start ?? whole
+  return head(text, max)?.start ?? text
 }
 
 export function line(problem: BoardProblem): string {

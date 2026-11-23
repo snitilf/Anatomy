@@ -38,14 +38,15 @@ function fail(code: 1 | 2, text: string, to: 'stdout' | 'stderr' = 'stderr'): Cl
 }
 
 /** The board, valid, or the result to return. `text` is the file as it is, for commands that print it. */
-function loadBoard(file: string, io: CliIo): { board: Board; text: string } | CliResult {
+function loadBoard(file: string, io: CliIo, json: boolean): { board: Board; text: string } | CliResult {
   const shownFile = io.display(file)
   const read = io.read(file)
   if (!read.ok) return fail(2, `Cannot read ${shownFile}: ${read.reason}.\n`)
   const result = parseBoard(read.text, { knownLessons: LESSON_IDS })
   if (!result.ok) {
     const total = result.errors.filter((e) => e.code !== 'more-problems').length + (result.omitted ?? 0)
-    return fail(1, `${shownFile}: invalid, ${count(total, 'error')}. Run validate to see them.\n`, 'stdout')
+    if (json) return fail(1, `${jsonLine({ file: shownFile, valid: false, errors: total })}\n`, 'stdout')
+    return fail(1, `${shown(shownFile, 200)}: invalid, ${count(total, 'error')}. Run validate to see them.\n`, 'stdout')
   }
   return { board: result.board, text: read.text }
 }
@@ -92,7 +93,7 @@ function was(x: unknown): string | undefined {
   const s = rec(x)
   if (s === undefined) return undefined
   const text = (k: string) => (str(s[k]) === undefined ? '' : shown(str(s[k])!, TEXT, true))
-  const parts = s.type === 'board' ? [text('title')] : s.type === 'component' ? [text('label'), text('summary')] : [text('label'), shown(str(s.kind) ?? '?', 20), `${shown(str(s.from) ?? '?', NAME)} > ${shown(str(s.to) ?? '?', NAME)}`]
+  const parts = s.type === 'board' ? [text('title'), text('goal')] : s.type === 'component' ? [text('label'), text('summary')] : [text('label'), shown(str(s.kind) ?? '?', 20), `${shown(str(s.from) ?? '?', NAME)} > ${shown(str(s.to) ?? '?', NAME)}`]
   return `was ${parts.filter((p) => p !== '').join(' ')}`
 }
 
@@ -117,7 +118,7 @@ function details(item: Rec, type: string): (string | undefined)[] {
     }
     case 'new-part': {
       const links = Array.isArray(item.links) ? item.links.map((l) => str(rec(l)?.id)).filter((id): id is string => id !== undefined) : []
-      return [quoted(item.label), quoted(item.summary), list(item.near, 'near'), links.length === 0 ? undefined : `links ${links.map((id) => shown(id, NAME)).join(', ')}`]
+      return [quoted(item.label), quoted(item.summary), list(item.near, 'near'), links.length === 0 ? undefined : `links ${links.slice(0, MAX_REFS).map((id) => shown(id, NAME)).join(', ')}${links.length > MAX_REFS ? `, ${links.length - MAX_REFS} more` : ''}`]
     }
     case 'shape':
       return [str(item.shape) === undefined ? undefined : shown(str(item.shape)!, 20), note, list(item.encloses, 'encloses'), list(item.touches, 'touches')]
@@ -147,28 +148,36 @@ interface FeedbackFile {
   boardId: string
   baseRevision: number
   items: unknown[]
-  withdrawn: number
+  withdrawn: Set<string>
 }
 
 function readFeedbackFile(text: string): FeedbackFile | undefined {
   let data: unknown
   try {
-    data = JSON.parse(text.replace(/^﻿/, ''))
+    data = JSON.parse(text.replace(/^\uFEFF/, ''))
   } catch {
     return undefined
   }
   const r = rec(data)
   if (r === undefined || r.format !== 'anatomy-feedback' || typeof r.id !== 'string' || typeof r.boardId !== 'string' || typeof r.baseRevision !== 'number' || !Array.isArray(r.items)) return undefined
-  return { id: r.id, boardId: r.boardId, baseRevision: r.baseRevision, items: r.items, withdrawn: Array.isArray(r.withdrawn) ? r.withdrawn.length : 0 }
+  return { id: r.id, boardId: r.boardId, baseRevision: r.baseRevision, items: r.items, withdrawn: new Set(Array.isArray(r.withdrawn) ? r.withdrawn.filter((id): id is string => typeof id === 'string') : []) }
 }
 
-/** The ID and revision of the board, read loosely: `feedback` still works when the board is broken or missing. */
-function boardHead(file: string, io: CliIo): { id: string; revision: number } | undefined {
+/** The ID, revision, and answers of the board, read loosely: `feedback` still works when the board is broken or missing. */
+function boardHead(file: string, io: CliIo): { id: string; revision: number; respondsTo?: string; answered: Set<string> } | undefined {
   const read = io.read(file)
   if (!read.ok) return undefined
   try {
-    const r = rec(JSON.parse(read.text.replace(/^﻿/, '')))
-    return typeof r?.id === 'string' && typeof r.revision === 'number' ? { id: r.id, revision: r.revision } : undefined
+    const r = rec(JSON.parse(read.text.replace(/^\uFEFF/, '')))
+    if (typeof r?.id !== 'string' || typeof r.revision !== 'number') return undefined
+    const responses = rec(r.responses)
+    const items = Array.isArray(responses?.items) ? responses.items : []
+    return {
+      id: r.id,
+      revision: r.revision,
+      ...(typeof responses?.respondsTo === 'string' ? { respondsTo: responses.respondsTo } : {}),
+      answered: new Set(items.map((i) => rec(i)?.feedbackId).filter((id): id is string => typeof id === 'string')),
+    }
   } catch {
     return undefined
   }
@@ -183,12 +192,17 @@ function runFeedback(boardFile: string, json: boolean, io: CliIo): CliResult {
   if (feedback === undefined) return fail(2, `${file} is not a feedback file.\n`)
 
   // An item needs an ID and a type. Anything else is counted, never printed.
-  const readable = feedback.items.map(rec).filter((r): r is Rec => r !== undefined && typeof r.id === 'string' && typeof r.type === 'string')
-  const unreadable = feedback.items.length - readable.length
-  const listed = readable.slice(0, MAX_FEEDBACK_ITEMS)
-  const omitted = readable.length - listed.length
+  const everyItem = feedback.items.map(rec).filter((r): r is Rec => r !== undefined && typeof r.id === 'string' && typeof r.type === 'string')
+  const unreadable = feedback.items.length - everyItem.length
   const board = boardHead(boardFile, io)
   const sameBoard = board !== undefined && board.id === feedback.boardId
+  // The user deleted the withdrawn ones, and the board already answers the others when it responds to this file.
+  const open = everyItem.filter((r) => !feedback.withdrawn.has(r.id as string))
+  const settled = sameBoard && board.respondsTo === feedback.id ? board.answered : new Set<string>()
+  const readable = open.filter((r) => !settled.has(r.id as string))
+  const answered = open.length - readable.length
+  const listed = readable.slice(0, MAX_FEEDBACK_ITEMS)
+  const omitted = readable.length - listed.length
 
   if (json) {
     const items = listed.map((item) => {
@@ -202,7 +216,8 @@ function runFeedback(boardFile: string, json: boolean, io: CliIo): CliResult {
       baseRevision: feedback.baseRevision,
       ...(sameBoard ? { boardRevision: board.revision } : {}),
       items,
-      withdrawn: feedback.withdrawn,
+      answered,
+      withdrawn: feedback.withdrawn.size,
       omittedItems: omitted,
       unreadableItems: unreadable,
     }
@@ -211,7 +226,7 @@ function runFeedback(boardFile: string, json: boolean, io: CliIo): CliResult {
 
   const state = board === undefined ? '' : !sameBoard ? ` (board is ${shown(board.id, NAME, true)})` : board.revision === feedback.baseRevision ? '' : ` (board now rev ${board.revision})`
   const total = readable.length === 0 ? 'no open items' : count(readable.length, 'item')
-  const left = feedback.withdrawn === 0 ? '' : `, ${feedback.withdrawn} withdrawn not shown`
+  const left = `${answered === 0 ? '' : `, ${answered} already answered`}${feedback.withdrawn.size === 0 ? '' : `, ${feedback.withdrawn.size} withdrawn not shown`}`
   const lines = [`${shown(feedback.id, NAME)}  board ${shown(feedback.boardId, NAME)}  base rev ${feedback.baseRevision}${state}  ${total}${left}`]
   for (const item of listed) {
     const type = item.type as string
@@ -226,7 +241,7 @@ function runFeedback(boardFile: string, json: boolean, io: CliIo): CliResult {
 // ---- outline ----
 
 function runOutline(boardFile: string, json: boolean, io: CliIo): CliResult {
-  const loaded = loadBoard(boardFile, io)
+  const loaded = loadBoard(boardFile, io, json)
   if (isResult(loaded)) return loaded
   const { board } = loaded
   const kinds = new Map<string, string[]>()
@@ -273,11 +288,11 @@ function runOutline(boardFile: string, json: boolean, io: CliIo): CliResult {
 const LISTS = ['components', 'relationships', 'items', 'groups', 'scenarios'] as const
 
 function runShow(boardFile: string, ids: readonly string[], json: boolean, io: CliIo): CliResult {
-  const loaded = loadBoard(boardFile, io)
+  const loaded = loadBoard(boardFile, io, json)
   if (isResult(loaded)) return loaded
   const { board } = loaded
   // The file as it is, so a part prints exactly as its author wrote it. The board passed validation, so the lists are there.
-  const raw = JSON.parse(loaded.text.replace(/^﻿/, '')) as Record<(typeof LISTS)[number], Rec[] | undefined>
+  const raw = JSON.parse(loaded.text.replace(/^\uFEFF/, '')) as Record<(typeof LISTS)[number], Rec[] | undefined>
   const known = new Map<string, { list: (typeof LISTS)[number]; index: number }>()
   for (const list of LISTS) (board[list] as { id: string }[]).forEach((x, index) => known.set(x.id, { list, index }))
 
