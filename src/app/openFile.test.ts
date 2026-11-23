@@ -24,8 +24,9 @@ describe('readFileText', () => {
     expect(text).not.toHaveBeenCalled()
     expect(result.ok).toBe(false)
     if (result.ok) return
-    expect(result.message).toBe(tooBig(size))
-    expect(result.message).toMatch(/MB\. Anatomy opens files up to 2 MB\.$/)
+    // Only the boundary size is built as text to compare. A huge file is never built in a test.
+    if (size === LIMITS.fileBytes * 2 + 1) expect(result.message).toBe(tooBig(size))
+    else expect(result.message).toBe('This file is 300 MB. Anatomy opens files up to 2 MB.')
   })
 
   it('reads a file at the limit as before', async () => {

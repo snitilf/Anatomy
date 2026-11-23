@@ -43,7 +43,9 @@ describe('watchBoard', () => {
     await folder.write(FILES.board, 'x'.repeat(1_000_001))
     await vi.advanceTimersByTimeAsync(20_000)
     expect(onBoard).not.toHaveBeenCalled()
-    expect(read.mock.calls.length).toBeLessThanOrEqual(1)
+    // The one read was refused for its size, and the file was not asked for again.
+    expect(read).toHaveBeenCalledTimes(1)
+    await expect(read.mock.results[0]!.value).rejects.toMatchObject({ name: 'FileTooLargeError' })
 
     await folder.write(FILES.board, revision(2))
     await vi.advanceTimersByTimeAsync(4000)

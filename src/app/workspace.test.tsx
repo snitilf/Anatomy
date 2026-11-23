@@ -8,6 +8,7 @@ import { createMemoryFolder, memoryFolderAccess, type MemoryFile } from '../work
 import { AppStoreProvider } from './AppStoreProvider'
 import { Shell } from './Shell'
 import { WorkspaceProvider } from './workspace'
+import { useWorkspace } from './workspaceContext'
 
 const refund = JSON.parse(refundRaw) as { title: string; components: { id: string; label: string }[] }
 const panel = () => within(screen.getByTestId('inspector'))
@@ -50,23 +51,111 @@ async function addNote(text: string) {
   fireEvent.click(panel().getByRole('button', { name: 'Add' }))
 }
 
+const MARKED = '<!-- Written by Anatomy, which replaces this file when the format changes. Delete this line to keep your own version. -->\n\n'
+
+/** A button that opens the folder the access picks next, as the open menu does while a board is open. */
+function PickAgain() {
+  const { openFolder } = useWorkspace()
+  return <button onClick={openFolder}>Pick again</button>
+}
+
+function appWithPicker(access: ReturnType<typeof memoryFolderAccess>) {
+  return render(
+    <AppStoreProvider>
+      <WorkspaceProvider folderAccess={access}>
+        <Shell />
+        <PickAgain />
+      </WorkspaceProvider>
+    </AppStoreProvider>,
+  )
+}
+
+const otherBoard = (JSON.stringify({ ...JSON.parse(refundRaw), id: 'other-board', title: 'Another board' }))
+
 describe('folder mode with a file that is too large', () => {
-  it('reports a board over the limit with the board check message, without reading it', async () => {
-    const folder = repo({ [FILES.board]: 'x'.repeat(1_200_000) })
-    const read = vi.spyOn(folder, 'read')
-    app(memoryFolderAccess(folder))
-    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
-    expect(await screen.findByText('The file is 1,200,000 bytes. The limit is 1,000,000 bytes.')).toBeInTheDocument()
-    expect(read).toHaveBeenCalledTimes(1)
+  it('reports a board over the limit without reading it, and opens the board when a valid one is written', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const folder = repo({ [FILES.board]: 'x'.repeat(1_200_000) })
+      const read = vi.spyOn(folder, 'read')
+      app(memoryFolderAccess(folder))
+      fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+      expect(await screen.findByText('The file is 1,200,000 bytes. The limit is 1,000,000 bytes.')).toBeInTheDocument()
+      await expect(read.mock.results[0]!.value).rejects.toMatchObject({ name: 'FileTooLargeError' })
+      // The folder is still watched: the next board the agent writes opens.
+      await folder.write(FILES.board, refundRaw)
+      await act(() => vi.advanceTimersByTimeAsync(6100))
+      expect(await opened()).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it('does not open the board when the layer is far over the limit, and keeps the file', async () => {
-    const folder = repo({ [FILES.board]: refundRaw, [FILES.layer]: 'x'.repeat(17_000_000) })
+  it('does not write the open board layer into a folder whose layer is far over the limit, and keeps that file', async () => {
+    const first = repo()
+    const second = repo({ [FILES.board]: otherBoard, [FILES.layer]: 'x'.repeat(17_000_000) })
+    const access = memoryFolderAccess(first)
+    appWithPicker(access)
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    await opened()
+    await addNote('Belongs to the first board')
+    await waitFor(() => expect(layerOf(first)?.notes).toHaveLength(1), { timeout: 10_000 })
+    const read = vi.spyOn(second, 'read')
+
+    access.pick = async () => second
+    fireEvent.click(screen.getByRole('button', { name: 'Pick again' }))
+    expect(await screen.findByText(/could not read layer\.json in shop/)).toBeInTheDocument()
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    await expect(read.mock.results.find((_, n) => read.mock.calls[n]![0] === FILES.layer)!.value).rejects.toMatchObject({ name: 'FileTooLargeError' })
+    expect(second.files.get(FILES.layer)?.text).toBe('x'.repeat(17_000_000))
+    expect(second.files.has(FILES.layerBackup)).toBe(false)
+  })
+
+  it('never writes the first board layer into the folder it switches to while that layer is being read', async () => {
+    const first = repo()
+    const writes: string[] = []
+    const second = createMemoryFolder(
+      'second',
+      new Map([
+        [FILES.board, { text: otherBoard, lastModified: 1 }],
+        [FILES.layer, { text: JSON.stringify({ format: 'anatomy-layer', version: 2, boardId: 'other-board', notes: [] }), lastModified: 1 }],
+      ]),
+      { onWrite: (files) => writes.push(files.get(FILES.layer)?.text ?? '') },
+    )
+    const slow = second.read.bind(second)
+    second.read = async (name) => {
+      if (name === FILES.layer) await new Promise((resolve) => setTimeout(resolve, 1200))
+      return slow(name)
+    }
+    const access = memoryFolderAccess(first)
+    appWithPicker(access)
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    await opened()
+    await addNote('Belongs to the first board')
+    await waitFor(() => expect(layerOf(first)?.notes).toHaveLength(1), { timeout: 10_000 })
+
+    access.pick = async () => second
+    fireEvent.click(screen.getByRole('button', { name: 'Pick again' }))
+    expect(await within(await screen.findByTestId('inspector')).findByRole('heading', { name: 'Another board' }, { timeout: 5000 })).toBeInTheDocument()
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    expect(writes.join('')).not.toContain('Belongs to the first board')
+  })
+
+  it('keeps a helper file over 2 MB without reading it, and still writes the others', async () => {
+    const big = MARKED + 'x'.repeat(2_000_001)
+    const folder = repo({ 'guide/ask.md': big })
     app(memoryFolderAccess(folder))
     fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
-    expect(await screen.findByText(/could not read layer\.json in shop/)).toBeInTheDocument()
-    expect(folder.files.get(FILES.layer)?.text.length).toBe(17_000_000)
-    expect(folder.files.has(FILES.layerBackup)).toBe(false)
+    await screen.findByRole('heading', { name: 'shop has no board yet.' })
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    const read = vi.spyOn(folder, 'read')
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Copy prompt' }))
+    await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^<!-- Written by Anatomy/))
+    await waitFor(() => expect(folder.files.get('guide/honesty.md')?.text).toContain('## Honesty rules'))
+    expect(folder.files.get('guide/ask.md')?.text).toBe(big)
+    const askRead = read.mock.calls.findIndex(([name]) => name === 'guide/ask.md')
+    expect(askRead).toBeGreaterThanOrEqual(0)
+    await expect(read.mock.results[askRead]!.value).rejects.toMatchObject({ name: 'FileTooLargeError' })
   })
 })
 

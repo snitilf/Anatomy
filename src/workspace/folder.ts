@@ -53,7 +53,7 @@ const READ_LIMITS: Record<string, number> = {
   [FILES.layer]: 16_000_000,
 }
 const HELPER_READ_LIMIT = 2_000_000
-export const readLimit = (name: string): number => READ_LIMITS[name] ?? HELPER_READ_LIMIT
+export const readLimit = (name: string): number => Object.hasOwn(READ_LIMITS, name) ? READ_LIMITS[name]! : HELPER_READ_LIMIT
 
 /** A file is over the size `read` accepts. Nothing of it was read. */
 export class FileTooLargeError extends Error {
