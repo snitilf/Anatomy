@@ -25,9 +25,15 @@ describe('the golden output', () => {
 })
 
 describe('validate', () => {
-  it.each(Object.entries(examples))('passes %s with exit 0 and no warnings', (_path, text) => {
-    const result = runAnatomy(['validate', 'board.json', '--strict'], memoryIo(new Map([['board.json', text]])))
-    expect(result).toEqual({ code: 0, stdout: expect.stringMatching(/^board\.json: valid, revision \d+\n$/), stderr: '' })
+  // The bundled boards were written before the warning about connections with no explanation. That is the only
+  // warning they may draw, until they gain explanations.
+  it.each(Object.entries(examples))('passes %s with exit 0 and no warning but the missing explanations', (_path, text) => {
+    const result = runAnatomy(['validate', 'board.json', '--json'], memoryIo(new Map([['board.json', text]])))
+    const report = JSON.parse(result.stdout) as { valid: boolean; errors: unknown[]; warnings: { code: string }[] }
+    expect(result.code).toBe(0)
+    expect(report.valid).toBe(true)
+    expect(report.errors).toEqual([])
+    expect(report.warnings.map((w) => w.code).filter((code) => code !== 'no-explanation')).toEqual([])
   })
 
   it.each(VALID_CASES.map((c) => [c.name, c] as const))('exits 0 on the valid case "%s"', (_name, c) => {

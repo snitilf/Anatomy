@@ -68,6 +68,17 @@ export function cliOutputs(examples: Record<string, string>, texts: CliTexts): C
       text: applied([{ op: 'remove', path: '/components/payment' }]),
       kind: 'prose',
     },
+    {
+      name: 'anatomy apply, two added parts with no ID',
+      text: applied([
+        { op: 'add', path: '/components', value: { label: 'Fraud check', summary: 'Scores each order before it is charged.', source: { kind: 'agent-proposal' } } },
+        { op: 'add', path: '/relationships', value: { from: 'api', to: 'payment', kind: 'calls', label: 'score', explanation: 'The API asks for a score first.', source: { kind: 'agent-proposal' } } },
+      ]),
+      kind: 'prose',
+    },
+    { name: 'anatomy id, a taken slug', text: read('base board', ['id', 'Checkout page']), kind: 'prose' },
+    { name: 'anatomy fmt --bump', text: read('base board', ['fmt', '--bump']), kind: 'prose' },
+    { name: 'anatomy validate, no explanations and a revision that did not rise', text: corpus('connections with no explanation') + corpus('revision not above the last version'), kind: 'prose' },
     { name: 'anatomy feedback, three items', text: read('feedback not answered yet', ['feedback']), kind: 'prose' },
     { name: 'anatomy feedback --json, three items', text: read('feedback not answered yet', ['feedback', '--json']), kind: 'json' },
     { name: 'anatomy outline, corpus board', text: read('base board', ['outline']), kind: 'prose' },

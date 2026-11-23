@@ -229,7 +229,8 @@ In this repository, `npm run anatomy -- <command>` runs the same tool from the s
 | Command | What it does |
 | --- | --- |
 | `node .anatomy/anatomy.mjs validate [file]` | Checks the board the way Anatomy does. The file is `.anatomy/board.json` unless you name one. |
-| `node .anatomy/anatomy.mjs fmt [file]` | Validates the board and, when it is valid, puts the keys in schema order and indents with two spaces. It writes only when the text changes. |
+| `node .anatomy/anatomy.mjs fmt [file]` | Validates the board and, when it is valid, puts the keys in schema order and indents with two spaces. It writes only when the text changes. With `--bump`, it also raises `revision` by one (above `board.prev.json` when that is higher), so use it after you rewrite the whole file. |
+| `node .anatomy/anatomy.mjs id <label>` | Prints an ID made from the label that nothing on the board uses: `payment-step`, then `payment-step-2`. |
 | `node .anatomy/anatomy.mjs apply [patch \| -]` | Edits the board with a list of operations. See [Revise a board with a patch](#revise-a-board-with-a-patch). |
 | `node .anatomy/anatomy.mjs topic [name]` | Prints a topic of the authoring guide, the same text as `.anatomy/guide/<name>.md`. Without a name, it lists the topics. |
 | `node .anatomy/anatomy.mjs schema` | Prints every field of a board with its limits, from `schema/board.v1.fields.txt`. |
@@ -258,6 +259,8 @@ They do not stop the board from opening:
 - A lesson that this version of Anatomy does not have.
 - An ID in `changed` that is not on the board.
 - A component with no connection.
+- Connections with no `explanation`. One warning counts them and names the first three. `validate` and `apply` print it, and the app does not.
+- A `revision` that is not above the one in `board.prev.json`, the last version `apply` kept. With no such file there is nothing to compare, and the tool says nothing.
 - A phrase that promises what no explanation can know, such as "never fails", "foolproof", or "100% secure", in a claim.
   Words that honest text uses, such as "always" or "guarantees", are left alone.
 - An adopted answer with an empty `changed` list, which keeps the user's mark on the map.
@@ -337,6 +340,7 @@ Answers to the same feedback that the board already has stay, and answers to old
 ### The revision and the result
 
 `apply` raises `revision` by exactly one.
+An added item with no `id` gets one made from its `label`, `title`, or `text` (a connection with no `label` from its ends), and `apply` prints the IDs it made.
 A `test` on `/revision`, or `--base N` with the revision you read, stops the patch when the board is at another revision.
 The new board is checked with the same `parseBoard` as the app before anything is written, then written in the format of `fmt`, so a later `fmt` changes nothing.
 The old board is kept first, byte for byte, as `board.prev.json` in the same folder (`<name>.prev.json` for a board with another name).

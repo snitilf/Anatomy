@@ -1,6 +1,7 @@
-import { boardAdvice, feedbackAdvice, readFeedback } from '../board/advice.ts'
+import { boardAdvice, explanationAdvice, feedbackAdvice, readFeedback } from '../board/advice.ts'
 import type { BoardProblem } from '../board/validate.ts'
 import { applyPatch, type OpProblem } from './apply.ts'
+import { previousName } from './ids.ts'
 import { clip, count, line, MAX_WARNINGS, plain, type CliIo, type CliResult } from './output.ts'
 
 export interface ApplyOptions {
@@ -15,12 +16,6 @@ export interface ApplyOptions {
 
 /** Diff lines past this many are counted, not listed. */
 const MAX_DIFF = 50
-
-/** The board file name without `.json`, plus `.prev.json`: `board.json` keeps its last version as `board.prev.json`. */
-function previousName(board: string): string {
-  const name = board.slice(Math.max(board.lastIndexOf('/'), board.lastIndexOf('\\')) + 1)
-  return `${name.replace(/\.json$/i, '')}.prev.json`
-}
 
 function opLine(problem: OpProblem): string {
   const where = problem.op === undefined ? '(patch)' : `ops[${problem.op}]`
@@ -92,11 +87,13 @@ export function runApply(options: ApplyOptions, io: CliIo): CliResult {
   }
 
   const feedbackWarnings = feedbackAdvice(result.board, feedback)
-  const all = [...feedbackWarnings, ...result.warnings, ...boardAdvice(result.board)]
+  const all = [...feedbackWarnings, ...result.warnings, ...boardAdvice(result.board), ...explanationAdvice(result.board)]
   const warnings = all.slice(0, MAX_WARNINGS)
   const omittedWarnings = Math.max(0, all.length - warnings.length)
   const shownDiff = result.diff.slice(0, MAX_DIFF)
   const omittedDiff = result.diff.length - shownDiff.length
+  const shownIds = result.assigned.slice(0, MAX_DIFF)
+  const omittedIds = result.assigned.length - shownIds.length
 
   if (options.json) {
     const report = {
@@ -106,6 +103,8 @@ export function runApply(options: ApplyOptions, io: CliIo): CliResult {
       revision: { from: result.from, to: result.to },
       diff: shownDiff,
       omittedDiff,
+      assigned: shownIds,
+      omittedAssigned: omittedIds,
       warnings: warnings.map(plain),
       omittedWarnings,
     }
@@ -116,6 +115,8 @@ export function runApply(options: ApplyOptions, io: CliIo): CliResult {
     `${head}${all.length > 0 ? `, ${count(all.length, 'warning')}` : ''}`,
     ...shownDiff.map(clip),
     ...(omittedDiff > 0 ? [`${omittedDiff} more changes are not shown.`] : []),
+    ...shownIds.map((a) => `ops[${a.op}] ID: ${a.id}`),
+    ...(omittedIds > 0 ? [`${omittedIds} more IDs are not shown.`] : []),
     ...warnings.map(line),
     ...(omittedWarnings > 0 ? [`${omittedWarnings} more warnings are not shown.`] : []),
   ]

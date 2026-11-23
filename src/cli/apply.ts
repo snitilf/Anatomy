@@ -3,6 +3,7 @@ import { LIMITS, RESPONSE_STATUSES } from '../board/schema.ts'
 import { inSchemaOrder, keysOf, schemaAt } from '../board/shape.ts'
 import { freeId, nearest } from '../board/suggest.ts'
 import { parseBoard, type BoardProblem } from '../board/validate.ts'
+import { idsOn, makeId } from './ids.ts'
 import { LESSON_IDS } from '../lessons/ids.ts'
 
 // `anatomy apply`: a short list of edits that addresses list items by ID, applied to a copy of the board, checked
@@ -116,6 +117,8 @@ export type ApplyResult =
       /** Warnings of `parseBoard` for the new board. */
       warnings: BoardProblem[]
       board: import('../board/schema.ts').Board
+      /** The IDs given to added items that had none, with the index of the operation. */
+      assigned: { op: number; id: string }[]
     }
   | {
       ok: false
@@ -308,15 +311,14 @@ function notFoundKey(parent: Obj, key: string, trail: readonly PropertyKey[], wh
 }
 
 /** Every ID on the board, with the board's own. */
-function idsOn(doc: Obj): Set<string> {
-  const ids = new Set<string>()
-  if (typeof doc.id === 'string') ids.add(doc.id)
-  for (const name of LISTS) {
-    const list = doc[name]
-    if (Array.isArray(list)) for (const entry of list) ids.add(idOf(entry) ?? '')
-  }
-  ids.delete('')
-  return ids
+/** The field that names an item of each list, and so gives it an ID when the patch has none. */
+const NAME_FIELD: Record<ListName, string> = { groups: 'label', components: 'label', relationships: 'label', items: 'text', scenarios: 'title' }
+
+/** The text an added item's ID is made from: its ends for a connection, else its label, title, or text. Undefined when it has none. */
+function nameFor(list: ListName, value: Obj): string | undefined {
+  if (list === 'relationships' && typeof value.from === 'string' && typeof value.to === 'string') return `${value.from}-to-${value.to}`
+  const name = value[NAME_FIELD[list]]
+  return typeof name === 'string' && name.trim() !== '' ? name : undefined
 }
 
 /** What `--cascade` took out along with a removed part: a path, as in the diff, and the part it was removed with. */
@@ -484,6 +486,7 @@ export function applyPatch(input: ApplyInput): ApplyResult {
   const touches: Touches = new Map()
   const answers = new Map<string, { op: number; status: string; text: string }>()
   const removed = new Map<string, { op: number; path: string }>()
+  const assigned: { op: number; id: string }[] = []
   const cascaded: Cascaded = new Map()
   const feedback = input.feedback
 
@@ -567,11 +570,21 @@ export function applyPatch(input: ApplyInput): ApplyResult {
           return
         }
         // add: append an item, or put it before another one
-        const value = op.value
+        let value = op.value
         if (!isObj(value)) return fail('wrong-type', `The value added to ${op.path} must be an object.`)
-        const id = idOf(value)
-        if (id === undefined) return fail('missing-id', 'A new item needs an "id".', `Add one, for example "id": "${listName === 'components' ? 'payment' : 'new-item'}".`)
         const taken = idsOn(doc)
+        let id = idOf(value)
+        if (id === undefined) {
+          const source = nameFor(listName, value)
+          id = source === undefined ? undefined : makeId(source, taken)
+          if (id === undefined) {
+            const example = `"id": "${listName === 'components' ? 'payment' : 'new-item'}"`
+            if (source === undefined) return fail('missing-id', 'A new item needs an "id" or a label to make one from.', `Add one, for example ${example}.`)
+            return fail('missing-id', `The ${NAME_FIELD[listName]} ${show(source.slice(0, 80))} has no letters or digits to make an ID from.`, `Add an "id", for example ${example}.`)
+          }
+          value = { ...value, id }
+          assigned.push({ op: index, id })
+        }
         if (taken.has(id)) return fail('duplicate-id', `The ID ${show(id.slice(0, 80))} is already used on the board. IDs are unique across the whole board.`, `Use a new ID, for example "${freeId(id, taken, LIMITS.id)}".`)
         let position = list.length
         if (op.before !== undefined) {
@@ -643,7 +656,7 @@ export function applyPatch(input: ApplyInput): ApplyResult {
       const because = notes.find((n) => line.slice(2) === n.path)
       return because === undefined ? line : `${line} (cascade, with ${because.because})`
     })
-    return { ok: true, text, from, to: from + 1, diff: lines, warnings: parsed.warnings, board: parsed.board }
+    return { ok: true, text, from, to: from + 1, diff: lines, warnings: parsed.warnings, board: parsed.board, assigned }
   }
   if (!parsed.ok && !input.cascade) {
     for (const [id, where] of removed) {

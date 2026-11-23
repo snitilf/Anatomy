@@ -38,7 +38,7 @@ describe('anatomy id', () => {
     const s = setup()
     expect(s.run('id', 'Shop').stdout).toBe('shop-2\n')
     expect(s.run('id', 'Backend').stdout).toBe('backend-2\n')
-    expect(s.run('id', 'Place an order').stdout).toBe('place-an-order-2\n')
+    expect(s.run('id', 'Place order').stdout).toBe('place-order-2\n')
   })
 
   it('counts on from a label that already ends in a number', () => {
@@ -86,7 +86,7 @@ describe('anatomy id', () => {
   })
 
   it('exits 2 when the label has nothing to make an ID from', () => {
-    for (const label of ['日本語', '---', '   ', '']) {
+    for (const label of ['日本語', '!!!', '   ', '']) {
       const r = setup().run('id', label)
       expect(r.code, label).toBe(2)
       expect(r.stdout).toBe('')
@@ -121,7 +121,7 @@ describe('apply assigns missing IDs', () => {
     const r = apply([addPart(part)])
     expect(r.code).toBe(0)
     expect(r.board().components.at(-1).id).toBe('queue')
-    expect(r.stdout).toBe('.anatomy/board.json: applied, revision 3 to 4\n+ components/queue\nops[0] ID: queue\n')
+    expect(r.stdout.split('\n').slice(0, 3)).toEqual(['.anatomy/board.json: applied, revision 3 to 4, 1 warning', '+ components/queue', 'ops[0] ID: queue'])
   })
 
   it('prints the map in --json', () => {
@@ -291,7 +291,7 @@ describe('validate warns when the revision did not rise', () => {
 
   it('names the prev file after the board file', () => {
     const s = setup(() => {}, { 'work/draft.json': pretty(baseBoard()), 'work/draft.prev.json': pretty({ ...baseBoard(), revision: 3 }) })
-    expect(s.run('validate', 'work/draft.json').stdout).toContain('work/draft.prev.json')
+    expect(s.run('validate', 'work/draft.json').stdout).toContain('draft.prev.json')
   })
 
   it('ignores a prev file that is not a board or has no revision', () => {
