@@ -27,6 +27,7 @@
     "schema": "node scripts/generate-schema.ts",
     "tokens": "node scripts/tokens.ts",
     "eval": "node eval/run.ts",
+    "agent-files": "node scripts/agent-files.ts",
     "anatomy": "node bin/anatomy.ts"
   },
   "dependencies": {

@@ -46,6 +46,7 @@ export type ProblemCode =
   | 'responds-to-other'
   | 'revision-not-raised'
   | 'feedback-unreadable'
+  | 'no-assumptions'
 
 export interface BoardProblem {
   /** Where the problem is, for example `relationships[2].to`. Empty for the whole file. */

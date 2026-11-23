@@ -231,9 +231,12 @@ In this repository, `npm run anatomy -- <command>` runs the same tool from the s
 | `node .anatomy/anatomy.mjs validate [file]` | Checks the board the way Anatomy does. The file is `.anatomy/board.json` unless you name one. |
 | `node .anatomy/anatomy.mjs fmt [file]` | Validates the board and, when it is valid, puts the keys in schema order and indents with two spaces. It writes only when the text changes. |
 | `node .anatomy/anatomy.mjs apply [patch \| -]` | Edits the board with a list of operations. See [Revise a board with a patch](#revise-a-board-with-a-patch). |
+| `node .anatomy/anatomy.mjs topic [name]` | Prints a topic of the authoring guide, the same text as `.anatomy/guide/<name>.md`. Without a name, it lists the topics. |
+| `node .anatomy/anatomy.mjs schema` | Prints every field of a board with its limits, from `schema/board.v1.fields.txt`. |
 | `node .anatomy/anatomy.mjs help` | Shows the commands. |
 
-`--json` prints the result as one JSON object, and `--strict` makes warnings count as problems.
+`--json` prints the result of `validate`, `fmt`, or `apply` as one JSON object, and `--strict` makes warnings count as problems for `validate` and `fmt`.
+`topic` and `schema` print plain text and take no options.
 The exit code is 0 when the board is valid (or the patch was applied), 1 when it has problems (or the patch was not applied), and 2 when a file cannot be read or written or the command is wrong.
 
 The output has one line for the file, then one line per problem:
@@ -258,6 +261,8 @@ They do not stop the board from opening:
 - A phrase that promises what no explanation can know, such as "never fails", "foolproof", or "100% secure", in a claim.
   Words that honest text uses, such as "always" or "guarantees", are left alone.
 - An adopted answer with an empty `changed` list, which keeps the user's mark on the map.
+- A first board (revision 1) with no item of kind `assumption` or `unknown`.
+  It points to the `ask` topic, because such a board was most likely written without the questions, or with gaps filled silently.
 - When `feedback.json` is next to the board and is for the same board: a revision that should answer it but does not, an item with no answer, an answer to an unknown or withdrawn item, and a revision that is not higher than the feedback's `baseRevision`.
 
 With `--json`, each problem has a `code` that stays the same when a message changes, for example `unknown-component`, `duplicate-id`, or `unanswered-feedback`.

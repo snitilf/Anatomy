@@ -20,7 +20,7 @@ const files = (page: Page) => page.evaluate((key) => (JSON.parse(localStorage.ge
 async function runApply(page: Page, patch: unknown[]): Promise<{ code: number; stdout: string; written: Record<string, string>; names: string[] }> {
   const dir = await mkdtemp(join(tmpdir(), 'anatomy-e2e-apply-'))
   try {
-    await mkdir(join(dir, '.anatomy'))
+    await mkdir(join(dir, '.anatomy', 'guide'), { recursive: true })
     for (const [name, file] of Object.entries(await files(page))) await writeDiskFile(join(dir, '.anatomy', name), file.text)
     const child = promisify(execFile)(process.execPath, ['.anatomy/anatomy.mjs', 'apply', '-'], { cwd: dir })
     child.child.stdin?.end(JSON.stringify(patch))

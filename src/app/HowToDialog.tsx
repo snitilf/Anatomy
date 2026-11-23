@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { Copy, Download, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { AGENT_PROMPT } from './agentReadme'
 import { AppToaster } from './AppToaster'
 import guideText from '../../docs/authoring-guide.md?raw'
 import schemaText from '../../schema/board.v1.schema.json?raw'
@@ -9,21 +10,6 @@ import buttons from './buttons.module.css'
 import styles from './HowToDialog.module.css'
 
 const DIALOG_TOASTER = 'how-to'
-
-export const AGENT_PROMPT = `Write an Anatomy board file that explains: [describe the plan, feature, or project here]
-
-Follow the attached guide (authoring-guide.md) and JSON Schema (board.v1.schema.json).
-Read only this material: [list the files or notes you allow].
-
-Rules:
-- Use 6 to 12 parts. Group them as Frontend, Backend, Infrastructure, or similar, one level only.
-- Give every part and connection an honest source: user-stated for what I told you, agent-explanation for what you understood, agent-proposal for what you suggest, documented-intent only with a cited document.
-- Never claim that you checked code or saw it running. Cited paths are shown as "cited, not checked".
-- Before you write, ask me a few plain questions, with your recommended answer for each. Record what stays unknown as "unknown" or "question" items.
-- Add 1 to 4 walkthroughs. Highlights name parts and connections only.
-- Every ID is unique across the whole board, and every reference must point at something that exists.
-- Write the board to .anatomy/board.json in this repository. If you cannot write files, return only the JSON.
-- When you revise it later, raise revision and keep the IDs of everything that stays.`
 
 export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)

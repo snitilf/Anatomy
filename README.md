@@ -25,7 +25,7 @@ Your agent does the thinking, and Anatomy shows it.
 1. Start Anatomy and open it in Chrome or Edge (see [Quick start](#quick-start)).
 2. Click **Open folder** and pick your project.
 3. Click **Copy prompt**.
-   Anatomy writes `.anatomy/README.md` into your project, which teaches your agent the board format.
+   Anatomy writes `.anatomy/README.md` into your project: a short page that teaches your agent the rules, with topics in `.anatomy/guide/` that it reads when it needs them.
    It also writes `.anatomy/anatomy.mjs`, a script your agent can run to check the board before it hands it over and to revise it with a short patch.
 4. Paste the prompt into your coding agent and finish the sentence:
 
@@ -107,9 +107,10 @@ In other browsers, open a board file or a built-in example.
 | `npm test` | Runs the unit tests once with Vitest. |
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
 | `npm run test:e2e` | Builds the app in the `e2e` mode and runs the browser tests with the installed Google Chrome. |
-| `npm run schema` | Writes `schema/board.v1.schema.json` from the Zod schema. Run it after a schema change. |
+| `npm run schema` | Writes `schema/board.v1.schema.json` and the field list `schema/board.v1.fields.txt` from the Zod schema. Run it after a schema change. |
 | `npm run anatomy -- <command>` | Runs the `anatomy` tool from the source, for example `npm run anatomy -- validate path/to/board.json`. See [Board format](docs/board-format.md#check-a-board-outside-the-app). |
-| `npm run tokens` | Prints the size of the generated agent README, each guide section, each example board, and the output of the `anatomy` tool. |
+| `npm run tokens` | Prints the size of the generated agent README, each guide section and topic, each example board, and the output of the `anatomy` tool. |
+| `npm run agent-files -- <folder>` | Writes the agent files into `<folder>/.anatomy/`, the way Copy prompt does. |
 | `npm run eval` | Prints the evaluation tasks in `eval/` and scores a board file against them. |
 
 The dev and preview servers listen on the loopback interface only.

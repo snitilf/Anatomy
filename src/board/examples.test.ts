@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import guide from '../../docs/authoring-guide.md?raw'
 import { LESSON_IDS } from '../lessons/catalog'
 import { EXAMPLES } from '../app/examples'
+import { readFeedback } from './advice'
 import { parseBoard } from './validate'
 
 const boards = import.meta.glob('../examples/**/*.board.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
@@ -76,10 +77,18 @@ describe('the two practical examples', () => {
 })
 
 describe('authoring guide', () => {
+  const section = (title: string) => guide.slice(guide.indexOf(title))
+  const firstJson = (text: string) => /```json\n([\s\S]*?)\n```/.exec(text)?.[1] ?? ''
+
   it('contains a minimal example that passes the full validator', () => {
-    const block = /```json\n([\s\S]*?)\n```/.exec(guide)?.[1]
-    expect(block).toBeDefined()
-    const result = parseBoard(block ?? '')
+    const block = firstJson(section('Minimal valid example'))
+    const result = parseBoard(block)
     expect(result.ok ? result.warnings : result.errors).toEqual([])
+  })
+
+  it('gives a feedback file, a patch, and a responses block that parse', () => {
+    expect(readFeedback(firstJson(section('The feedback file')))).toMatchObject({ id: 'feedback-k2m9x0q4z7ab' })
+    expect(Array.isArray(JSON.parse(firstJson(section('Revise with a patch'))))).toBe(true)
+    expect(JSON.parse(`{${firstJson(section('### The responses block'))}}`)).toHaveProperty('responses.respondsTo', 'feedback-k2m9x0q4z7ab')
   })
 })

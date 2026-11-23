@@ -1,4 +1,4 @@
-import type { FileName, FolderAccess, Folder } from './folder'
+import { filePath, type FileName, type FolderAccess, type Folder } from './folder'
 import type { MemoryFile } from './memoryFolder'
 
 /** The localStorage key an end-to-end test sets to stand in a repository folder. */
@@ -29,7 +29,11 @@ const save = (stored: Stored) => localStorage.setItem(TEST_FOLDER_KEY, JSON.stri
 export function testFolderAccess(): FolderAccess | undefined {
   const first = read()
   if (!first) return undefined
-  const file = (name: FileName) => read()?.files[name]
+  const file = (name: FileName) => {
+    filePath(name)
+    const files = read()?.files
+    return files !== undefined && Object.hasOwn(files, name) ? files[name] : undefined
+  }
   const stampOf = (f: MemoryFile) => ({ lastModified: f.lastModified, size: new TextEncoder().encode(f.text).length })
   const folder: Folder = {
     name: first.name,
@@ -43,6 +47,7 @@ export function testFolderAccess(): FolderAccess | undefined {
       return f ? { text: f.text, stamp: stampOf(f) } : undefined
     },
     write: async (name, text) => {
+      filePath(name)
       const stored = read() ?? { ...first, files: {} }
       stored.files[name] = { text, lastModified: Date.now() }
       save(stored)

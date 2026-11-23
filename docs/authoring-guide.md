@@ -32,7 +32,7 @@ This list shows the order and the board field that each decision settles:
 
 1. Audience and goal. Who will read the board, and what must they understand afterwards? This settles `goal`.
 2. Scope. What is in, what is out, and does the board describe what is built, a plan, or both? This settles `scope.includes` and `scope.excludes`.
-3. Material. Which files and notes can you read? This limits your reading, as section 3 explains.
+3. Material. Which files and notes can you read? This limits your reading, as the next section explains.
 4. Depth. How many parts, from 6 to 12, and how much detail in each? This settles the number of components and the length of the summaries.
 5. Groups. How do the parts sort into groups, for example Frontend and Backend? This settles `groups`.
 6. Journeys. Which journeys deserve a walkthrough? This settles `scenarios`.
@@ -105,7 +105,7 @@ If you answer `feedback.json`, ask only about the feedback items that are unclea
 
 Read only the material that the user authorized.
 Do not search for other files and do not open them, even if they seem related.
-If an unknown can change the result, ask the user before you write, as section 2 explains.
+If an unknown can change the result, ask the user before you write.
 Record what you cannot confirm as items of kind `unknown` or `question`.
 Do not guess.
 
@@ -168,7 +168,7 @@ Label any part of the path that is not built as planned.
 A board lives in the repository at `.anatomy/board.json`.
 Anatomy opens each new revision as soon as you write it.
 
-To update a board, write the whole file again and do these steps:
+Every time you change a board, follow these rules:
 
 - Raise `revision` by one.
 - Keep the ID of every part, connection, item, and scenario that stays. The notes of the user stay attached by ID.
@@ -176,14 +176,119 @@ To update a board, write the whole file again and do these steps:
 - Give new things new IDs. Never reuse the ID of something that you removed for something else.
 
 When the user sends feedback, Anatomy writes `.anatomy/feedback.json`.
-Then the user asks you to answer it.
-Answer every item by its `id` in a `responses` block.
-Give each answer the status `adopted`, `declined`, or `answered`, and set `respondsTo` to the feedback `id`.
-For each adopted item, list in `changed` the IDs that you added or changed.
-Do not edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
-See [Responses](board-format.md#responses).
+Then the user asks you to answer it:
 
-## 8. Checklist before you hand over the file
+1. Read `.anatomy/feedback.json`. Each item has an `id` and a `type`.
+2. Decide what to do with each item. If an item is unclear, ask the user about that item only.
+3. Make the changes and answer every item, with a patch or by writing the whole file.
+4. Run `node .anatomy/anatomy.mjs validate`. It also checks that every item has an answer.
+
+Answer the items in a `responses` block:
+
+- Set `respondsTo` to the `id` of the feedback file.
+- Answer every item by its `id`, with the status `adopted`, `declined`, or `answered`.
+- For each adopted item, list in `changed` the IDs that you added or changed.
+- To adopt a `reconnect`, change `from` or `to` of the same relationship and keep its ID. List that ID in `changed`.
+- To adopt a `link` or a `new-part`, add the relationship or component, and list the new IDs in `changed`.
+- Do not answer the items in `withdrawn`.
+
+An item comes again when the user changed it, or when no answer to it arrived.
+Anatomy shows each answer next to the mark of the user.
+It removes a mark from the map once you adopted it and the IDs in `changed` are on the board.
+Do not edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
+
+## 8. Revise with a patch
+
+Once a board exists, you can write only the edits instead of the whole file.
+Write them to `.anatomy/patch.json` and run `node .anatomy/anatomy.mjs apply`.
+The script needs Node.js 24 or later.
+
+A patch is a JSON array of `test`, `add`, `remove`, `replace`, and `respond` operations.
+Paths name list items by ID: `/components/payment/summary`, `/relationships` to add one, `/relationships/api-to-queue` to remove one.
+Lists without IDs (`inputs`, `steps`) are replaced whole, and `add` takes an optional `before` ID.
+`for` ties an edit to a feedback item, and `respond` answers it: the script writes `responses` and `changed`.
+The script raises `revision`, validates the result, and writes only a valid board.
+It keeps the old board as `.anatomy/board.prev.json`.
+
+```json
+[
+  { "op": "replace", "path": "/components/payment/summary", "value": "Charges the card and retries twice.", "for": "note-a1b2c3d4e5f6" },
+  { "op": "respond", "for": "note-a1b2c3d4e5f6", "status": "answered", "text": "It retries twice." }
+]
+```
+
+`--base N` (the revision you read) stops a stale patch, `--dry-run` writes nothing, and `--cascade` drops what refers to a removed part.
+For a first board or a big restructure, write the whole file and run `validate`.
+
+## 9. The feedback file
+
+This is an example of `.anatomy/feedback.json`:
+
+```json
+{
+  "format": "anatomy-feedback",
+  "schemaVersion": 1,
+  "id": "feedback-k2m9x0q4z7ab",
+  "boardId": "checkout",
+  "baseRevision": 3,
+  "createdAt": "2026-11-14T10:02:00.000Z",
+  "items": [
+    {
+      "id": "note-a1b2c3d4e5f6",
+      "type": "question",
+      "text": "What happens when the payment call times out?",
+      "about": { "type": "component", "id": "payment", "label": "Payment" },
+      "snapshot": { "type": "component", "label": "Payment", "summary": "Charges the card." }
+    },
+    {
+      "id": "edit-0p9o8i7u6y5t",
+      "type": "reconnect",
+      "connection": { "id": "api-to-payment", "label": "charges", "kind": "calls" },
+      "was": { "from": { "type": "component", "id": "api", "label": "API" }, "to": { "type": "component", "id": "payment", "label": "Payment" } },
+      "now": { "from": { "type": "component", "id": "api", "label": "API" }, "to": { "type": "component", "id": "queue", "label": "Queue" } }
+    }
+  ],
+  "withdrawn": []
+}
+```
+
+Every mark is described by what it means on the board, never in pixels.
+A part is `{ "type": "component" }` for one of yours, or `{ "type": "new-part" }` for one the user proposed.
+`missing` means the user pointed at something that is no longer on the board.
+
+| `type` | What the user did | Fields |
+| --- | --- | --- |
+| `note`, `question` | Wrote a note or asked a question about the board, a part, or a connection. | `text`, `about`, `snapshot` (the target as the user saw it), and `status` when the target changed or left after they wrote it. |
+| `link` | Drew a connection you do not have. | `from`, `to`, `label`. |
+| `reconnect` | Moved one or both ends of one of your connections. | `connection`, `was` and `now` ends. |
+| `new-part` | Proposed a part. | `label`, `summary`, its `links`, and the parts it sits `near`. |
+| `drawing`, `shape` | Drew around or across parts and connections. | `note`, what it `encloses`, what it `touches`. |
+| `arrow` | Drew an arrow. | `note`, `from`, `to`. On a connection, `at` says where along it, from 0 at its start to 1 at its end. |
+| `text`, `sticky` | Wrote text on the map. | `text`, `note`, the parts it is `on`. |
+
+`withdrawn` lists items the user deleted after an earlier send.
+
+### The responses block
+
+```json
+"responses": {
+  "respondsTo": "feedback-k2m9x0q4z7ab",
+  "items": [
+    { "feedbackId": "note-a1b2c3d4e5f6", "status": "answered", "text": "It retries three times, then shows an error.", "changed": [] },
+    { "feedbackId": "edit-0p9o8i7u6y5t", "status": "adopted", "text": "The API now hands charges to the queue.", "changed": ["api-to-payment"] }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `respondsTo` | The `id` of the feedback file. |
+| `feedbackId` | The `id` of one item in it. |
+| `status` | `adopted`: the change is on the board now. `declined`: you did not make it, and `text` says why. `answered`: a question or note, answered in `text`. |
+| `text` | The answer, at most 600 characters. |
+| `changed` | The IDs of the components and relationships you added or changed for this item. |
+
+## 10. Checklist before you hand over the file
 
 Before you reply, make sure that every item in this list is true.
 If `.anatomy/anatomy.mjs` exists, run `node .anatomy/anatomy.mjs validate`: it checks items 1 to 3, 5, 6, 8, and 10 for you.
@@ -199,7 +304,7 @@ If `.anatomy/anatomy.mjs` exists, run `node .anatomy/anatomy.mjs validate`: it c
 9. No text promises a guarantee that the material does not state.
 10. If you answer feedback, `revision` is higher than before and every feedback item has a response.
 
-## 9. Prompt to paste into your agent
+## 11. Prompt to paste into your agent
 
 Copy this block, replace the placeholders, and send it to your agent.
 
@@ -209,13 +314,13 @@ Write an Anatomy board file that explains: <WHAT TO EXPLAIN>.
 Follow the guide at <PATH TO authoring-guide.md>.
 Validate the file against <PATH TO board.v1.schema.json>.
 Read only this material: <MATERIAL YOU AUTHORIZE>.
-Before you write, ask me the questions that section 2 of the guide describes.
+Before you write, ask me the questions that the guide describes under "Ask before you write".
 Record what you cannot confirm as "unknown" or "question" items instead of guessing.
 Write the board to .anatomy/board.json in the repository, and do not edit any other file.
 ```
 
 Anatomy writes `.anatomy/README.md` in a repository that it already opened.
-That file holds this guide and the schema, so a shorter prompt is enough:
+That file and the topics next to it hold this guide, so a shorter prompt is enough:
 
 ```text
 Read .anatomy/README.md, then write .anatomy/board.json that explains: <WHAT TO EXPLAIN>.
@@ -227,7 +332,7 @@ After the user sends feedback, Anatomy copies this prompt:
 Read .anatomy/feedback.json and answer every item in the next revision of .anatomy/board.json. The format is in .anatomy/README.md.
 ```
 
-## 10. Minimal valid example
+## 12. Minimal valid example
 
 This example is the smallest board that passes the schema, so it has 2 components.
 A real board has 6 to 12 components.

@@ -28,7 +28,7 @@ async function runTool(page: Page, args: string[]): Promise<{ code: number; stdo
   const files = await page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string }> }).files, KEY)
   const dir = await mkdtemp(join(tmpdir(), 'anatomy-e2e-'))
   try {
-    await mkdir(join(dir, '.anatomy'))
+    await mkdir(join(dir, '.anatomy', 'guide'), { recursive: true })
     for (const [name, file] of Object.entries(files)) await writeDiskFile(join(dir, '.anatomy', name), file.text)
     try {
       return { code: 0, stdout: (await promisify(execFile)(process.execPath, ['.anatomy/anatomy.mjs', ...args], { cwd: dir })).stdout }
@@ -151,7 +151,11 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   expect(reconnect.connection?.id).toBe(line.id)
   expect(reconnect.now?.to.id).toBe(other.id)
   expect(first.items.find((i) => i.type === 'shape')?.encloses?.map((x) => x.id)).toEqual(expect.arrayContaining([a.id, b.id]))
-  expect(await fileText(page, 'README.md')).toContain('### The responses block')
+  expect(await fileText(page, 'README.md')).toContain('`feedback-format`')
+  // The topic the README points to for feedback is a file next to it, and the script prints the same text.
+  const topic = (await fileText(page, 'guide/feedback-format.md')) ?? ''
+  expect(topic).toContain('### The responses block')
+  expect(await runTool(page, ['topic', 'feedback-format'])).toEqual({ code: 0, stdout: topic.slice(topic.indexOf('\n\n') + 2) })
   // The script the README names is there too, and it checks the board the agent is about to revise.
   expect(await fileText(page, 'anatomy.mjs')).toMatch(/^\/\/ Written by Anatomy/)
   expect(await runTool(page, ['validate'])).toEqual({ code: 0, stdout: '.anatomy/board.json: valid, revision 1\n' })

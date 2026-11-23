@@ -97,7 +97,10 @@ describe('folder mode', () => {
       const writeText = vi.fn().mockResolvedValue(undefined)
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
       fireEvent.click(main.getByRole('button', { name: 'Copy prompt' }))
-      await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^<!-- Written by Anatomy[^]*# Authoring an Anatomy board/))
+      await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toMatch(/^<!-- Written by Anatomy[^]*# Anatomy\n/))
+      // The topics go next to it, in .anatomy/guide, with the JSON Schema.
+      await waitFor(() => expect(folder.files.get('guide/ask.md')?.text).toMatch(/^<!-- Written by Anatomy[^]*## Ask before you write/))
+      expect(JSON.parse(folder.files.get('board.schema.json')!.text)).toMatchObject({ title: 'Anatomy board, version 1' })
       // It also writes the anatomy tool that the README tells the agent to run.
       await waitFor(() => expect(folder.files.get(FILES.script)?.text).toMatch(/^\/\/ Written by Anatomy[^]*node:fs/))
       expect(writeText).toHaveBeenCalledWith('Read .anatomy/README.md, then write .anatomy/board.json that explains: ')
@@ -107,6 +110,21 @@ describe('folder mode', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('keeps a topic file the user took over, and refreshes one Anatomy wrote before', async () => {
+    const mine = '# My own way to ask\n'
+    const older = '<!-- Written by Anatomy, which replaces this file when the format changes. Delete this line to keep your own version. -->\n\nOld.\n'
+    const folder = repo({ 'guide/ask.md': mine, 'guide/honesty.md': older })
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    await screen.findByRole('heading', { name: 'shop has no board yet.' })
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Copy prompt' }))
+    await waitFor(() => expect(folder.files.get('guide/honesty.md')?.text).toContain('## Honesty rules'))
+    expect(folder.files.get('guide/ask.md')?.text).toBe(mine)
+    // Nothing lands outside .anatomy: every name the app wrote is a file in it or in its guide folder.
+    for (const name of folder.files.keys()) expect(name).toMatch(/^(?:guide\/)?[a-z0-9][a-z0-9.-]*$/i)
   })
 
   it('shows a new revision through the update review and keeps the notes', async () => {

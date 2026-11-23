@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 import type { Board } from '../board/schema'
 import type { Layer } from '../layer/model'
 import type { BoardSummary, StorageError } from '../workspace/db'
-import type { FileName } from '../workspace/folder'
+import type { FileName, GuideFile } from '../workspace/folder'
 import type { Action } from './state'
 
 /** What the toolbar says about saving. It says "saved" only after the write was confirmed. */
@@ -51,7 +51,7 @@ export interface WorkspaceApi {
    * `onlyIfMissing` leaves any existing file alone, and `keep` leaves an existing file alone when it returns true.
    */
   writeFolderFile: (
-    file: Extract<FileName, 'feedback.json' | 'README.md' | 'anatomy.mjs'>,
+    file: Extract<FileName, 'feedback.json' | 'README.md' | 'anatomy.mjs' | 'board.schema.json'> | GuideFile,
     text: string,
     options?: { onlyIfMissing?: boolean; keep?: (existing: string) => boolean },
   ) => Promise<boolean>

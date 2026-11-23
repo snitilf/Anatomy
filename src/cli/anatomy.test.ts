@@ -182,6 +182,33 @@ describe('usage', () => {
   })
 })
 
+describe('the first board notice', () => {
+  const first = (items: unknown[]) => JSON.stringify({ ...baseBoard(), revision: 1, items })
+
+  it('warns, without failing, on a revision 1 board with no assumption or unknown items', () => {
+    const result = runAnatomy(['validate', 'board.json'], memoryIo(new Map([['board.json', first([])]])))
+    expect(result.code).toBe(0)
+    expect(result.stdout).toMatch(/^board\.json: valid, revision 1, 1 warning\nitems: .*\bask\b.*\n$/)
+    const json = JSON.parse(runAnatomy(['validate', 'board.json', '--json'], memoryIo(new Map([['board.json', first([])]]))).stdout) as { warnings: { code: string }[] }
+    expect(json.warnings.map((w) => w.code)).toEqual(['no-assumptions'])
+  })
+
+  it('stays quiet once the board records an assumption', () => {
+    const text = first([{ id: 'a-scope', kind: 'assumption', text: 'Only the order path.' }])
+    expect(runAnatomy(['validate', 'board.json'], memoryIo(new Map([['board.json', text]]))).stdout).toBe('board.json: valid, revision 1\n')
+  })
+})
+
+describe('help', () => {
+  it('lists topic and schema next to the other commands', () => {
+    const help = runAnatomy(['help'], memoryIo(new Map())).stdout
+    for (const command of ['validate', 'fmt', 'apply', 'topic', 'schema', 'help']) expect(help).toMatch(new RegExp(`^  ${command}\\b`, 'm'))
+    // topic and schema print plain text, so --json names the commands it works with.
+    expect(help).toMatch(/^ {2}--json .*\(validate, fmt, apply\)\.$/m)
+    expect(runAnatomy(['topic', '--json'], memoryIo(new Map())).code).toBe(2)
+  })
+})
+
 describe('fmt', () => {
   const compact = JSON.stringify(baseBoard()).replace('{"format":"anatomy-board","schemaVersion":1,', '{"schemaVersion":1,"format":"anatomy-board",')
 

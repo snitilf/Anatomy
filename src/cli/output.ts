@@ -19,6 +19,10 @@ export interface CliIo {
   sibling(path: string, name: string): string
   /** A short form of the path for messages. */
   display(path: string): string
+  /** The text of the authoring guide, for `topic`. Undefined in a copy of the tool built without it. */
+  guide?(): string
+  /** The field list, for `schema`. */
+  schemaSheet?(): string
 }
 
 export interface CliResult {

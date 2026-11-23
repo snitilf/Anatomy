@@ -2,7 +2,8 @@
 // Run with: npm run tokens
 import { readdirSync, readFileSync } from 'node:fs'
 import { cliOutputs } from './lib/cliOutputs.ts'
-import { estimateReadmeTokens, estimateTokens, guideSections, type TextKind } from './lib/estimate.ts'
+import { splitGuide } from '../src/cli/topics.ts'
+import { estimateTokens, guideSections, type TextKind } from './lib/estimate.ts'
 import { withAppModules } from './lib/vite.ts'
 
 interface Row {
@@ -21,17 +22,19 @@ function row(artifact: string, text: string, kind: TextKind): Row {
 async function measure(): Promise<Row[]> {
   const schemaText = read('schema/board.v1.schema.json')
   const guide = read('docs/authoring-guide.md')
+  const fields = read('schema/board.v1.fields.txt')
   const [{ agentReadme }] = (await withAppModules(['/src/app/agentReadme.ts'], (modules) => modules)) as [
     { agentReadme: () => string },
   ]
   const readme = agentReadme()
 
   const rows: Row[] = [
-    { artifact: '.anatomy/README.md as generated', characters: readme.length, tokens: estimateReadmeTokens(readme, schemaText) },
-    row('  authoring guide, whole', guide, 'prose'),
-    ...guideSections(guide).map((section) => row(`    ${section.title}`, section.text, 'prose')),
-    row('  JSON Schema, pretty printed', schemaText, 'json'),
-    row('  JSON Schema, minified', JSON.stringify(JSON.parse(schemaText)), 'json'),
+    { artifact: '.anatomy/README.md as generated', characters: readme.length, tokens: estimateTokens(readme, 'prose') },
+    row('docs/authoring-guide.md, whole', guide, 'prose'),
+    ...guideSections(guide).map((section) => row(`  ${section.title}`, section.text, 'prose')),
+    ...splitGuide(guide).map((topic) => row(`.anatomy/guide/${topic.name}.md`, topic.text, 'prose')),
+    row('JSON Schema, pretty printed', schemaText, 'json'),
+    row('  minified', JSON.stringify(JSON.parse(schemaText)), 'json'),
   ]
 
   const exampleDir = new URL('src/examples/', rootUrl)
@@ -44,7 +47,7 @@ async function measure(): Promise<Row[]> {
   }
 
   // The output of the anatomy tool. tokenBudget.test.ts guards these rows too.
-  for (const output of cliOutputs(examples)) rows.push(row(output.name, output.text, output.kind))
+  for (const output of cliOutputs(examples, { guide, fields })) rows.push(row(output.name, output.text, output.kind))
   return rows
 }
 
@@ -54,7 +57,7 @@ function printTable(rows: Row[]): void {
   console.log(line('Artifact', 'Characters', 'Est. tokens'))
   console.log(line('-'.repeat(width), '-'.repeat(10), '-'.repeat(10)))
   for (const r of rows) console.log(line(r.artifact, r.characters.toLocaleString('en-US'), r.tokens.toLocaleString('en-US')))
-  console.log('\nEstimate: characters / 4 for prose, characters / 3 for JSON. The README counts its schema as JSON.\nThe anatomy rows count its text output as prose and its --json output as JSON.')
+  console.log('\nEstimate: characters / 4 for prose, characters / 3 for JSON.\nThe anatomy rows count its text output as prose and its --json output as JSON.')
 }
 
 printTable(await measure())

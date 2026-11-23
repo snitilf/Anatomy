@@ -1,4 +1,4 @@
-import type { FileName, FileStamp, Folder, FolderAccess, Permission } from './folder'
+import { filePath, type FileName, type FileStamp, type Folder, type FolderAccess, type Permission } from './folder'
 
 export interface MemoryFile {
   text: string
@@ -32,16 +32,19 @@ export function createMemoryFolder(
     },
     async stat(file: FileName) {
       check()
+      filePath(file)
       const f = files.get(file)
       return f ? stampOf(f) : undefined
     },
     async read(file: FileName) {
       check()
+      filePath(file)
       const f = files.get(file)
       return f ? { text: f.text, stamp: stampOf(f) } : undefined
     },
     async write(file: FileName, text: string) {
       check()
+      filePath(file)
       files.set(file, { text, lastModified: clock() })
       options.onWrite?.(files)
     },

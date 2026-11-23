@@ -23,7 +23,7 @@ In other browsers, the user can open a board file or a built-in example.
 
 Tell the user to click **Open folder** and pick their project.
 When the project has no board yet, the user can click **How to make a board** to read the steps.
-The user then clicks **Copy prompt**, which copies the first prompt and writes `.anatomy/README.md` and `.anatomy/anatomy.mjs` into the project.
+The user then clicks **Copy prompt**, which copies the first prompt and writes the agent files into `.anatomy/` in the project: `README.md`, the topics in `guide/`, `board.schema.json`, and `anatomy.mjs`.
 
 ## Write a board
 
@@ -31,8 +31,9 @@ The board goes in the user's project, never in this repository.
 The path is `.anatomy/board.json`.
 
 1. If `.anatomy/README.md` exists in the user's project, read it.
-   It holds the authoring guide, the feedback format, and the schema.
-2. If it does not exist, read `docs/authoring-guide.md` and `schema/board.v1.schema.json` in this repository.
+   It holds the rules that you must always keep and an index of topics in `.anatomy/guide/`.
+   Read the `ask` topic before a first board, and the other topics when the index says so.
+2. If it does not exist, read `docs/authoring-guide.md` in this repository, and `schema/board.v1.fields.txt` for the fields and their limits.
 3. Read only the material that the user authorized.
 4. Ask the user a few questions in plain English before you write, as the guide explains under "Ask before you write".
    If the user says to skip them, list your assumptions and record them as items.
@@ -80,7 +81,7 @@ Read .anatomy/feedback.json and answer every item in the next revision of .anato
 3. For a first board or a big restructure, write the whole file instead, with `revision` raised by one and a `responses` block that has `respondsTo` set to the feedback `id` and an answer for every item.
 4. Run the check again. It also warns about an item with no answer.
 
-The full format is in `.anatomy/README.md`.
+The full format is in the `revise` and `feedback-format` topics in `.anatomy/guide/`.
 Anatomy opens the new revision on its own.
 
 Never edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
@@ -105,17 +106,20 @@ Do this only when the user asks you to change Anatomy.
 
 - `npm run check` runs the type check, lint, and unit tests.
 - `npm run test:e2e` builds the app and runs the browser tests in Google Chrome.
-- `npm run schema` rewrites `schema/board.v1.schema.json` from the Zod schema.
+- `npm run schema` rewrites `schema/board.v1.schema.json` from the Zod schema, and `schema/board.v1.fields.txt`, the field list that `anatomy schema` prints.
   Run it after every change to the board schema.
 - `npm run anatomy -- <command>` runs the `anatomy` tool from `bin/anatomy.ts`.
   The app writes the same tool, bundled, as `.anatomy/anatomy.mjs`.
   `src/cli/corpus.golden.txt` holds its output on the broken boards in `src/cli/corpus.ts`; update it with `npx vitest run src/cli -u` when the output changes on purpose.
-- `npm run tokens` prints the size of the generated README, each guide section, each example board, and the output of the `anatomy` tool.
+- `npm run tokens` prints the size of the generated README, each guide section and topic, each example board, and the output of the `anatomy` tool.
   A unit test fails when the README or a tool output grows more than 5 percent over `tokens.baseline.json`.
   Edit the baseline only when the growth is intended.
 - `npm run eval` prints the evaluation tasks in `eval/` and scores a board file. See `eval/README.md`.
+- `npm run agent-files -- <folder>` writes the agent files into `<folder>/.anatomy/`, the way **Copy prompt** does.
 - `docs/board-format.md` explains every field of a board file.
 - `docs/authoring-guide.md` holds the rules for writing a board.
-  Anatomy copies it into the `.anatomy/README.md` of each project, so edit it with care.
+  It is the one source of the topics in `.anatomy/guide/`: `src/cli/topics.ts` splits it at its `##` headings, and a test fails when a heading has no topic.
+  The README core in `src/app/agentReadme.ts` repeats only the rules that every agent must keep.
+  Edit both with care, because every agent reads them.
 - `docs/architecture.md` explains the layout, the storage, and the file safety.
 - Use a feature branch, write commits as `type(scope): summary`, and run `npm run check` before you push.
