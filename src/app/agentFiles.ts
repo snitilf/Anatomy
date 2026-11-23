@@ -1,5 +1,4 @@
 import { keepScript } from '../cli/script'
-import { agentFiles } from './agentReadme'
 import type { WorkspaceApi } from './workspaceContext'
 
 /** The bundled `anatomy` tool. It loads on first use, so it never weighs on the first paint. Undefined when it cannot load. */
@@ -18,6 +17,8 @@ async function anatomyScript(): Promise<string | undefined> {
  * It runs on Copy prompt, on Send, and in the background when a folder with a board opens.
  */
 export async function writeAgentFiles(write: WorkspaceApi['writeFolderFile']): Promise<void> {
+  // The text of the README, the guide, and the schema loads here, not with the first script.
+  const { agentFiles } = await import('./agentReadme')
   await Promise.all([
     ...agentFiles().map((file) => write(file.name, file.text, { keep: file.keep })),
     anatomyScript().then((text) => (text === undefined ? false : write('anatomy.mjs', text, { keep: (existing) => keepScript(existing, text) }))),

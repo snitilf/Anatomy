@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type FocusEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type FocusEvent } from 'react'
 import { toast } from 'sonner'
 import { Canvas } from '../canvas/Canvas'
 import { CameraSlotContext, createCameraSlot } from '../canvas/cameraContext'
@@ -8,11 +8,10 @@ import type { ShellActions } from '../commands/types'
 import { Sidebar } from '../inspector/Sidebar'
 import { WalkthroughBar } from '../scenarios/WalkthroughBar'
 import { writeAgentFiles } from './agentFiles'
-import { FIRST_BOARD_PROMPT } from './agentReadme'
+import { FIRST_BOARD_PROMPT } from './agentPrompts'
 import { copyText } from './clipboard'
 import { Dialogs } from './Dialogs'
 import { EmptyState } from './EmptyState'
-import { HowToDialog } from './HowToDialog'
 import { Notices } from './Notices'
 import { readFileText } from './openFile'
 import styles from './Shell.module.css'
@@ -23,6 +22,9 @@ import { createUi, UiContext, useUi, useUiApi } from './ui'
 import { OverviewPage } from '../overview/OverviewPage'
 import { entryBoard, rememberedView, rememberView, viewFromHash, writeHash } from './view'
 import { useWorkspace } from './workspaceContext'
+
+/** The dialog carries the authoring guide and the schema, so it loads the first time the user opens it. */
+const HowToDialog = lazy(() => import('./HowToDialog').then((m) => ({ default: m.HowToDialog })))
 
 /** Elements on the map that can hold keyboard focus. */
 const MAP_FOCUS = '.react-flow__node, .react-flow__edge, [data-unit] button, button[data-far-label]'
@@ -99,6 +101,8 @@ function ShellBody() {
   const uiApi = useUiApi()
   const sidebar = useUi((u) => u.sidebar)
   const howTo = useUi((u) => u.howToOpen)
+  const [howToSeen, setHowToSeen] = useState(false)
+  if (howTo && !howToSeen) setHowToSeen(true)
   const { openText, writeFolderFile } = useWorkspace()
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -260,7 +264,11 @@ function ShellBody() {
         <input ref={input} type="file" name="board-file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
         <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
         <Dialogs />
-        <HowToDialog open={howTo} onClose={closeHowTo} />
+        {howToSeen && (
+          <Suspense fallback={null}>
+            <HowToDialog open={howTo} onClose={closeHowTo} />
+          </Suspense>
+        )}
         <CommandMenu />
         {dragging && (
           <div className={styles.drop} aria-hidden="true">
