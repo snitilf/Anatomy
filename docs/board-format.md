@@ -8,7 +8,7 @@ Anatomy never runs, fetches, or evaluates anything in it.
 Anatomy shows file paths as text.
 
 The machine-readable definition is [`schema/board.v1.schema.json`](../schema/board.v1.schema.json).
-Two complete examples are in [`src/examples/`](../src/examples/).
+Three complete examples are in [`src/examples/`](../src/examples/).
 
 ## Top level
 
