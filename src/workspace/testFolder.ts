@@ -1,4 +1,4 @@
-import type { FileName, FolderAccess, Folder } from './folder'
+import { filePath, type FileName, type FolderAccess, type Folder } from './folder'
 import type { MemoryFile } from './memoryFolder'
 
 /** The localStorage key an end-to-end test sets to stand in a repository folder. */
@@ -43,6 +43,7 @@ export function testFolderAccess(): FolderAccess | undefined {
       return f ? { text: f.text, stamp: stampOf(f) } : undefined
     },
     write: async (name, text) => {
+      filePath(name)
       const stored = read() ?? { ...first, files: {} }
       stored.files[name] = { text, lastModified: Date.now() }
       save(stored)

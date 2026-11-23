@@ -15,8 +15,29 @@ export const FILES = {
   readme: 'README.md',
   /** The bundled `anatomy` tool that checks a board the way the app does. */
   script: 'anatomy.mjs',
+  /** The JSON Schema of a board, for an agent's tools. */
+  schema: 'board.schema.json',
 } as const
-export type FileName = (typeof FILES)[keyof typeof FILES]
+
+/** The one folder inside `.anatomy` that Anatomy writes to: the topics of the authoring guide. */
+export const GUIDE_DIR = 'guide'
+/** A topic file, `guide/<name>.md`. */
+export type GuideFile = `${typeof GUIDE_DIR}/${string}.md`
+export type FileName = (typeof FILES)[keyof typeof FILES] | GuideFile
+
+/** One plain name: lowercase letters and digits, joined by single dots or hyphens. No path, no "..", no hidden file. */
+const PLAIN_NAME = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/i
+
+/**
+ * Where a file goes inside `.anatomy`: straight in it, or in its `guide` folder. Throws for any other name, so no
+ * caller can reach a file outside `.anatomy`, whatever name it passes.
+ */
+export function filePath(name: string): { dir: typeof GUIDE_DIR | undefined; file: string } {
+  const [first, second, ...rest] = name.split('/')
+  if (rest.length === 0 && second === undefined && first !== undefined && PLAIN_NAME.test(first)) return { dir: undefined, file: first }
+  if (rest.length === 0 && first === GUIDE_DIR && second !== undefined && PLAIN_NAME.test(second) && second.endsWith('.md')) return { dir: GUIDE_DIR, file: second }
+  throw new StorageError('folder', `Anatomy writes only inside .anatomy, so it refused the name "${name}".`)
+}
 
 /** Enough to tell that a file changed without reading it. */
 export interface FileStamp {
@@ -34,7 +55,7 @@ export interface Folder {
   /** Undefined when the file does not exist. */
   stat(file: FileName): Promise<FileStamp | undefined>
   read(file: FileName): Promise<{ text: string; stamp: FileStamp } | undefined>
-  /** Creates `.anatomy` and the file when they are missing. */
+  /** Creates `.anatomy`, its `guide` folder for a topic, and the file when they are missing. Refuses any other path. */
   write(file: FileName, text: string): Promise<void>
 }
 
@@ -74,8 +95,10 @@ function isHandle(value: unknown): value is DirectoryHandle {
 
 function browserFolder(handle: DirectoryHandle): Folder & { handle: DirectoryHandle } {
   const file = async (name: FileName, create: boolean) => {
-    const dir = await handle.getDirectoryHandle(ANATOMY_DIR, { create })
-    return dir.getFileHandle(name, { create })
+    const path = filePath(name)
+    const anatomy = await handle.getDirectoryHandle(ANATOMY_DIR, { create })
+    const dir = path.dir === undefined ? anatomy : await anatomy.getDirectoryHandle(path.dir, { create })
+    return dir.getFileHandle(path.file, { create })
   }
   const open = async (name: FileName): Promise<File | undefined> => {
     try {

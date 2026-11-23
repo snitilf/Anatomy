@@ -1,4 +1,4 @@
-import type { FileName, FileStamp, Folder, FolderAccess, Permission } from './folder'
+import { filePath, type FileName, type FileStamp, type Folder, type FolderAccess, type Permission } from './folder'
 
 export interface MemoryFile {
   text: string
@@ -42,6 +42,7 @@ export function createMemoryFolder(
     },
     async write(file: FileName, text: string) {
       check()
+      filePath(file)
       files.set(file, { text, lastModified: clock() })
       options.onWrite?.(files)
     },
