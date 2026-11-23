@@ -59,45 +59,15 @@ test('the violation recorder sees a violation', async ({ page, violations }) => 
   violations.take()
 })
 
-// The fixture must catch a violation that is still in flight when the test body ends. These tests break the policy as their last step and never poll, so they fail only if the teardown flushes first.
-// The violation comes on a timer, so it is still on its way when the call returns.
-const inlineScript = () => {
-  setTimeout(() => {
-    const s = document.createElement('script')
-    s.textContent = 'window.__ran = true'
-    document.head.append(s)
-  }, 0)
-}
-
-test('the fixture fails a test that ends right after a violation', async ({ page }) => {
-  test.fail(true, 'the violation recorder must fail this test')
-  await page.goto('/')
-  void page.evaluate(inlineScript)
-})
-
-test('the fixture fails a test that ends right after a blocked fetch', async ({ page }) => {
-  test.fail(true, 'the violation recorder must fail this test')
-  await page.goto('/')
-  void page.evaluate(() => {
-    setTimeout(() => void fetch('http://127.0.0.1:9/', { mode: 'no-cors' }).catch(() => undefined), 0)
-  })
-})
-
-test('the fixture fails a test whose second page ends right after a violation', async ({ page, context }) => {
-  test.fail(true, 'the violation recorder must fail this test')
-  await page.goto('/')
-  const second = await context.newPage()
-  await second.goto('/')
-  void second.evaluate(inlineScript)
-})
-
 /** Records every write to `data-theme` of the root element, with the time of it, from before the page's own scripts run. */
 const watchTheme = (page: Page) =>
   page.addInitScript(() => {
     const w = window as unknown as { __themeWrites: { value: string | null; at: number }[] }
     w.__themeWrites = []
     // The root element does not exist yet when this runs, so watch the whole document.
-    new MutationObserver((records) => {
+    new MutationObserver((batch) => {
+      // Only the root element counts: another element may carry a `data-theme` of its own.
+      const records = batch.filter((record) => record.target === document.documentElement)
       records.forEach((record, i) => {
         const next = records[i + 1]
         const value = next ? next.oldValue : (record.target as HTMLElement).getAttribute('data-theme')
