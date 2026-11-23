@@ -27,6 +27,8 @@ Your agent does the thinking, and Anatomy shows it.
 3. Click **Copy prompt**.
    Anatomy writes `.anatomy/README.md` into your project: a short page that teaches your agent the rules, with topics in `.anatomy/guide/` that it reads when it needs them.
    It also writes `.anatomy/anatomy.mjs`, a script your agent can run to check the board before it hands it over and to revise it with a short patch.
+   When you open a folder that already has a board, Anatomy writes any of these files that are missing and refreshes the ones it wrote before.
+   It leaves a file alone when you removed its first line.
 4. Paste the prompt into your coding agent and finish the sentence:
 
    ```text
@@ -45,7 +47,9 @@ Your agent does the thinking, and Anatomy shows it.
 
 Commit `.anatomy/board.json` with the code it explains.
 Add `.anatomy/layer.json` and `.anatomy/feedback.json` to `.gitignore`, because they hold your own working state.
-Add `.anatomy/anatomy.mjs`, `.anatomy/patch.json`, and `.anatomy/board.prev.json` as well: Anatomy writes the script again, and the other two are the last patch and the board before it.
+Add `.anatomy/anatomy.mjs`, `.anatomy/patch.json`, and `.anatomy/board.prev.json` as well.
+Anatomy writes the script again each time you open the folder, so a teammate who clones the repository gets it too.
+The other two are the last patch and the board before it.
 
 No agent at hand?
 Open a built-in example: How the Claude Code harness works, Anatomy itself, or How a large language model like Opus 5.5 works.
