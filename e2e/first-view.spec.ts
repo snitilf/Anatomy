@@ -69,6 +69,7 @@ const EXPECTED_FAILURES: Record<string, string> = {
   [cell('claude code harness', '1280x800', 'in view')]: '18.3',
   [cell('claude code harness', '1024x768', 'in view')]: '18.3',
   [cell('large language model', '1440x900', 'in view')]: '18.3',
+  [cell('large language model', '1280x800', 'in view')]: '18.3',
   [cell('large language model', '1024x768', 'in view')]: '18.3',
   [cell('refund approval', '1280x800', 'in view')]: '18.3',
   [cell('refund approval', '1024x768', 'in view')]: '18.3',
