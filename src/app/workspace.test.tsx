@@ -111,6 +111,31 @@ describe('folder mode with a file that is too large', () => {
     expect(second.files.has(FILES.layerBackup)).toBe(false)
   })
 
+  it('keeps watching the open folder when the next folder cannot be opened', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const first = repo()
+      const second = repo({ [FILES.board]: otherBoard, [FILES.layer]: 'x'.repeat(17_000_000) })
+      const access = memoryFolderAccess(first)
+      appWithPicker(access)
+      fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+      await opened()
+      access.pick = async () => second
+      fireEvent.click(screen.getByRole('button', { name: 'Pick again' }))
+      expect(await screen.findByText(/could not read layer\.json in shop/)).toBeInTheDocument()
+
+      const next = JSON.parse(refundRaw) as { revision: number; components: { summary: string }[] }
+      next.revision = 2
+      next.components[0]!.summary = 'Says something new.'
+      await first.write(FILES.board, JSON.stringify(next))
+      await act(() => vi.advanceTimersByTimeAsync(6100))
+      fireEvent.click(await panel().findByRole('tab', { name: /Review/ }))
+      expect(await panel().findByRole('heading', { name: 'Changed in revision 2' })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('never writes the first board layer into the folder it switches to while that layer is being read', async () => {
     const first = repo()
     const writes: string[] = []
