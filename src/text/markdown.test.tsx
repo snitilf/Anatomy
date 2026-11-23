@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { Markdown, parseMarkdown, plainText } from './markdown'
-import { fastestMs } from '../test/timing'
+import { Markdown, markdownStats, parseMarkdown, plainText } from './markdown'
 
 function html(source: string): string {
   const { container } = render(<Markdown source={source} />)
@@ -94,12 +93,21 @@ describe('untrusted text', () => {
 })
 
 describe('performance', () => {
-  it('handles adversarial input quickly', () => {
-    for (const input of ['*'.repeat(4000), '**_`'.repeat(1000), '*a '.repeat(1333), '_a'.repeat(2000)]) {
-      // The slowest of these takes about 40 ms on a quiet machine. A blowup is orders of magnitude slower, in every run.
-      expect(fastestMs(() => parseMarkdown(input), 200, 5)).toBeLessThan(2000)
-    }
-  })
+  // The work is counted, not timed: the characters the closing-marker search looks at.
+  // Most inputs need a few per character. `*a *a *a` opens at every marker and each search runs to the end, so it grows with the square, and its bound is a quarter of that.
+  const cases: [string, string, (n: number) => number][] = [
+    ['stars', '*'.repeat(4000), (n) => 4 * n],
+    ['markers and a backtick', '**_`'.repeat(1000), (n) => 4 * n],
+    ['an opener on every word', '*a '.repeat(1333), (n) => (n * n) / 4],
+    ['underscores in words', '_a'.repeat(2000), (n) => 4 * n],
+  ]
+  for (const [name, input, bound] of cases) {
+    it(`handles adversarial input with bounded work: ${name}`, () => {
+      markdownStats.scanned = 0
+      parseMarkdown(input)
+      expect(markdownStats.scanned).toBeLessThanOrEqual(bound(input.length))
+    })
+  }
 })
 
 describe('plainText', () => {
