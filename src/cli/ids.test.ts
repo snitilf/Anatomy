@@ -190,11 +190,11 @@ describe('apply assigns missing IDs', () => {
   })
 
   it('counts the lines of the map past 50', () => {
-    const ops = Array.from({ length: 52 }, (_, i) => addPart({ ...part, label: `Queue ${i}` }, '/items').op && addPart({ kind: 'question', text: `Question number ${i}?` }, '/items'))
+    const ops = Array.from({ length: 52 }, (_, i) => addPart({ kind: 'question', text: `Question number ${i}?` }, '/items'))
     const r = apply(ops)
     expect(r.code, r.stdout).toBe(0)
-    expect(r.stdout).toContain('ID: ')
-    expect(r.stdout).toContain('more IDs are not shown.')
+    expect(r.stdout.split('\n').filter((l) => l.includes(' ID: '))).toHaveLength(50)
+    expect(r.stdout).toContain('2 more IDs are not shown.')
   })
 })
 
@@ -342,18 +342,13 @@ describe('validate warns about connections with no explanation', () => {
   })
 
   it('names every ID when there are three or fewer, and says "1 connection has"', () => {
-    const few = setup((b) => (b.relationships = b.relationships.slice(0, 3)))
-    few.board()
-    const one = setup((b) => {
+    const keep = (n: number) => (b: Json) => {
       bare(b)
-      b.relationships = b.relationships.slice(0, 1)
-    })
-    expect(one.run('validate').stdout).toContain('relationships: 1 connection has no explanation: cart-to-checkout.')
-    const three = setup((b) => {
-      bare(b)
-      b.relationships = b.relationships.slice(0, 3)
-    })
-    expect(three.run('validate').stdout).toContain('3 connections have no explanation: cart-to-checkout, checkout-to-api, api-to-payment.')
+      b.relationships = b.relationships.slice(0, n)
+      b.scenarios = []
+    }
+    expect(setup(keep(1)).run('validate').stdout).toContain('relationships: 1 connection has no explanation: cart-to-checkout.')
+    expect(setup(keep(3)).run('validate').stdout).toContain('3 connections have no explanation: cart-to-checkout, checkout-to-api, api-to-payment.')
   })
 
   it('has the code no-explanation in --json, and counts as one warning', () => {
