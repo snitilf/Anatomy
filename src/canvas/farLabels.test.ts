@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bundle } from './bundleRoutes'
-import { countHeight, countWidth, groupNameRect, isMixed, placeCounts, YOURS_TICK } from './farLabels'
+import { countHeight, countWidth, groupNameRect, isMixed, nameRoom, placeCounts, YOURS_TICK } from './farLabels'
 
 const bundle = (id: string, count: number, points: { x: number; y: number }[]): Bundle => ({ id, a: 'a', b: 'b', count, ab: count, ba: 0, connectionIds: [], mine: false, yours: 0, d: '', points, width: 2 })
 const hit = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
@@ -54,5 +54,16 @@ describe("the user's mark on a count", () => {
     // The mark sits under the number: the count is taller, and as wide as before, which leaves room for the mark's 13 px.
     expect(countHeight({ mine: false, yours: 1 }) - countHeight({ mine: false, yours: 0 })).toBe(YOURS_TICK)
     expect(countWidth({ count: 2 })).toBeGreaterThanOrEqual(13)
+  })
+})
+
+describe('the room for a group name', () => {
+  const area = (x: number, y: number) => ({ x, y, width: 280, height: 400 })
+  it('stops short of the next group on the same line, and is the widest name anywhere else', () => {
+    const room = nameRoom([{ id: 'a', area: area(0, 0) }, { id: 'b', area: area(320, 0) }, { id: 'c', area: area(0, 600) }], 2)
+    // 320 board pixels at a label scale of 2 is 160 at natural size, less the gap.
+    expect(room.get('a')).toBe(152)
+    expect(room.get('b')).toBe(260)
+    expect(room.get('c')).toBe(260)
   })
 })

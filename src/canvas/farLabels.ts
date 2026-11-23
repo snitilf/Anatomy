@@ -11,9 +11,34 @@ const CHIP_HEIGHT = 18
 const touches = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
 /** The room the name and count of a group take above its top edge, at this label scale. */
-export function groupNameRect(area: Rect, label: string, count: number, scale: number): Rect {
-  const natural = Math.min(NAME_MAX, (textWidth(label, 'title') * 13) / 12 + 6 + String(count).length * 8 + 4)
+export function groupNameRect(area: Rect, label: string, count: number, scale: number, room = NAME_MAX): Rect {
+  const natural = Math.min(NAME_MAX, room, (textWidth(label, 'title') * 13) / 12 + 6 + String(count).length * 8 + 4)
   return { x: area.x, y: area.y - (NAME_LIFT + NAME_LINE) * scale, width: natural * scale, height: NAME_LINE * scale }
+}
+
+/** A name stops this far short of the name of the next group to its right, at natural size. */
+const NAME_GAP = 8
+
+/**
+ * How wide each group's name may be drawn, at natural size, before the scale. A name stops short of the next group to its
+ * right whose name sits on the same line, so two names never run into each other; past that, a long name is cut with an
+ * ellipsis at `NAME_MAX`.
+ */
+export function nameRoom(groups: readonly { id: string; area: Rect }[], scale: number): Map<string, number> {
+  const band = (area: Rect) => ({ top: area.y - (NAME_LIFT + NAME_LINE) * scale, bottom: area.y })
+  const out = new Map<string, number>()
+  for (const g of groups) {
+    let room = NAME_MAX
+    const a = band(g.area)
+    for (const h of groups) {
+      if (h === g || h.area.x <= g.area.x) continue
+      const b = band(h.area)
+      if (b.top >= a.bottom || a.top >= b.bottom) continue
+      room = Math.min(room, (h.area.x - g.area.x) / scale - NAME_GAP)
+    }
+    out.set(g.id, Math.max(0, room))
+  }
+  return out
 }
 
 /** The room the user's mark takes under the number of a count: one dash and dot, and the gap above it. */
