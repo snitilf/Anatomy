@@ -519,7 +519,7 @@ function oriented(pairs: readonly { from: string; to: string; label: number }[],
 }
 
 /** The shapes tried for a layout: the ratio a group is packed toward, and the ratio of the whole. */
-const GROUP_SHAPES = [0.7, 1, 1.3, 1.6, 2, 2.4, 3]
+const GROUP_SHAPES = [0.7, 1, 1.6, 2.4, 3]
 const MAP_SHAPES = [0.8, 1, 1.15, 1.3, 1.45, 1.6, 2]
 /**
  * The shape the layout aims for: the free map area of a 1440x900 and a 1280x800 window with the sidebar docked, less the
