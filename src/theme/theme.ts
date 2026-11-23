@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react'
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type Theme = 'light' | 'dark'
 
-/** The same key the inline script in index.html reads before the first paint. */
+/** The same key that public/theme.js reads before the first paint. */
 export const THEME_KEY = 'anatomy:theme'
 const DARK = '(prefers-color-scheme: dark)'
 
@@ -79,7 +79,7 @@ export function useTheme(): Theme {
   return useSyncExternalStore(subscribe, resolve, () => 'light')
 }
 
-/** Brings `data-theme` in line with the stored choice. The inline script has usually done it already. */
+/** Brings `data-theme` in line with the stored choice. The script `public/theme.js` has usually done it already. */
 export function initTheme() {
   mode = readMode()
   apply()

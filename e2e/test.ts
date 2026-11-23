@@ -26,15 +26,28 @@ export const test = base.extend<{ violations: Violations }>({
         list.push(v)
       })
       await context.addInitScript(() => {
+        const w = window as unknown as { __anatomyViolation: (v: unknown) => Promise<void>; __anatomyFlush: () => Promise<void> }
+        const pending: Promise<void>[] = []
         document.addEventListener('securitypolicyviolation', (e) => {
-          const report = (window as unknown as { __anatomyViolation: (v: unknown) => void }).__anatomyViolation
-          report({ directive: e.violatedDirective, blocked: e.blockedURI, sample: e.sample, source: e.sourceFile })
+          pending.push(w.__anatomyViolation({ directive: e.violatedDirective, blocked: e.blockedURI, sample: e.sample, source: e.sourceFile }))
         })
+        // The event is dispatched on a task of its own and the binding call crosses to the test process, so a test must wait for both.
+        w.__anatomyFlush = async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          await Promise.all(pending.splice(0))
+        }
       })
       await use({
         list,
         take: () => list.splice(0, list.length),
       })
+      // A violation can still be on its way when the test body ends, on any page and in any frame.
+      for (const page of context.pages()) {
+        if (page.isClosed()) continue
+        for (const frame of page.frames()) {
+          await frame.evaluate(() => (window as unknown as { __anatomyFlush?: () => Promise<void> }).__anatomyFlush?.()).catch(() => undefined)
+        }
+      }
       expect(list, 'the page broke its Content Security Policy').toEqual([])
     },
     { auto: true },
