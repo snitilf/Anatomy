@@ -221,7 +221,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
     async (target: Folder): Promise<void> => {
       const gen = ++generation.current
       await queueRef.current?.flush()
-      stopWatch()
+      if (gen !== generation.current) return
       let file: { text: string; stamp: FileStamp } | undefined
       let tooLarge: FileTooLargeError | undefined
       try {
@@ -237,6 +237,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       // The folder becomes the place work is saved only once it is settled what opens, in the same step as the dispatch.
       // Until then the board that is open keeps its own place, so its layer is never written into this folder.
       const settle = () => {
+        stopWatch()
         void access?.remember(target).catch(() => {})
         void storeRef.current?.setLastOpened({ mode: 'folder' }).catch(() => {})
         switchSink({ kind: 'folder', folder: target })
