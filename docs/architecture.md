@@ -100,7 +100,8 @@ Routing, labels, group areas, and the camera all read the card rects and never a
 Every connection has straight runs with rounded corners (`src/canvas/routing.ts`).
 The router picks the first of three shapes that fits:
 
-1. A straight run, when the two ends line up. Two ends on facing sides that are off by a short jog are lined up first.
+1. A straight run, when the two ends line up.
+   Two ends on facing sides that are off by a short jog are lined up first.
 2. An elbow on a free track of the gap between the cards.
 3. A path that A* finds around the cards.
 
