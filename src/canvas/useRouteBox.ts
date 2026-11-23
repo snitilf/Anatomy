@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Rect } from '../layout/geometry'
 
 type Compute = () => Rect | undefined
@@ -37,7 +37,8 @@ export function useRouteBox(compute: Compute, far: boolean, wanted: boolean, sco
   // Kept in the same render, so the box is not worked out again by the render that follows.
   if (now) setKept({ scope, compute, box })
   const latest = useRef({ scope, compute, kept })
-  useEffect(() => {
+  // A layout effect, like the refs of Canvas, so a fit in the commit that opens a board never reads the last board.
+  useLayoutEffect(() => {
     latest.current = { scope, compute, kept }
   })
   useEffect(() => {

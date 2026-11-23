@@ -230,10 +230,11 @@ describe('sharedBundles', () => {
     const other = sharedBundles(board, moved, pairs)
     expect(other).not.toBe(first)
     expect(sharedBundles(board, moved, pairs)).toBe(other)
-    expect(sharedBundles({ ...board }, moved, pairs)).not.toBe(other)
+    // Only the pairs change here, so the board and cards are the ones cached just before.
     const fewer = pairs.slice(1)
     const trimmed = sharedBundles(board, moved, fewer)
     expect(trimmed).not.toBe(other)
     expect(trimmed.length).toBeLessThan(other.length)
+    expect(sharedBundles({ ...board }, moved, fewer)).not.toBe(trimmed)
   })
 })
