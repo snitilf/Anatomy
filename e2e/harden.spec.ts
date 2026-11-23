@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { open, pickConnection } from './helpers.ts'
 
 const WORST = 'e2e/fixtures/worst-text.board.json'

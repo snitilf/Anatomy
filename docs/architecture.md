@@ -539,4 +539,16 @@ The app has these safety rules:
 - The app renders board text as React text nodes. A small local parser reads the Markdown subset and never uses `innerHTML`.
 - The app shows paths in references as text and never opens them.
 - The app makes no network requests after the page loads, except for its own files on the same local server: the map view, the example boards, the how-to dialog, the text of the `.anatomy/` files, a lesson, and the `anatomy` tool load on their own scripts. Inter is bundled with the app.
+- The built app carries a Content Security Policy in a meta tag: `default-src 'self'; script-src 'self'; connect-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'`.
+  The build adds it (`scripts/lib/csp.ts`, applied only to `vite build`, including the `e2e` mode), and the dev server does not have it.
+  No script can run unless it is a file from the same origin, no code can send a request, and the page cannot be given a plugin, a new base URL, or a form target.
+  The theme script is `public/theme.js`, loaded in the head, so it still runs before the first paint.
+  `style-src` keeps `'unsafe-inline'` on purpose.
+  The toast library writes a style sheet at run time, and the map writes style rules for the card under the pointer and for a selected bundle, so an inline style cannot be avoided.
+  Allowing the toast sheet by its hash would break when the library updates and would not cover the map rules.
+  A style cannot reach the network under this policy, because `connect-src`, `img-src`, and `font-src` stop a `url()` in it from loading anything from another origin.
+  `src/main.tsx` imports `src/cli/jitless.ts` first, which turns off the code generation of Zod, because the policy blocks `new Function`.
+  Keep that import first and keep the file in the app.
+  `frame-ancestors` is not in the policy, because a browser ignores it in a meta tag.
+  The browser tests record every `securitypolicyviolation` event and fail on any (`e2e/test.ts`).
 - The `anatomy` tool imports only `node:fs`, `node:path`, and `node:url`. It reads the board, the `feedback.json` next to it, and a patch, only as regular files and with a size cap, writes only the board and its `board.prev.json` (`fmt` and `apply`, each through a new file that must not exist yet, renamed over the old one), and never runs anything from them. A patch path may not contain `__proto__`, `constructor`, or `prototype`, and a patch is capped at 500 operations, 1,000,000 bytes, and 16 levels. Its first import, `src/cli/jitless.ts`, turns off the code generation of Zod before any schema loads, so it never calls `Function`. A test runs the bundle with `Function` trapped to prove it.

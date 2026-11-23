@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { open, pickPart } from './helpers.ts'
 
 const SHORTENER = 'e2e/fixtures/url-shortener.board.json'

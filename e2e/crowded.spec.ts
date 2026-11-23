@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { open, viewport } from './helpers.ts'
 
 const SIXTY = 'e2e/fixtures/sixty-parts.board.json'

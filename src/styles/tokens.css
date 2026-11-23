@@ -1,6 +1,6 @@
 /*
  * Design tokens. Every color, size, and radius in the app comes from here.
- * `data-theme` on <html> is always `light` or `dark`; an inline script in index.html sets it before the first paint.
+ * `data-theme` on <html> is always `light` or `dark`; public/theme.js sets it before the first paint.
  */
 
 /* The smallest hit area of a control. The control keeps its look; the area around it answers the pointer too. */

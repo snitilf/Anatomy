@@ -1,3 +1,5 @@
+// Must come first: it turns off the code generation of Zod before any schema loads. The Content Security Policy blocks `new Function`.
+import './cli/jitless'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'

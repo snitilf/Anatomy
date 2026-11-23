@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { everyState, NOTE_STATES, RELINK_TEXT, seedFolder } from './states.ts'
 
 async function openStates(page: Page) {

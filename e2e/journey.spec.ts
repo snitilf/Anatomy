@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { pickConnection, pickPart } from './helpers.ts'
 
 const BOARD_FILE = 'e2e/fixtures/refund-approval.board.json'
