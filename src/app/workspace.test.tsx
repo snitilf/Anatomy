@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import refundRaw from '../../e2e/fixtures/refund-approval.board.json?raw'
 import { FILES, type Folder } from '../workspace/folder'
 import { createMemoryFolder, memoryFolderAccess, type MemoryFile } from '../workspace/memoryFolder'
+import { agentFiles, agentReadme, README_MARK } from './agentReadme'
 import { AppStoreProvider } from './AppStoreProvider'
 import { Shell } from './Shell'
 import { WorkspaceProvider } from './workspace'
@@ -181,6 +182,162 @@ describe('folder mode with a file that is too large', () => {
     const askRead = read.mock.calls.findIndex(([name]) => name === 'guide/ask.md')
     expect(askRead).toBeGreaterThanOrEqual(0)
     await expect(read.mock.results[askRead]!.value).rejects.toMatchObject({ name: 'FileTooLargeError' })
+  })
+})
+
+describe('agent files on open', () => {
+  const openIt = async (folder: ReturnType<typeof repo>) => {
+    const view = app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    expect(await opened()).toBeInTheDocument()
+    return view
+  }
+  const helperWrites = (write: { mock: { calls: unknown[][] } }) => write.mock.calls.filter(([name]) => name !== FILES.layer)
+
+  it('writes the files that are missing when a folder opens', async () => {
+    const folder = repo()
+    await openIt(folder)
+    await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toBe(agentReadme()))
+    for (const file of agentFiles()) await waitFor(() => expect(folder.files.get(file.name)?.text).toBe(file.text))
+    await waitFor(() => expect(folder.files.get(FILES.script)?.text).toMatch(/^\/\/ Written by Anatomy/))
+  })
+
+  it('refreshes a file with the marker, including one the user edited below it, and keeps one without', async () => {
+    const edited = `${MARKED}# My notes under the marker\n`
+    const mine = '# My own README\n'
+    const folder = repo({
+      [FILES.board]: refundRaw,
+      [FILES.readme]: edited,
+      'guide/honesty.md': `${MARKED}Old.\n`,
+      'guide/ask.md': mine,
+      [FILES.script]: 'console.log("mine")\n',
+      [FILES.schema]: '{"title":"mine"}\n',
+    })
+    await openIt(folder)
+    await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toBe(agentReadme()))
+    await waitFor(() => expect(folder.files.get('guide/honesty.md')?.text).toContain('## Honesty rules'))
+    await waitFor(() => expect(folder.files.has('guide/writing.md')).toBe(true))
+    expect(folder.files.get('guide/ask.md')?.text).toBe(mine)
+    expect(folder.files.get(FILES.script)?.text).toBe('console.log("mine")\n')
+    expect(folder.files.get(FILES.schema)?.text).toBe('{"title":"mine"}\n')
+  })
+
+  it('keeps a marked helper file over 2 MB without reading it, and still writes the others', async () => {
+    const big = MARKED + 'x'.repeat(2_000_001)
+    const folder = repo({ [FILES.board]: refundRaw, 'guide/ask.md': big })
+    await openIt(folder)
+    await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toBe(agentReadme()))
+    expect(folder.files.get('guide/ask.md')?.text).toBe(big)
+  })
+
+  it('writes after the click that grants permission', async () => {
+    const folder = repo()
+    folder.grant('prompt')
+    const db = await import('../workspace/db').then((m) => m.openStore())
+    await db.setLastOpened({ mode: 'folder' })
+    db.close()
+    const write = vi.spyOn(folder, 'write')
+    app(memoryFolderAccess(undefined, folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Reopen shop' }))
+    expect(await opened()).toBeInTheDocument()
+    await waitFor(() => expect(folder.files.get(FILES.readme)?.text).toBe(agentReadme()))
+    expect(write).toHaveBeenCalled()
+  })
+
+  it('does not touch the folder while permission is still needed', async () => {
+    const folder = repo()
+    folder.grant('prompt')
+    const db = await import('../workspace/db').then((m) => m.openStore())
+    await db.setLastOpened({ mode: 'folder' })
+    db.close()
+    const write = vi.spyOn(folder, 'write')
+    app(memoryFolderAccess(undefined, folder))
+    await screen.findByRole('button', { name: 'Reopen shop' })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(write).not.toHaveBeenCalled()
+    expect([...folder.files.keys()]).toEqual([FILES.board])
+  })
+
+  it('checks permission again before it writes, and writes nothing when it is no longer granted', async () => {
+    const folder = repo()
+    const write = vi.spyOn(folder, 'write')
+    const read = vi.spyOn(folder, 'read')
+    // The folder lets the open read the board, but the check inside the refresh finds that write permission is not granted.
+    const asked = vi.spyOn(folder, 'permission').mockResolvedValue('prompt')
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    expect(await opened()).toBeInTheDocument()
+    await waitFor(() => expect(asked).toHaveBeenCalledWith(false))
+    expect(read.mock.calls.some(([name]) => name === FILES.script)).toBe(false)
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it('keeps a README whose first line the user deleted, on open and on Copy prompt', async () => {
+    const plain = agentReadme().slice(README_MARK.length).replace(/^\n+/, '')
+    expect(plain.startsWith('# Anatomy')).toBe(true)
+    const opened1 = repo({ [FILES.board]: refundRaw, [FILES.readme]: plain })
+    const first = await openIt(opened1)
+    await waitFor(() => expect(opened1.files.get(FILES.schema)).toBeDefined())
+    await waitFor(() => expect(opened1.files.get(FILES.script)).toBeDefined())
+    expect(opened1.files.get(FILES.readme)?.text).toBe(plain)
+    first.unmount()
+
+    const empty = repo({ [FILES.readme]: plain })
+    app(memoryFolderAccess(empty))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    await screen.findByRole('heading', { name: 'shop has no board yet.' })
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Copy prompt' }))
+    await waitFor(() => expect(empty.files.get(FILES.script)).toBeDefined())
+    await waitFor(() => expect(empty.files.get(FILES.schema)).toBeDefined())
+    expect(empty.files.get(FILES.readme)?.text).toBe(plain)
+  })
+
+  it('does not write a folder with no board, so opening a repository to look leaves it as it was', async () => {
+    const folder = repo({})
+    const write = vi.spyOn(folder, 'write')
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    await screen.findByRole('heading', { name: 'shop has no board yet.' })
+    // Copy prompt writes through the same code, so a refresh that ran would have written by the time it does.
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    expect(write).not.toHaveBeenCalled()
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Copy prompt' }))
+    await waitFor(() => expect(folder.files.get(FILES.script)).toBeDefined())
+    expect(write.mock.calls.length).toBe(agentFiles().length + 1)
+  })
+
+  it('writes nothing when every file is current', async () => {
+    const folder = repo()
+    const first = await openIt(folder)
+    await waitFor(() => expect(folder.files.get(FILES.script)).toBeDefined())
+    for (const file of agentFiles()) await waitFor(() => expect(folder.files.get(file.name)?.text).toBe(file.text))
+    first.unmount()
+    const write = vi.spyOn(folder, 'write')
+    const read = vi.spyOn(folder, 'read')
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    expect(await opened()).toBeInTheDocument()
+    // The refresh has reached the last file it checks, so it had its chance to write.
+    await waitFor(() => expect(read.mock.calls.some(([name]) => name === FILES.script)).toBe(true))
+    await waitFor(() => expect(read.mock.calls.some(([name]) => name === FILES.schema)).toBe(true))
+    expect(helperWrites(write)).toEqual([])
+  })
+
+  it('opens the board when a write fails', async () => {
+    const folder = repo()
+    const write = vi.spyOn(folder, 'write').mockRejectedValue(new Error('disk full'))
+    const rejected = vi.fn()
+    window.addEventListener('unhandledrejection', rejected)
+    try {
+      await openIt(folder)
+      await waitFor(() => expect(write).toHaveBeenCalled())
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(rejected).not.toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).toBeNull()
+    } finally {
+      window.removeEventListener('unhandledrejection', rejected)
+    }
   })
 })
 

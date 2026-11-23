@@ -7,9 +7,10 @@ import { makeExport, serializeExport } from '../layer/files'
 import { emptyLayer, hasUserWork, serializeLayer, type Layer } from '../layer/model'
 import { readLayer } from '../layer/upgrade'
 import { openStore, StorageError, type BoardStore, type BoardSummary } from '../workspace/db'
-import { browserFolderAccess, canPickFolders, FILES, FileTooLargeError, type FileStamp, type Folder, type FolderAccess } from '../workspace/folder'
+import { browserFolderAccess, canPickFolders, FILES, FileTooLargeError, type FileName, type FileStamp, type Folder, type FolderAccess } from '../workspace/folder'
 import { createSaveQueue, type SaveQueue, type SaveStatus } from '../workspace/saveQueue'
 import { watchBoard } from '../workspace/watch'
+import { writeAgentFiles } from './agentFiles'
 import { downloadText } from './download'
 import { openFromText } from './openFile'
 import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
@@ -73,6 +74,43 @@ async function readFolderLayer(folder: Folder, board: Board): Promise<{ layer: L
   if (result?.ok && result.layer.boardId === board.id) return { layer: result.layer, backedUp: false }
   await folder.write(FILES.layerBackup, file.text)
   return { layer: emptyLayer(board.id), backedUp: true }
+}
+
+/**
+ * Writes one file into a folder's `.anatomy`. `onlyIfMissing` leaves any existing file alone, and `keep` leaves an
+ * existing file alone when it returns true. A file too large to be one of Anatomy's is somebody else's, so it is kept
+ * without being read. False when the write failed.
+ */
+async function writeKept(folder: Folder, file: FileName, text: string, options: Parameters<WorkspaceApi['writeFolderFile']>[2] = {}): Promise<boolean> {
+  try {
+    if (options.onlyIfMissing && (await folder.stat(file)) !== undefined) return true
+    if (options.keep) {
+      const existing = await folder.read(file).catch((error: unknown) => {
+        if (error instanceof FileTooLargeError) return { text: '', stamp: undefined, large: true as const }
+        throw error
+      })
+      if (existing && ('large' in existing || options.keep(existing.text))) return true
+    }
+    await folder.write(file, text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Brings the agent files in a folder that was just opened up to date: missing ones are written and Anatomy's own are
+ * refreshed. It runs only with write permission, never throws, and the open does not wait for it.
+ */
+function refreshAgentFiles(folder: Folder): void {
+  void (async () => {
+    try {
+      if ((await folder.permission(false)) !== 'granted') return
+      await writeAgentFiles((file, text, options) => writeKept(folder, file, text, options))
+    } catch {
+      // The files are a convenience. A failure here must not touch the board that is open.
+    }
+  })()
 }
 
 /**
@@ -265,6 +303,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
         dispatch({ type: 'closed' })
         dispatch({ type: 'openFailed', fileName: `${target.name}/.anatomy/${FILES.board}`, errors: [{ path: '', message: tooLarge.message }] })
         watch(undefined)
+        refreshAgentFiles(target)
         return
       }
       if (!file) {
@@ -281,6 +320,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
         dispatch({ type: 'closed' })
         dispatch({ type: 'openFailed', fileName: `${target.name}/.anatomy/${FILES.board}`, errors: parsed.errors })
         watch(file.stamp)
+        refreshAgentFiles(target)
         return
       }
       let found
@@ -301,6 +341,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       dispatch({ type: 'boardOpened', board: parsed.board, layer: found.layer, warnings: parsed.warnings, now: new Date() })
       if (found.backedUp) notice(`${FILES.layer} could not be read, so it was kept as ${FILES.layerBackup} and a new one starts.`)
       watch(file.stamp)
+      refreshAgentFiles(target)
     },
     [access, appStore, dispatch, markPersisted, notice, stopWatch, switchSink],
   )
@@ -430,21 +471,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
   const writeFolderFile = useCallback<WorkspaceApi['writeFolderFile']>(
     async (file, text, options = {}) => {
       if (!folder || folder.state === 'reopen') return false
-      try {
-        if (options.onlyIfMissing && (await folder.folder.stat(file)) !== undefined) return true
-        if (options.keep) {
-          // A file too large to be one of ours is somebody else's, so it is kept.
-          const existing = await folder.folder.read(file).catch((error: unknown) => {
-            if (error instanceof FileTooLargeError) return { text: '', stamp: undefined, large: true as const }
-            throw error
-          })
-          if (existing && ('large' in existing || options.keep(existing.text))) return true
-        }
-        await folder.folder.write(file, text)
-        return true
-      } catch {
-        return false
-      }
+      return writeKept(folder.folder, file, text, options)
     },
     [folder],
   )

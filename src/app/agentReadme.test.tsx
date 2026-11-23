@@ -18,11 +18,10 @@ describe('keeping an existing README', () => {
     expect(keepReadme(`${README_MARK}\n\n# Anatomy\n\nAn older format.`)).toBe(false)
   })
 
-  it('marks one that is exactly the text Anatomy writes, minus the first line', () => {
+  it('keeps one that is exactly the text Anatomy writes minus the first line, because the user deleted the line to keep it', () => {
     const plain = agentReadme().slice(README_MARK.length).replace(/^\n+/, '')
     expect(plain.startsWith('# Anatomy')).toBe(true)
-    expect(keepReadme(plain)).toBe(false)
-    // A plain file the user edited is theirs.
+    expect(keepReadme(plain)).toBe(true)
     expect(keepReadme(`${plain}\nMy own line.`)).toBe(true)
   })
 })

@@ -418,6 +418,11 @@ A new revision goes through the update review.
 A look never shows an error.
 
 The app writes `README.md`, the topics in `guide/`, `board.schema.json`, and `anatomy.mjs` when the user clicks **Copy prompt** or sends feedback.
+It also writes them once each time a folder that has a `.anatomy` board opens, so a clone or an update of Anatomy does not leave them missing or old.
+This runs in the background after the board shows, and only when the app has write permission for the folder.
+A failure there is ignored and never stops the open.
+A file without the marker is always the user's and is never replaced, even when its text equals Anatomy's.
+A folder with no board is not written until the user clicks **Copy prompt**.
 Each starts with a marker line, or for the JSON Schema a `$comment` key.
 The app replaces a file that has the marker when its text changes, and leaves a file without the marker alone.
 `src/app/agentReadme.ts` holds the README core and builds every one of these files except the script.
