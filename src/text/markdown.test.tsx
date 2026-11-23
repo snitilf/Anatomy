@@ -96,7 +96,8 @@ describe('untrusted text', () => {
 describe('performance', () => {
   it('handles adversarial input quickly', () => {
     for (const input of ['*'.repeat(4000), '**_`'.repeat(1000), '*a '.repeat(1333), '_a'.repeat(2000)]) {
-      expect(fastestMs(() => parseMarkdown(input), 200)).toBeLessThan(200)
+      // The slowest of these takes about 40 ms on a quiet machine. A blowup is orders of magnitude slower, in every run.
+      expect(fastestMs(() => parseMarkdown(input), 200, 5)).toBeLessThan(2000)
     }
   })
 })

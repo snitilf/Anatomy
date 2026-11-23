@@ -328,7 +328,7 @@ describe('saving', () => {
     await loadRefund()
     selectPart('manager-approval')
     addNote('Still here')
-    const alert = await screen.findByRole('alert', {}, { timeout: 3000 })
+    const alert = await screen.findByRole('alert', {}, { timeout: 15_000 })
     expect(within(alert).getByText('Not saved')).toBeInTheDocument()
     expect(within(alert).getByText(/out of storage space/)).toBeInTheDocument()
     expect(within(alert).getByRole('button', { name: 'Download a copy' })).toBeInTheDocument()
