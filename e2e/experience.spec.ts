@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { grabbable, open, pickConnection, pickPart, viewport } from './helpers.ts'
 
 const REFUND = 'e2e/fixtures/refund-approval.board.json'

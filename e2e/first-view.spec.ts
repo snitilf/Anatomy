@@ -18,7 +18,8 @@
  * To see every cell's real result and the reason it fails, run with `FIRST_VIEW_IGNORE_EXPECTED=1`, which turns the list off.
  */
 import { readFileSync } from 'node:fs'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { open, viewport } from './helpers.ts'
 
 /** Smallest text on screen, in CSS pixels. */

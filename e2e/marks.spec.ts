@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 import { everyState, seedFolder } from './states.ts'
 
 const AT = '2026-11-14T00:00:00.000Z'

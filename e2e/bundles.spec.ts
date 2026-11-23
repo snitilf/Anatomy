@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Locator, Page } from '@playwright/test'
 import { readFile, writeFile } from 'node:fs/promises'
 import { open, pickPart, viewport } from './helpers.ts'
 

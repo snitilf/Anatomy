@@ -4,7 +4,8 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile as writeDiskFile } fro
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from './test.ts'
+import type { Page } from '@playwright/test'
 
 // The key src/workspace/testFolder.ts reads: a stand-in repository folder kept in localStorage.
 const KEY = 'anatomy:test-folder'

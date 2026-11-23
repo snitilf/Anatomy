@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { open } from './helpers.ts'
 
 const BOARDS = [

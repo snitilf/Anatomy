@@ -1,5 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { open, viewport } from './helpers.ts'
 
 const REFUND = 'e2e/fixtures/refund-approval.board.json'

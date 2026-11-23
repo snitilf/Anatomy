@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { open, pickConnection, pickPart, viewport } from './helpers.ts'
 
 const REFUND = 'e2e/fixtures/refund-approval.board.json'

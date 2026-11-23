@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { cardTransform, grabbable, nextFrame, open } from './helpers.ts'
 
 const BOARD_FILE = 'e2e/fixtures/refund-approval.board.json'

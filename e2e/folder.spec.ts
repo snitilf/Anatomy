@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { cardTransform, drag, grabbable } from './helpers.ts'
 
 // The key src/workspace/testFolder.ts reads. The e2e build stands in a folder kept in localStorage for the folder picker.

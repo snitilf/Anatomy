@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { readFile } from 'node:fs/promises'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test.ts'
 import { cardCenter, cardTransform, drag, grabbable, nextFrame, open, startFrameLog, stopFrameLog, viewport } from './helpers.ts'
 
 const BOARDS = [
