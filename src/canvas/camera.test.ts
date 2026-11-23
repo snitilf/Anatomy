@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampViewport, contentBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, READABLE_ZOOM, START_ZOOM, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
+import { clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, READABLE_ZOOM, START_ZOOM, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
 
 const map = { width: 1000, height: 700 }
 const board = { x: 0, y: 0, width: 2000, height: 1000 }
@@ -30,6 +30,36 @@ describe('zoom limits', () => {
       [{ id: 'part-aaaaaa', label: 'New', summary: '', x: -300, y: 0, width: 200, height: 100, createdAt: '2026-11-14T00:00:00Z' }],
     )
     expect(bounds).toEqual({ x: -300, y: -40, width: 820, height: 440 })
+  })
+})
+
+describe('far-view routes in the fit', () => {
+  const cards = [{ x: 0, y: 0, width: 800, height: 600 }]
+  const route = { x: 780, y: -40, width: 500, height: 700 }
+
+  it('counts the routes of the far view in the content', () => {
+    expect(contentBounds(cards, [], [], [], [route])).toEqual({ x: 0, y: -40, width: 1280, height: 700 })
+  })
+
+  it('adds the routes to the box when the fit lands in the far view', () => {
+    const phone = { width: 390, height: 844 }
+    expect(fitBounds(cards[0], () => route, phone)).toEqual({ x: 0, y: -40, width: 1280, height: 700 })
+  })
+
+  it('leaves the box alone when the fit stays in the near view', () => {
+    const wide = { width: 1440, height: 900 }
+    let asked = false
+    const box = fitBounds(cards[0], () => ((asked = true), route), wide)
+    expect(box).toEqual(cards[0])
+    expect(asked).toBe(false)
+  })
+
+  it('leaves the box alone when the routes do not push the fit into the far view', () => {
+    const map = { width: 800, height: 600 }
+    const tall = { x: 0, y: 0, width: 800, height: 678 }
+    const inside = { x: 10, y: 10, width: 100, height: 100 }
+    expect(fitBounds(tall, () => inside, map)).toEqual(tall)
+    expect(fitBounds(tall, () => ({ x: 790, y: 0, width: 40, height: 40 }), map)).toEqual(tall)
   })
 })
 

@@ -42,7 +42,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { contentBounds, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { bundleSelection } from '../app/state'
@@ -50,7 +50,8 @@ import { usePhone } from '../app/usePhone'
 import { frameConnection } from './bundleFrame'
 import { bundleWords, type BundleWords } from './bundleWords'
 import { bundleGroups, connectionsOf } from './bundles'
-import { computeBundles, type Bundle } from './bundleRoutes'
+import { useRouteBox } from './useRouteBox'
+import { sharedBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup } from './FarLayer'
 import { CardNode } from './CardNode'
@@ -371,23 +372,52 @@ export function Canvas() {
 
   // The limits follow what is on the map once it is solved, never a card in hand.
   const solved = shown?.geometry.solved
-  const bounds = useMemo(
+  // The lines of the far view run around the outside of the cards, so a fit that lands in the far view frames them too.
+  // They are solved once for each layout and shared with the far layer below.
+  const bundlesFor = useCallback(
+    (rects: Readonly<Record<string, Rect>>): Bundle[] => (board ? sharedBundles(board, rects, bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? [])) : []),
+    [board, links, reconnects, proposals],
+  )
+  const routesBox = useCallback(
+    () =>
+      solved
+        ? contentBounds(
+            [],
+            [],
+            [],
+            [],
+            bundlesFor(solved).flatMap((b) => {
+              const xs = b.points.map((p) => p.x)
+              const ys = b.points.map((p) => p.y)
+              return xs.length === 0 ? [] : [{ x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) }]
+            }),
+          )
+        : undefined,
+    [solved, bundlesFor],
+  )
+  const baseBounds = useMemo(
     () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
     [board, solved, marks, proposals],
   )
   // The opening view frames the parts. A mark drawn far from them does not pull it off the board.
-  const partsBounds = useMemo(
+  const basePartsBounds = useMemo(
     () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
     [board, solved, proposals],
   )
+  const { box: routes, resolveNow } = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize), board)
+  const bounds = useMemo(() => fitBounds(baseBounds, () => routes, mapSize), [baseBounds, routes, mapSize])
   const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])
   const boundsRef = useRef(bounds)
-  const partsBoundsRef = useRef(partsBounds)
+  const baseBoundsRef = useRef(baseBounds)
+  const basePartsBoundsRef = useRef(basePartsBounds)
+  const resolveNowRef = useRef(resolveNow)
   const partCount = board?.components.length ?? 0
   const partCountRef = useRef(partCount)
   useLayoutEffect(() => {
     boundsRef.current = bounds
-    partsBoundsRef.current = partsBounds
+    baseBoundsRef.current = baseBounds
+    basePartsBoundsRef.current = basePartsBounds
+    resolveNowRef.current = resolveNow
     partCountRef.current = partCount
   })
   // What arrow ends attach to, as drawn now. Filled in below, once the map is built.
@@ -399,17 +429,21 @@ export function Canvas() {
       return { width: r?.width ?? 0, height: r?.height ?? 0, top: el ? coveredTop(el) : 0 }
     }
     const current = (): Limits => zoomLimits(boundsRef.current, size())
-    const move = (viewport: Viewport, duration = 0) => {
+    // The limits with the far-view lines solved now, if the last layout's are still waiting for the browser to be idle.
+    // Fit, zooming out, and the wheel ask for these. A card dropped off screen does not, so a drop never solves lines.
+    const fresh = (): Limits => zoomLimits(fitBounds(baseBoundsRef.current, resolveNowRef.current, size()), size())
+    const move = (viewport: Viewport, duration = 0, limits: Limits = current()) => {
       const flow = flowRef.current
-      return flow ? moveCamera(flow, viewport, current(), size(), duration) : viewport
+      return flow ? moveCamera(flow, viewport, limits, size(), duration) : viewport
     }
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
       const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
-      if (!options.readable) return move(frameViewport(current(), size(), options), duration)
+      const limits = options.box && !options.readable ? current() : fresh()
+      if (!options.readable) return move(frameViewport(limits, size(), options), duration, limits)
       const start = flowStart(rects)
-      const box = partsBoundsRef.current
+      const box = fitBounds(basePartsBoundsRef.current, resolveNowRef.current, size())
       const framed: Frame = { ...options, fitAll: partCountRef.current > OPEN_FIT_PARTS, ...(start ? { start } : {}), ...(box ? { box } : {}) }
-      return move(frameViewport(current(), size(), framed), duration)
+      return move(frameViewport(limits, size(), framed), duration, limits)
     }
     // Where a glide is going. A second step during the glide goes on from there, not from halfway.
     const glide: { heading?: { viewport: Viewport; until: number } | undefined } = {}
@@ -422,7 +456,7 @@ export function Canvas() {
       const duration = animate && !prefersStillness() ? GLIDE_MS : 0
       const box = size()
       const middle = { x: box.width / 2, y: box.top + (box.height - box.top) / 2 }
-      const limits = current()
+      const limits = command === 'fit' || command === 'out' ? fresh() : current()
       const step = stepZoom(now().zoom, command === 'in' ? 1 : -1, limits)
       let viewport: Viewport
       // Zoomed all the way out, the whole board is in view, wherever the view was before.
@@ -431,7 +465,7 @@ export function Canvas() {
       glide.heading = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
     }
     return {
-      limits: current,
+      limits: fresh,
       size,
       move,
       frame,
@@ -514,8 +548,8 @@ export function Canvas() {
   // leaves the last ones where they are until the build that follows the drop.
   const solvedRects = geometryNow?.solved
   const bundles = useMemo(
-    () => (far && board && solvedRects ? computeBundles(board, solvedRects, bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? [])) : []),
-    [far, board, solvedRects, links, reconnects, proposals],
+    () => (far && solvedRects ? bundlesFor(solvedRects) : []),
+    [far, solvedRects, bundlesFor],
   )
   const farGroups = useMemo<FarGroup[]>(
     () =>

@@ -1,6 +1,7 @@
 import type { CoordinateExtent, ReactFlowInstance, Viewport } from '@xyflow/react'
 import type { Rect } from '../layout/geometry'
 import type { Mark, Proposal } from '../layer/model'
+import { FAR_ENTER, FAR_EXIT } from './far'
 
 /** The closest the map can zoom in. */
 export const MAX_ZOOM = 2
@@ -34,7 +35,7 @@ export interface Limits {
   /** The zoom that shows all the content. */
   fitZoom: number
   extent: CoordinateExtent
-  /** Everything on the map: cards, group areas, marks, and proposed parts. */
+  /** Everything on the map: cards, group areas, marks, proposed parts, and, when the fit lands in the far view, the lines of the far view. */
   bounds: Rect
 }
 
@@ -70,19 +71,42 @@ function markBox(mark: Mark): Rect | undefined {
   }
 }
 
-/** Everything on the map, as one box: cards, group areas, marks, and proposed parts. */
+/** Everything on the map, as one box: cards, group areas, marks, proposed parts, and the routes of the far-view lines when given. */
 export function contentBounds(
   cards: readonly Rect[],
   groups: readonly Rect[] = [],
   marks: readonly Mark[] = [],
   proposals: readonly Proposal[] = [],
+  routes: readonly Rect[] = [],
 ): Rect | undefined {
-  const boxes: Rect[] = [...cards, ...groups, ...proposals.map((p) => ({ x: p.x, y: p.y, width: p.width, height: p.height }))]
+  const boxes: Rect[] = [...cards, ...groups, ...routes, ...proposals.map((p) => ({ x: p.x, y: p.y, width: p.width, height: p.height }))]
   for (const m of marks) {
     const box = markBox(m)
     if (box) boxes.push(box)
   }
   return union(boxes)
+}
+
+/**
+ * The box a fit frames. When the cards alone fit near the far view, the lines of the far view count too, because they
+ * route around the outside of the cards. They join the box only when that puts the fit in the far view, where they are
+ * drawn. `routes` is asked only then, so a map that fits well in the near view never solves them.
+ */
+export function fitBounds(base: Rect | undefined, routes: () => Rect | undefined, map: Size): Rect | undefined {
+  if (!base || !mayReachFar(base, map)) return base
+  const area = fitArea(map)
+  const lines = routes()
+  const all = lines ? union([base, lines]) : undefined
+  return all && fitZoomFor(all, area) < FAR_ENTER ? all : base
+}
+
+function fitArea(map: Size): Size {
+  return { width: map.width, height: Math.max(120, map.height - CORNER_ROOM) }
+}
+
+/** Whether a fit of the cards alone lands near enough to the far view that its lines could matter. */
+export function mayReachFar(base: Rect | undefined, map: Size): boolean {
+  return base !== undefined && map.width > 0 && map.height > 0 && fitZoomFor(base, fitArea(map)) < FAR_EXIT
 }
 
 /** The zoom that shows the whole box in an area, with some room around it. */

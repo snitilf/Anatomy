@@ -4,7 +4,7 @@ import type { Board } from '../board/schema'
 import { parseBoard } from '../board/validate'
 import { placeCards } from '../layout/cards'
 import { bundleGroups, clusterOf, connectionsOf, countPairs } from './bundles'
-import { arrowOf, nearestBundle, type Bundle, visibleArrows, blocksOf, bundleWidth, BUNDLE_MAX_WIDTH, computeBundles, roundedPath } from './bundleRoutes'
+import { arrowOf, nearestBundle, type Bundle, visibleArrows, blocksOf, bundleWidth, BUNDLE_MAX_WIDTH, computeBundles, roundedPath, sharedBundles } from './bundleRoutes'
 
 const sixty = (): Board => {
   const r = parseBoard(sixtyText)
@@ -210,5 +210,31 @@ describe('resolving a tap to a line', () => {
 
   it('picks nothing when no line is within reach', () => {
     expect(nearestBundle(lines, { x: 50, y: 40 }, 12)).toBeUndefined()
+  })
+})
+
+describe('sharedBundles', () => {
+  const board = sixty()
+  const rects = placeCards(board, { positions: {}, sizes: {} })
+  const pairs = bundleGroups(board)
+
+  it('gives the same lines again for the same board, cards, and pairs, even for a new list of pairs', () => {
+    const first = sharedBundles(board, rects, pairs)
+    expect(sharedBundles(board, rects, pairs)).toBe(first)
+    expect(sharedBundles(board, rects, bundleGroups(board))).toBe(first)
+  })
+
+  it('solves again when the board, the cards, or the pairs change', () => {
+    const first = sharedBundles(board, rects, pairs)
+    const moved = { ...rects, [board.components[0]!.id]: { ...rects[board.components[0]!.id]!, x: -900 } }
+    const other = sharedBundles(board, moved, pairs)
+    expect(other).not.toBe(first)
+    expect(sharedBundles(board, moved, pairs)).toBe(other)
+    // Only the pairs change here, so the board and cards are the ones cached just before.
+    const fewer = pairs.slice(1)
+    const trimmed = sharedBundles(board, moved, fewer)
+    expect(trimmed).not.toBe(other)
+    expect(trimmed.length).toBeLessThan(other.length)
+    expect(sharedBundles({ ...board }, moved, fewer)).not.toBe(trimmed)
   })
 })

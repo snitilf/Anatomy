@@ -260,3 +260,17 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
   }
   return pairs.flatMap((p) => out.get(`${p.a}|${p.b}`) ?? [])
 }
+
+let last: { board: Board; rects: Readonly<Record<string, Rect>>; key: string; bundles: Bundle[] } | undefined
+
+/**
+ * `computeBundles` for the one layout on the map. The fit and the far layer ask for the same lines, so the last answer
+ * is kept for as long as the board, the cards, and the pairs are the same.
+ */
+export function sharedBundles(board: Board, rects: Readonly<Record<string, Rect>>, counted: readonly Pair[]): Bundle[] {
+  const key = JSON.stringify(counted)
+  if (last && last.board === board && last.rects === rects && last.key === key) return last.bundles
+  const bundles = computeBundles(board, rects, counted)
+  last = { board, rects, key, bundles }
+  return bundles
+}
