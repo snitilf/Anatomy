@@ -404,17 +404,20 @@ export function Canvas() {
     () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
     [board, solved, proposals],
   )
-  const { box: routes } = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize))
+  const { box: routes, resolveNow } = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize), board)
   const bounds = useMemo(() => fitBounds(baseBounds, () => routes, mapSize), [baseBounds, routes, mapSize])
-  const partsBounds = useMemo(() => fitBounds(basePartsBounds, () => routes, mapSize), [basePartsBounds, routes, mapSize])
   const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])
   const boundsRef = useRef(bounds)
-  const partsBoundsRef = useRef(partsBounds)
+  const baseBoundsRef = useRef(baseBounds)
+  const basePartsBoundsRef = useRef(basePartsBounds)
+  const resolveNowRef = useRef(resolveNow)
   const partCount = board?.components.length ?? 0
   const partCountRef = useRef(partCount)
   useLayoutEffect(() => {
     boundsRef.current = bounds
-    partsBoundsRef.current = partsBounds
+    baseBoundsRef.current = baseBounds
+    basePartsBoundsRef.current = basePartsBounds
+    resolveNowRef.current = resolveNow
     partCountRef.current = partCount
   })
   // What arrow ends attach to, as drawn now. Filled in below, once the map is built.
@@ -426,17 +429,21 @@ export function Canvas() {
       return { width: r?.width ?? 0, height: r?.height ?? 0, top: el ? coveredTop(el) : 0 }
     }
     const current = (): Limits => zoomLimits(boundsRef.current, size())
-    const move = (viewport: Viewport, duration = 0) => {
+    // The limits with the far-view lines solved now, if the last layout's are still waiting for the browser to be idle.
+    // Fit, zooming out, and the wheel ask for these. A card dropped off screen does not, so a drop never solves lines.
+    const fresh = (): Limits => zoomLimits(fitBounds(baseBoundsRef.current, resolveNowRef.current, size()), size())
+    const move = (viewport: Viewport, duration = 0, limits: Limits = current()) => {
       const flow = flowRef.current
-      return flow ? moveCamera(flow, viewport, current(), size(), duration) : viewport
+      return flow ? moveCamera(flow, viewport, limits, size(), duration) : viewport
     }
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
       const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
-      if (!options.readable) return move(frameViewport(current(), size(), options), duration)
+      const limits = options.box && !options.readable ? current() : fresh()
+      if (!options.readable) return move(frameViewport(limits, size(), options), duration, limits)
       const start = flowStart(rects)
-      const box = partsBoundsRef.current
+      const box = fitBounds(basePartsBoundsRef.current, resolveNowRef.current, size())
       const framed: Frame = { ...options, fitAll: partCountRef.current > OPEN_FIT_PARTS, ...(start ? { start } : {}), ...(box ? { box } : {}) }
-      return move(frameViewport(current(), size(), framed), duration)
+      return move(frameViewport(limits, size(), framed), duration, limits)
     }
     // Where a glide is going. A second step during the glide goes on from there, not from halfway.
     const glide: { heading?: { viewport: Viewport; until: number } | undefined } = {}
@@ -449,7 +456,7 @@ export function Canvas() {
       const duration = animate && !prefersStillness() ? GLIDE_MS : 0
       const box = size()
       const middle = { x: box.width / 2, y: box.top + (box.height - box.top) / 2 }
-      const limits = current()
+      const limits = command === 'fit' || command === 'out' ? fresh() : current()
       const step = stepZoom(now().zoom, command === 'in' ? 1 : -1, limits)
       let viewport: Viewport
       // Zoomed all the way out, the whole board is in view, wherever the view was before.
@@ -458,7 +465,7 @@ export function Canvas() {
       glide.heading = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
     }
     return {
-      limits: current,
+      limits: fresh,
       size,
       move,
       frame,
