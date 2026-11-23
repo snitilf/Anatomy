@@ -128,15 +128,20 @@ describe('the check at the end of a test', () => {
     fake.context.pages = () => [page([{ evaluate }])]
     const recorder = await recordViolations(fake.context)
     let settled = false
+    let failure: unknown
     const done = recorder.finish().then(
       () => (settled = true),
-      () => (settled = true),
+      (error: unknown) => {
+        settled = true
+        failure = error
+      },
     )
     await new Promise((r) => setTimeout(r, 20))
     expect(settled).toBe(false)
     flushed.resolve()
     await done
     expect(settled).toBe(true)
+    expect(String(failure)).toContain('the page broke its Content Security Policy')
     expect(recorder.list).toEqual([violation()])
   })
 
