@@ -3,9 +3,7 @@ import type { Board } from '../board/schema'
 import { MAX_WIDTH, narrowest } from '../canvas/labelPlacement'
 import { checkLines } from '../canvas/crossings'
 import type { Point, Size } from './geometry'
-import { FAR_PARTS, GROUP_PADDING, groupPadding } from './groupArea'
-
-export { GROUP_PADDING }
+import { FAR_PARTS, groupPadding } from './groupArea'
 
 /** The gaps of one layout, worked out from how many connections it has (`load`). */
 interface Gaps {
