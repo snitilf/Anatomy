@@ -1,17 +1,27 @@
 // Small helpers that turn a problem into a concrete fix: the nearest known name, a free ID, a valid ID.
 // They only compare strings. Nothing from a board is ever run.
 
+/** Counts of the work the comparison does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
+export const suggestStats = { nearestCalls: 0, editDistanceCalls: 0, rows: 0 }
+export function resetSuggestStats(): void {
+  suggestStats.nearestCalls = 0
+  suggestStats.editDistanceCalls = 0
+  suggestStats.rows = 0
+}
+
 /**
  * Edit distance between two strings: inserts, deletes, and replaces each count one.
  * With `limit`, it stops as soon as the distance must be over the limit and returns `limit + 1`.
  */
 export function editDistance(a: string, b: string, limit = Infinity): number {
+  suggestStats.editDistanceCalls++
   if (a === b) return 0
   if (Math.abs(a.length - b.length) > limit) return limit + 1
   let previous = new Int32Array(b.length + 1)
   let current = new Int32Array(b.length + 1)
   for (let j = 0; j <= b.length; j++) previous[j] = j
   for (let i = 1; i <= a.length; i++) {
+    suggestStats.rows++
     current[0] = i
     let rowMin = i
     const code = a.charCodeAt(i - 1)
@@ -42,6 +52,7 @@ const MAX_CANDIDATES = 500
  * differs, with a floor of one edit. A tie between two candidates gives no suggestion, because a guess could mislead.
  */
 export function nearest(value: string, candidates: ReadonlySet<string> | readonly string[]): string | undefined {
+  suggestStats.nearestCalls++
   if (value.length < MIN_LENGTH || value.length > MAX_LENGTH) return undefined
   if (('size' in candidates ? candidates.size : candidates.length) > MAX_CANDIDATES) return undefined
   const lower = value.toLowerCase()

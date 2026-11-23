@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Board } from '../board/schema'
 import { allBoards, anatomyBoard, clone, refundBoard } from '../layer/testBoards'
-import { autoLayout } from './autoLayout'
+import { autoLayout, layoutStats, resetLayoutStats } from './autoLayout'
 import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, clampSize, contentSize, groupAreas, lineCount, placeCards, summaryLinesFor } from './cards'
 import { overlaps, type Rect } from './geometry'
 import { fastestMs } from '../test/timing'
@@ -111,9 +111,30 @@ describe('autoLayout', () => {
     }
   })
 
-  it('takes a few milliseconds on the forty part board', () => {
+  it('does a bounded amount of layout work on the forty part board', () => {
     const forty = withoutPositions(allBoards()[4]!)
-    expect(fastestMs(() => placeCards(forty, none), 60)).toBeLessThan(600)
+    resetLayoutStats()
+    autoLayout(forty, () => ({ ...CARD_SIZE }))
+    // Dagre runs once per connected piece and spacing, and the shapes tried for one board share those runs.
+    expect(layoutStats.layouts).toBe(1)
+    expect(layoutStats.dagreRuns).toBeLessThanOrEqual(forty.groups.length + 3)
+    // Six row counts for each shape: a fixed number of shapes, never one that grows with the board.
+    expect(layoutStats.wrapShapes).toBeLessThanOrEqual(128)
+  })
+
+  it('shares dagre runs between shapes on every test board', () => {
+    for (const b of allBoards()) {
+      resetLayoutStats()
+      autoLayout(withoutPositions(b), () => ({ ...CARD_SIZE }))
+      expect(layoutStats.dagreRuns, `${b.components.length} parts`).toBeLessThanOrEqual(b.groups.length + 3)
+      expect(layoutStats.wrapShapes, `${b.components.length} parts`).toBeLessThanOrEqual(256)
+    }
+  })
+
+  it('takes a few milliseconds on the forty part board', () => {
+    // autoLayout itself, so the cached layout of placeCards is not what is timed. About 6 ms on a quiet machine.
+    const forty = withoutPositions(allBoards()[4]!)
+    expect(fastestMs(() => autoLayout(forty, () => ({ ...CARD_SIZE })), 60)).toBeLessThan(60)
   })
 
   it('packs cards that no connection joins instead of one long row or column', () => {

@@ -1,6 +1,5 @@
-import { fastestMs } from '../test/timing'
 import { describe, expect, it } from 'vitest'
-import { editDistance, freeId, nearest, slugify } from './suggest'
+import { editDistance, freeId, nearest, resetSuggestStats, slugify, suggestStats } from './suggest'
 
 describe('editDistance', () => {
   it('counts inserts, deletes, and replaces', () => {
@@ -29,14 +28,33 @@ describe('nearest', () => {
     expect(nearest('cart', ['card'])).toBe('card')
   })
 
-  it('skips huge values and candidates, and stays fast with many candidates', () => {
+  it('skips huge values and candidates, and stops early on a candidate that is too far off', () => {
+    resetSuggestStats()
     expect(nearest('a'.repeat(201), ['a'.repeat(200)])).toBeUndefined()
+    expect(suggestStats.editDistanceCalls).toBe(0)
     expect(nearest('note-1', ['n'.repeat(2_000_000), 'note-2x'])).toBe('note-2x')
+    // The huge candidate is skipped, so only the other one is compared.
+    expect(suggestStats.editDistanceCalls).toBe(1)
+  })
+
+  it('compares at most the allowed number of rows, and nothing past the caps', () => {
     const many = Array.from({ length: 500 }, (_, i) => `${String(i).padStart(4, '0')}-${'x'.repeat(59)}`)
-    // The tool asks for at most 25 hints, each against at most 500 candidates.
-    // A slow machine only adds time, so the fastest of a few runs is judged. A real blowup is slow in every run.
-    expect(fastestMs(() => { for (let i = 0; i < 25; i++) nearest(`${'y'.repeat(59)}-${i}`, many) }, 1000, 5)).toBeLessThan(10_000)
+    // The tool asks for at most 25 hints, each against at most 500 candidates. A value of 64 characters allows 21 edits.
+    // The row early-exit stops a hopeless comparison at limit + 1 rows, where a full table would be 64 rows.
+    resetSuggestStats()
+    expect(editDistance('y'.repeat(59), 'x'.repeat(59), 20)).toBe(21)
+    expect(suggestStats.rows).toBeLessThanOrEqual(21)
+    resetSuggestStats()
+    for (let i = 0; i < 25; i++) nearest(`${'y'.repeat(59)}-${i}`, many)
+    expect(suggestStats.editDistanceCalls).toBe(25 * 500)
+    expect(suggestStats.rows).toBeLessThanOrEqual(25 * 500 * 22)
+    // Over the caps nothing is compared at all.
+    resetSuggestStats()
     expect(nearest('note-1', Array.from({ length: 501 }, (_, i) => `note-${i + 2}`))).toBeUndefined()
+    expect(nearest('note-1', new Set(Array.from({ length: 501 }, (_, i) => `note-${i + 2}`)))).toBeUndefined()
+    expect(nearest('x'.repeat(201), ['x'.repeat(200)])).toBeUndefined()
+    expect(suggestStats.editDistanceCalls).toBe(0)
+    expect(suggestStats.rows).toBe(0)
   })
 
   it('gives nothing when no candidate is close', () => {

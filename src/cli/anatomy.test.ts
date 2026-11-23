@@ -1,4 +1,4 @@
-import { fastestMs } from '../test/timing'
+import { resetSuggestStats, suggestStats } from '../board/suggest'
 import { describe, expect, it } from 'vitest'
 import { parseBoard } from '../board/validate'
 import { LESSON_IDS } from '../lessons/ids'
@@ -147,8 +147,11 @@ describe('speed', () => {
     const board = { ...baseBoard(), revision: 4, responses: { respondsTo: 'feedback-big', items: ids(300, 1).map((feedbackId) => ({ feedbackId, status: 'answered', text: 'Yes.' })) } }
     const feedback = { format: 'anatomy-feedback', schemaVersion: 1, id: 'feedback-big', boardId: 'shop', baseRevision: 3, items: ids(5000, 2).map((id) => ({ id, type: 'note' })), withdrawn: [] }
     const files = new Map([['.anatomy/board.json', JSON.stringify(board)], ['.anatomy/feedback.json', JSON.stringify(feedback)]])
-    let result = runAnatomy(['validate', '--json'], memoryIo(files))
-    expect(fastestMs(() => { result = runAnatomy(['validate', '--json'], memoryIo(files)) }, 3000, 5)).toBeLessThan(30_000)
+    resetSuggestStats()
+    const result = runAnatomy(['validate', '--json'], memoryIo(files))
+    // At most 25 warnings carry a hint, and 5,000 candidates are over the cap, so nothing is compared.
+    expect(suggestStats.nearestCalls).toBeLessThanOrEqual(25)
+    expect(suggestStats.editDistanceCalls).toBe(0)
     const report = JSON.parse(result.stdout) as { warnings: { code: string }[]; omittedWarnings: number }
     expect(report.warnings).toHaveLength(25)
     expect(report.warnings[0]?.code).toBe('unanswered-feedback')
@@ -159,9 +162,10 @@ describe('speed', () => {
     const board = baseBoard()
     const targets = ids(400, 3)
     board.scenarios[0].steps = Array.from({ length: 50 }, (_, i) => ({ caption: `Step ${i}.`, highlight: targets.slice(0, 30) }))
-    const files = new Map([['.anatomy/board.json', JSON.stringify(board)]])
-    let result = runAnatomy(['validate'], memoryIo(files))
-    expect(fastestMs(() => { result = runAnatomy(['validate'], memoryIo(files)) }, 3000, 5)).toBeLessThan(30_000)
+    resetSuggestStats()
+    const result = runAnatomy(['validate'], memoryIo(new Map([['.anatomy/board.json', JSON.stringify(board)]])))
+    // Only the 25 listed problems get a hint, however many references are broken.
+    expect(suggestStats.nearestCalls).toBeLessThanOrEqual(25)
     expect(result.stdout.split('\n')[0]).toBe('.anatomy/board.json: invalid, 1500 errors')
   })
 })

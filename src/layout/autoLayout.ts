@@ -199,6 +199,7 @@ function wrapColumns(cols: Columns, aspect: number, slack: number): void {
   const gapAt = (start: number) => Math.max(96, roomFor(cols.crossing[start - 1] as number))
   let choice: { starts: number[]; score: number } | undefined
   for (let rows = 1; rows <= Math.min(count, 6); rows++) {
+    layoutStats.wrapShapes++
     const starts = splitColumns(widths, rows)
     if (new Set(starts).size !== starts.length) continue
     let width = 0
@@ -228,6 +229,14 @@ function wrapColumns(cols: Columns, aspect: number, slack: number): void {
   })
 }
 
+/** Counts of the work a layout does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
+export const layoutStats = { layouts: 0, dagreRuns: 0, wrapShapes: 0 }
+export function resetLayoutStats(): void {
+  layoutStats.layouts = 0
+  layoutStats.dagreRuns = 0
+  layoutStats.wrapShapes = 0
+}
+
 /** The layers dagre found for the layout in progress, by input. The shapes tried for one board share them. */
 let dagreMemo: Map<string, Spot[]> | undefined
 
@@ -247,6 +256,7 @@ function flow(boxes: readonly Box[], edges: readonly Edge[], spacing: { nodesep:
     edges.forEach((e, i) => {
       if (e.from !== e.to) g.setEdge(e.from, e.to, { weight: e.weight, minlen: 1 }, String(i))
     })
+    layoutStats.dagreRuns++
     layout(g)
     base = boxes.map((b) => {
       const n = g.node(b.id) as { x: number; y: number }
@@ -422,6 +432,7 @@ export function autoLayout(board: Board, sizeOf: (id: string) => Size, ids?: Rea
     }
     return backward <= forward
   }
+  layoutStats.layouts++
   dagreMemo = new Map()
   try {
     // The layout with every strip kept whole is the one that always reads left to right, and the fallback.

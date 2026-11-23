@@ -25,6 +25,10 @@ describe('release velocity', () => {
     expect(releaseVelocity([{ y: 0, t: 900 }], 1000, 10)).toBeCloseTo(0.1, 10)
   })
 
+  it('drops a sample 101 ms old', () => {
+    expect(releaseVelocity([{ y: 0, t: 899 }, { y: 300, t: 900 }], 1000, 300)).toBe(0)
+  })
+
   it('is zero with no samples or no elapsed time', () => {
     expect(releaseVelocity([], 1000, 5)).toBe(0)
     expect(releaseVelocity([{ y: 0, t: 1000 }], 1000, 50)).toBe(0)
@@ -45,11 +49,25 @@ describe('settling on a stop', () => {
     expect(settleStop(e.samples, e.now, e.y, e.at, all)).toBe(1)
   })
 
+  it('goes to the nearest stop on a slow but moving finger inside the window', () => {
+    // 0.1 px/ms over the last 100 ms is below the flick speed, so the sheet at 650 settles on the peek, not past it.
+    const samples: Sample[] = [{ y: 500, t: 900 }, { y: 510, t: 1000 }]
+    expect(releaseVelocity(samples, 1000, 510)).toBeCloseTo(0.1, 10)
+    expect(settleStop(samples, 1000, 510, 650, all)).toBe(0)
+    // The same speed upward from 500 settles on half.
+    const up: Sample[] = [{ y: 510, t: 900 }, { y: 500, t: 1000 }]
+    expect(settleStop(up, 1000, 500, 500, all)).toBe(1)
+  })
+
   it('does not fling exactly at the threshold', () => {
     // 11 px in 100 ms is exactly FLICK: not above it, so the nearest stop wins (half, at 411).
     expect(FLICK).toBe(0.11)
     const d = drag(11, 100)
     expect(settleStop(d.samples, d.now, d.y, d.at, all)).toBe(1)
+    // And upward: -0.11 is not a flick either.
+    const u = drag(-11, 100)
+    expect(releaseVelocity(u.samples, u.now, u.y)).toBeCloseTo(-0.11, 10)
+    expect(settleStop(u.samples, u.now, u.y, u.at, all)).toBe(1)
   })
 
   it('flings just above the threshold to the next stop in its direction', () => {
