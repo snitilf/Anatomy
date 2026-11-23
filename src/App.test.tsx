@@ -12,6 +12,8 @@ import { press } from './test/press'
 async function loadRefund() {
   openBoardFile(refundRaw, 'refund-approval.board.json')
   await screen.findByTestId('inspector')
+  // The map loads on its own script, a moment after the sidebar.
+  await waitFor(() => expect(document.querySelector('.react-flow__node-card')).not.toBeNull())
 }
 
 const refund = JSON.parse(refundRaw) as {
@@ -149,6 +151,8 @@ describe('App', () => {
     press(within(screen.getByRole('banner')).getByRole('button', { name: 'Local file' }))
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Open' })).getByRole('button', { name: /Anatomy itself/ }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open' })).not.toBeInTheDocument())
+    // The example loads on demand, so the board changes a moment after the popover closes.
+    expect(await within(screen.getByTestId('inspector')).findByRole('heading', { name: 'Anatomy: how a board becomes a map' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: refund.title })).not.toBeInTheDocument()
   })
 

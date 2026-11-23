@@ -75,6 +75,8 @@ function readBlob(blob: Blob): Promise<string> {
 async function loadRefund() {
   openBoardFile(refundRaw, 'refund-approval.board.json')
   await screen.findByTestId('inspector')
+  // The map loads on its own script, a moment after the sidebar.
+  await waitFor(() => expect(document.querySelector('.react-flow__node-card')).not.toBeNull())
 }
 
 function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: number; y: number } {

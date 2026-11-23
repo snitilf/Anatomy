@@ -21,13 +21,13 @@ describe('every bundled example board', () => {
 describe('the examples offered to the user', () => {
   it('list every bundled board', () => {
     const ids = Object.values(boards).map((text) => (JSON.parse(text) as { id: string }).id)
-    expect(EXAMPLES.map((e) => (JSON.parse(e.raw) as { id: string }).id).sort()).toEqual(ids.sort())
+    expect(EXAMPLES.map((e) => e.boardId).sort()).toEqual(ids.sort())
   })
 })
 
 describe('the two practical examples', () => {
   const byId = (id: string) => {
-    const raw = EXAMPLES.find((e) => e.id === id)!.raw
+    const raw = boards[`../examples/${EXAMPLES.find((e) => e.id === id)!.fileName}`]!
     const board = JSON.parse(raw) as {
       groups: { id: string }[]
       components: { id: string; label: string; lesson?: string; group?: string; source: { kind: string; references?: unknown[] } }[]
