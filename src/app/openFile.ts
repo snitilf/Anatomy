@@ -1,6 +1,6 @@
 import { parseBoard } from '../board/validate'
 import { LESSON_IDS } from '../lessons/catalog'
-import { parseOpenedFile } from '../layer/files'
+import { openTooLargeMessage, parseOpenedFile } from '../layer/files'
 import type { Action } from './state'
 
 /** Turns the text of a file into the action that opens it, or the action that reports why it could not open. */
@@ -16,6 +16,9 @@ export function openFromText(fileName: string, text: string): Action {
 }
 
 export async function readFileText(file: File): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+  // The size is known without reading, so a huge file is refused before its content is loaded.
+  const tooLarge = openTooLargeMessage(file.size)
+  if (tooLarge) return { ok: false, message: tooLarge }
   try {
     return { ok: true, text: await file.text() }
   } catch {

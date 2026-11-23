@@ -1,3 +1,5 @@
+import { LIMITS } from '../board/schema'
+import { boardTooLargeMessage } from '../board/validate'
 import { openStore, StorageError, type BoardStore } from './db'
 
 /** The files Anatomy reads and writes inside the `.anatomy` folder of a repository. */
@@ -41,6 +43,38 @@ export function filePath(name: string): { dir: typeof GUIDE_DIR | undefined; fil
   throw new StorageError('folder', `Anatomy writes only inside .anatomy, so it refused the name "${name}".`)
 }
 
+/**
+ * The most bytes `read` loads for each file. The size is checked first, so a file over its limit is never read.
+ * The board has the board limit. The layer grows with the user's marks, so it has room for much more. The files the app
+ * writes itself are small, so a bigger one is not the app's.
+ */
+const READ_LIMITS: Record<string, number> = {
+  [FILES.board]: LIMITS.fileBytes,
+  [FILES.layer]: 16_000_000,
+}
+const HELPER_READ_LIMIT = 2_000_000
+export const readLimit = (name: string): number => READ_LIMITS[name] ?? HELPER_READ_LIMIT
+
+/** A file is over the size `read` accepts. Nothing of it was read. */
+export class FileTooLargeError extends Error {
+  readonly file: string
+  readonly size: number
+  readonly limit: number
+  constructor(file: string, size: number, limit: number) {
+    super(file === FILES.board ? boardTooLargeMessage(size) : `${file} is ${size.toLocaleString('en-US')} bytes. The limit is ${limit.toLocaleString('en-US')} bytes.`)
+    this.name = 'FileTooLargeError'
+    this.file = file
+    this.size = size
+    this.limit = limit
+  }
+}
+
+/** Throws a `FileTooLargeError` when a file of this size is over the limit for its name. */
+export function checkReadSize(name: string, size: number): void {
+  const limit = readLimit(name)
+  if (size > limit) throw new FileTooLargeError(name, size, limit)
+}
+
 /** Enough to tell that a file changed without reading it. */
 export interface FileStamp {
   lastModified: number
@@ -56,6 +90,7 @@ export interface Folder {
   permission(ask: boolean): Promise<Permission>
   /** Undefined when the file does not exist. */
   stat(file: FileName): Promise<FileStamp | undefined>
+  /** Undefined when the file does not exist. Throws a `FileTooLargeError`, without reading the file, when it is over its limit. */
   read(file: FileName): Promise<{ text: string; stamp: FileStamp } | undefined>
   /** Creates `.anatomy`, its `guide` folder for a topic, and the file when they are missing. Refuses any other path. */
   write(file: FileName, text: string): Promise<void>
@@ -123,7 +158,9 @@ function browserFolder(handle: DirectoryHandle): Folder & { handle: DirectoryHan
     },
     async read(name) {
       const f = await open(name)
-      return f ? { text: await f.text(), stamp: { lastModified: f.lastModified, size: f.size } } : undefined
+      if (!f) return undefined
+      checkReadSize(name, f.size)
+      return { text: await f.text(), stamp: { lastModified: f.lastModified, size: f.size } }
     },
     async write(name, text) {
       try {

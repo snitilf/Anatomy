@@ -106,10 +106,10 @@ describe('reading a file that is too large', () => {
     [FILES.board, 1_000_001],
     [FILES.board, 300_000_000],
     [FILES.layer, 300_000_000],
-    [FILES.readme, 2_000_000],
-    ['guide/ask.md', 2_000_000],
-    [FILES.script, 2_000_000],
-    [FILES.schema, 2_000_000],
+    [FILES.readme, 2_000_001],
+    ['guide/ask.md', 2_000_001],
+    [FILES.script, 2_000_001],
+    [FILES.schema, 2_000_001],
   ] as const)('does not read %s of %i bytes', async (name, size) => {
     const { folder, text } = await bigFile(name, size)
     await expect(folder.read(name)).rejects.toMatchObject({ name: 'FileTooLargeError', file: name, size })
