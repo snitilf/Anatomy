@@ -6,11 +6,10 @@ import styles from './Sheet.module.css'
 import { findItem } from '../layer/edits'
 import { bundleWords } from '../canvas/bundleWords'
 import { bundleGroups } from '../canvas/bundles'
+import { settleStop } from './sheetStops'
 
 /** The header and handle, which is all the sheet shows at its lowest stop. */
 export const PEEK = 64
-/** Faster than this, in px per ms, a release goes on to the next stop in that direction. */
-const FLICK = 0.11
 /** Less movement than this is a tap on the header. */
 const TAP = 4
 
@@ -127,19 +126,7 @@ export function Sheet({ body, inert = false }: { body: (header: ReactNode) => Re
       return
     }
     // Only the last 100 ms count, so a finger that stopped before it lifted does not fling.
-    const recent = d.samples.filter((x) => event.timeStamp - x.t <= 100)
-    const first = recent[0]
-    const velocity = first && event.timeStamp > first.t ? (event.clientY - first.y) / (event.timeStamp - first.t) : 0
-    const at = d.start + moved
-    const stops = ([0, 1, 2] as const).map((s) => ({ s, y: all[s] }))
-    let next: Stop
-    if (Math.abs(velocity) > FLICK) {
-      // A flick goes to the next stop in its direction from where the sheet is now.
-      const ahead = stops.filter((x) => (velocity > 0 ? x.y > at : x.y < at)).sort((a, b) => Math.abs(a.y - at) - Math.abs(b.y - at))
-      next = ahead[0]?.s ?? (velocity > 0 ? 0 : 2)
-    } else {
-      next = stops.reduce((best, x) => (Math.abs(x.y - at) < Math.abs(best.y - at) ? x : best)).s
-    }
+    const next = settleStop(d.samples, event.timeStamp, event.clientY, d.start + moved, all)
     ui.setSheet(next)
     place(all[next], true)
   }
