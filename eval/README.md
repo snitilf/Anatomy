@@ -25,7 +25,7 @@ They use the code in `web-app/fixture`.
 1. Run `npm run eval` to print every prompt. Run `npm run eval -- web-app` to print one.
 2. Copy the fixture folder to a scratch folder outside this repository.
    For a revision task, copy `board.json` to `.anatomy/board.json` and `feedback.json` to `.anatomy/feedback.json` as well.
-3. Start Anatomy for that folder, so it writes `.anatomy/README.md`.
+3. Run `npm run agent-files -- <folder>`, or start Anatomy for that folder and click **Copy prompt**, so it writes `.anatomy/README.md`, the topics in `.anatomy/guide/`, and `.anatomy/anatomy.mjs`.
 4. Give your agent the prompt. Let it write `.anatomy/board.json`.
 5. Score the file:
 
