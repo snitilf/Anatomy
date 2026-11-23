@@ -317,8 +317,8 @@ It then writes `.anatomy/feedback.json` and copies a short prompt.
 If the user opened the board as a file or as an example, the app downloads `feedback.json` instead.
 The prompt then says that the file is in the Downloads folder.
 The copy starts first, inside the press, because browsers allow a copy only there.
-The app writes `.anatomy/README.md` on the first send.
-It replaces that file when the format changes, unless the user removed its first line.
+The app writes the agent files (see [Repository folder](#repository-folder-chrome-and-edge)) on the first send.
+It replaces each one when the format changes, unless the user removed its mark.
 
 ### The feedback file
 
@@ -391,7 +391,9 @@ The app uses these files in the folder:
 | `.anatomy/layer.json` | The app | The user layer, saved a moment after each change. |
 | `.anatomy/layer.backup.json` | The app | A layer file that the app cannot read, kept before a new one starts. |
 | `.anatomy/feedback.json` | The app | What the user sends to the agent. |
-| `.anatomy/README.md` | The app | Format notes for agents. |
+| `.anatomy/README.md` | The app | The short core for agents: the files, the commands, the rules an agent must keep, and the topic index. |
+| `.anatomy/guide/<topic>.md` | The app | One topic of the authoring guide, read on demand. |
+| `.anatomy/board.schema.json` | The app | The JSON Schema of a board, with a `$comment` mark as its first key. |
 | `.anatomy/anatomy.mjs` | The app | The `anatomy` tool that checks a board. See below. |
 
 The app keeps the folder handle in IndexedDB.
@@ -407,11 +409,24 @@ It opens the file only if the file is valid and its `revision` is higher.
 A new revision goes through the update review.
 A look never shows an error.
 
-The app writes `README.md` and `anatomy.mjs` when the user clicks **Copy prompt** or sends feedback.
-Each starts with a marker line.
+The app writes `README.md`, the topics in `guide/`, `board.schema.json`, and `anatomy.mjs` when the user clicks **Copy prompt** or sends feedback.
+Each starts with a marker line, or for the JSON Schema a `$comment` key.
 The app replaces a file that has the marker when its text changes, and leaves a file without the marker alone.
+`src/app/agentReadme.ts` holds the README core and builds every one of these files except the script.
+The README text never changes between writes, with no date and no counter, so an agent harness that caches a stable prompt prefix can reuse it.
 
-`anatomy.mjs` is `bin/anatomy.ts` and everything it imports, bundled into one file of about 100 KB.
+The topics come from `docs/authoring-guide.md` and nowhere else.
+`src/cli/topics.ts` maps each topic to one or more `##` sections of the guide and takes them word for word, without the section numbers.
+A test fails when a section has no topic, so a new heading cannot drop out of the agent's text.
+The section of prompts for people is the one part that no topic takes.
+
+The folder layer writes only inside `.anatomy` and in one folder below it, `.anatomy/guide`.
+`filePath` in `src/workspace/folder.ts` turns a file name into that place and refuses any other name, such as one with `..`, a slash in the wrong place, or a hidden file.
+The browser folder, the in-memory folder, and the end-to-end test folder all call it.
+
+`anatomy.mjs` is `bin/anatomy.ts` and everything it imports, bundled into one file of about 148 KB.
+It also carries, as text, the guide sections that the topics use and the field list `schema/board.v1.fields.txt`, so `topic` and `schema` need no other file.
+`bin/anatomy.test.ts` holds it under 150,000 bytes.
 The Vite plugin in `scripts/lib/cliBundle.ts` builds it during the dev server, the build, and the tests, and serves the text as `virtual:anatomy-cli`.
 The app loads that module only when it writes the file, so the tool adds nothing to the first load.
 The tool and the app run the same `parseBoard`, and `bin/anatomy.test.ts` runs the bundle in Node on every board in the repository to prove that they agree.

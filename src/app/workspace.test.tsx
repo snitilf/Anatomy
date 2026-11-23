@@ -124,7 +124,7 @@ describe('folder mode', () => {
     await waitFor(() => expect(folder.files.get('guide/honesty.md')?.text).toContain('## Honesty rules'))
     expect(folder.files.get('guide/ask.md')?.text).toBe(mine)
     // Nothing lands outside .anatomy: every name the app wrote is a file in it or in its guide folder.
-    for (const name of folder.files.keys()) expect(name).toMatch(/^(?:guide\/)?[a-z0-9][a-z0-9.-]*$/)
+    for (const name of folder.files.keys()) expect(name).toMatch(/^(?:guide\/)?[a-z0-9][a-z0-9.-]*$/i)
   })
 
   it('shows a new revision through the update review and keeps the notes', async () => {

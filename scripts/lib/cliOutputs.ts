@@ -26,12 +26,20 @@ function applied(patch: unknown[], args: string[] = []): string {
   return runAnatomy(['apply', '-', ...args], memoryIo(files, undefined, JSON.stringify(patch))).stdout
 }
 
-export function cliOutputs(examples: Record<string, string>): CliOutput[] {
+/** The texts the bundled tool carries: the authoring guide and the field list. */
+export interface CliTexts {
+  guide: string
+  fields: string
+}
+
+export function cliOutputs(examples: Record<string, string>, texts: CliTexts): CliOutput[] {
   const [firstName, firstText] = Object.entries(examples).sort(([a], [b]) => a.localeCompare(b))[0] ?? []
   if (firstName === undefined || firstText === undefined) throw new Error('No example boards.')
   const valid = runAnatomy(['validate', firstName], memoryIo(new Map([[firstName, firstText]])))
   return [
     { name: 'anatomy help', text: runAnatomy(['help'], memoryIo(new Map())).stdout, kind: 'prose' },
+    { name: 'anatomy topic', text: runAnatomy(['topic'], { ...memoryIo(new Map()), guide: () => texts.guide }).stdout, kind: 'prose' },
+    { name: 'anatomy schema', text: runAnatomy(['schema'], { ...memoryIo(new Map()), schemaSheet: () => texts.fields }).stdout, kind: 'prose' },
     { name: 'anatomy validate, valid example', text: valid.stdout, kind: 'prose' },
     { name: 'anatomy validate, one broken reference', text: corpus('relationship to a misspelled component'), kind: 'prose' },
     { name: 'anatomy validate, four faults', text: corpus('several faults at once'), kind: 'prose' },

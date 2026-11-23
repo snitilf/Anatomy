@@ -1,9 +1,11 @@
 {
-  "readme": { "characters": 30718, "tokens": 8727 },
-  "hardCap": { "characters": 32000, "tokens": 9200 },
+  "readme": { "characters": 5427, "tokens": 1357 },
+  "hardCap": { "characters": 8000, "tokens": 2000 },
   "allowedGrowth": 0.05,
   "cli": {
-    "anatomy help": { "characters": 976, "tokens": 244 },
+    "anatomy help": { "characters": 1131, "tokens": 283 },
+    "anatomy topic": { "characters": 673, "tokens": 169 },
+    "anatomy schema": { "characters": 2112, "tokens": 528 },
     "anatomy validate, valid example": { "characters": 38, "tokens": 10 },
     "anatomy validate, one broken reference": { "characters": 173, "tokens": 44 },
     "anatomy validate, four faults": { "characters": 377, "tokens": 95 },

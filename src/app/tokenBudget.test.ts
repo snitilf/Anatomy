@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import baselineText from '../../tokens.baseline.json?raw'
-import schemaText from '../../schema/board.v1.schema.json?raw'
+import guideText from '../../docs/authoring-guide.md?raw'
+import fieldsText from '../../schema/board.v1.fields.txt?raw'
 import { cliOutputs } from '../../scripts/lib/cliOutputs.ts'
-import { estimateReadmeTokens, estimateTokens } from '../../scripts/lib/estimate.ts'
+import { estimateTokens } from '../../scripts/lib/estimate.ts'
 import { agentReadme } from './agentReadme'
 
 // The README is the first thing every agent session reads, and an agent reads every line the anatomy tool prints,
@@ -27,7 +28,7 @@ interface Baseline {
 const baseline = JSON.parse(baselineText) as Baseline
 const readme = agentReadme()
 const characters = readme.length
-const tokens = estimateReadmeTokens(readme, schemaText)
+const tokens = estimateTokens(readme, 'prose')
 
 describe('the agent README size', () => {
   it('stays within the allowed growth over the baseline', () => {
@@ -63,7 +64,7 @@ const examples = Object.fromEntries(
     text,
   ]),
 )
-const outputs = cliOutputs(examples).map((o) => ({ name: o.name, characters: o.text.length, tokens: estimateTokens(o.text, o.kind) }))
+const outputs = cliOutputs(examples, { guide: guideText, fields: fieldsText }).map((o) => ({ name: o.name, characters: o.text.length, tokens: estimateTokens(o.text, o.kind) }))
 
 describe('the anatomy tool output size', () => {
   it('has a baseline for every measured output, and no stale ones', () => {

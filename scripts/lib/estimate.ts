@@ -10,17 +10,6 @@ export function estimateTokens(text: string, kind: TextKind): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN[kind])
 }
 
-/**
- * The README Anatomy writes is prose with the JSON Schema inside it.
- * The schema part counts as JSON and the rest counts as prose.
- */
-export function estimateReadmeTokens(readme: string, schemaText: string): number {
-  const schema = schemaText.trim()
-  if (!readme.includes(schema)) return estimateTokens(readme, 'prose')
-  const prose = readme.length - schema.length
-  return Math.ceil(prose / CHARS_PER_TOKEN.prose + schema.length / CHARS_PER_TOKEN.json)
-}
-
 /** Splits the authoring guide at its numbered `##` headings. The text before the first one is the preface. */
 export function guideSections(guide: string): { title: string; text: string }[] {
   const sections: { title: string; text: string }[] = []
