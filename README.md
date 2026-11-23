@@ -28,7 +28,7 @@ Your agent does the thinking, and Anatomy shows it.
    Anatomy writes `.anatomy/README.md` into your project: a short page that teaches your agent the rules, with topics in `.anatomy/guide/` that it reads when it needs them.
    It also writes `.anatomy/anatomy.mjs`, a script your agent can run to check the board before it hands it over and to revise it with a short patch.
    When you open a folder that already has a board, Anatomy writes any of these files that are missing and refreshes the ones it wrote before.
-   It leaves a file alone when you removed its first line.
+   It leaves a file alone when you removed its Anatomy marker, which is the first line, or for the schema the `$comment` key.
 4. Paste the prompt into your coding agent and finish the sentence:
 
    ```text
