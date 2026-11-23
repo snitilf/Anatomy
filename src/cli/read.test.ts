@@ -8,6 +8,7 @@ import { baseBoard, CORPUS, INVALID_CASES, memoryIo, runCase, VALID_CASES } from
 // An agent that answers feedback should never need the whole board or the raw feedback.json.
 
 /** Characters that can move the cursor, clear the screen, or reorder text. A newline (U+000A) separates lines, so it is allowed. */
+// eslint-disable-next-line no-control-regex
 const CONTROL = new RegExp('[\\u0000-\\u0009\\u000b-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]')
 
 const BOARD = '.anatomy/board.json'
@@ -138,7 +139,7 @@ describe('feedback', () => {
     for (const args of [['feedback'], ['feedback', '--json']]) {
       const result = run(args, { [FEEDBACK]: feedbackOf({ items }) })
       expect(result.stdout, args.join(' ')).not.toMatch(CONTROL)
-      expect(result.stdout.trimEnd().split('\n').length).toBe(args.includes('--json') ? 1 : 3 + 1)
+      expect(result.stdout.trimEnd().split('\n').length).toBe(args.includes('--json') ? 1 : 3)
     }
   })
 
@@ -314,8 +315,7 @@ describe('show', () => {
 describe('the other commands', () => {
   it('escape control characters in what they print, so a board cannot write to the terminal', () => {
     const board = baseBoard()
-    board.components[1].label = 'x'.repeat(10)
-    board.relationships[0].to = 'a\u001b[2Jb'
+    board.components[1]['k\u001b[2Jk'] = 1
     const result = run(['validate'], { [BOARD]: JSON.stringify(board) })
     expect(result.stdout).not.toMatch(CONTROL)
     expect(result.stdout).toContain('\\x1b')

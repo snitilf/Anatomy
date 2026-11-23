@@ -50,17 +50,55 @@ function head(text: string, max: number): { start: string; length: number } | un
 }
 
 /**
+ * Characters that can move the cursor, clear the screen, hide text, or reorder it: the C0 and C1 controls, the line
+ * and paragraph separators, the left-to-right and right-to-left marks, the bidirectional overrides, and the byte order mark. A board and a feedback file
+ * are data from anywhere, so none of these reaches the terminal as it is.
+ */
+// eslint-disable-next-line no-control-regex
+const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g
+
+/** What `UNSAFE` covers that JSON does not escape itself: everything but the C0 controls. */
+const BEYOND_JSON = /[\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g
+
+const NAMED: Record<string, string> = { '\n': '\\n', '\r': '\\r', '\t': '\\t' }
+
+/** `text` with each unsafe character written as an escape: `\n`, `\x1b`, or `\u202e`. */
+export function safe(text: string): string {
+  return text.replace(UNSAFE, (c) => NAMED[c] ?? (c.charCodeAt(0) < 256 ? `\\x${c.charCodeAt(0).toString(16).padStart(2, '0')}` : `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`))
+}
+
+/** One line of JSON for `--json`. JSON escapes the C0 controls itself, and this escapes the rest of what `safe` covers. */
+export function jsonLine(value: unknown, space?: number): string {
+  return JSON.stringify(value, null, space).replace(BEYOND_JSON, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
+}
+
+/**
  * Cuts long quoted values to `"start…" (N characters)`, then cuts the text itself if it is still too long.
  * Characters are Unicode code points.
  */
 export function clip(text: string): string {
   // Quotes pair up from the left, so text between two quoted values is never taken for a value.
-  const quoted = text.replace(/"([^"]*)"/g, (match, value: string) => {
+  const quoted = safe(text).replace(/"([^"]*)"/g, (match, value: string) => {
     const cut = head(value, MAX_QUOTED)
     return cut === undefined ? match : `"${cut.start}" (${cut.length.toLocaleString('en-US')} characters)`
   })
   const cut = head(quoted, MAX_LINE)
   return cut === undefined ? quoted : cut.start
+}
+
+/** A text, cut at `max` characters and with the control characters escaped, for a printed line. `quote` wraps it in quotes. */
+export function shown(text: string, max: number, quote = false): string {
+  const whole = safe(text)
+  const cut = head(whole, max)
+  const body = cut === undefined ? whole : cut.start
+  const out = quote ? `"${body.replace(/"/g, '\\"')}"` : body
+  return cut === undefined ? out : `${out} (${cut.length.toLocaleString('en-US')} characters)`
+}
+
+/** `text` with control characters escaped and cut at `max` characters, with "…" at the end when it was cut. For `--json`. */
+export function cutText(text: string, max: number): string {
+  const whole = safe(text)
+  return head(whole, max)?.start ?? whole
 }
 
 export function line(problem: BoardProblem): string {

@@ -92,7 +92,9 @@ describe('the bundled tool', () => {
   })
 
   it('stays small, with the topics and the field sheet inside it', () => {
-    expect(Buffer.byteLength(script)).toBeLessThan(150_000)
+    // The file holds Zod, the validator, the guide, and the commands. The three read commands added about 9 KB. The limit keeps
+    // the file the app writes small, and it is not a product rule: raise it on purpose, with the reason, when a command needs it.
+    expect(Buffer.byteLength(script)).toBeLessThan(165_000)
     expect(script).toContain('The decision tree')
     expect(script).toContain('anatomy-board')
   })
@@ -129,6 +131,31 @@ describe('the bundled tool', () => {
       }
     }
   })
+
+  it('prints outline, show, and feedback exactly as the app does, with the board and the feedback in files', async () => {
+    // Every case with feedback, and every fourth of the rest: each run starts a Node process.
+    const picked = cases.filter((c, i) => c.feedback !== undefined || i % 4 === 0)
+    const results: { name: string; bundled: unknown; local: unknown }[] = []
+    for (let i = 0; i < picked.length; i += 8) {
+      const batch = await Promise.all(
+        picked.slice(i, i + 8).map(async (c, j) => {
+          const dir = join(root, `read-${i + j}`)
+          mkdirSync(dir, { recursive: true })
+          const feedback = c.feedback ?? '{ "format": "anatomy-feedback" }'
+          writeFileSync(join(dir, 'board.json'), c.text)
+          writeFileSync(join(dir, 'feedback.json'), feedback)
+          const files = new Map([['board.json', c.text], ['feedback.json', feedback]])
+          const out: { name: string; bundled: unknown; local: unknown }[] = []
+          for (const args of [['outline', '--board', 'board.json'], ['show', 'cart', 'payment', 'nope', '--board', 'board.json'], ['feedback', '--board', 'board.json'], ['outline', '--json', '--board', 'board.json']]) {
+            out.push({ name: `${c.name}: ${args[0]}`, bundled: await node(args, dir), local: runAnatomy(args, memoryIo(new Map(files))) })
+          }
+          return out
+        }),
+      )
+      results.push(...batch.flat())
+    }
+    for (const { name, bundled, local } of results) expect(bundled, name).toEqual(local)
+  }, 120_000)
 
   it('finds .anatomy/board.json next to itself, from any folder', async () => {
     const board = CORPUS.find((c) => c.name === 'relationship to a misspelled component')!

@@ -26,6 +26,13 @@ function applied(patch: unknown[], args: string[] = []): string {
   return runAnatomy(['apply', '-', ...args], memoryIo(files, undefined, JSON.stringify(patch))).stdout
 }
 
+/** The output of a read command on the corpus case `name`, with the example feedback when it has one. */
+function read(name: string, args: string[]): string {
+  const found = CORPUS.find((c) => c.name === name)
+  if (!found) throw new Error(`No corpus case named "${name}".`)
+  return runCase(found, args).stdout
+}
+
 /** The texts the bundled tool carries: the authoring guide and the field list. */
 export interface CliTexts {
   guide: string
@@ -36,6 +43,7 @@ export function cliOutputs(examples: Record<string, string>, texts: CliTexts): C
   const [firstName, firstText] = Object.entries(examples).sort(([a], [b]) => a.localeCompare(b))[0] ?? []
   if (firstName === undefined || firstText === undefined) throw new Error('No example boards.')
   const valid = runAnatomy(['validate', firstName], memoryIo(new Map([[firstName, firstText]])))
+  const exampleFiles = () => new Map([[firstName, firstText]])
   return [
     { name: 'anatomy help', text: runAnatomy(['help'], memoryIo(new Map())).stdout, kind: 'prose' },
     { name: 'anatomy topic', text: runAnatomy(['topic'], { ...memoryIo(new Map()), guide: () => texts.guide }).stdout, kind: 'prose' },
@@ -60,5 +68,10 @@ export function cliOutputs(examples: Record<string, string>, texts: CliTexts): C
       text: applied([{ op: 'remove', path: '/components/payment' }]),
       kind: 'prose',
     },
+    { name: 'anatomy feedback, three items', text: read('feedback not answered yet', ['feedback']), kind: 'prose' },
+    { name: 'anatomy feedback --json, three items', text: read('feedback not answered yet', ['feedback', '--json']), kind: 'json' },
+    { name: 'anatomy outline, corpus board', text: read('base board', ['outline']), kind: 'prose' },
+    { name: 'anatomy outline, example board', text: runAnatomy(['outline', '--board', firstName], memoryIo(exampleFiles())).stdout, kind: 'prose' },
+    { name: 'anatomy show, two parts', text: read('base board', ['show', 'payment', 'api-to-payment']), kind: 'prose' },
   ]
 }
