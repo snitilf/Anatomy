@@ -1,6 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type FocusEvent } from 'react'
 import { toast } from 'sonner'
-import { Canvas } from '../canvas/Canvas'
 import { CameraSlotContext, createCameraSlot } from '../canvas/cameraContext'
 import { CommandMenu } from '../commands/CommandMenu'
 import { CommandsProvider } from '../commands/CommandsProvider'
@@ -22,6 +21,9 @@ import { createUi, UiContext, useUi, useUiApi } from './ui'
 import { OverviewPage } from '../overview/OverviewPage'
 import { entryBoard, rememberedView, rememberView, viewFromHash, writeHash } from './view'
 import { useWorkspace } from './workspaceContext'
+
+/** The map carries React Flow, the layout, and the whiteboard tools. The start screen needs none of them, so they load when a board opens. */
+const Canvas = lazy(() => import('../canvas/Canvas').then((m) => ({ default: m.Canvas })))
 
 /** The dialog carries the authoring guide and the schema, so it loads the first time the user opens it. */
 const HowToDialog = lazy(() => import('./HowToDialog').then((m) => ({ default: m.HowToDialog })))
@@ -250,7 +252,9 @@ function ShellBody() {
             {hasBoard ? (
               <>
                 <div className={styles.canvas} inert={overview}>
-                  <Canvas />
+                  <Suspense fallback={null}>
+                    <Canvas />
+                  </Suspense>
                   {scenario && <WalkthroughBar />}
                 </div>
                 <Sidebar />

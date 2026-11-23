@@ -66,13 +66,9 @@ export async function openExample(example: Example, open: (fileName: string, tex
   open(example.fileName, text)
 }
 
-/** Loads every example once the page is idle, so an example still opens if the local server has stopped. */
+/** Loads every example, so one still opens if the local server has stopped. Run it when the page is idle. */
 export function preloadExamples(): void {
-  const run = () => {
-    for (const example of EXAMPLES) void loadExample(example).catch(() => undefined)
-  }
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) window.requestIdleCallback(run)
-  else setTimeout(run, 1000)
+  for (const example of EXAMPLES) void loadExample(example).catch(() => undefined)
 }
 
 /** True when a board ID belongs to one of the examples, so a board reopened from browser storage still reads as one. */

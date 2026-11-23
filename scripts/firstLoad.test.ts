@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 const root = process.cwd()
 
 /** The largest the script that the page loads first may be, minified, before compression. The build warning is at 800 kB; this is the line the work of C5 reached. */
-const FIRST_SCRIPT_BUDGET = 1_200_000
+const FIRST_SCRIPT_BUDGET = 950_000
 
 let entry: Rolldown.OutputChunk
 let chunks: Rolldown.OutputChunk[]
@@ -59,6 +59,12 @@ describe('the first script', () => {
     expect(tool, 'the tool has a script of its own').toBeDefined()
     expect(entry.code.includes(mark)).toBe(false)
     expect(entry.imports, 'the first script loads the tool at start').not.toContain(tool!.fileName)
+  })
+
+  it('has no map in it: React Flow and the whiteboard tools load when a board opens', () => {
+    const mark = 'react-flow__renderer'
+    expect(entry.code.includes(mark)).toBe(false)
+    expect(chunks.some((c) => !c.isEntry && c.code.includes(mark))).toBe(true)
   })
 
   it('stays under its byte budget', () => {
