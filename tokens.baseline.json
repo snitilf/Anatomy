@@ -3,9 +3,9 @@
   "hardCap": { "characters": 8000, "tokens": 2000 },
   "allowedGrowth": 0.05,
   "cli": {
-    "anatomy help": { "characters": 1131, "tokens": 283 },
+    "anatomy help": { "characters": 1154, "tokens": 289 },
     "anatomy topic": { "characters": 673, "tokens": 169 },
-    "anatomy schema": { "characters": 2112, "tokens": 528 },
+    "anatomy schema": { "characters": 2126, "tokens": 532 },
     "anatomy validate, valid example": { "characters": 38, "tokens": 10 },
     "anatomy validate, one broken reference": { "characters": 173, "tokens": 44 },
     "anatomy validate, four faults": { "characters": 377, "tokens": 95 },

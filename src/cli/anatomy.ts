@@ -26,7 +26,7 @@ Commands:
   help             Show this text.
 
 Options:
-  --json         Print the result as one JSON object.
+  --json         Print the result as one JSON object (validate, fmt, apply).
   --strict       Exit with 1 when there are warnings (validate, fmt).
   --base N       Stop unless the board is at revision N (apply).
   --cascade      Drop what refers to a removed part (apply).

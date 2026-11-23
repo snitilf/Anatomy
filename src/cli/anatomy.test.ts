@@ -203,6 +203,9 @@ describe('help', () => {
   it('lists topic and schema next to the other commands', () => {
     const help = runAnatomy(['help'], memoryIo(new Map())).stdout
     for (const command of ['validate', 'fmt', 'apply', 'topic', 'schema', 'help']) expect(help).toMatch(new RegExp(`^  ${command}\\b`, 'm'))
+    // topic and schema print plain text, so --json names the commands it works with.
+    expect(help).toMatch(/^ {2}--json .*\(validate, fmt, apply\)\.$/m)
+    expect(runAnatomy(['topic', '--json'], memoryIo(new Map())).code).toBe(2)
   })
 })
 

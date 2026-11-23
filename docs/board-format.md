@@ -235,7 +235,8 @@ In this repository, `npm run anatomy -- <command>` runs the same tool from the s
 | `node .anatomy/anatomy.mjs schema` | Prints every field of a board with its limits, from `schema/board.v1.fields.txt`. |
 | `node .anatomy/anatomy.mjs help` | Shows the commands. |
 
-`--json` prints the result as one JSON object, and `--strict` makes warnings count as problems.
+`--json` prints the result of `validate`, `fmt`, or `apply` as one JSON object, and `--strict` makes warnings count as problems for `validate` and `fmt`.
+`topic` and `schema` print plain text and take no options.
 The exit code is 0 when the board is valid (or the patch was applied), 1 when it has problems (or the patch was not applied), and 2 when a file cannot be read or written or the command is wrong.
 
 The output has one line for the file, then one line per problem:
