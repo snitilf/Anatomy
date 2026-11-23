@@ -6,7 +6,7 @@
     "anatomy help": { "characters": 1860, "tokens": 465 },
     "anatomy topic": { "characters": 673, "tokens": 169 },
     "anatomy schema": { "characters": 2126, "tokens": 532 },
-    "anatomy validate, valid example": { "characters": 234, "tokens": 59 },
+    "anatomy validate, valid example": { "characters": 38, "tokens": 10 },
     "anatomy validate, one broken reference": { "characters": 173, "tokens": 44 },
     "anatomy validate, four faults": { "characters": 377, "tokens": 95 },
     "anatomy validate, five feedback warnings": { "characters": 500, "tokens": 125 },

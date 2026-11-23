@@ -25,14 +25,25 @@ describe('the golden output', () => {
 })
 
 describe('validate', () => {
-  // The bundled boards were written before the warning about connections with no explanation. That is the only
-  // warning they may draw, until they gain explanations.
-  it.each(Object.entries(examples))('passes %s with exit 0 and no warning but the missing explanations', (_path, text) => {
+  // The bundled examples are the showcase, so they draw no warning at all. The eval tasks are fixtures for the question
+  // rounds and the revision tasks, and are written without an explanation on each connection.
+  const bundled = Object.entries(examples).filter(([path]) => path.includes('/examples/'))
+  const fixtures = Object.entries(examples).filter(([path]) => !path.includes('/examples/'))
+
+  it('finds the bundled example boards', () => {
+    expect(bundled.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it.each(bundled)('passes %s with exit 0 and no warnings', (_path, text) => {
+    const result = runAnatomy(['validate', 'board.json', '--strict'], memoryIo(new Map([['board.json', text]])))
+    expect(result).toEqual({ code: 0, stdout: expect.stringMatching(/^board\.json: valid, revision \d+\n$/), stderr: '' })
+  })
+
+  it.each(fixtures)('passes the fixture %s with exit 0 and no warning but the missing explanations', (_path, text) => {
     const result = runAnatomy(['validate', 'board.json', '--json'], memoryIo(new Map([['board.json', text]])))
     const report = JSON.parse(result.stdout) as { valid: boolean; errors: unknown[]; warnings: { code: string }[] }
     expect(result.code).toBe(0)
     expect(report.valid).toBe(true)
-    expect(report.errors).toEqual([])
     expect(report.warnings.map((w) => w.code).filter((code) => code !== 'no-explanation')).toEqual([])
   })
 

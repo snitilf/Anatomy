@@ -787,6 +787,7 @@ relationships/agent-writes-file
   "to": "board-file",
   "kind": "sends-data-to",
   "label": "writes a revision",
+  "explanation": "The agent writes the whole board as one file and saves a new revision each time it changes it. Everything you see on the map starts from this file.",
   "source": {
     "kind": "user-stated"
   }
