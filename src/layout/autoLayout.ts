@@ -2,6 +2,7 @@ import { Graph, layout } from '@dagrejs/dagre'
 import type { Board } from '../board/schema'
 import { MAX_WIDTH, narrowest } from '../canvas/labelPlacement'
 import { checkLines } from '../canvas/crossings'
+import { measuringByTable } from '../canvas/textMeasure'
 import type { Point, Size } from './geometry'
 import { FAR_PARTS, groupPadding } from './groupArea'
 
@@ -569,6 +570,11 @@ const TANGLE_SLACK = 1.25
  * Only the cards in `ids` are placed, and only the connections between them count. All cards when it is left out.
  */
 export function autoLayout(board: Board, sizeOf: (id: string) => Size, ids?: ReadonlySet<string>): Record<string, Point> {
+  // Label widths come from the tables, so the layout is the same before and after the font loads.
+  return measuringByTable(() => layOut(board, sizeOf, ids))
+}
+
+function layOut(board: Board, sizeOf: (id: string) => Size, ids?: ReadonlySet<string>): Record<string, Point> {
   const cards = board.components.filter((c) => !ids || ids.has(c.id))
   if (cards.length === 0) return {}
   const placed = new Set(cards.map((c) => c.id))
