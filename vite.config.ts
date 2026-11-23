@@ -1,7 +1,5 @@
-/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import { configDefaults } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { anatomyCli } from './scripts/lib/cliBundle.ts'
 
 // Anatomy is a local tool. The dev and preview servers listen on loopback only.
