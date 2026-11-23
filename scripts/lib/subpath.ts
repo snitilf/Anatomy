@@ -15,7 +15,7 @@ export function fileForUrl(base: string, rawUrl: string): string | undefined {
   }
   if (!pathname.startsWith(base)) return undefined
   const rest = pathname.slice(base.length)
-  if (rest.includes('\0') || rest.includes('\\')) return undefined
+  if (rest.startsWith('/') || rest.includes('\0') || rest.includes('\\')) return undefined
   if (rest.split('/').some((part) => part === '..')) return undefined
   return rest === '' || rest.endsWith('/') ? `${rest}index.html` : rest
 }
