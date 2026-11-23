@@ -35,7 +35,8 @@ test('a request to another origin from the page is blocked', async ({ page, viol
   // A request to the page's own origin is blocked too: nothing in the app needs `fetch`.
   const same = await page.evaluate(() => fetch('/').then(() => 'sent', () => 'blocked'))
   expect(same).toBe('blocked')
-  expect(violations.take().length).toBeGreaterThan(0)
+  await expect.poll(() => violations.list.length).toBeGreaterThan(0)
+  expect(violations.take().map((v) => v.directive)).toContain('connect-src')
 })
 
 test('an inline script is blocked', async ({ page, violations }) => {
@@ -58,37 +59,90 @@ test('the violation recorder sees a violation', async ({ page, violations }) => 
   violations.take()
 })
 
+// The fixture must catch a violation that is still in flight when the test body ends. These tests break the policy as their last step and never poll, so they fail only if the teardown flushes first.
+// The violation comes on a timer, so it is still on its way when the call returns.
+const inlineScript = () => {
+  setTimeout(() => {
+    const s = document.createElement('script')
+    s.textContent = 'window.__ran = true'
+    document.head.append(s)
+  }, 0)
+}
+
+test('the fixture fails a test that ends right after a violation', async ({ page }) => {
+  test.fail(true, 'the violation recorder must fail this test')
+  await page.goto('/')
+  void page.evaluate(inlineScript)
+})
+
+test('the fixture fails a test that ends right after a blocked fetch', async ({ page }) => {
+  test.fail(true, 'the violation recorder must fail this test')
+  await page.goto('/')
+  void page.evaluate(() => {
+    setTimeout(() => void fetch('http://127.0.0.1:9/', { mode: 'no-cors' }).catch(() => undefined), 0)
+  })
+})
+
+test('the fixture fails a test whose second page ends right after a violation', async ({ page, context }) => {
+  test.fail(true, 'the violation recorder must fail this test')
+  await page.goto('/')
+  const second = await context.newPage()
+  await second.goto('/')
+  void second.evaluate(inlineScript)
+})
+
+/** Records every write to `data-theme` of the root element, with the time of it, from before the page's own scripts run. */
+const watchTheme = (page: Page) =>
+  page.addInitScript(() => {
+    const w = window as unknown as { __themeWrites: { value: string | null; at: number }[] }
+    w.__themeWrites = []
+    // The root element does not exist yet when this runs, so watch the whole document.
+    new MutationObserver((records) => {
+      records.forEach((record, i) => {
+        const next = records[i + 1]
+        const value = next ? next.oldValue : (record.target as HTMLElement).getAttribute('data-theme')
+        w.__themeWrites.push({ value, at: performance.now() })
+      })
+    }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-theme'], attributeOldValue: true })
+  })
+
+/** The theme was written before the first paint, the first write was the right one, and no other value was ever written. */
+async function expectThemeBeforePaint(page: Page, expected: 'light' | 'dark') {
+  await expect(page.locator('html')).toHaveAttribute('data-theme', expected)
+  await page.waitForFunction(() => performance.getEntriesByName('first-paint').length > 0)
+  const { writes, paint } = await page.evaluate(() => ({
+    writes: (window as unknown as { __themeWrites: { value: string | null; at: number }[] }).__themeWrites,
+    paint: performance.getEntriesByName('first-paint')[0]!.startTime,
+  }))
+  expect(writes.length).toBeGreaterThan(0)
+  expect(writes[0]!.value).toBe(expected)
+  expect(writes[0]!.at).toBeLessThan(paint)
+  expect(writes.filter((w) => w.value !== expected)).toEqual([])
+}
+
 for (const scheme of ['light', 'dark'] as const) {
   test(`the ${scheme} theme is set before the first paint, by a file that is loaded in the head`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme })
-    await page.addInitScript(() => {
-      const w = window as unknown as { __themeAt?: number }
-      // The root element does not exist yet when this runs, so watch the whole document.
-      new MutationObserver(() => {
-        if (w.__themeAt === undefined && document.documentElement?.dataset.theme) w.__themeAt = performance.now()
-      }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-theme'] })
-    })
+    await watchTheme(page)
     await page.goto('/')
-    await expect(page.locator('html')).toHaveAttribute('data-theme', scheme)
     const head = await page.evaluate(() => [...document.head.querySelectorAll('script')].map((s) => ({ src: s.getAttribute('src'), inline: !s.src, async: s.async, defer: s.defer, module: s.type === 'module' })))
     expect(head.filter((s) => s.inline)).toEqual([])
     const theme = head.find((s) => !s.module)
     expect(theme?.src).toBeTruthy()
     expect(theme).toMatchObject({ async: false, defer: false })
-    // The theme is on the page before the browser paints anything.
-    await page.waitForFunction(() => performance.getEntriesByName('first-paint').length > 0)
-    const times = await page.evaluate(() => ({ theme: (window as unknown as { __themeAt?: number }).__themeAt, paint: performance.getEntriesByName('first-paint')[0]!.startTime }))
-    expect(times.theme).toBeDefined()
-    expect(times.theme!).toBeLessThan(times.paint)
+    await expectThemeBeforePaint(page, scheme)
   })
 }
 
-test('a stored theme wins over the system theme, before the first paint', async ({ page }) => {
-  await page.emulateMedia({ colorScheme: 'light' })
-  await page.addInitScript(() => localStorage.setItem('anatomy:theme', 'dark'))
-  await page.goto('/')
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-})
+for (const [system, stored] of [['light', 'dark'], ['dark', 'light']] as const) {
+  test(`a stored ${stored} theme wins over the ${system} system theme, before the first paint`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: system })
+    await page.addInitScript((value) => localStorage.setItem('anatomy:theme', value), stored)
+    await watchTheme(page)
+    await page.goto('/')
+    await expectThemeBeforePaint(page, stored)
+  })
+}
 
 for (const scheme of ['light', 'dark'] as const) {
   test(`toasts, hover, and bundle highlights still render in the ${scheme} theme`, async ({ page }, testInfo) => {
@@ -104,7 +158,8 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.getByLabel('Board file').setInputFiles(path)
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Revision 2 is open' })
     await expect(toast).toBeVisible()
-    await page.waitForTimeout(500)
+    await expect(toast).toHaveAttribute('data-mounted', 'true')
+    await toast.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
     // The injected sheet of the toast library is applied: the toast is a positioned, rounded box.
     const look = await toast.evaluate((el) => {
       const s = getComputedStyle(el)
