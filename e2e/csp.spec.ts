@@ -145,8 +145,10 @@ for (const scheme of ['light', 'dark'] as const) {
     await card.hover()
     const rules = await page.locator('[data-hover-scope] > style').first().evaluate((el) => el.textContent ?? '')
     expect(rules).toContain('[data-ends~=')
-    const lifted = await page.locator('[data-hover-scope] [data-ends]').evaluateAll((els) => els.map((el) => getComputedStyle(el).opacity))
-    expect(new Set(lifted).size).toBeGreaterThan(1)
+    // The step back is a short transition, so wait until the other lines have moved.
+    await expect
+      .poll(async () => new Set(await page.locator('[data-hover-scope] [data-ends]').evaluateAll((els) => els.map((el) => getComputedStyle(el).opacity))).size)
+      .toBeGreaterThan(1)
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/${scheme}-hover.png` })
   })
 
