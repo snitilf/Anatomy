@@ -154,6 +154,65 @@ describe('tighter is still clean', () => {
   }
 })
 
+/** Every test board, and the generated ones. */
+const everyBoard: [string, Board][] = [...boards, ...Array.from({ length: GENERATED_BOARDS }, (_, i) => [`generated ${i + 1}`, generatedBoard(i + 1)] as [string, Board])]
+
+describe('a group reads left to right', () => {
+  // A connection that follows the order of the file points right, to a later column, or straight down a stack of single
+  // cards. One that runs against the file (a reply, or the connection that closes a loop) may run back.
+  it('points every connection inside a group right or straight down, and lines up the cards of a column', () => {
+    const problems: string[] = []
+    for (const [name, board] of everyBoard) {
+      const { cards } = lay(board)
+      const order = new Map(board.components.map((c, i) => [c.id, i]))
+      const groupOf = new Map(board.components.map((c) => [c.id, c.group]))
+      for (const r of board.relationships) {
+        const g = groupOf.get(r.from)
+        if (g === undefined || groupOf.get(r.to) !== g || (order.get(r.from) ?? 0) > (order.get(r.to) ?? 0)) continue
+        const a = cards[r.from]
+        const b = cards[r.to]
+        if (!a || !b) continue
+        const right = b.x >= a.x + a.width
+        const down = b.x === a.x && b.y >= a.y + a.height
+        if (!right && !down) problems.push(`${name}: ${r.id} runs from (${a.x}, ${a.y}) to (${b.x}, ${b.y})`)
+      }
+      const members = board.components.filter((c) => c.group !== undefined)
+      for (const p of members) {
+        for (const q of members) {
+          const a = cards[p.id]
+          const b = cards[q.id]
+          if (!a || !b || p.id >= q.id || p.group !== q.group) continue
+          const across = a.x < b.x + b.width && b.x < a.x + a.width
+          if (across && a.x !== b.x) problems.push(`${name}: ${p.id} and ${q.id} share a column ${Math.abs(a.x - b.x)} px apart`)
+        }
+      }
+    }
+    expect(problems.slice(0, 10)).toEqual([])
+  }, 120_000)
+})
+
+/** A far-view group name is drawn above its block; at 1280x800 the far view draws it at up to 2.5 times its size. */
+const NAME_ROOM = 25 * 2.5
+
+describe('a group has room for its far-view name', () => {
+  it('keeps every block a scaled name clear of the group below it', () => {
+    const problems: string[] = []
+    for (const [name, board] of boards) {
+      const { cards, groups } = lay(board)
+      const blocks = [...Object.entries(groups).map(([id, r]) => ({ id: `group ${id}`, r })), ...board.components.filter((c) => c.group === undefined && cards[c.id]).map((c) => ({ id: c.id, r: cards[c.id]! }))]
+      for (const [id, g] of Object.entries(groups)) {
+        for (const b of blocks) {
+          if (b.id === `group ${id}`) continue
+          const across = b.r.x < g.x + g.width && g.x < b.r.x + b.r.width
+          const gap = g.y - (b.r.y + b.r.height)
+          if (across && gap >= 0 && gap < NAME_ROOM) problems.push(`${name}: ${b.id} sits ${gap} px above group ${id}`)
+        }
+      }
+    }
+    expect(problems).toEqual([])
+  })
+})
+
 describe('the layout is a pure function of the board', () => {
   const all: [string, Board, () => Board][] = [
     ...boards.map(([name]) => [name, (boards.find(([n]) => n === name) as [string, Board])[1], () => {

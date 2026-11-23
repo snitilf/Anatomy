@@ -51,6 +51,18 @@ describe('work of the hot paths', () => {
   const small = measure(forty)
   const large = measure(sixty)
 
+  it('lays out a board of forty or sixty parts without routing a line', () => {
+    for (const text of [fortyText, sixtyText]) {
+      // A board read again is a new object, so the layout runs again rather than coming from the last one.
+      const board = load(text)
+      resetRouteStats()
+      resetLabelStats()
+      placeCards(board, { positions: {}, sizes: {} })
+      expect(routeStats.searches).toBe(0)
+      expect(labelStats.placements).toBe(0)
+    }
+  })
+
   it('counts something, so the guard cannot pass by measuring nothing', () => {
     expect(small.geo.searches).toBeGreaterThan(forty.relationships.length / 2)
     expect(small.geo.expansions).toBeGreaterThan(0)
