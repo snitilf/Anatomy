@@ -85,7 +85,7 @@ describe('settling on a stop', () => {
   })
 
   it('is the nearest stop with only one sample', () => {
-    expect(settleStop([{ y: 500, t: 1000 }], 1000, 500, 600, all)).toBe(1)
+    expect(settleStop([{ y: 500, t: 1000 }], 1000, 500, 550, all)).toBe(1)
     expect(settleStop([{ y: 500, t: 1000 }], 1000, 500, 700, all)).toBe(0)
   })
 })
