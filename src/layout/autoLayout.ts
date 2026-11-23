@@ -378,7 +378,7 @@ function flowAndPack(
  * it let it, so a card that sat between two others stays between them and its lines stay straight. The order down the
  * map and every place across stay as they were. Kept only when the whole gets shorter.
  */
-function settle(placed: Placed, sizes: ReadonlyMap<string, Size>, edges: readonly Edge[], gap: number): Placed {
+export function settle(placed: Placed, sizes: ReadonlyMap<string, Size>, edges: readonly Edge[], gap: number): Placed {
   const boxes = [...placed.at].map(([id, p]) => ({ id, x: p.x, y: p.y, ...(sizes.get(id) as Size) }))
   boxes.sort((a, b) => a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : 1))
   // Boxes beside each other with a gap of a track or more between them do not hold each other up.
