@@ -1,0 +1,72 @@
+The fields of a board. * marks a required field.
+Text is never empty, and its limit is in characters. An id uses lowercase letters, digits, and single hyphens, at most 64.
+
+format*: "anatomy-board"
+schemaVersion*: 1
+id*: id
+revision*: integer min 1
+title*: text max 120
+goal*: text max 600
+scope*:
+  includes: list max 20 of text max 280
+  excludes: list max 20 of text max 280
+groups: list max 12 of
+  id*: id
+  label*: text max 60
+  description: text max 280
+components*: list 1 to 60 of
+  id*: id
+  label*: text max 60
+  summary*: text max 280
+  explanation: text max 4000
+  group: id
+  inputs: list max 20 of text max 280
+  outputs: list max 20 of text max 280
+  source*:
+    kind*: agent-explanation | agent-proposal | documented-intent | user-stated
+    references: list max 10 of
+      label*: text max 60
+      path: text max 600
+      note: text max 280
+  position:
+    x*: number from -100000 to 100000
+    y*: number from -100000 to 100000
+  lesson: id
+relationships: list max 200 of
+  id*: id
+  from*: id
+  to*: id
+  kind*: calls | sends-data-to | stores-in | reads-from | depends-on | triggers | unknown
+  label*: text max 60
+  explanation: text max 4000
+  source*:
+    kind*: agent-explanation | agent-proposal | documented-intent | user-stated
+    references: list max 10 of
+      label*: text max 60
+      path: text max 600
+      note: text max 280
+items: list max 100 of
+  id*: id
+  kind*: assumption | unknown | question
+  text*: text max 600
+  about: id
+scenarios: list max 20 of
+  id*: id
+  title*: text max 120
+  summary: text max 280
+  steps*: list 1 to 50 of
+    caption*: text max 600
+    highlight: list max 30 of id
+responses:
+  respondsTo*: id
+  items: list max 300 of
+    feedbackId*: id
+    status*: adopted | declined | answered
+    text*: text max 600
+    changed: list max 20 of id
+
+Anatomy also checks what the schema cannot:
+- Every id is unique across the whole board.
+- Every from, to, about, and highlight names a component or relationship that exists, and every group names a group.
+- A documented-intent source has at least one reference.
+Run validate to check all of it.

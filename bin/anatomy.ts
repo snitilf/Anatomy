@@ -4,7 +4,7 @@
 // (fmt and apply), and imports no network module.
 // Must stay first. See src/cli/jitless.ts.
 import '../src/cli/jitless.ts'
-import { chmodSync, closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runAnatomy, type ReadResult } from '../src/cli/anatomy.ts'
@@ -127,6 +127,14 @@ function write(path: string, text: string, create = false): void {
   }
 }
 
+// The bundle carries the authoring guide and the field list as text, set by scripts/lib/cliBundle.ts, so `topic` and
+// `schema` need no other file. From the source, they are read from this repository.
+declare const __ANATOMY_GUIDE__: string | undefined
+declare const __ANATOMY_FIELDS__: string | undefined
+const embeddedGuide = typeof __ANATOMY_GUIDE__ === 'string' ? __ANATOMY_GUIDE__ : undefined
+const embeddedFields = typeof __ANATOMY_FIELDS__ === 'string' ? __ANATOMY_FIELDS__ : undefined
+const repoText = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
+
 const result = runAnatomy(process.argv.slice(2), {
   defaultBoard: bundled ? join(here, 'board.json') : join(cwd, '.anatomy', 'board.json'),
   invocation: bundled ? `node ${display(self)}` : 'npm run anatomy --',
@@ -135,6 +143,8 @@ const result = runAnatomy(process.argv.slice(2), {
   write: (path, text, options) => write(resolve(cwd, path), text, options?.create === true),
   sibling: (path, name) => join(dirname(resolve(cwd, path)), name),
   display: (path) => display(resolve(cwd, path)),
+  guide: () => embeddedGuide ?? repoText('../docs/authoring-guide.md'),
+  schemaSheet: () => embeddedFields ?? repoText('../schema/board.v1.fields.txt'),
 })
 process.stdout.write(result.stdout)
 process.stderr.write(result.stderr)

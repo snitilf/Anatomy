@@ -176,3 +176,20 @@ export function feedbackAdvice(board: Board, feedback: FeedbackSummary | 'unread
 export function boardAdvice(board: Board): BoardProblem[] {
   return [...unconnected(board), ...guarantees(board), ...adoptedWithoutChanges(board)]
 }
+
+/**
+ * A notice for a first board that records no assumption and no unknown. Such a board was most likely written without
+ * the question rounds, or with gaps filled silently. It is kept apart from `boardAdvice`, because a board made for a
+ * test or a demo may have no open items on purpose.
+ */
+export function firstBoardAdvice(board: Board): BoardProblem[] {
+  if (board.revision !== 1 || board.items.some((item) => item.kind === 'assumption' || item.kind === 'unknown')) return []
+  return [
+    {
+      path: 'items',
+      code: 'no-assumptions',
+      message: 'This first board records no assumption or unknown.',
+      hint: 'Record each assumption you made and each point you could not confirm as an item. See the ask topic.',
+    },
+  ]
+}

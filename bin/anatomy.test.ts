@@ -85,7 +85,8 @@ describe('the bundled tool', () => {
   })
 
   it('imports only the node:fs, node:path, and node:url modules', () => {
-    const imports = [...script.matchAll(/\bfrom\s*["']([^"']+)["']/g)].map((m) => m[1]).sort()
+    // Import statements only: the guide text inside the bundle has JSON such as "from": "api", which is data.
+    const imports = [...script.matchAll(/\bimport\s*(?:[\w$*{},\s]+?\bfrom\s*)?["']([^"']+)["']/g)].map((m) => m[1]).sort()
     expect(imports).toEqual(['node:fs', 'node:path', 'node:url'])
     expect(script).not.toMatch(/\bimport\s*\(|\brequire\s*\(|child_process|node:(?:http|https|net|dgram|tls|dns|worker_threads|vm)|\bfetch\s*\(|XMLHttpRequest|WebSocket|\beval\s*\(/)
   })
