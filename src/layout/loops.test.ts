@@ -76,7 +76,7 @@ describe('a loop in the connections', () => {
   it('does not change the layout of a board without a loop', () => {
     const diamond = make([['a'], ['b'], ['c'], ['d']], [['a', 'b'], ['a', 'c'], ['b', 'd'], ['c', 'd']])
     const reply = make([['a'], ['b'], ['c']], [['a', 'b'], ['c', 'b'], ['c', 'a']])
-    expect(autoLayout(diamond, size)).toEqual({ a: { x: 0, y: 0 }, b: { x: 0, y: 352 }, c: { x: 0, y: 192 }, d: { x: 352, y: 272 } })
+    expect(autoLayout(diamond, size)).toEqual({ a: { x: 0, y: 0 }, b: { x: 0, y: 368 }, c: { x: 0, y: 192 }, d: { x: 352, y: 280 } })
     expect(autoLayout(reply, size)).toEqual({ a: { x: 0, y: 192 }, b: { x: 352, y: 192 }, c: { x: 0, y: 0 } })
   })
 })

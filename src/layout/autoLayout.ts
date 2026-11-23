@@ -6,6 +6,9 @@ import { measuringByTable } from '../canvas/textMeasure'
 import type { Point, Size } from './geometry'
 import { FAR_PARTS, groupPadding } from './groupArea'
 
+/** On a board too large to be drawn while it is laid out, a gap holds a track for each line through it past this many. */
+const SHARED_FROM = 4
+
 /** The gaps of one layout, worked out from how many connections it has (`load`). */
 interface Gaps {
   /** Between cards in one group: stacked across the flow, and between columns. */
@@ -17,6 +20,11 @@ interface Gaps {
   piece: number
   /** Between the rows a strip is wrapped into, before the room for the lines that cross the break. */
   row: number
+  /**
+   * How many lines through a gap leave its label room alone. A board of up to `ROUTED_PARTS` parts finds the room its
+   * labels need by drawing them (`makeRoom`); a larger one is never drawn while it is laid out (`SHARED_FROM`).
+   */
+  sharedFrom: number
 }
 
 /**
@@ -27,10 +35,12 @@ const tightGaps = (load: number): Gaps => {
   const stacked = roomFor(Math.max(0, load - 2))
   return {
     inner: { nodesep: stacked, ranksep: 64 },
-    outer: { nodesep: stacked, ranksep: 64 },
+    // Between blocks a group's name has room above it, drawn larger in the far view (see `NAME_ROOM` in the tests).
+    outer: { nodesep: Math.max(64, stacked), ranksep: 64 },
     member: roomFor(Math.ceil(load / 2)),
     piece: Math.max(64, roomFor(Math.ceil(load / 2))),
     row: 64,
+    sharedFrom: Infinity,
   }
 }
 
@@ -44,6 +54,7 @@ const roomyGaps = (load: number): Gaps => ({
   member: roomFor(load),
   piece: Math.max(96, roomFor(load)),
   row: 96,
+  sharedFrom: SHARED_FROM,
 })
 /**
  * A connected layout is a strip of columns, left to right. A strip much wider than the map is wrapped into rows of
@@ -51,6 +62,8 @@ const roomyGaps = (load: number): Gaps => ({
  */
 /** A strip within this factor of the wanted ratio is left alone. */
 const FLOW_SLACK = 1.12
+/** The clear room two cards always keep: one track of lines and the margin that keeps it off each card. */
+const MIN_GAP = 48
 /** Lines that run alongside each other are this far apart, and keep this far from a card. See `TRACK` and `MARGIN` in routing. */
 const TRACK = 16
 const MARGIN = 16
@@ -64,6 +77,8 @@ interface Placed {
   at: Map<string, Point>
   width: number
   height: number
+  /** For a strip wrapped into rows, the row of each member. */
+  rows?: Map<string, number>
 }
 
 interface Edge {
@@ -165,7 +180,7 @@ const right = (col: readonly Spot[]) => Math.max(...col.map((n) => n.x + n.width
  * Opens the gap after every column to the room its connections need, so lines have tracks to run on and are never
  * packed between the cards. A gap that is wide enough stays as it is.
  */
-function openGaps(cols: Columns): void {
+function openGaps(cols: Columns, sharedFrom: number): void {
   let shift = 0
   cols.list.forEach((col, k) => {
     for (const n of col) n.x += shift
@@ -173,7 +188,10 @@ function openGaps(cols: Columns): void {
     if (!next) return
     const gap = left(next) + shift - right(col)
     // A label sits across the line in the middle of the gap, or on its straight run, with a margin for the cards and arrow.
-    const want = Math.min(Math.max(roomFor(Math.floor(cols.crossing[k] as number)), (cols.labels[k] as number) + LABEL_ROOM), 400)
+    const crossing = Math.floor(cols.crossing[k] as number)
+    // Past `sharedFrom` lines, each line through the gap takes a track the label would have sat on.
+    const label = (cols.labels[k] as number) + LABEL_ROOM + TRACK * Math.max(0, crossing - sharedFrom)
+    const want = Math.min(Math.max(roomFor(crossing), label), 400)
     if (gap < want) shift += want - gap
   })
 }
@@ -209,8 +227,10 @@ function splitColumns(widths: readonly number[], rows: number): number[] {
 }
 
 /** Wraps the columns into rows toward the wanted ratio. Rows read top to bottom, and each reads left to right. */
-function wrapColumns(cols: Columns, aspect: number, slack: number, rowGap: number): void {
+function wrapColumns(cols: Columns, aspect: number, slack: number, rowGap: number, stackOnly: boolean): Map<string, number> | undefined {
   const count = cols.list.length
+  // A branching flow wrapped into rows reads in a zig-zag, so inside a group only a plain chain is wrapped, into a stack.
+  if (stackOnly && cols.list.some((col) => col.length > 1)) return undefined
   const box = () => {
     const nodes = cols.list.flat()
     const w = Math.max(...nodes.map((n) => n.x + n.width)) - Math.min(...nodes.map((n) => n.x))
@@ -219,7 +239,7 @@ function wrapColumns(cols: Columns, aspect: number, slack: number, rowGap: numbe
   }
   const flat = box()
   const ratio = flat.w / flat.h
-  if (count < 3 || (ratio <= aspect * slack && ratio >= aspect / slack)) return
+  if (count < 3 || (ratio <= aspect * slack && ratio >= aspect / slack)) return undefined
   // A column's width is its own, and the gap after it goes with it, so a row ends at a column.
   const widths = cols.list.map((col, k) => {
     const next = cols.list[k + 1]
@@ -230,7 +250,7 @@ function wrapColumns(cols: Columns, aspect: number, slack: number, rowGap: numbe
   // Every connection that crosses a break needs its own track along the gap between the two rows.
   const gapAt = (start: number) => Math.max(rowGap, roomFor(Math.floor(cols.crossing[start - 1] as number)))
   let choice: { starts: number[]; score: number } | undefined
-  for (let rows = 1; rows <= Math.min(count, 6); rows++) {
+  for (const rows of stackOnly ? [1, count] : Array.from({ length: Math.min(count, 6) }, (_, i) => i + 1)) {
     layoutStats.wrapShapes++
     const starts = splitColumns(widths, rows)
     if (new Set(starts).size !== starts.length) continue
@@ -245,8 +265,9 @@ function wrapColumns(cols: Columns, aspect: number, slack: number, rowGap: numbe
     const score = Math.log(Math.max(width / aspect, height)) + (rows - 1) * 0.04
     if (!choice || score < choice.score) choice = { starts, score }
   }
-  if (!choice || choice.starts.length === 1) return
+  if (!choice || choice.starts.length === 1) return undefined
   const { starts } = choice
+  const rowOf = new Map<string, number>()
   let top = 0
   starts.forEach((s, r) => {
     const slice = sliceOf(starts, r)
@@ -257,9 +278,11 @@ function wrapColumns(cols: Columns, aspect: number, slack: number, rowGap: numbe
     for (const n of nodes) {
       n.x -= x0
       n.y += top - y0
+      rowOf.set(n.id, r)
     }
     top += heightOf(nodes)
   })
+  return rowOf
 }
 
 /** Counts of the work a layout does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
@@ -274,7 +297,7 @@ export function resetLayoutStats(): void {
 let dagreMemo: Map<string, Spot[]> | undefined
 
 /** A layered left-to-right layout of one connected piece. Dagre returns centers; this returns top-left corners from zero. */
-function flow(boxes: readonly Box[], edges: readonly Edge[], spacing: { nodesep: number; ranksep: number; row: number }, aspect: number, slack: number): Placed {
+function flow(boxes: readonly Box[], edges: readonly Edge[], spacing: { nodesep: number; ranksep: number; row: number; sharedFrom: number }, aspect: number, slack: number, stackOnly: boolean): Placed {
   if (boxes.length === 1) {
     const only = boxes[0] as Box
     return { at: new Map([[only.id, { x: 0, y: 0 }]]), width: only.width, height: only.height }
@@ -300,14 +323,32 @@ function flow(boxes: readonly Box[], edges: readonly Edge[], spacing: { nodesep:
   // The columns are moved about below, so each use has its own copy.
   const spots: Spot[] = base.map((n) => ({ ...n }))
   const cols = columnsOf(spots, edges)
-  openGaps(cols)
-  wrapColumns(cols, aspect, slack, spacing.row)
+  openGaps(cols, spacing.sharedFrom)
+  const rows = wrapColumns(cols, aspect, slack, spacing.row, stackOnly)
   const minX = Math.min(...spots.map((r) => r.x))
   const minY = Math.min(...spots.map((r) => r.y))
   const at = new Map(spots.map((r) => [r.id, { x: Math.round(r.x - minX), y: Math.round(r.y - minY) }]))
   const width = Math.max(...spots.map((r) => r.x + r.width)) - minX
   const height = Math.max(...spots.map((r) => r.y + r.height)) - minY
-  return { at, width: Math.round(width), height: Math.round(height) }
+  return { at, width: Math.round(width), height: Math.round(height), ...(rows ? { rows } : {}) }
+}
+
+/**
+ * Puts the columns of every piece of a group on one grid, so a column of one piece lines up with the column of another
+ * above or below it. Every gap between columns takes the widest one the group needs. Returns the gap.
+ */
+function onGrid(laid: Placed[], sizes: ReadonlyMap<string, Size>, least: number): number {
+  const widest = Math.max(...[...sizes.values()].map((s) => s.width))
+  const columns = laid.map((p) => [...new Set([...p.at.values()].map((q) => q.x))].sort((a, b) => a - b))
+  let gap = least
+  for (const xs of columns) for (let k = 1; k < xs.length; k++) gap = Math.max(gap, (xs[k] as number) - (xs[k - 1] as number) - widest)
+  laid.forEach((p, i) => {
+    const xs = columns[i] as number[]
+    const index = new Map(xs.map((x, k) => [x, k]))
+    for (const [id, q] of p.at) p.at.set(id, { x: (index.get(q.x) as number) * (widest + gap), y: q.y })
+    p.width = (xs.length - 1) * (widest + gap) + widest
+  })
+  return gap
 }
 
 /** Packs pieces in rows, left to right, toward a width that gives the whole about the wanted ratio. */
@@ -338,12 +379,13 @@ function pack(parts: readonly Placed[], aspect: number, gap: number): { offsets:
 function flowAndPack(
   boxes: readonly Box[],
   edges: readonly Edge[],
-  spacing: { nodesep: number; ranksep: number; row: number },
+  spacing: { nodesep: number; ranksep: number; row: number; sharedFrom: number },
   aspect: number,
   gap: number,
   largestFirst: boolean,
   wrap: { aspect: number; slack: number },
   lift: boolean,
+  inGroup: boolean,
 ): Placed {
   const byId = new Map(boxes.map((b) => [b.id, b]))
   const order = new Map(boxes.map((b, i) => [b.id, i]))
@@ -360,15 +402,24 @@ function flowAndPack(
       spacing,
       wrap.aspect,
       wrap.slack,
+      inGroup,
     )
   })
-  const { offsets, width, height } = pack(laid, aspect, gap)
+  // Inside a group the pieces share one grid of columns, so the cards of a column line up.
+  const packGap = inGroup && laid.length > 1 ? onGrid(laid, byId, gap) : gap
+  const { offsets, width, height } = pack(laid, aspect, packGap)
   const at = new Map<string, Point>()
+  const rows = new Map<string, string>()
   laid.forEach((p, i) => {
     const o = offsets[i] as Point
-    for (const [id, q] of p.at) at.set(id, { x: o.x + q.x, y: o.y + q.y })
+    for (const [id, q] of p.at) {
+      at.set(id, { x: o.x + q.x, y: o.y + q.y })
+      const row = p.rows?.get(id)
+      // Inside a group a wrapped row never rises beside the row before it, so the group reads like text.
+      if (row !== undefined && inGroup) rows.set(id, `${i}:${row}`)
+    }
   })
-  return lift ? settle({ at, width, height }, byId, edges, spacing.nodesep) : { at, width, height }
+  return lift ? settle({ at, width, height }, byId, edges, spacing.nodesep, rows) : { at, width, height }
 }
 
 /**
@@ -378,11 +429,22 @@ function flowAndPack(
  * it let it, so a card that sat between two others stays between them and its lines stay straight. The order down the
  * map and every place across stay as they were. Kept only when the whole gets shorter.
  */
-export function settle(placed: Placed, sizes: ReadonlyMap<string, Size>, edges: readonly Edge[], gap: number): Placed {
+export function settle(placed: Placed, sizes: ReadonlyMap<string, Size>, edges: readonly Edge[], gap: number, rows: ReadonlyMap<string, string> = new Map()): Placed {
   const boxes = [...placed.at].map(([id, p]) => ({ id, x: p.x, y: p.y, ...(sizes.get(id) as Size) }))
   boxes.sort((a, b) => a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : 1))
-  // Boxes beside each other with a gap of a track or more between them do not hold each other up.
-  const stacked = (a: (typeof boxes)[number], b: (typeof boxes)[number]) => a.x < b.x + b.width + gap && b.x < a.x + a.width + gap
+  /**
+   * Whether one box holds the other up. Two rows of one wrapped strip always do, so a row never rises beside the row
+   * before it and the strip still reads like text. Otherwise boxes do when they share a column: closer across than the
+   * gap two cards keep, and one wholly above the other. Boxes side by side never do.
+   */
+  const stacked = (a: (typeof boxes)[number], b: (typeof boxes)[number]) => {
+    const ra = rows.get(a.id)
+    const rb = rows.get(b.id)
+    if (ra !== undefined && rb !== undefined && ra !== rb && ra.split(':')[0] === rb.split(':')[0]) return true
+    const across = a.x < b.x + b.width + MIN_GAP && b.x < a.x + a.width + MIN_GAP
+    const apart = a.y >= b.y + b.height || b.y >= a.y + a.height
+    return across && apart
+  }
   // The lines that leave a box downward and upward, as the boxes stand now. A gap keeps a track for each line that
   // leaves the box above it downward or the box below it upward.
   const byId = new Map(boxes.map((b) => [b.id, b]))
@@ -520,7 +582,7 @@ function oriented(pairs: readonly { from: string; to: string; label: number }[],
 }
 
 /** The shapes tried for a layout: the ratio a group is packed toward, and the ratio of the whole. */
-const GROUP_SHAPES = [0.7, 1, 1.6, 2.4, 3]
+const GROUP_SHAPES = [0.7, 1, 1.6, 2.4, 6]
 const MAP_SHAPES = [0.8, 1, 1.15, 1.3, 1.45, 1.6, 2]
 /**
  * The shape the layout aims for: the free map area of a 1440x900 and a 1280x800 window with the sidebar docked, less the
@@ -555,6 +617,8 @@ const detailAt = (laid: { width: number; height: number }) => {
   const zoom = Math.min(REFERENCE.width / laid.width, REFERENCE.height / laid.height)
   return DETAIL_ZOOMS.filter((z) => zoom >= z).length
 }
+/** A connection that runs against the reading order counts as this many crossings. */
+const BACKWARD_TANGLE = 4
 /** A layout is about as clean as the cleanest when its tangle is at most this many times the least, plus one. */
 const TANGLE_SLACK = 1.25
 
@@ -605,25 +669,25 @@ function layOut(board: Board, sizeOf: (id: string) => Size, ids?: ReadonlySet<st
     // shape, so smaller is better, and what its backward connections cost.
     const found = new Map<string, { out: Record<string, Point>; size: number; score: number; level: number }>()
     const careful = prep.lift
-    for (const group of careful ? GROUP_SHAPES : FAR_GROUP_SHAPES) {
-      for (const map of [...(careful ? MAP_SHAPES : FAR_MAP_SHAPES), Infinity]) {
-        const laid = layoutOnce(prep, group, map)
-        const backward = backwardOf(laid.out)
-        if (backward === undefined) continue
-        const size = Math.log(Math.max(laid.width / WANTED_ASPECT, laid.height))
-        // A board read in the far view aims at the shape of the map, with a little held against its area.
-        const score = careful ? size + BACKWARD_COST * backward : Math.abs(Math.log(laid.width / laid.height / FAR_ASPECT)) + Math.log((laid.width * laid.height) / 1e6) * 0.05
-        const key = JSON.stringify(laid.out)
-        if ((found.get(key)?.score ?? Infinity) > score) found.set(key, { out: laid.out, size, score, level: detailAt(laid) })
-      }
+    const consider = (group: number, map: number) => {
+      const laid = layoutOnce(prep, group, map)
+      const backward = backwardOf(laid.out)
+      if (backward === undefined) return
+      const size = Math.log(Math.max(laid.width / WANTED_ASPECT, laid.height))
+      // A board read in the far view aims at the shape of the map, with a little held against its area.
+      const score = careful ? size + BACKWARD_COST * backward : Math.abs(Math.log(laid.width / laid.height / FAR_ASPECT)) + Math.log((laid.width * laid.height) / 1e6) * 0.05
+      const key = JSON.stringify(laid.out)
+      if ((found.get(key)?.score ?? Infinity) > score) found.set(key, { out: laid.out, size, score, level: detailAt(laid) })
     }
+    const maps = [...(careful ? MAP_SHAPES : FAR_MAP_SHAPES), Infinity]
+    for (const group of careful ? GROUP_SHAPES : FAR_GROUP_SHAPES) for (const map of maps) consider(group, map)
     // Sorted by score, then by the order they were found in, which is fixed.
     const ranked = [...found.values()].sort((a, b) => a.score - b.score)
     // The layout with every strip kept whole always reads left to right, and is the fallback.
     if (ranked.length === 0) return layoutOnce(prep, GROUP_SHAPES[0] as number, Infinity).out
-    if (cards.length > ROUTED_PARTS) return makeRoom(board, (ranked[0] as (typeof ranked)[number]).out, sizeOf, loops, prep.lift ? ROOM_STEP : FAR_ROOM_STEP)
-    // The layouts close to the smallest are drawn, to count how tangled each one reads: its crossings, twice its
-    // backward connections, and three times each label with no place. Of those about as clean as the cleanest, the
+    if (cards.length > ROUTED_PARTS) return (ranked[0] as (typeof ranked)[number]).out
+    // The layouts close to the smallest are drawn, to count how tangled each one reads: its crossings, its backward
+    // connections (`BACKWARD_TANGLE`), and three times each label with no place. Of those about as clean as the cleanest, the
     // smallest wins, so a layout a little larger is taken when it reads clearly cleaner. A cleaner layout never costs a
     // level of detail on the reference window that the smallest one reaches.
     const rectsOf = (out: Record<string, Point>) => Object.fromEntries(Object.entries(out).map(([id, p]) => [id, { ...p, ...sizeOf(id) }]))
@@ -634,7 +698,7 @@ function layOut(board: Board, sizeOf: (id: string) => Size, ids?: ReadonlySet<st
     if (close.length > 1) {
       const tangles = close.map((c) => {
         const check = checkLines(board, rectsOf(c.out), loops)
-        return check.crossings + 2 * (backwardOf(c.out) ?? 0) + 3 * check.unplaced.length
+        return check.crossings + BACKWARD_TANGLE * (backwardOf(c.out) ?? 0) + 3 * check.unplaced.length
       })
       const cleanest = Math.min(...tangles)
       let chosenSize = Infinity
@@ -654,9 +718,7 @@ function layOut(board: Board, sizeOf: (id: string) => Size, ids?: ReadonlySet<st
 /** How many times room is made for labels that found no place. */
 const ROOM_PASSES = 2
 /** How much a gap opens for a label that found no place: a label's own margins and one more track. */
-const ROOM_STEP = 64
-/** On a board read in the far view, whose gaps are roomier already, a gap opens by one track. */
-const FAR_ROOM_STEP = 16
+const ROOM_STEP = 32
 
 /**
  * Opens the gap a label could not find a place in. For a connection between cards side by side, every card that starts
@@ -753,7 +815,7 @@ function prepare(board: Board, sizeOf: (id: string) => Size, cards: readonly Boa
   )
   // Lines need tracks between the cards: the busier the board, the wider its gaps.
   const load = Math.ceil(Math.sqrt(relations.length) / 2)
-  return { cards, sizeOf, blockOf, groups, outerEdges, load, inner: new Map(), lift, gaps: lift ? tightGaps(load) : roomyGaps(load), pad: groupPadding(board) }
+  return { cards, sizeOf, blockOf, groups, outerEdges, load, inner: new Map(), lift, gaps: { ...(lift ? tightGaps(load) : roomyGaps(load)), ...(cards.length > ROUTED_PARTS ? { sharedFrom: SHARED_FROM } : {}) }, pad: groupPadding(board) }
 }
 
 function layoutOnce(prep: Prepared, groupAspect: number, mapAspect: number): { out: Record<string, Point>; width: number; height: number } {
@@ -767,7 +829,7 @@ function layoutOnce(prep: Prepared, groupAspect: number, mapAspect: number): { o
     const key = `${block}|${aspect}|${wrapped}`
     let placed = prep.inner.get(key)
     if (!placed) {
-      placed = flowAndPack(boxes, edges, { ...prep.gaps.inner, row: prep.gaps.row }, aspect, prep.gaps.member, false, { aspect, slack: wrapped ? 2.2 : Infinity }, prep.lift)
+      placed = flowAndPack(boxes, edges, { ...prep.gaps.inner, row: prep.gaps.row, sharedFrom: prep.gaps.sharedFrom }, aspect, prep.gaps.member, false, { aspect, slack: wrapped ? 2.2 : Infinity }, prep.lift, true)
       prep.inner.set(key, placed)
     }
     inner.set(block, placed)
@@ -787,7 +849,7 @@ function layoutOnce(prep: Prepared, groupAspect: number, mapAspect: number): { o
         : { id: block, ...sizeOf(c.id) },
     )
   }
-  const outer = flowAndPack(blocks, prep.outerEdges, { ...prep.gaps.outer, row: prep.gaps.row }, wrapped ? mapAspect : PACK_ASPECT, prep.gaps.piece, true, { aspect: mapAspect, slack: wrapped ? FLOW_SLACK : Infinity }, prep.lift)
+  const outer = flowAndPack(blocks, prep.outerEdges, { ...prep.gaps.outer, row: prep.gaps.row, sharedFrom: prep.gaps.sharedFrom }, wrapped ? mapAspect : PACK_ASPECT, prep.gaps.piece, true, { aspect: mapAspect, slack: wrapped ? FLOW_SLACK : Infinity }, prep.lift, false)
 
   const out: Record<string, Point> = {}
   for (const c of cards) {
