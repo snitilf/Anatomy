@@ -62,14 +62,18 @@ function megabytes(bytes: number): string {
   return tenths % 10 === 0 ? String(tenths / 10) : (tenths / 10).toFixed(1)
 }
 
+/** The message for a file too large to open, or undefined when the size is fine. Needs only the size, so a caller can check before reading. */
+export function openTooLargeMessage(bytes: number, options: OpenOptions = {}): string | undefined {
+  const maxBytes = options.maxExportBytes ?? LIMITS.fileBytes * 2
+  return bytes > maxBytes ? `This file is ${megabytes(bytes)} MB. Anatomy opens files up to ${megabytes(maxBytes)} MB.` : undefined
+}
+
 function open(text: string, options: OpenOptions): OpenedFile {
   if (text.startsWith('﻿')) text = text.slice(1)
 
-  const maxBytes = options.maxExportBytes ?? LIMITS.fileBytes * 2
   const bytes = new TextEncoder().encode(text).length
-  if (bytes > maxBytes) {
-    return fail('', `This file is ${megabytes(bytes)} MB. Anatomy opens files up to ${megabytes(maxBytes)} MB.`)
-  }
+  const tooLarge = openTooLargeMessage(bytes, options)
+  if (tooLarge) return fail('', tooLarge)
 
   let data: unknown
   try {

@@ -1,4 +1,4 @@
-import { filePath, type FileName, type FileStamp, type Folder, type FolderAccess, type Permission } from './folder'
+import { checkReadSize, filePath, type FileName, type FileStamp, type Folder, type FolderAccess, type Permission } from './folder'
 
 export interface MemoryFile {
   text: string
@@ -40,7 +40,9 @@ export function createMemoryFolder(
       check()
       filePath(file)
       const f = files.get(file)
-      return f ? { text: f.text, stamp: stampOf(f) } : undefined
+      if (!f) return undefined
+      checkReadSize(file, stampOf(f).size)
+      return { text: f.text, stamp: stampOf(f) }
     },
     async write(file: FileName, text: string) {
       check()

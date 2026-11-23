@@ -1,6 +1,6 @@
 import type { Board } from '../board/schema'
 import { parseBoard, type BoardProblem } from '../board/validate'
-import { FILES, type FileStamp, type Folder } from './folder'
+import { FILES, FileTooLargeError, type FileStamp, type Folder } from './folder'
 
 /**
  * Notices new revisions of `.anatomy/board.json` while an agent writes them.
@@ -50,7 +50,14 @@ export function watchBoard(folder: Folder, options: WatchOptions): () => void {
       const step = observe(state, await folder.stat(FILES.board))
       state = step.state
       if (!step.read || stopped) return
-      const file = await folder.read(FILES.board)
+      let file
+      try {
+        file = await folder.read(FILES.board)
+      } catch (error) {
+        // A board over the size limit is never read. It counts as seen, so it is looked at again only when it changes.
+        if (error instanceof FileTooLargeError && step.state.pending) state = { seen: step.state.pending }
+        throw error
+      }
       if (!file || stopped) return
       state = { seen: file.stamp }
       const parsed = parseBoard(file.text, options.knownLessons ? { knownLessons: options.knownLessons } : {})

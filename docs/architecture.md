@@ -375,6 +375,14 @@ It also opens an export file of up to 2,000,000 bytes.
 A version 1 export file holds an `overlay` instead of a `layer`, and the app upgrades it when it opens.
 An export file is valid only if the `boardId` of the layer matches the `id` of the board.
 
+The app checks the size of a file before it reads the file.
+`readFileText` in `src/app/openFile.ts` refuses a picked or dropped file over 2,000,000 bytes without calling `text()`.
+`read` in `src/workspace/folder.ts` does the same for the files in `.anatomy`, and throws a `FileTooLargeError` when a file is over its limit.
+The limit is 1,000,000 bytes for `board.json`, 16,000,000 bytes for `layer.json`, and 2,000,000 bytes for every file Anatomy writes itself (the README, the guide topics, the schema, and `anatomy.mjs`).
+A board that is too large is reported like any other board that cannot open, and the watcher does not look at it again until it changes.
+A layer that is too large stops the board from opening and is left as it is.
+A helper file that is too large is taken to be the user's own, and is kept.
+
 ## Where the work is kept
 
 There is one workspace for each repository.

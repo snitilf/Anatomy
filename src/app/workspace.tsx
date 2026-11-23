@@ -7,7 +7,7 @@ import { makeExport, serializeExport } from '../layer/files'
 import { emptyLayer, hasUserWork, serializeLayer, type Layer } from '../layer/model'
 import { readLayer } from '../layer/upgrade'
 import { openStore, StorageError, type BoardStore, type BoardSummary } from '../workspace/db'
-import { browserFolderAccess, canPickFolders, FILES, type FileStamp, type Folder, type FolderAccess } from '../workspace/folder'
+import { browserFolderAccess, canPickFolders, FILES, FileTooLargeError, type FileStamp, type Folder, type FolderAccess } from '../workspace/folder'
 import { createSaveQueue, type SaveQueue, type SaveStatus } from '../workspace/saveQueue'
 import { watchBoard } from '../workspace/watch'
 import { downloadText } from './download'
@@ -221,19 +221,28 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
     async (target: Folder): Promise<void> => {
       const gen = ++generation.current
       await queueRef.current?.flush()
-      stopWatch()
+      if (gen !== generation.current) return
       let file: { text: string; stamp: FileStamp } | undefined
+      let tooLarge: FileTooLargeError | undefined
       try {
         file = await target.read(FILES.board)
-      } catch {
-        if (gen === generation.current) notice(`Anatomy could not read the folder ${target.name}.`)
-        return
+      } catch (error) {
+        if (error instanceof FileTooLargeError) tooLarge = error
+        else {
+          if (gen === generation.current) notice(`Anatomy could not read the folder ${target.name}.`)
+          return
+        }
       }
       if (gen !== generation.current) return
-      void access?.remember(target).catch(() => {})
-      void storeRef.current?.setLastOpened({ mode: 'folder' }).catch(() => {})
-      switchSink({ kind: 'folder', folder: target })
-      markPersisted(undefined)
+      // The folder becomes the place work is saved only once it is settled what opens, in the same step as the dispatch.
+      // Until then the board that is open keeps its own place, so its layer is never written into this folder.
+      const settle = () => {
+        stopWatch()
+        void access?.remember(target).catch(() => {})
+        void storeRef.current?.setLastOpened({ mode: 'folder' }).catch(() => {})
+        switchSink({ kind: 'folder', folder: target })
+        markPersisted(undefined)
+      }
 
       const watch = (seen: FileStamp | undefined) => {
         stopWatching.current = watchBoard(target, {
@@ -249,7 +258,17 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
         })
       }
 
+      if (tooLarge) {
+        // The folder opened, but the board in it is too large to read. It is reported the way a bad board is.
+        settle()
+        setFolder({ folder: target, state: 'open' })
+        dispatch({ type: 'closed' })
+        dispatch({ type: 'openFailed', fileName: `${target.name}/.anatomy/${FILES.board}`, errors: [{ path: '', message: tooLarge.message }] })
+        watch(undefined)
+        return
+      }
       if (!file) {
+        settle()
         setFolder({ folder: target, state: 'missing' })
         dispatch({ type: 'closed' })
         watch(undefined)
@@ -257,6 +276,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       }
       const parsed = parseBoard(file.text, { knownLessons: LESSON_IDS })
       if (!parsed.ok) {
+        settle()
         setFolder({ folder: target, state: 'open' })
         dispatch({ type: 'closed' })
         dispatch({ type: 'openFailed', fileName: `${target.name}/.anatomy/${FILES.board}`, errors: parsed.errors })
@@ -274,6 +294,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
         notice(`Anatomy could not read ${FILES.layer} in ${target.name}, so the board was not opened.`)
         return
       }
+      settle()
       setFolder({ folder: target, state: 'open' })
       setOrigin('folder')
       markPersisted({ sink: sinkRef.current, board: parsed.board, json: JSON.stringify(found.layer) })
@@ -412,8 +433,12 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       try {
         if (options.onlyIfMissing && (await folder.folder.stat(file)) !== undefined) return true
         if (options.keep) {
-          const existing = await folder.folder.read(file)
-          if (existing && options.keep(existing.text)) return true
+          // A file too large to be one of ours is somebody else's, so it is kept.
+          const existing = await folder.folder.read(file).catch((error: unknown) => {
+            if (error instanceof FileTooLargeError) return { text: '', stamp: undefined, large: true as const }
+            throw error
+          })
+          if (existing && ('large' in existing || options.keep(existing.text))) return true
         }
         await folder.folder.write(file, text)
         return true

@@ -87,7 +87,7 @@ export function parseBoard(fileText: string, options: ParseOptions = {}): ParseR
 
   const bytes = new TextEncoder().encode(fileText).length
   if (bytes > LIMITS.fileBytes) {
-    return fail('', 'file-too-large', `The file is ${formatBytes(bytes)}. The limit is ${formatBytes(LIMITS.fileBytes)}.`)
+    return fail('', 'file-too-large', boardTooLargeMessage(bytes))
   }
 
   let data: unknown
@@ -350,6 +350,11 @@ function limit(shown: BoardProblem[], total: number): ParseResult {
   const omitted = total - shown.length
   if (omitted <= 0) return { ok: false, errors: shown }
   return { ok: false, errors: [...shown, { path: '', code: 'more-problems', message: `${omitted} more problems are not shown.` }], omitted }
+}
+
+/** What the app says about a board file over the size limit. Needs only the size, so a caller can say it before reading the file. */
+export function boardTooLargeMessage(bytes: number): string {
+  return `The file is ${formatBytes(bytes)}. The limit is ${formatBytes(LIMITS.fileBytes)}.`
 }
 
 function formatBytes(bytes: number): string {
