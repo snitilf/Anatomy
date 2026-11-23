@@ -1,0 +1,91 @@
+{
+  "format": "anatomy-feedback",
+  "schemaVersion": 1,
+  "id": "feedback-q7w8e9r0t1y2",
+  "boardId": "anatomy-app",
+  "baseRevision": 3,
+  "createdAt": "2026-11-20T09:30:00.000Z",
+  "items": [
+    {
+      "id": "note-a1b2c3d4e5f6",
+      "type": "question",
+      "text": "What happens when the validator rejects a file that was fine a minute ago?",
+      "about": { "type": "component", "id": "validator", "label": "Validator" },
+      "snapshot": { "type": "component", "label": "Validator", "summary": "Checks every board file." }
+    },
+    {
+      "id": "note-b2c3d4e5f6a1",
+      "type": "note",
+      "text": "This line should say who starts the write.",
+      "about": { "type": "relationship", "id": "agent-writes-file", "label": "writes a revision", "from": "agent", "to": "board-file" },
+      "snapshot": { "type": "relationship", "label": "writes a revision", "kind": "sends-data-to", "from": "Your agent", "to": "Board file" },
+      "status": "possibly-outdated"
+    },
+    {
+      "id": "note-c3d4e5f6a1b2",
+      "type": "note",
+      "text": "The whole board needs a short intro.",
+      "about": { "type": "board" }
+    },
+    {
+      "id": "note-d4e5f6a1b2c3",
+      "type": "note",
+      "text": "Where did the old part go?",
+      "about": { "type": "missing", "id": "old-part" },
+      "status": "needs-relinking"
+    },
+    {
+      "id": "link-e5f6a1b2c3d4",
+      "type": "link",
+      "from": { "type": "component", "id": "canvas", "label": "Map" },
+      "to": { "type": "component", "id": "layer-file", "label": "Layer file" },
+      "label": "saves positions"
+    },
+    {
+      "id": "edit-f6a1b2c3d4e5",
+      "type": "reconnect",
+      "connection": { "id": "agent-reads-feedback", "label": "reads", "kind": "reads-from" },
+      "was": { "from": { "type": "component", "id": "agent", "label": "Your agent" }, "to": { "type": "component", "id": "feedback-file", "label": "Feedback file" } },
+      "now": { "from": { "type": "component", "id": "agent", "label": "Your agent" }, "to": { "type": "component", "id": "layer-file", "label": "Layer file" } }
+    },
+    {
+      "id": "part-0a1b2c3d4e5f",
+      "type": "new-part",
+      "label": "Fraud check",
+      "summary": "Looks at every board before it opens.",
+      "links": [{ "id": "link-1a2b3c4d5e6f", "direction": "to", "part": { "type": "component", "id": "validator", "label": "Validator" }, "label": "asks" }],
+      "near": [{ "type": "component", "id": "workspace", "label": "Workspace" }]
+    },
+    {
+      "id": "mark-1b2c3d4e5f6a",
+      "type": "drawing",
+      "note": "These three are one idea.",
+      "encloses": [
+        { "type": "component", "id": "board-file", "label": "Board file" },
+        { "type": "component", "id": "feedback-file", "label": "Feedback file" }
+      ],
+      "touches": [{ "type": "relationship", "id": "agent-writes-file", "label": "writes a revision", "from": "agent", "to": "board-file" }]
+    },
+    {
+      "id": "mark-2c3d4e5f6a1b",
+      "type": "shape",
+      "shape": "ellipse",
+      "encloses": [{ "type": "component", "id": "canvas", "label": "Map" }],
+      "touches": []
+    },
+    {
+      "id": "mark-3d4e5f6a1b2c",
+      "type": "arrow",
+      "note": "Why does this go the long way?",
+      "from": { "type": "component", "id": "inspector", "label": "Sidebar" },
+      "to": { "type": "relationship", "id": "state-to-canvas", "label": "cards and lines", "from": "app-state", "to": "canvas", "at": 0.5 }
+    },
+    {
+      "id": "mark-4e5f6a1b2c3d",
+      "type": "sticky",
+      "text": "Check this one first.",
+      "on": [{ "type": "component", "id": "app-state", "label": "App state" }]
+    }
+  ],
+  "withdrawn": ["note-old000000001", "mark-old000000002"]
+}

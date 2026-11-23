@@ -178,10 +178,17 @@ Every time you change a board, follow these rules:
 When the user sends feedback, Anatomy writes `.anatomy/feedback.json`.
 Then the user asks you to answer it:
 
-1. Read `.anatomy/feedback.json`. Each item has an `id` and a `type`.
-2. Decide what to do with each item. If an item is unclear, ask the user about that item only.
-3. Make the changes and answer every item, with a patch or by writing the whole file.
-4. Run `node .anatomy/anatomy.mjs validate`. It also checks that every item has an answer.
+1. Run `node .anatomy/anatomy.mjs feedback`.
+   It prints one line per open item: its `id`, its `type`, what it is about, and the text of the user.
+   It leaves out the items that the user withdrew and the items that the board already answers, and says how many.
+2. Run `node .anatomy/anatomy.mjs outline` to see every part and connection with its ID.
+   Then run `node .anatomy/anatomy.mjs show <id...>` for the parts that the items name.
+   Read the whole board or the raw `feedback.json` only when these do not answer your question.
+3. Decide what to do with each item.
+   If an item is unclear, ask the user about that item only.
+4. Make the changes and answer every item, with `apply` (see "Revise with a patch") or by writing the whole file.
+5. Run `node .anatomy/anatomy.mjs validate`.
+   It also checks that every item has an answer.
 
 Answer the items in a `responses` block:
 
@@ -201,6 +208,8 @@ Do not edit `.anatomy/layer.json` or `.anatomy/feedback.json`.
 
 Once a board exists, you can write only the edits instead of the whole file.
 Write them to `.anatomy/patch.json` and run `node .anatomy/anatomy.mjs apply`.
+First read what you need with `feedback`, `outline`, and `show <id...>`.
+They print only the open feedback items, one line per part and connection, and the full JSON of the IDs you name.
 The script needs Node.js 24 or later.
 
 A patch is a JSON array of `test`, `add`, `remove`, `replace`, and `respond` operations.

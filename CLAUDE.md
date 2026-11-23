@@ -73,7 +73,9 @@ The user then gives you this prompt:
 Read .anatomy/feedback.json and answer every item in the next revision of .anatomy/board.json. The format is in .anatomy/README.md.
 ```
 
-1. Read `.anatomy/feedback.json`.
+1. Run `node .anatomy/anatomy.mjs feedback` for the open items.
+   Then run `outline` and `show <id...>` for the parts they name.
+   Read the whole board or the raw `feedback.json` only when these do not answer your question.
 2. Write a short patch to `.anatomy/patch.json` and run `node .anatomy/anatomy.mjs apply`.
    Edits address list items by ID, `for` ties an edit to a feedback item, and one `respond` operation per item answers it with the status `adopted`, `declined`, or `answered`.
    The script raises `revision` by one, writes `responses` and `changed`, and writes the board only when it is valid.

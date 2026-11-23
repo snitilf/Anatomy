@@ -118,6 +118,9 @@ If you cannot run it, read the topic files and follow the \`checklist\` topic.
 | --- | --- |
 | \`validate [file]\` | Checks the board the way Anatomy does, with one line per problem and often a fix. Exit code 0 means valid, 1 means problems, and 2 means a file could not be read. |
 | \`fmt [file]\` | Validates the board, then orders its keys and indents it, so you can write compact JSON. |
+| \`feedback\` | Lists the open feedback items, one line each. Run it instead of reading \`feedback.json\`. |
+| \`outline\` | Lists every part, connection, item, and scenario with its ID, one line each. |
+| \`show <id...>\` | Prints the full JSON of the parts you name. |
 | \`apply [patch]\` | Edits an existing board with a short patch, \`.anatomy/patch.json\` by default. The \`revise\` topic explains it. |
 | \`topic [name]\` | Prints a topic. Without a name, it lists the topics. |
 | \`schema\` | Prints every field of a board with its limits. |

@@ -4,7 +4,8 @@ import { parseBoard, type BoardProblem } from '../board/validate.ts'
 import { editDistance } from '../board/suggest.ts'
 import { LESSON_IDS } from '../lessons/ids.ts'
 import { runApply, type ApplyOptions } from './applyCommand.ts'
-import { clip, count, line, MAX_WARNINGS, plain, type CliIo, type CliResult } from './output.ts'
+import { MAX_SHOW_IDS, runRead } from './readCommands.ts'
+import { clip, count, finalText, line, MAX_WARNINGS, plain, type CliIo, type CliResult } from './output.ts'
 import { splitGuide, topicIndex, TOPICS } from './topics.ts'
 
 export { clip }
@@ -21,26 +22,30 @@ Commands:
   validate [file]  Check a board the way Anatomy does. The file defaults to .anatomy/board.json.
   fmt [file]       Put the keys of a valid board in schema order and indent with two spaces.
   apply [patch|-]  Edit the board with a JSON list of operations (default .anatomy/patch.json, - is stdin).
+  feedback         List the open feedback items, one line each, with what a response needs.
+  outline          List every part, connection, item, and scenario of the board, one line each.
+  show <id...>     Print the full JSON of the parts, connections, items, groups, or scenarios you name.
   topic [name]     Print a topic of the authoring guide. Without a name, list the topics.
   schema           Print every field of a board with its limits.
   help             Show this text.
 
 Options:
-  --json         Print the result as one JSON object (validate, fmt, apply).
+  --json         Print the result as one JSON object (validate, fmt, apply, feedback, outline, show).
   --strict       Exit with 1 when there are warnings (validate, fmt).
   --base N       Stop unless the board is at revision N (apply).
   --cascade      Drop what refers to a removed part (apply).
   --dry-run      Print the changes and write nothing (apply).
-  --board file   The board to edit (apply).
+  --board file   The board to edit or read (apply, feedback, outline, show).
 
-Exit codes: 0 valid or applied, 1 problems or patch not applied, 2 file not readable or wrong usage.
+Exit codes: 0 valid or applied, 1 problems, patch not applied, or unknown ID, 2 file not readable or wrong usage.
 fmt and apply write the board. apply raises revision by one and keeps the old board as board.prev.json.
 `
 }
 
 interface Options {
-  command: 'validate' | 'fmt' | 'apply' | 'help'
+  command: 'validate' | 'fmt' | 'apply' | 'feedback' | 'outline' | 'show' | 'help'
   file: string | undefined
+  ids: string[]
   json: boolean
   strict: boolean
   board: string | undefined
@@ -49,7 +54,8 @@ interface Options {
   dryRun: boolean
 }
 
-const APPLY_ONLY = ['--board', '--base', '--cascade', '--dry-run']
+const APPLY_ONLY = ['--base', '--cascade', '--dry-run']
+const COMMANDS = ['validate', 'fmt', 'apply', 'feedback', 'outline', 'show']
 
 /** `topic [name]` and `schema`, which take no options. */
 function parseText(command: 'topic' | 'schema', rest: readonly string[]): { command: 'topic' | 'schema' | 'help'; name: string | undefined } | string {
@@ -63,17 +69,19 @@ function parseText(command: 'topic' | 'schema', rest: readonly string[]): { comm
 
 function parseArgs(args: readonly string[]): Options | string {
   const [first, ...rest] = args
-  const options: Options = { command: 'help', file: undefined, json: false, strict: false, board: undefined, base: undefined, cascade: false, dryRun: false }
+  const options: Options = { command: 'help', file: undefined, ids: [], json: false, strict: false, board: undefined, base: undefined, cascade: false, dryRun: false }
   if (first === undefined || first === 'help' || first === '--help' || first === '-h') return options
-  if (first !== 'validate' && first !== 'fmt' && first !== 'apply') return `Unknown command "${first}".`
-  options.command = first
+  if (!COMMANDS.includes(first)) return `Unknown command "${first}".`
+  options.command = first as Options['command']
+  const reads = first === 'feedback' || first === 'outline' || first === 'show'
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!
     const [name, inline] = arg.startsWith('--') && arg.includes('=') ? [arg.slice(0, arg.indexOf('=')), arg.slice(arg.indexOf('=') + 1)] : [arg, undefined]
     if (APPLY_ONLY.includes(name) && first !== 'apply') return `"${name}" works only with apply.`
+    if (name === '--board' && first !== 'apply' && !reads) return '"--board" works only with apply, feedback, outline, and show.'
     if (arg === '--json') options.json = true
     else if (arg === '--strict') {
-      if (first === 'apply') return '"--strict" works only with validate and fmt.'
+      if (first !== 'validate' && first !== 'fmt') return '"--strict" works only with validate and fmt.'
       options.strict = true
     } else if (arg === '--cascade') options.cascade = true
     else if (arg === '--dry-run') options.dryRun = true
@@ -85,9 +93,13 @@ function parseArgs(args: readonly string[]): Options | string {
       else return '"--base" needs a revision, a whole number of 1 or more.'
     } else if (arg === '--help' || arg === '-h') return { ...options, command: 'help' }
     else if (arg.startsWith('-') && arg !== '-') return `Unknown option "${arg}".`
+    else if (first === 'show') options.ids.push(arg)
+    else if (reads) return `${first} takes no file. Use --board to name the board.`
     else if (options.file !== undefined) return first === 'apply' ? 'Give at most one patch.' : 'Give at most one file.'
     else options.file = arg
   }
+  if (first === 'show' && options.ids.length === 0) return 'show needs at least one ID. Run outline to list them.'
+  if (first === 'show' && options.ids.length > MAX_SHOW_IDS) return `Give at most ${MAX_SHOW_IDS} IDs.`
   return options
 }
 
@@ -107,6 +119,11 @@ function runTopic(name: string | undefined, io: CliIo): CliResult {
 }
 
 export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
+  const result = runCommand(args, io)
+  return { code: result.code, stdout: finalText(result.stdout), stderr: finalText(result.stderr) }
+}
+
+function runCommand(args: readonly string[], io: CliIo): CliResult {
   const [first, ...rest] = args
   if (first === 'topic' || first === 'schema') {
     const text = parseText(first, rest)
@@ -120,6 +137,9 @@ export function runAnatomy(args: readonly string[], io: CliIo): CliResult {
   const options = parseArgs(args)
   if (typeof options === 'string') return { code: 2, stdout: '', stderr: `${options}\n\n${usage(io.invocation)}` }
   if (options.command === 'help') return { code: 0, stdout: usage(io.invocation), stderr: '' }
+  if (options.command === 'feedback' || options.command === 'outline' || options.command === 'show') {
+    return runRead({ command: options.command, board: options.board, ids: options.ids, json: options.json }, io)
+  }
   if (options.command === 'apply') {
     const apply: ApplyOptions = { patch: options.file, board: options.board, base: options.base, cascade: options.cascade, dryRun: options.dryRun, json: options.json }
     return runApply(apply, io)
