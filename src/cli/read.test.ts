@@ -9,7 +9,7 @@ import { baseBoard, CORPUS, INVALID_CASES, memoryIo, runCase, VALID_CASES } from
 
 /** Characters that can move the cursor, clear the screen, or reorder text. A newline (U+000A) separates lines, so it is allowed. */
 // eslint-disable-next-line no-control-regex
-const CONTROL = new RegExp('[\\u0000-\\u0009\\u000b-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]')
+const CONTROL = new RegExp('[\\u0000-\\u0009\\u000b-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff]')
 
 const BOARD = '.anatomy/board.json'
 const FEEDBACK = '.anatomy/feedback.json'
@@ -175,6 +175,8 @@ describe('outline', () => {
 
   it('is far smaller than the board', () => {
     const result = run(['outline'], { [BOARD]: exampleBoard })
+    expect(result.code).toBe(0)
+    expect(result.stdout.length).toBeGreaterThan(0)
     expect(result.stdout.length).toBeLessThan(exampleBoard.length / 4)
   })
 
@@ -296,14 +298,23 @@ describe('show', () => {
     expect(run(['show', 'cart'], {}).code).toBe(2)
   })
 
-  it('prints no terminal control character, even from a long text', () => {
+  it('prints no terminal control character, and shows what it escaped', () => {
     const board = baseBoard()
-    board.components[0].explanation = 'x\u001b[31m\u0085\u202e'
+    board.components[0].explanation = 'x\u001b[31m\u0085\u202e\u200e\ufeff'
     board.components[0].label = 'Cart\u0007'
-    for (const args of [['show', 'cart'], ['show', 'cart', '--json'], ['show', 'ca\u001brt']]) {
-      const result = run(args, { [BOARD]: JSON.stringify(board) })
-      expect(result.stdout + result.stderr, args.join(' ')).not.toMatch(CONTROL)
+    const files = { [BOARD]: JSON.stringify(board) }
+    for (const args of [['show', 'cart'], ['show', 'cart', '--json']]) {
+      const result = run(args, files)
+      expect(result.code, args.join(' ')).toBe(0)
+      expect(result.stdout, args.join(' ')).not.toMatch(CONTROL)
+      expect(result.stdout, args.join(' ')).toContain('\\u001b[31m')
+      expect(result.stdout, args.join(' ')).toContain('\\u0085')
+      expect(JSON.parse(args.includes('--json') ? result.stdout : result.stdout.slice(result.stdout.indexOf('{'))).items?.[0]?.value?.explanation ?? 'x').toBeDefined()
     }
+    const unknown = run(['show', 'ca\u001brt'], files)
+    expect(unknown.code).toBe(1)
+    expect(unknown.stdout).not.toMatch(CONTROL)
+    expect(unknown.stdout).toContain('Unknown ID "ca\\x1brt"')
   })
 
   it('rejects an option that belongs to another command', () => {
@@ -324,5 +335,110 @@ describe('the other commands', () => {
   it('lists the new commands in help', () => {
     const help = runAnatomy(['help'], memoryIo(new Map())).stdout
     for (const word of ['feedback', 'outline', 'show <id...>']) expect(help).toContain(word)
+  })
+})
+
+describe('every output path is safe', () => {
+  const evilPath = 'bad\u001b[2J\u009b2J\u202e.json'
+  const evilIo = (files: Record<string, string>, stdin?: string) => ({ ...memoryIo(new Map(Object.entries(files)), 'node x', stdin), display: (p: string) => p.replace('board.json', evilPath) })
+
+  it('escapes validate, fmt, and apply --json, and their file names', () => {
+    const files = { '.anatomy/board.json': base() }
+    for (const args of [['validate', '--json'], ['fmt', '--json'], ['validate'], ['feedback'], ['outline'], ['outline', '--json']]) {
+      const result = runAnatomy(args, evilIo(files))
+      expect(result.stdout + result.stderr, args.join(' ')).not.toMatch(CONTROL)
+    }
+    const patch = JSON.stringify([{ op: 'replace', path: '/components/cart/\u009b2J\u202e', value: 'x' }])
+    const applied = runAnatomy(['apply', '-', '--json'], evilIo(files, patch))
+    expect(applied.code).toBe(1)
+    expect(applied.stdout).not.toMatch(CONTROL)
+    expect(() => JSON.parse(applied.stdout)).not.toThrow()
+    const text = runAnatomy(['apply', '-'], evilIo(files, patch))
+    expect(text.stdout).not.toMatch(CONTROL)
+  })
+
+  it('escapes the file name in a read error and an echoed command or option', () => {
+    expect(runAnatomy(['validate'], { ...memoryIo(new Map()), display: () => evilPath }).stderr).not.toMatch(CONTROL)
+    for (const args of [['ev\u001b[2Jil'], ['validate', '--b\u009bad'], ['topic', 'x\u001b[2J']]) {
+      const result = runAnatomy(args, { ...memoryIo(new Map()), guide: () => '## 1. Ask before you write\n' })
+      expect(result.code, args.join(' ')).toBe(2)
+      expect(result.stdout + result.stderr, args.join(' ')).not.toMatch(CONTROL)
+    }
+  })
+
+  it('escapes the text of a topic and of the field list', () => {
+    const io = { ...memoryIo(new Map()), schemaSheet: () => 'a\u001b[2Jb\tc\n' }
+    const out = runAnatomy(['schema'], io).stdout
+    expect(out).not.toMatch(CONTROL)
+    expect(out).toContain('\tc\n')
+  })
+})
+
+describe('--json on an invalid board', () => {
+  it('prints one JSON object for outline and show, with the same exit code as the text', () => {
+    const broken = INVALID_CASES.find((c) => c.name === 'missing title')!
+    for (const args of [['outline', '--json'], ['show', 'cart', '--json']]) {
+      const result = runCase(broken, args)
+      expect(result.code, args.join(' ')).toBe(1)
+      expect(JSON.parse(result.stdout), args.join(' ')).toEqual({ file: '.anatomy/board.json', valid: false, errors: 1 })
+    }
+  })
+})
+
+describe('feedback --json round trip', () => {
+  it('keeps a multi-line note exactly, and prints no control character', () => {
+    const text = 'Line 1\nLine 2\tTabbed \u0085 \u202e end'
+    const result = run(['feedback', '--json'], { [FEEDBACK]: feedbackOf({ items: [{ id: 'n-1', type: 'note', text, about: { type: 'board' } }] }) })
+    expect(result.stdout).not.toMatch(CONTROL)
+    expect((JSON.parse(result.stdout) as { items: { text: string }[] }).items[0]!.text).toBe(text)
+  })
+})
+
+describe('feedback and what is already settled', () => {
+  const board = (extra: object = {}) => JSON.stringify({ ...baseBoard(), revision: 4, ...extra })
+  const answered = (...ids: string[]) => ({ responses: { respondsTo: 'feedback-k2m9x0q4z7ab', items: ids.map((feedbackId) => ({ feedbackId, status: 'answered', text: 'Done.', changed: [] })) } })
+
+  it('leaves out an item that is in both items and withdrawn', () => {
+    const result = run(['feedback'], { [BOARD]: base(), [FEEDBACK]: feedbackOf({ withdrawn: ['note-a1b2c3d4e5f6', 7, 'note-a1b2c3d4e5f6'] }) })
+    expect(result.stdout).not.toContain('note-a1b2c3d4e5f6')
+    expect(result.stdout.split('\n')[0]).toBe('feedback-k2m9x0q4z7ab  board shop  base rev 3  2 items, 1 withdrawn not shown')
+    const json = JSON.parse(run(['feedback', '--json'], { [BOARD]: base(), [FEEDBACK]: feedbackOf({ withdrawn: ['note-a1b2c3d4e5f6'] }) }).stdout) as { items: { id: string }[]; withdrawn: number }
+    expect(json.items.map((i) => i.id)).not.toContain('note-a1b2c3d4e5f6')
+    expect(json.withdrawn).toBe(1)
+  })
+
+  it('leaves out items that the board already answers, and counts them', () => {
+    const files = { [BOARD]: board(answered('note-a1b2c3d4e5f6')), [FEEDBACK]: feedbackOf() }
+    const result = run(['feedback'], files)
+    expect(result.stdout).not.toContain('note-a1b2c3d4e5f6')
+    expect(result.stdout.split('\n')[0]).toContain('2 items, 1 already answered, 1 withdrawn not shown')
+    const json = JSON.parse(run(['feedback', '--json'], files).stdout) as { items: unknown[]; answered: number }
+    expect(json.items).toHaveLength(2)
+    expect(json.answered).toBe(1)
+  })
+
+  it('says so when every item is answered, and prints no footer', () => {
+    const result = run(['feedback'], { [BOARD]: board(answered('note-a1b2c3d4e5f6', 'edit-0p9o8i7u6y5t', 'part-9z8y7x6w5v4u')), [FEEDBACK]: feedbackOf() })
+    expect(result.code).toBe(0)
+    expect(result.stdout).toBe('feedback-k2m9x0q4z7ab  board shop  base rev 3 (board now rev 4)  no open items, 3 already answered, 1 withdrawn not shown\n')
+  })
+
+  it('ignores answers to another feedback file', () => {
+    const other = { responses: { respondsTo: 'feedback-older0000001', items: [{ feedbackId: 'note-a1b2c3d4e5f6', status: 'answered', text: 'Done.', changed: [] }] } }
+    expect(run(['feedback'], { [BOARD]: board(other), [FEEDBACK]: feedbackOf() }).stdout).toContain('note-a1b2c3d4e5f6')
+  })
+})
+
+describe('feedback line length', () => {
+  it('caps the links of a new part and keeps the goal of a board snapshot', () => {
+    const links = Array.from({ length: 500 }, (_, i) => ({ id: `link-${i}`, direction: 'to', part: { type: 'component', id: 'api', label: 'API' }, label: 'x' }))
+    const items = [
+      { id: 'part-1', type: 'new-part', label: 'Big', summary: 's', links, near: [] },
+      { id: 'n-1', type: 'note', text: 't', about: { type: 'board' }, snapshot: { type: 'board', title: 'Shop', goal: 'Understand the old goal.' }, status: 'possibly-outdated' },
+    ]
+    const lines = run(['feedback'], { [FEEDBACK]: feedbackOf({ items }) }).stdout.split('\n')
+    expect(lines[1]!.length).toBeLessThan(300)
+    expect(lines[1]).toContain('494 more')
+    expect(lines[2]).toContain('"Understand the old goal."')
   })
 })
