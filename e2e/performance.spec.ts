@@ -29,11 +29,19 @@ const SLOW_FRAMES_ALLOWED = 1
 for (const board of BOARDS) {
   test(`dragging a card stays smooth and lands under the pointer: ${board.name}`, async ({ page }) => {
     await open(page, board.file)
-    const first = await grabbable(page, { dx: 90, dy: 60 })
+    // The same length of drag, toward whichever corner has room to land: a tightly packed board may have none down and right.
+    let move = { dx: 90, dy: 60 }
+    let first: Awaited<ReturnType<typeof grabbable>> | undefined
+    for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]] as const) {
+      move = { dx: 90 * sx, dy: 60 * sy }
+      first = await grabbable(page, move).catch(() => undefined)
+      if (first) break
+    }
+    if (!first) throw new Error('no card can be grabbed on this board')
     const before = await cardTransform(page, first.id)
 
     await startFrameLog(page)
-    await drag(page, first, 90, 60)
+    await drag(page, first, move.dx, move.dy)
     await nextFrame(page)
     const frames = await stopFrameLog(page)
     await page.waitForTimeout(300)
@@ -50,8 +58,8 @@ for (const board of BOARDS) {
     // The card ends where the pointer let go.
     const after = await cardCenter(page, first.id)
     expect(after).toBeDefined()
-    expect(Math.abs((after?.x ?? 0) - (first.x + 90))).toBeLessThanOrEqual(LAND_PX)
-    expect(Math.abs((after?.y ?? 0) - (first.y + 60))).toBeLessThanOrEqual(LAND_PX)
+    expect(Math.abs((after?.x ?? 0) - (first.x + move.dx))).toBeLessThanOrEqual(LAND_PX)
+    expect(Math.abs((after?.y ?? 0) - (first.y + move.dy))).toBeLessThanOrEqual(LAND_PX)
 
     // The new place is saved and comes back after a reload.
     const moved = await cardTransform(page, first.id)

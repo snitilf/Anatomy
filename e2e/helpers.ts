@@ -44,7 +44,7 @@ export async function grabbable(page: Page, move?: { dx: number; dy: number }): 
           const o = other.getBoundingClientRect()
           return o.left < to.right && o.right > to.left && o.top < to.bottom && o.bottom > to.top
         })
-        if (crowded || x + move.dx > map.right - 120 || y + move.dy > map.bottom - 120) continue
+        if (crowded || x + move.dx > map.right - 120 || y + move.dy > map.bottom - 120 || x + move.dx < map.left + 20 || y + move.dy < map.top + 20) continue
       }
       const hit = document.elementFromPoint(x, y)
       if (hit && node.contains(hit)) return { id: node.dataset.id ?? '', x, y }
