@@ -49,13 +49,18 @@ for (const board of BOARDS) {
 }
 
 test('a label with no free place shows in full when its line is hovered, and not before', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await open(page, BOARDS[0]!.file)
-  const hidden = page.locator('[data-label][data-hidden]').first()
+  // A window wide enough for this board to open whole, so the line is in view.
+  await page.setViewportSize({ width: 1920, height: 1200 })
+  // The label of r1 is one word too long for the widest pill, so it is always held back.
+  await open(page, 'e2e/fixtures/worst-text.board.json')
+  const hidden = page.locator('[data-label][data-hidden][data-edge="r1"]')
   await expect(hidden).toHaveCount(1)
   await expect(hidden).toHaveCSS('opacity', '0')
   const id = await hidden.getAttribute('data-edge')
-  await page.locator(`g[data-edge="${id}"] .react-flow__edge-interaction`).hover({ force: true })
+  // A straight line has a box of no height, which Playwright takes as out of view, so the pointer goes to its middle.
+  const line = await page.locator(`g[data-edge="${id}"] .react-flow__edge-interaction`).boundingBox()
+  expect(line).not.toBeNull()
+  await page.mouse.move(line!.x + line!.width / 2, line!.y + line!.height / 2)
   await expect(hidden).toHaveCSS('opacity', '1')
 })
 
