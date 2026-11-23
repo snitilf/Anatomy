@@ -107,7 +107,9 @@ describe('anatomy id', () => {
   })
 
   it('is in the help', () => {
-    expect(setup().run('help').stdout).toContain('id <label>')
+    const help = setup().run('help').stdout
+    expect(help).toContain('id <label>')
+    expect(help).toMatch(/--json .*\(validate, fmt, apply, id,/)
   })
 })
 
@@ -172,6 +174,30 @@ describe('apply assigns missing IDs', () => {
     expect(r.code).toBe(1)
     expect(r.stdout).toContain('ops[0] missing-id')
     expect(r.stdout).toContain('letters or digits')
+  })
+
+  it('never gives an item the ID of one that the same patch removed, because the notes stay attached by ID', () => {
+    const s = setup((b) => b.components.push({ ...part, id: 'queue' }), { '.anatomy/patch.json': JSON.stringify([{ op: 'remove', path: '/components/queue' }, addPart(part)]) })
+    const r = s.run('apply')
+    expect(r.code, r.stdout).toBe(0)
+    expect(s.board().components.map((c: Json) => c.id)).not.toContain('queue')
+    expect(s.board().components.at(-1).id).toBe('queue-2')
+    expect(r.stdout).toContain('ops[1] ID: queue-2')
+  })
+
+  it('never gives an item the ID of one that a replaced list held', () => {
+    const s = setup((b) => b.groups.push({ id: 'data', label: 'Data' }), { '.anatomy/patch.json': JSON.stringify([{ op: 'replace', path: '/groups', value: [{ id: 'backend', label: 'Backend' }, { id: 'frontend', label: 'Frontend' }] }, addPart({ label: 'Data' }, '/groups')]) })
+    const r = s.run('apply')
+    expect(r.code, r.stdout).toBe(0)
+    expect(s.board().groups.at(-1).id).toBe('data-2')
+  })
+
+  it('refuses an explicit ID that is not text instead of replacing it', () => {
+    for (const id of [42, null, ['queue'], {}]) {
+      const r = apply([addPart({ ...part, id })])
+      expect(r.code, JSON.stringify(id)).toBe(1)
+      expect(r.files.get(PREV)).toBeUndefined()
+    }
   })
 
   it('keeps an ID the patch gives', () => {
@@ -297,6 +323,20 @@ describe('validate warns when the revision did not rise', () => {
   it('ignores a prev file that is not a board or has no revision', () => {
     for (const text of ['not json', '[]', '{"revision":"3"}', '{"revision":0}']) {
       expect(setup(() => {}, { [PREV]: text }).run('validate', '--strict').code, text).toBe(0)
+    }
+  })
+
+  it('ignores a prev file that belongs to another board', () => {
+    const other = { [PREV]: pretty({ ...baseBoard(), id: 'old-shop', revision: 5 }) }
+    expect(setup((b) => (b.revision = 1), other).run('validate', '--strict').code).toBe(0)
+    const s = setup((b) => (b.revision = 1), other)
+    expect(s.run('fmt', '--bump').stdout).toContain('revision 1 to 2')
+  })
+
+  it('ignores a prev file that is not a board, or whose revision is not a safe whole number', () => {
+    for (const text of ['{"revision":10}', '{"format":"anatomy-board","id":"shop","revision":1e30}', '{"format":"other","id":"shop","revision":10}']) {
+      expect(setup(() => {}, { [PREV]: text }).run('validate', '--strict').code, text).toBe(0)
+      expect(setup(() => {}, { [PREV]: text }).run('fmt', '--bump').stdout, text).toContain('revision 3 to 4')
     }
   })
 

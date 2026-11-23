@@ -111,6 +111,14 @@ describe('the bundled tool', () => {
     expect(await node(['schema'], dir)).toEqual({ code: 0, stdout: readFileSync('schema/board.v1.fields.txt', 'utf8'), stderr: '' })
   })
 
+  it('reads board.prev.json next to the board, as the app does', async () => {
+    const c = CORPUS.find((x) => x.name === 'revision not above the last version')!
+    const index = CORPUS.indexOf(c)
+    const { bundled, local } = await both(c, index, ['validate'])
+    expect(local.stdout).toContain('is not above revision 3 of the last version, board.prev.json')
+    expect(bundled.stdout).toBe(local.stdout)
+  })
+
   it('agrees with the app on every board, in text and in JSON', async () => {
     const results = await eachCase(async (c, i) => ({ c, text: await both(c, i, ['validate']), json: await both(c, i, ['validate', '--json']) }))
     for (const { c, text, json } of results) {
