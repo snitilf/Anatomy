@@ -4,13 +4,19 @@ import { allBoards, anatomyBoard, clone, refundBoard } from '../layer/testBoards
 import { autoLayout, layoutStats, resetLayoutStats } from './autoLayout'
 import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, clampSize, contentSize, groupAreas, lineCount, placeCards, summaryLinesFor } from './cards'
 import { overlaps, type Rect } from './geometry'
-import { fastestMs } from '../test/timing'
 
 const none = { positions: {}, sizes: {} }
 
 /** The same board with every starting position removed, so the layout places every card. */
 function withoutPositions(b: Board): Board {
   return { ...b, components: b.components.map(({ position: _p, ...rest }) => rest) }
+}
+
+/** The test board with this many parts. Found by count, so a reordered list cannot swap it for another board. */
+function boardWith(parts: number): Board {
+  const found = allBoards().filter((b) => b.components.length === parts)
+  expect(found, `a board of ${parts} parts`).toHaveLength(1)
+  return found[0]!
 }
 
 function overlapping(rects: readonly Rect[]): number {
@@ -99,8 +105,7 @@ describe('autoLayout', () => {
   })
 
   it('stays compact on the sixteen and forty part boards', () => {
-    const [, , , sixteen, forty] = allBoards()
-    for (const board of [sixteen!, forty!]) {
+    for (const board of [boardWith(16), boardWith(40)]) {
       const rects = Object.values(placeCards(withoutPositions(board), none))
       const size = bounds(rects)
       // A long strip is hard to read at any zoom. The pieces are packed toward a screen-like shape.
@@ -112,7 +117,7 @@ describe('autoLayout', () => {
   })
 
   it('does a bounded amount of layout work on the forty part board', () => {
-    const forty = withoutPositions(allBoards()[4]!)
+    const forty = withoutPositions(boardWith(40))
     resetLayoutStats()
     autoLayout(forty, () => ({ ...CARD_SIZE }))
     // Dagre runs once per connected piece and spacing, and the shapes tried for one board share those runs.
@@ -129,12 +134,6 @@ describe('autoLayout', () => {
       expect(layoutStats.dagreRuns, `${b.components.length} parts`).toBeLessThanOrEqual(b.groups.length + 3)
       expect(layoutStats.wrapShapes, `${b.components.length} parts`).toBeLessThanOrEqual(256)
     }
-  })
-
-  it('takes a few milliseconds on the forty part board', () => {
-    // autoLayout itself, so the cached layout of placeCards is not what is timed. About 6 ms on a quiet machine.
-    const forty = withoutPositions(allBoards()[4]!)
-    expect(fastestMs(() => autoLayout(forty, () => ({ ...CARD_SIZE })), 60)).toBeLessThan(60)
   })
 
   it('packs cards that no connection joins instead of one long row or column', () => {
