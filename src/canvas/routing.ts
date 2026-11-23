@@ -14,6 +14,13 @@ export interface Route {
   crowded?: true
 }
 
+/** Counts of the work the router does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
+export const routeStats = { searches: 0, expansions: 0 }
+export function resetRouteStats(): void {
+  routeStats.searches = 0
+  routeStats.expansions = 0
+}
+
 export interface Plan {
   out: Side
   in: Side
@@ -565,7 +572,9 @@ function findPath(
   let goal = -1
   let goalCost = Infinity
   let guard = 0
+  routeStats.searches++
   for (let item = pop(); item && guard < (strict ? STRICT_LIMIT : SEARCH_LIMIT); item = pop(), guard++) {
+    routeStats.expansions++
     const [estimate, state] = item
     if (estimate >= goalCost) break
     const d = state % 4
