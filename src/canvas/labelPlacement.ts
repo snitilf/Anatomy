@@ -130,6 +130,13 @@ const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.
  * True when a pill box keeps clear of every card, every group name band, every other pill, and every line but its own
  * host run. `host` is the run it sits on or beside, `undefined` to count every run of its own line too.
  */
+/** Counts of the work label placement does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
+export const labelStats = { placements: 0, candidates: 0 }
+export function resetLabelStats(): void {
+  labelStats.placements = 0
+  labelStats.candidates = 0
+}
+
 export function labelFits(box: Rect, ctx: LabelContext, host?: Run): boolean {
   return blocker(box, ctx, host) === undefined
 }
@@ -159,6 +166,7 @@ function overhang(t: number, len: number, along: number): number {
  * line, so no label can sit between two lines. When nothing is free the label is held back until the line is hovered.
  */
 export function placeLabel(runs: readonly Run[], text: string, ctx: LabelContext): LabelSpot {
+  labelStats.placements++
   const size = wrap(text)
   const longest = [...runs].sort((p, q) => length(q) - length(p))[0]
   const fallback = (): LabelSpot => {
@@ -205,6 +213,7 @@ export function placeLabel(runs: readonly Run[], text: string, ctx: LabelContext
         const cy = py + (level ? shift : 0)
         const box: Rect = { x: cx - size.width / 2, y: cy - height / 2, width: size.width, height }
         if (overlaps(box, arrow)) continue
+        labelStats.candidates++
         // Beside the run, the box and the run bound a strip that no other line may cross either.
         if (!labelFits(side === 0 ? box : reaching(box, px, py), ctx, run)) continue
         const mid = before + t
