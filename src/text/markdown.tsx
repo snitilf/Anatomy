@@ -32,6 +32,9 @@ function findCodeEnd(s: string, open: number): number {
   return end > open + 1 ? end : -1
 }
 
+/** The characters `findClose` has looked at, for tests to assert on. One integer increment each, and nothing reads it in the app. */
+export const markdownStats = { scanned: 0 }
+
 /**
  * Finds a valid closing marker at or after `from`.
  * Skips escapes and code spans.
@@ -39,6 +42,7 @@ function findCodeEnd(s: string, open: number): number {
 function findClose(s: string, from: number, marker: string): number {
   let j = from
   while (j < s.length) {
+    markdownStats.scanned++
     const ch = s[j]
     if (ch === '\\' && ESCAPABLE.has(s[j + 1] ?? '')) {
       j += 2

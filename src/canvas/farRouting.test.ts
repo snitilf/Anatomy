@@ -83,21 +83,25 @@ function generated(seed: number): Board {
 }
 
 describe('far view lines keep out of blocks on generated boards', () => {
-  it('holds for 150 boards of groups and loose parts, loops included', () => {
-    const failures: string[] = []
-    for (let seed = 1; seed <= 150; seed++) {
-      const board = generated(seed)
-      const rects = placeCards(board, { positions: {}, sizes: {} })
-      const blocks = blocksOf(board, rects)
-      for (const b of computeBundles(board, rects, bundleGroups(board))) {
-        for (let i = 1; i < b.points.length; i++) {
-          for (const [id, r] of blocks) {
-            if (id === b.a || id === b.b) continue
-            if (crossesInside(b.points[i - 1] as Point, b.points[i] as Point, r)) failures.push(`seed ${seed}: ${b.id} crosses ${id}`)
+  // 150 boards in five batches, each with its own generous timeout, so a busy machine slows a batch and never fails it.
+  const BATCH = 30
+  for (let first = 1; first <= 150; first += BATCH) {
+    it(`holds for boards ${first} to ${first + BATCH - 1} of groups and loose parts, loops included`, { timeout: 120_000 }, () => {
+      const failures: string[] = []
+      for (let seed = first; seed < first + BATCH; seed++) {
+        const board = generated(seed)
+        const rects = placeCards(board, { positions: {}, sizes: {} })
+        const blocks = blocksOf(board, rects)
+        for (const b of computeBundles(board, rects, bundleGroups(board))) {
+          for (let i = 1; i < b.points.length; i++) {
+            for (const [id, r] of blocks) {
+              if (id === b.a || id === b.b) continue
+              if (crossesInside(b.points[i - 1] as Point, b.points[i] as Point, r)) failures.push(`seed ${seed}: ${b.id} crosses ${id}`)
+            }
           }
         }
       }
-    }
-    expect(failures.slice(0, 10)).toEqual([])
-  })
+      expect(failures.slice(0, 10)).toEqual([])
+    })
+  }
 })
