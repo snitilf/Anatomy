@@ -143,11 +143,25 @@ test.describe('on a phone', () => {
     await page.mouse.up()
     await expect(sheet).toHaveAttribute('data-stop', '1')
 
-    const top = (await header.boundingBox())!
-    await page.mouse.move(x, top.y + 20)
-    await page.mouse.down()
-    for (let i = 1; i <= 3; i++) await page.mouse.move(x, top.y + 20 - i * 20)
-    await page.mouse.up()
+    // Wait for the sheet to come to rest, so the press lands where the header is.
+    // Two readings at least 100 ms apart must agree, so the first attempt never passes on its own.
+    let top = (await header.boundingBox())!
+    let lastY = Number.NaN
+    await expect(async () => {
+      const now = (await header.boundingBox())!
+      const still = now.y === lastY
+      lastY = now.y
+      top = now
+      expect(still).toBe(true)
+    }).toPass({ intervals: [100] })
+    // The flick carries its own event times, 16 ms apart, so a busy machine cannot slow it below a flick.
+    const cdp = await page.context().newCDPSession(page)
+    const at = Date.now() / 1000
+    const send = (type: 'mousePressed' | 'mouseMoved' | 'mouseReleased', step: number) =>
+      cdp.send('Input.dispatchMouseEvent', { type, x, y: top.y + top.height / 2 - Math.min(step, 3) * 20, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: type === 'mouseMoved' ? 0 : 1, timestamp: at + step * 0.016 })
+    await send('mousePressed', 0)
+    for (let i = 1; i <= 3; i++) await send('mouseMoved', i)
+    await send('mouseReleased', 4)
     await expect(sheet).toHaveAttribute('data-stop', '2')
 
     // A part picked on the map raises the sheet to half, so its details show.
