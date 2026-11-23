@@ -217,12 +217,13 @@ function runCommand(args: readonly string[], io: CliIo): CliResult {
   let errors: BoardProblem[] = []
   let omittedErrors = 0
   let warnings: BoardProblem[] = []
-  if (result.ok && board !== undefined) {
+  if (result.ok) {
     const feedbackPath = io.sibling(file, 'feedback.json')
     const feedbackFile = feedbackPath === file ? undefined : io.read(feedbackPath)
     const feedback = feedbackFile === undefined || (!feedbackFile.ok && feedbackFile.missing) ? undefined : feedbackFile.ok ? (readFeedback(feedbackFile.text) ?? 'unreadable') : 'unreadable'
     // Feedback warnings come first, so the cap below never hides them.
-    warnings = [...feedbackAdvice(board, feedback), ...revisionAdvice(board, lastRevision === undefined ? undefined : { revision: lastRevision, file: lastFile }), ...result.warnings, ...boardAdvice(board), ...explanationAdvice(board), ...firstBoardAdvice(board)]
+    const current = board ?? result.board
+    warnings = [...feedbackAdvice(current, feedback), ...revisionAdvice(current, lastRevision === undefined ? undefined : { revision: lastRevision, file: lastFile }), ...result.warnings, ...boardAdvice(current), ...explanationAdvice(current), ...firstBoardAdvice(current)]
   } else {
     errors = result.errors.filter((e) => e.code !== 'more-problems')
     omittedErrors = result.omitted ?? 0
