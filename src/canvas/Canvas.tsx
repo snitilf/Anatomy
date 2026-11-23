@@ -42,7 +42,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredTop, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { contentBounds, coveredTop, fitBounds, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { bundleSelection } from '../app/state'
@@ -50,7 +50,7 @@ import { usePhone } from '../app/usePhone'
 import { frameConnection } from './bundleFrame'
 import { bundleWords, type BundleWords } from './bundleWords'
 import { bundleGroups, connectionsOf } from './bundles'
-import { computeBundles, type Bundle } from './bundleRoutes'
+import { sharedBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup } from './FarLayer'
 import { CardNode } from './CardNode'
@@ -371,14 +371,38 @@ export function Canvas() {
 
   // The limits follow what is on the map once it is solved, never a card in hand.
   const solved = shown?.geometry.solved
+  // The lines of the far view run around the outside of the cards, so a fit that lands in the far view frames them too.
+  // They are solved once for each layout and shared with the far layer below.
+  const bundlesFor = useCallback(
+    (rects: Readonly<Record<string, Rect>>): Bundle[] => (board ? sharedBundles(board, rects, bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? [])) : []),
+    [board, links, reconnects, proposals],
+  )
+  const routesBox = useCallback(
+    () =>
+      solved
+        ? contentBounds(
+            [],
+            [],
+            [],
+            [],
+            bundlesFor(solved).flatMap((b) => {
+              const xs = b.points.map((p) => p.x)
+              const ys = b.points.map((p) => p.y)
+              return xs.length === 0 ? [] : [{ x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) }]
+            }),
+          )
+        : undefined,
+    [solved, bundlesFor],
+  )
   const bounds = useMemo(
-    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
-    [board, solved, marks, proposals],
+    () =>
+      board && solved ? fitBounds(contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals), routesBox, mapSize) : undefined,
+    [board, solved, marks, proposals, routesBox, mapSize],
   )
   // The opening view frames the parts. A mark drawn far from them does not pull it off the board.
   const partsBounds = useMemo(
-    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
-    [board, solved, proposals],
+    () => (board && solved ? fitBounds(contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals), routesBox, mapSize) : undefined),
+    [board, solved, proposals, routesBox, mapSize],
   )
   const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])
   const boundsRef = useRef(bounds)
@@ -514,8 +538,8 @@ export function Canvas() {
   // leaves the last ones where they are until the build that follows the drop.
   const solvedRects = geometryNow?.solved
   const bundles = useMemo(
-    () => (far && board && solvedRects ? computeBundles(board, solvedRects, bundleGroups(board, links ?? [], reconnects ?? [], proposals ?? [])) : []),
-    [far, board, solvedRects, links, reconnects, proposals],
+    () => (far && solvedRects ? bundlesFor(solvedRects) : []),
+    [far, solvedRects, bundlesFor],
   )
   const farGroups = useMemo<FarGroup[]>(
     () =>

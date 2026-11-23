@@ -1,6 +1,7 @@
 import type { CoordinateExtent, ReactFlowInstance, Viewport } from '@xyflow/react'
 import type { Rect } from '../layout/geometry'
 import type { Mark, Proposal } from '../layer/model'
+import { FAR_ENTER, FAR_EXIT } from './far'
 
 /** The closest the map can zoom in. */
 export const MAX_ZOOM = 2
@@ -76,9 +77,9 @@ export function contentBounds(
   groups: readonly Rect[] = [],
   marks: readonly Mark[] = [],
   proposals: readonly Proposal[] = [],
-  _routes: readonly Rect[] = [],
+  routes: readonly Rect[] = [],
 ): Rect | undefined {
-  const boxes: Rect[] = [...cards, ...groups, ...proposals.map((p) => ({ x: p.x, y: p.y, width: p.width, height: p.height }))]
+  const boxes: Rect[] = [...cards, ...groups, ...routes, ...proposals.map((p) => ({ x: p.x, y: p.y, width: p.width, height: p.height }))]
   for (const m of marks) {
     const box = markBox(m)
     if (box) boxes.push(box)
@@ -86,8 +87,18 @@ export function contentBounds(
   return union(boxes)
 }
 
-export function fitBounds(base: Rect | undefined, _routes: () => Rect | undefined, _map: Size): Rect | undefined {
-  return base
+/**
+ * The box a fit frames. When the cards alone fit near the far view, the lines of the far view count too, because they
+ * route around the outside of the cards. They join the box only when that puts the fit in the far view, where they are
+ * drawn. `routes` is asked only then, so a map that fits well in the near view never solves them.
+ */
+export function fitBounds(base: Rect | undefined, routes: () => Rect | undefined, map: Size): Rect | undefined {
+  if (!base || map.width <= 0 || map.height <= 0) return base
+  const area = { width: map.width, height: Math.max(120, map.height - CORNER_ROOM) }
+  if (fitZoomFor(base, area) >= FAR_EXIT) return base
+  const lines = routes()
+  const all = lines ? union([base, lines]) : undefined
+  return all && fitZoomFor(all, area) < FAR_ENTER ? all : base
 }
 
 /** The zoom that shows the whole box in an area, with some room around it. */

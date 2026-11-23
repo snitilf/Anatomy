@@ -34,16 +34,16 @@ describe('zoom limits', () => {
 })
 
 describe('far-view routes in the fit', () => {
-  const cards = [{ x: 0, y: 0, width: 400, height: 300 }]
-  const route = { x: 380, y: -40, width: 500, height: 400 }
+  const cards = [{ x: 0, y: 0, width: 800, height: 600 }]
+  const route = { x: 780, y: -40, width: 500, height: 700 }
 
   it('counts the routes of the far view in the content', () => {
-    expect(contentBounds(cards, [], [], [], [route])).toEqual({ x: 0, y: -40, width: 880, height: 400 })
+    expect(contentBounds(cards, [], [], [], [route])).toEqual({ x: 0, y: -40, width: 1280, height: 700 })
   })
 
   it('adds the routes to the box when the fit lands in the far view', () => {
     const phone = { width: 390, height: 844 }
-    expect(fitBounds(cards[0], () => route, phone)).toEqual({ x: 0, y: -40, width: 880, height: 400 })
+    expect(fitBounds(cards[0], () => route, phone)).toEqual({ x: 0, y: -40, width: 1280, height: 700 })
   })
 
   it('leaves the box alone when the fit stays in the near view', () => {
@@ -56,8 +56,10 @@ describe('far-view routes in the fit', () => {
 
   it('leaves the box alone when the routes do not push the fit into the far view', () => {
     const map = { width: 800, height: 600 }
+    const tall = { x: 0, y: 0, width: 800, height: 678 }
     const inside = { x: 10, y: 10, width: 100, height: 100 }
-    expect(fitBounds(cards[0], () => inside, map)).toEqual(cards[0])
+    expect(fitBounds(tall, () => inside, map)).toEqual(tall)
+    expect(fitBounds(tall, () => ({ x: 790, y: 0, width: 40, height: 40 }), map)).toEqual(tall)
   })
 })
 
