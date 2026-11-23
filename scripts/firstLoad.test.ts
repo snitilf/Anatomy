@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 const root = process.cwd()
 
-/** The largest the script that the page loads first may be, minified, before compression. The build warning is at 800 kB; this is the line the work of C5 reached. */
+/** The largest the script that the page loads first may be, minified, before compression. It sits just above the size of today's build, and `chunkSizeWarningLimit` in `vite.config.ts` has the same line. */
 const FIRST_SCRIPT_BUDGET = 950_000
 
 let entry: Rolldown.OutputChunk
@@ -19,7 +19,8 @@ beforeAll(async () => {
   try {
     result = (await build({ root, mode: 'production', logLevel: 'silent', build: { write: false } })) as Rolldown.RolldownOutput | Rolldown.RolldownOutput[]
   } finally {
-    process.env.NODE_ENV = before
+    if (before === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = before
   }
   const outputs = Array.isArray(result) ? result : [result]
   chunks = outputs.flatMap((o) => o.output).filter((c): c is Rolldown.OutputChunk => c.type === 'chunk')
@@ -27,6 +28,21 @@ beforeAll(async () => {
   if (!found) throw new Error('The build has no entry chunk.')
   entry = found
 }, 120_000)
+
+/** Every script that the first script loads at start: its static imports, and theirs. */
+function loadedAtStart(): Set<string> {
+  const seen = new Set<string>()
+  const walk = (chunk: Rolldown.OutputChunk) => {
+    for (const name of chunk.imports) {
+      if (seen.has(name)) continue
+      seen.add(name)
+      const next = chunks.find((c) => c.fileName === name)
+      if (next) walk(next)
+    }
+  }
+  walk(entry)
+  return seen
+}
 
 /** The longest plain sentence of a board: a string that stays the same in minified code, and that no other file repeats. */
 function marker(path: string): string {
@@ -48,7 +64,9 @@ describe('the first script', () => {
       expect(text.length, file).toBeGreaterThan(60)
       expect(entry.code.includes(text), `${file} is in the first script`).toBe(false)
       // Each board is in a script of its own, so it loads when the user opens it.
-      expect(chunks.some((c) => !c.isEntry && c.code.includes(text)), `${file} has a script of its own`).toBe(true)
+      const own = chunks.find((c) => !c.isEntry && c.code.includes(text))
+      expect(own, `${file} has a script of its own`).toBeDefined()
+      expect(loadedAtStart().has(own!.fileName), `${file} loads at start`).toBe(false)
     }
   })
 
@@ -58,13 +76,15 @@ describe('the first script', () => {
     const tool = chunks.find((c) => !c.isEntry && c.code.includes(mark))
     expect(tool, 'the tool has a script of its own').toBeDefined()
     expect(entry.code.includes(mark)).toBe(false)
-    expect(entry.imports, 'the first script loads the tool at start').not.toContain(tool!.fileName)
+    expect(loadedAtStart().has(tool!.fileName), 'the first script loads the tool at start').toBe(false)
   })
 
   it('has no map in it: React Flow and the whiteboard tools load when a board opens', () => {
     const mark = 'react-flow__renderer'
     expect(entry.code.includes(mark)).toBe(false)
-    expect(chunks.some((c) => !c.isEntry && c.code.includes(mark))).toBe(true)
+    const map = chunks.find((c) => !c.isEntry && c.code.includes(mark))
+    expect(map, 'the map has a script of its own').toBeDefined()
+    expect(loadedAtStart().has(map!.fileName), 'the map loads at start').toBe(false)
   })
 
   it('stays under its byte budget', () => {
