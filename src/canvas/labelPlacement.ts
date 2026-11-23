@@ -33,9 +33,37 @@ export function pillHeight(lines: number): number {
   return lines * LINE_HEIGHT + PAD_Y * 2
 }
 
+/**
+ * The room a pill keeps from other labels. A label grows on screen at low zoom (up to this share, see `LABEL_MAX_SCALE`),
+ * and placement does not know the zoom, so each label holds back the room it may grow into.
+ */
+export const LABEL_GROWTH = 1.3
+
+/** The box of a pill centered on a spot, grown by `room`. */
+export function pillRect(spot: { x: number; y: number; width: number; lines: number }, room = 1): Rect {
+  const height = pillHeight(spot.lines) * room
+  const width = spot.width * room
+  return { x: spot.x - width / 2, y: spot.y - height / 2, width, height }
+}
+
 /** A label never sits on a card: cards are sized to their text, so the whole card and a thin margin count as covered. */
 export function textArea(card: Rect): Rect {
   return { x: card.x - 4, y: card.y - 4, width: card.width + 8, height: card.height + 8 }
+}
+
+/** The narrowest pill that holds the words in two lines, broken at a space. `undefined` for a single word. */
+function twoLines(words: readonly string[]): number | undefined {
+  if (words.length < 2) return undefined
+  const space = charWidth(' ', 'label')
+  const widths = words.map((w) => textWidth(w, 'label'))
+  let best = Infinity
+  let acc = 0
+  for (let k = 1; k < words.length; k++) {
+    acc += (widths[k - 1] as number) + (k > 1 ? space : 0)
+    const rest = widths.slice(k).reduce((sum, w) => sum + w, 0) + space * (words.length - k - 1)
+    best = Math.min(best, Math.max(acc, rest))
+  }
+  return Math.ceil(best) + PAD_X * 2 + 2
 }
 
 /**
@@ -47,21 +75,33 @@ export function wrap(text: string): { lines: number; width: number } | undefined
   const words = text.split(/\s+/).filter(Boolean)
   if (words.length === 0) return { lines: 1, width: PAD_X * 2 + 2 }
   const whole = textWidth(words.join(' '), 'label')
-  const space = charWidth(' ', 'label')
   if (whole <= SINGLE) return { lines: 1, width: Math.ceil(whole) + PAD_X * 2 + 2 }
-  let best = Infinity
-  let acc = 0
-  const widths = words.map((w) => textWidth(w, 'label'))
-  for (let k = 1; k < words.length; k++) {
-    acc += (widths[k - 1] as number) + (k > 1 ? space : 0)
-    const rest = widths.slice(k).reduce((sum, w) => sum + w, 0) + space * (words.length - k - 1)
-    best = Math.min(best, Math.max(acc, rest))
-  }
-  const width = Math.ceil(best) + PAD_X * 2 + 2
-  if (width <= MAX_WIDTH) return { lines: 2, width }
+  const width = twoLines(words)
+  if (width !== undefined && width <= MAX_WIDTH) return { lines: 2, width }
   // A single word, or words no two lines hold, can still be one line when the widest pill takes it.
   const one = Math.ceil(whole) + PAD_X * 2 + 2
   return one <= MAX_WIDTH ? { lines: 1, width: one } : undefined
+}
+
+/** A one-line label of more words than this is wrapped to two lines where the room is too short for one. */
+const NARROW_SAVES = 24
+
+/**
+ * The ways a label can wrap, in the order they are tried: the usual wrap, then, for a one-line label of several words,
+ * two lines about even, when that is clearly narrower. Empty when no pill holds the text.
+ */
+export function wraps(text: string): { lines: number; width: number }[] {
+  const usual = wrap(text)
+  if (!usual) return []
+  if (usual.lines === 2) return [usual]
+  const narrow = twoLines(text.split(/\s+/).filter(Boolean))
+  return narrow !== undefined && narrow <= usual.width - NARROW_SAVES ? [usual, { lines: 2, width: narrow }] : [usual]
+}
+
+/** The narrowest pill a label can take, which is the room a gap between cards keeps for it. `undefined` when none holds it. */
+export function narrowest(text: string): number | undefined {
+  const all = wraps(text)
+  return all.length === 0 ? undefined : Math.min(...all.map((w) => w.width))
 }
 
 type Run = readonly [Point, Point]
@@ -122,6 +162,8 @@ export interface LabelContext {
   lines: RunIndex
   /** The number the line was added to `lines` under. */
   own: number
+  /** What Fit frames: the cards and the group areas. A label outside it would be cut off a fitted map. */
+  frame?: Rect
 }
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
@@ -142,7 +184,9 @@ export function labelFits(box: Rect, ctx: LabelContext, host?: Run): boolean {
 }
 
 /** What keeps a pill box from its place, or `undefined` when it is free. */
-export function blocker(box: Rect, ctx: LabelContext, host?: Run): 'card' | 'band' | 'label' | 'line' | undefined {
+export function blocker(box: Rect, ctx: LabelContext, host?: Run): 'frame' | 'card' | 'band' | 'label' | 'line' | undefined {
+  const f = ctx.frame
+  if (f && (box.x < f.x || box.y < f.y || box.x + box.width > f.x + f.width || box.y + box.height > f.y + f.height)) return 'frame'
   for (const c of ctx.cards) if (overlaps(box, textArea(c))) return 'card'
   for (const b of ctx.bands) if (overlaps(box, b)) return 'band'
   for (const t of ctx.taken) if (overlaps(box, inflate(t, 3))) return 'label'
@@ -163,17 +207,28 @@ function overhang(t: number, len: number, along: number): number {
 /**
  * Picks where a connection's label goes. It sits on a straight run of its own line, with the line cut around it, or
  * beside a run with its nearest edge a few pixels off. Never across a card, a group name, another label, or another
- * line, so no label can sit between two lines. When nothing is free the label is held back until the line is hovered.
+ * line, so no label can sit between two lines, and never outside the frame Fit shows. When nothing is free the label
+ * is held back until the line is hovered.
  */
 export function placeLabel(runs: readonly Run[], text: string, ctx: LabelContext): LabelSpot {
   labelStats.placements++
-  const size = wrap(text)
+  const sizes = wraps(text)
   const longest = [...runs].sort((p, q) => length(q) - length(p))[0]
   const fallback = (): LabelSpot => {
     const mid = longest ? { x: (longest[0].x + longest[1].x) / 2, y: (longest[0].y + longest[1].y) / 2 } : { x: 0, y: 0 }
     return { ...mid, width: 0, lines: 1, hidden: true }
   }
-  if (!size || runs.length === 0) return fallback()
+  if (sizes.length === 0 || runs.length === 0) return fallback()
+  // The usual wrap first. Two lines only when one finds no place: a narrower pill fits a shorter run.
+  for (const size of sizes) {
+    const spot = placeSized(runs, size, ctx)
+    if (spot) return spot
+  }
+  return fallback()
+}
+
+/** The best place for a pill of this size on or beside the runs, or `undefined` when none is free. */
+function placeSized(runs: readonly Run[], size: { lines: number; width: number }, ctx: LabelContext): LabelSpot | undefined {
   const height = pillHeight(size.lines)
   const last = runs[runs.length - 1] as Run
   const end = last[1]
@@ -222,7 +277,7 @@ export function placeLabel(runs: readonly Run[], text: string, ctx: LabelContext
       }
     }
   })
-  return best ? best.spot : fallback()
+  return best?.spot
 }
 
 /** The box and the point on its line that it sits beside: everything between them counts as under the label. */
