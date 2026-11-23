@@ -48,7 +48,7 @@ test('an inline script is blocked', async ({ page, violations }) => {
   })
   expect(ran).toBe(false)
   await expect.poll(() => violations.list.length).toBeGreaterThan(0)
-  expect(violations.take().map((v) => v.directive)).toContain('script-elem')
+  expect(violations.take().map((v) => v.directive)).toContain('script-src-elem')
 })
 
 test('the violation recorder sees a violation', async ({ page, violations }) => {
@@ -63,9 +63,10 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme })
     await page.addInitScript(() => {
       const w = window as unknown as { __themeAt?: number }
+      // The root element does not exist yet when this runs, so watch the whole document.
       new MutationObserver(() => {
-        if (w.__themeAt === undefined && document.documentElement.dataset.theme) w.__themeAt = performance.now()
-      }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+        if (w.__themeAt === undefined && document.documentElement?.dataset.theme) w.__themeAt = performance.now()
+      }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-theme'] })
     })
     await page.goto('/')
     await expect(page.locator('html')).toHaveAttribute('data-theme', scheme)
