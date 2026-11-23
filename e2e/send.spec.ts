@@ -158,7 +158,8 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   expect(await runTool(page, ['topic', 'feedback-format'])).toEqual({ code: 0, stdout: topic.slice(topic.indexOf('\n\n') + 2) })
   // The script the README names is there too, and it checks the board the agent is about to revise.
   expect(await fileText(page, 'anatomy.mjs')).toMatch(/^\/\/ Written by Anatomy/)
-  expect(await runTool(page, ['validate'])).toEqual({ code: 0, stdout: '.anatomy/board.json: valid, revision 1\n' })
+  // The test board has connections with no explanation, so the tool adds one warning line.
+  expect(await runTool(page, ['validate'])).toEqual({ code: 0, stdout: expect.stringMatching(/^\.anatomy\/board\.json: valid, revision 1(, 1 warning\nrelationships: .*)?\n$/s) })
   await page.keyboard.press('Escape')
   await expect(sendButton(page)).toHaveAccessibleName('Send to agent')
 
@@ -191,7 +192,8 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   // The agent left the second note unanswered, and the script says so before the user would notice.
   const checked = await runTool(page, ['validate'])
   expect(checked.code).toBe(0)
-  expect(checked.stdout).toMatch(/^\.anatomy\/board\.json: valid, revision 2, 1 warning\nresponses\.items: Feedback item "[a-z0-9-]+" has no answer\.\n$/)
+  // The one warning about the answers, then the one about connections with no explanation, which the test board has.
+  expect(checked.stdout).toMatch(/^\.anatomy\/board\.json: valid, revision 2, 2 warnings\nresponses\.items: Feedback item "[a-z0-9-]+" has no answer\.\nrelationships: \d+ connections have no explanation: .*\n$/)
 
   // The poll picks it up. The adopted move leaves the map, and the agent's own line now has the new end.
   await expect(page.getByRole('complementary').getByText('Revision', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText('2', { timeout: 15_000 })

@@ -45,6 +45,8 @@ export type ProblemCode =
   | 'withdrawn-answered'
   | 'responds-to-other'
   | 'revision-not-raised'
+  | 'revision-not-risen'
+  | 'no-explanation'
   | 'feedback-unreadable'
   | 'no-assumptions'
 

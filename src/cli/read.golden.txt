@@ -298,6 +298,50 @@ edit-0p9o8i7u6y5t  reconnect  was ? > ?  now ? > ?
 part-9z8y7x6w5v4u  new-part  "Fraud check"
 Answer each item with an apply operation: {"op": "respond", "for": "<id>", "status": "adopted|declined|answered", "text": "..."}.
 
+## connections with no explanation: outline
+(exit 0)
+shop  rev 3  "How an order moves through the shop"
+groups  frontend "Frontend"  backend "Backend"
+components 6
+cart  "Cart"  frontend
+checkout  "Checkout page"  frontend
+api  "API"  backend
+payment  "Payment"  backend
+database  "Database"  backend
+warehouse  "Warehouse queue"  backend
+connections 5
+cart-to-checkout  cart > checkout  sends-data-to  "items"
+checkout-to-api  checkout > api  calls  "place order"
+api-to-payment  api > payment  calls  "charge"
+api-to-database  api > database  stores-in  "order"
+api-to-warehouse  api > warehouse  triggers  "paid order"
+items 1
+question 1: q-timeout
+scenarios 1
+place-order  "Place an order"  3 steps
+
+## revision not above the last version: outline
+(exit 0)
+shop  rev 3  "How an order moves through the shop"
+groups  frontend "Frontend"  backend "Backend"
+components 6
+cart  "Cart"  frontend
+checkout  "Checkout page"  frontend
+api  "API"  backend
+payment  "Payment"  backend
+database  "Database"  backend
+warehouse  "Warehouse queue"  backend
+connections 5
+cart-to-checkout  cart > checkout  sends-data-to  "items"
+checkout-to-api  checkout > api  calls  "place order"
+api-to-payment  api > payment  calls  "charge"
+api-to-database  api > database  stores-in  "order"
+api-to-warehouse  api > warehouse  triggers  "paid order"
+items 1
+question 1: q-timeout
+scenarios 1
+place-order  "Place an order"  3 steps
+
 ## more warnings than the report shows: outline
 (exit 0)
 shop  rev 4  "How an order moves through the shop"
@@ -576,6 +620,7 @@ relationships/api-to-payment
   "to": "payment",
   "kind": "calls",
   "label": "charge",
+  "explanation": "The API asks the payment provider to charge the card.",
   "source": {
     "kind": "agent-explanation"
   }
@@ -742,6 +787,7 @@ relationships/agent-writes-file
   "to": "board-file",
   "kind": "sends-data-to",
   "label": "writes a revision",
+  "explanation": "The agent writes the whole board as one file and saves a new revision each time it changes it. Everything you see on the map starts from this file.",
   "source": {
     "kind": "user-stated"
   }

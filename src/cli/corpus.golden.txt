@@ -59,6 +59,16 @@ responses.items: Feedback item "part-9z8y7x6w5v4u" has no answer.
 responses.items[1].feedbackId: The user withdrew "note-old000000001". Remove this answer.
 responses.items[2].feedbackId: "edit-0p9o8i7u6y5u" is not an item in feedback.json. Did you mean "edit-0p9o8i7u6y5t"?
 
+## connections with no explanation
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 1 warning
+relationships: 5 connections have no explanation: cart-to-checkout, checkout-to-api, api-to-payment, and 2 more. Say in one or two sentences why each exists, in "explanation".
+
+## revision not above the last version
+$ validate (exit 0)
+.anatomy/board.json: valid, revision 3, 1 warning
+revision: Revision 3 is not above revision 3 of the last version, board.prev.json. Run fmt --bump.
+
 ## more warnings than the report shows
 $ validate (exit 0)
 .anatomy/board.json: valid, revision 4, 33 warnings
@@ -132,7 +142,7 @@ schemaVersion: This board uses schema version 2. This app supports version 1.
 ## file over the size limit
 $ validate (exit 1)
 .anatomy/board.json: invalid, 1 error
-(file): The file is 1,002,296 bytes. The limit is 1,000,000 bytes.
+(file): The file is 1,002,604 bytes. The limit is 1,000,000 bytes.
 
 ## missing title
 $ validate (exit 1)

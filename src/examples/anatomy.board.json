@@ -269,6 +269,7 @@
       "to": "board-file",
       "kind": "sends-data-to",
       "label": "writes a revision",
+      "explanation": "The agent writes the whole board as one file and saves a new revision each time it changes it. Everything you see on the map starts from this file.",
       "source": {
         "kind": "user-stated"
       }
@@ -279,6 +280,7 @@
       "to": "workspace",
       "kind": "sends-data-to",
       "label": "each revision",
+      "explanation": "The workspace watches the board file. When a new revision is saved, it reads the text and hands it on, so you never reload by hand.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -289,6 +291,7 @@
       "to": "validator",
       "kind": "sends-data-to",
       "label": "file text",
+      "explanation": "The raw text of the file goes to the validator, which checks it before anything is shown. A file that fails the check never reaches the map.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -299,6 +302,7 @@
       "to": "app-state",
       "kind": "sends-data-to",
       "label": "checked board",
+      "explanation": "Only a board that passed the check is stored. The map and the sidebar then read from this one copy and cannot show a broken board.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -309,6 +313,7 @@
       "to": "canvas",
       "kind": "sends-data-to",
       "label": "cards and lines",
+      "explanation": "The map receives the board and your layer and turns them into cards and lines. When the store changes, the map redraws.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -319,6 +324,7 @@
       "to": "app-state",
       "kind": "triggers",
       "label": "clicks and drops",
+      "explanation": "When you click, drag, or drop on the map, the map tells the store what you did. The store keeps the selection and the undo history, not the map.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -329,6 +335,7 @@
       "to": "inspector",
       "kind": "sends-data-to",
       "label": "selection",
+      "explanation": "The sidebar shows whatever you have selected, so it reads the selection from the store. Pick a part and its details appear.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -339,6 +346,7 @@
       "to": "app-state",
       "kind": "triggers",
       "label": "commands",
+      "explanation": "Each command you run from the menu becomes the same change as clicking the matching button. The menu holds no state of its own.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -349,6 +357,7 @@
       "to": "human-overlay",
       "kind": "sends-data-to",
       "label": "marks and moved ends",
+      "explanation": "Every drawing, sticky note, proposed part, and moved connection end is saved in your layer. Your marks stay apart from the agent's board.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -359,6 +368,7 @@
       "to": "human-overlay",
       "kind": "sends-data-to",
       "label": "notes and links",
+      "explanation": "Notes and links you write in the sidebar go into your layer, attached to a part or a connection by its ID.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -369,6 +379,7 @@
       "to": "layer-file",
       "kind": "stores-in",
       "label": "saves",
+      "explanation": "A moment after each change, your layer is written to its file. That keeps your positions and notes when you close the tab.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -379,6 +390,7 @@
       "to": "human-overlay",
       "kind": "reads-from",
       "label": "your items",
+      "explanation": "Send to agent collects the items you added or changed from your layer. It leaves out anything you have not touched.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -389,6 +401,7 @@
       "to": "feedback-file",
       "kind": "sends-data-to",
       "label": "writes",
+      "explanation": "Each item is described by what it means on the board, such as \"a question about this part\", and written to the feedback file. It never records pixel positions.",
       "source": {
         "kind": "user-stated"
       }
@@ -399,6 +412,7 @@
       "to": "feedback-file",
       "kind": "reads-from",
       "label": "reads",
+      "explanation": "The agent reads the feedback file to learn what you asked, then answers each item in the next revision of the board.",
       "source": {
         "kind": "user-stated"
       }
@@ -409,6 +423,7 @@
       "to": "update-review",
       "kind": "triggers",
       "label": "new revision",
+      "explanation": "When a new revision arrives, the store starts the Review. It compares the new board with the one you had.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -419,6 +434,7 @@
       "to": "human-overlay",
       "kind": "sends-data-to",
       "label": "answers and archive",
+      "explanation": "The agent's answers are placed next to the items they answer. Items that are settled move to an archive so your layer stays short.",
       "source": {
         "kind": "agent-explanation"
       }

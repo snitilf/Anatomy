@@ -25,9 +25,26 @@ describe('the golden output', () => {
 })
 
 describe('validate', () => {
-  it.each(Object.entries(examples))('passes %s with exit 0 and no warnings', (_path, text) => {
+  // The bundled examples are the showcase, so they draw no warning at all. The eval tasks are fixtures for the question
+  // rounds and the revision tasks, and are written without an explanation on each connection.
+  const bundled = Object.entries(examples).filter(([path]) => path.includes('/examples/'))
+  const fixtures = Object.entries(examples).filter(([path]) => !path.includes('/examples/'))
+
+  it('finds the bundled example boards', () => {
+    expect(bundled.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it.each(bundled)('passes %s with exit 0 and no warnings', (_path, text) => {
     const result = runAnatomy(['validate', 'board.json', '--strict'], memoryIo(new Map([['board.json', text]])))
     expect(result).toEqual({ code: 0, stdout: expect.stringMatching(/^board\.json: valid, revision \d+\n$/), stderr: '' })
+  })
+
+  it.each(fixtures)('passes the fixture %s with exit 0 and no warning but the missing explanations', (_path, text) => {
+    const result = runAnatomy(['validate', 'board.json', '--json'], memoryIo(new Map([['board.json', text]])))
+    const report = JSON.parse(result.stdout) as { valid: boolean; errors: unknown[]; warnings: { code: string }[] }
+    expect(result.code).toBe(0)
+    expect(report.valid).toBe(true)
+    expect(report.warnings.map((w) => w.code).filter((code) => code !== 'no-explanation')).toEqual([])
   })
 
   it.each(VALID_CASES.map((c) => [c.name, c] as const))('exits 0 on the valid case "%s"', (_name, c) => {
@@ -208,7 +225,7 @@ describe('help', () => {
     const help = runAnatomy(['help'], memoryIo(new Map())).stdout
     for (const command of ['validate', 'fmt', 'apply', 'topic', 'schema', 'help']) expect(help).toMatch(new RegExp(`^  ${command}\\b`, 'm'))
     // topic and schema print plain text, so --json names the commands it works with.
-    expect(help).toMatch(/^ {2}--json .*\(validate, fmt, apply, feedback, outline, show\)\.$/m)
+    expect(help).toMatch(/^ {2}--json .*\(validate, fmt, apply, id, feedback, outline, show\)\.$/m)
     expect(runAnatomy(['topic', '--json'], memoryIo(new Map())).code).toBe(2)
   })
 })

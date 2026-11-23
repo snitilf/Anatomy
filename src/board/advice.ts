@@ -172,9 +172,47 @@ export function feedbackAdvice(board: Board, feedback: FeedbackSummary | 'unread
   return feedbackAnswers(board, feedback)
 }
 
+/** Connections named in the warning about missing explanations. The rest are counted. */
+const EXPLAIN_NAMED = 3
+
+/**
+ * One warning for all connections that have no `explanation`, so a large board does not print a line for each.
+ * Kept apart from `boardAdvice`, which stays quiet on every board of the test fixtures, and those have none.
+ */
+export function explanationAdvice(board: Board): BoardProblem[] {
+  const bare = board.relationships.filter((r) => r.explanation === undefined).map((r) => r.id)
+  if (bare.length === 0) return []
+  const named = bare.slice(0, EXPLAIN_NAMED).join(', ')
+  const rest = bare.length - EXPLAIN_NAMED
+  return [
+    {
+      path: 'relationships',
+      code: 'no-explanation',
+      message: `${bare.length} ${bare.length === 1 ? 'connection has' : 'connections have'} no explanation: ${named}${rest > 0 ? `, and ${rest} more` : ''}.`,
+      hint: 'Say in one or two sentences why each exists, in "explanation".',
+    },
+  ]
+}
+
 /** The other warnings for a board that passed `parseBoard`. */
 export function boardAdvice(board: Board): BoardProblem[] {
   return [...unconnected(board), ...guarantees(board), ...adoptedWithoutChanges(board)]
+}
+
+/**
+ * A warning when the revision is not above the revision of the last version seen, which `apply` keeps as
+ * `board.prev.json`. `last` is undefined when there is no such version, and then there is nothing to compare.
+ */
+export function revisionAdvice(board: Board, last: { revision: number; file: string } | undefined): BoardProblem[] {
+  if (last === undefined || board.revision > last.revision) return []
+  return [
+    {
+      path: 'revision',
+      code: 'revision-not-risen',
+      message: `Revision ${board.revision} is not above revision ${last.revision} of the last version, ${last.file}.`,
+      hint: 'Run fmt --bump.',
+    },
+  ]
 }
 
 /**

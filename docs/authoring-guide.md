@@ -171,9 +171,12 @@ Anatomy opens each new revision as soon as you write it.
 Every time you change a board, follow these rules:
 
 - Raise `revision` by one.
+  `apply` does it.
+  After you rewrite the whole file, run `node .anatomy/anatomy.mjs fmt --bump`.
 - Keep the ID of every part, connection, item, and scenario that stays. The notes of the user stay attached by ID.
 - If a connection moves to another part, change its `from` or `to` and keep its ID.
 - Give new things new IDs. Never reuse the ID of something that you removed for something else.
+  `node .anatomy/anatomy.mjs id "Payment step"` prints a free one.
 
 When the user sends feedback, Anatomy writes `.anatomy/feedback.json`.
 Then the user asks you to answer it:
@@ -218,6 +221,10 @@ Lists without IDs (`inputs`, `steps`) are replaced whole, and `add` takes an opt
 `for` ties an edit to a feedback item, and `respond` answers it: the script writes `responses` and `changed`.
 The script raises `revision`, validates the result, and writes only a valid board.
 It keeps the old board as `.anatomy/board.prev.json`.
+An added item may leave out its `id`: the script makes one from its `label`, `title`, or `text`, and prints it as `ops[0] ID: payment-step`.
+A connection always gets its ID from its ends, such as `cart-to-api`, and still needs its `label`.
+An item with nothing to make an ID from is refused.
+To use an item in a later operation of the same patch, give it an `id` yourself.
 
 ```json
 [
@@ -227,7 +234,9 @@ It keeps the old board as `.anatomy/board.prev.json`.
 ```
 
 `--base N` (the revision you read) stops a stale patch, `--dry-run` writes nothing, and `--cascade` drops what refers to a removed part.
-For a first board or a big restructure, write the whole file and run `validate`.
+For a first board or a big restructure, write the whole file, then run `fmt --bump` and `validate`.
+`validate` warns when `revision` is not above the one in `board.prev.json`, and when connections have no `explanation`.
+It cannot warn about the revision when there is no `board.prev.json`, so bump after every full rewrite.
 
 ## 9. The feedback file
 

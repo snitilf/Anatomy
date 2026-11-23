@@ -63,8 +63,10 @@ async function both(c: CorpusCase, index: number, args: string[]) {
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'board.json'), c.text)
   if (c.feedback !== undefined) writeFileSync(join(dir, 'feedback.json'), c.feedback)
+  if (c.previous !== undefined) writeFileSync(join(dir, 'board.prev.json'), c.previous)
   const files = new Map([['board.json', c.text]])
   if (c.feedback !== undefined) files.set('feedback.json', c.feedback)
+  if (c.previous !== undefined) files.set('board.prev.json', c.previous)
   const local = runAnatomy([...args, 'board.json'], memoryIo(files))
   return { bundled: await node([...args, 'board.json'], dir), local }
 }
@@ -109,6 +111,14 @@ describe('the bundled tool', () => {
     expect(list.code).toBe(0)
     for (const topic of TOPICS) expect(list.stdout).toContain(topic.when)
     expect(await node(['schema'], dir)).toEqual({ code: 0, stdout: readFileSync('schema/board.v1.fields.txt', 'utf8'), stderr: '' })
+  })
+
+  it('reads board.prev.json next to the board, as the app does', async () => {
+    const c = CORPUS.find((x) => x.name === 'revision not above the last version')!
+    const index = CORPUS.indexOf(c)
+    const { bundled, local } = await both(c, index, ['validate'])
+    expect(local.stdout).toContain('is not above revision 3 of the last version, board.prev.json')
+    expect(bundled.stdout).toBe(local.stdout)
   })
 
   it('agrees with the app on every board, in text and in JSON', async () => {

@@ -137,8 +137,8 @@ describe('the operations', () => {
     expect(apply([{ op: 'add', path: '/components/payment/summary', value: 'New.' }]).board().components[3].summary).toBe('New.')
   })
 
-  it('add needs an ID, refuses one that is taken anywhere, and offers a free one', () => {
-    const part = { label: 'Queue', summary: 'Holds jobs.', source: { kind: 'agent-explanation' } }
+  it('add needs an ID or a label, refuses one that is taken anywhere, and offers a free one', () => {
+    const part = { summary: 'Holds jobs.', source: { kind: 'agent-explanation' } }
     expect(apply([{ op: 'add', path: '/components', value: part }]).stdout).toContain('missing-id')
     const taken = apply([{ op: 'add', path: '/components', value: { ...part, id: 'api-to-payment' } }])
     expect(taken.stdout).toContain('ops[0] duplicate-id')
@@ -264,7 +264,7 @@ describe('feedback', () => {
   const files = { '.anatomy/feedback.json': FEEDBACK }
   const patch = [
     { op: 'replace', path: '/components/payment/summary', value: 'Charges the card and retries twice.', for: 'note-a1b2c3d4e5f6' },
-    { op: 'add', path: '/relationships', value: { id: 'api-to-queue', from: 'api', to: 'warehouse', kind: 'sends-data-to', label: 'charge jobs', source: { kind: 'agent-explanation' } }, for: 'edit-0p9o8i7u6y5t' },
+    { op: 'add', path: '/relationships', value: { id: 'api-to-queue', from: 'api', to: 'warehouse', kind: 'sends-data-to', label: 'charge jobs', explanation: 'Charges wait in a queue.', source: { kind: 'agent-explanation' } }, for: 'edit-0p9o8i7u6y5t' },
     { op: 'add', path: '/items', value: { id: 'q-retry', kind: 'question', text: 'How often should it retry?' }, for: 'edit-0p9o8i7u6y5t' },
     { op: 'respond', for: 'note-a1b2c3d4e5f6', status: 'answered', text: 'It retries twice.' },
     { op: 'respond', for: 'edit-0p9o8i7u6y5t', status: 'adopted', text: 'The API now hands charges to the queue.' },
@@ -418,7 +418,7 @@ describe('--cascade', () => {
 
 describe('--dry-run', () => {
   it('prints the changes by ID and writes nothing', () => {
-    const r = apply([replaceSummary, { op: 'add', path: '/relationships', value: { id: 'api-to-queue', from: 'api', to: 'warehouse', kind: 'calls', label: 'jobs', source: { kind: 'agent-explanation' } } }, { op: 'remove', path: '/relationships/api-to-database' }, { op: 'replace', path: '/title', value: 'Orders' }], ['--dry-run'])
+    const r = apply([replaceSummary, { op: 'add', path: '/relationships', value: { id: 'api-to-queue', from: 'api', to: 'warehouse', kind: 'calls', label: 'jobs', explanation: 'Jobs wait in a queue.', source: { kind: 'agent-explanation' } } }, { op: 'remove', path: '/relationships/api-to-database' }, { op: 'replace', path: '/title', value: 'Orders' }], ['--dry-run'])
     expect(r.code).toBe(0)
     expect(r.stdout.split('\n').slice(0, 6)).toEqual(['.anatomy/board.json: dry run, nothing written, would raise revision 3 to 4, 1 warning', '~ title', '~ components/payment.summary', '+ relationships/api-to-queue', '- relationships/api-to-database', 'components[4]: Component "database" has no connection.'])
     expect(r.io.written).toEqual([])

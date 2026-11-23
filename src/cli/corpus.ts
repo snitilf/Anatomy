@@ -9,6 +9,8 @@ export interface CorpusCase {
   text: string
   /** The text of the `feedback.json` next to it, when the case needs one. */
   feedback?: string
+  /** The text of the `board.prev.json` next to it, when the case needs one. */
+  previous?: string
 }
 
 type Json = Record<string, any>
@@ -43,11 +45,11 @@ export function baseBoard(): Json {
       },
     ],
     relationships: [
-      { id: 'cart-to-checkout', from: 'cart', to: 'checkout', kind: 'sends-data-to', label: 'items', source },
-      { id: 'checkout-to-api', from: 'checkout', to: 'api', kind: 'calls', label: 'place order', source },
-      { id: 'api-to-payment', from: 'api', to: 'payment', kind: 'calls', label: 'charge', source },
-      { id: 'api-to-database', from: 'api', to: 'database', kind: 'stores-in', label: 'order', source },
-      { id: 'api-to-warehouse', from: 'api', to: 'warehouse', kind: 'triggers', label: 'paid order', source },
+      { id: 'cart-to-checkout', from: 'cart', to: 'checkout', kind: 'sends-data-to', label: 'items', explanation: 'The cart hands its items to the checkout page.', source },
+      { id: 'checkout-to-api', from: 'checkout', to: 'api', kind: 'calls', label: 'place order', explanation: 'Checkout sends the finished order to the API.', source },
+      { id: 'api-to-payment', from: 'api', to: 'payment', kind: 'calls', label: 'charge', explanation: 'The API asks the payment provider to charge the card.', source },
+      { id: 'api-to-database', from: 'api', to: 'database', kind: 'stores-in', label: 'order', explanation: 'The API saves the order and its state.', source },
+      { id: 'api-to-warehouse', from: 'api', to: 'warehouse', kind: 'triggers', label: 'paid order', explanation: 'A paid order is queued for the warehouse.', source },
     ],
     items: [{ id: 'q-timeout', kind: 'question', text: 'What happens when the payment provider times out?', about: 'payment' }],
     scenarios: [
@@ -87,10 +89,10 @@ const allAnswered = () =>
   answers([answer('note-a1b2c3d4e5f6'), answer('edit-0p9o8i7u6y5t', 'adopted', ['api-to-payment']), answer('part-9z8y7x6w5v4u', 'declined')])
 
 /** A case made from the base board. `change` breaks it in place. */
-function mutate(name: string, change: (board: Json) => void, feedback?: string): CorpusCase {
+function mutate(name: string, change: (board: Json) => void, feedback?: string, previous?: string): CorpusCase {
   const board = baseBoard()
   change(board)
-  return { name, text: `${JSON.stringify(board, null, 2)}\n`, ...(feedback === undefined ? {} : { feedback }) }
+  return { name, text: `${JSON.stringify(board, null, 2)}\n`, ...(feedback === undefined ? {} : { feedback }), ...(previous === undefined ? {} : { previous }) }
 }
 
 /** Valid boards, with or without warnings. */
@@ -118,6 +120,8 @@ export const VALID_CASES: readonly CorpusCase[] = [
   mutate('feedback partly answered, revision not raised', (b) => {
     b.responses = answers([answer('note-a1b2c3d4e5f6'), answer('note-old000000001'), answer('edit-0p9o8i7u6y5u', 'adopted', ['api-to-payment'])])
   }, feedbackFile()),
+  mutate('connections with no explanation', (b) => b.relationships.forEach((r: Json) => delete r.explanation)),
+  mutate('revision not above the last version', () => {}, undefined, `${JSON.stringify(baseBoard(), null, 2)}\n`),
   mutate('more warnings than the report shows', (b) => {
     b.revision = 4
     b.responses = answers(Array.from({ length: 30 }, (_, i) => answer(`zz-${i}`)))
@@ -217,5 +221,6 @@ export function memoryIo(files: Map<string, string>, invocation = 'node .anatomy
 export function runCase(c: CorpusCase, args: readonly string[] = ['validate']): CliResult {
   const files = new Map([['.anatomy/board.json', c.text]])
   if (c.feedback !== undefined) files.set('.anatomy/feedback.json', c.feedback)
+  if (c.previous !== undefined) files.set('.anatomy/board.prev.json', c.previous)
   return runAnatomy(args, memoryIo(files))
 }
