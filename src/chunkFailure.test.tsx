@@ -20,7 +20,7 @@ describe('a script that fails to load', () => {
     openBoardFile(refundRaw, 'refund-approval.board.json')
     expect(await screen.findByTestId('inspector')).toBeInTheDocument()
     expect(await screen.findByText('The map could not load.')).toBeInTheDocument()
-    expect(within(screen.getByRole('banner')).getByRole('button', { name: /Refund approval/ })).toBeInTheDocument()
+    expect(within(screen.getByTestId('inspector')).getByRole('heading', { name: (JSON.parse(refundRaw) as { title: string }).title })).toBeInTheDocument()
   })
 
   it('says so when the how-to dialog cannot load, and the app stays', async () => {

@@ -11,6 +11,7 @@ import { FIRST_BOARD_PROMPT } from './agentPrompts'
 import { copyText } from './clipboard'
 import { Dialogs } from './Dialogs'
 import { EmptyState } from './EmptyState'
+import { ChunkBoundary } from './ChunkBoundary'
 import { Notices } from './Notices'
 import { readFileText } from './openFile'
 import styles from './Shell.module.css'
@@ -22,10 +23,10 @@ import { OverviewPage } from '../overview/OverviewPage'
 import { entryBoard, rememberedView, rememberView, viewFromHash, writeHash } from './view'
 import { useWorkspace } from './workspaceContext'
 
-/** The map carries React Flow, the layout, and the whiteboard tools. The start screen needs none of them, so they load when a board opens. */
+/** The map view, React Flow, and the whiteboard tools. The start screen needs none of them, so they load when a board opens. */
 const Canvas = lazy(() => import('../canvas/Canvas').then((m) => ({ default: m.Canvas })))
 
-/** The dialog carries the authoring guide and the schema, so it loads the first time the user opens it. */
+/** The dialog and the text it offers to download load the first time the user opens it. */
 const HowToDialog = lazy(() => import('./HowToDialog').then((m) => ({ default: m.HowToDialog })))
 
 /** Elements on the map that can hold keyboard focus. */
@@ -252,9 +253,17 @@ function ShellBody() {
             {hasBoard ? (
               <>
                 <div className={styles.canvas} inert={overview}>
-                  <Suspense fallback={null}>
-                    <Canvas />
-                  </Suspense>
+                  <ChunkBoundary
+                    fallback={
+                      <p className={styles.mapFailed} role="alert">
+                        The map could not load.
+                      </p>
+                    }
+                  >
+                    <Suspense fallback={null}>
+                      <Canvas />
+                    </Suspense>
+                  </ChunkBoundary>
                   {scenario && <WalkthroughBar />}
                 </div>
                 <Sidebar />
@@ -269,9 +278,18 @@ function ShellBody() {
         <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
         <Dialogs />
         {howToSeen && (
-          <Suspense fallback={null}>
-            <HowToDialog open={howTo} onClose={closeHowTo} />
-          </Suspense>
+          <ChunkBoundary
+            fallback={null}
+            onError={() => {
+              toast.error('The dialog could not load.')
+              closeHowTo()
+              setHowToSeen(false)
+            }}
+          >
+            <Suspense fallback={null}>
+              <HowToDialog open={howTo} onClose={closeHowTo} />
+            </Suspense>
+          </ChunkBoundary>
         )}
         <CommandMenu />
         {dragging && (

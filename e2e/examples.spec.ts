@@ -20,8 +20,15 @@ test.describe('the examples load when the user opens one', () => {
     test(`opens ${example.title} with the network gone, because the boards load while the page is idle`, async ({ page, context }) => {
       await page.goto('/')
       await expect(page.getByRole('button', { name: example.name })).toBeVisible()
-      await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(1000)
+      // The page fetches the map and the three boards after its first paint. Go offline only when all four have arrived.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const done = (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).filter((e) => e.responseEnd > 0).map((e) => e.name)
+            return [/\/Canvas-[^/]*\.js$/, /\/anatomy\.board-[^/]*\.js$/, /\/claude-code-harness\.board-[^/]*\.js$/, /\/how-an-llm-works\.board-[^/]*\.js$/].every((re) => done.some((n) => re.test(n)))
+          }),
+        )
+        .toBe(true)
       await context.setOffline(true)
       await page.getByRole('button', { name: example.name }).click()
       await expect(page.locator('.react-flow__node-card').first()).toBeVisible()

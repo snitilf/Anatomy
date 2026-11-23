@@ -108,3 +108,12 @@
     right: 12px;
   }
 }
+
+.mapFailed {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+  color: var(--fg-2);
+  font-size: var(--text-md);
+}

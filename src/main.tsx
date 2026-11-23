@@ -8,15 +8,16 @@ import { preloadExamples } from './app/examples'
 import { whenIdle } from './app/idle'
 
 initTheme()
-// The map and the examples load on their own scripts. Fetching them once the page is idle keeps the first paint small,
-// makes opening a board instant, and lets an example open even if the local server has stopped.
-whenIdle(() => {
-  void import('./canvas/Canvas').catch(() => undefined)
-  preloadExamples()
-})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
+
+// The map and the examples load on their own scripts. They are fetched after the first paint, so they never compete with
+// it. Then a board opens at once, and an example opens even if the local server has stopped.
+whenIdle(() => {
+  void import('./canvas/Canvas').catch(() => undefined)
+  preloadExamples()
+})

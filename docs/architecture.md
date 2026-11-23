@@ -492,18 +492,24 @@ Neither choice merges the two layers.
 
 ## What loads first
 
-The first script holds React, Base UI, Zod, the app shell, the sidebar, and the Overview.
+The first script holds React, Base UI, Zod, the app shell, the sidebar, the Overview, the layout and the line routing, and React Flow's core with its D3 helpers.
+The sidebar, the command menu, and the Overview use the layout and routing code, so it stays here.
 These load on their own scripts:
 
-- the map, with React Flow, the layout, and the whiteboard tools, when a board opens;
+- the map view: React Flow's components, the cards and lines, and the whiteboard tools (drawing, notes, and the tool bar), when a board opens;
 - each example board, when the user opens it;
-- the how-to dialog, with the authoring guide and the schema, and the text of the files written into `.anatomy/`, on first use;
+- the how-to dialog, on first use;
+- the text of the files written into `.anatomy/` (the README, the guide, the schema), when the app writes them;
 - a lesson, and the bundled `anatomy` tool, on first use.
 
 `src/app/examples.ts` is the index of the examples: the title, the description, the file name, the board ID, and a `load` function for each.
 `src/app/examples.test.ts` checks it against the board files.
 The start screen lists the examples from the index and loads no board.
-`scripts/firstLoad.test.ts` builds the app and checks that the first script holds no example board, no part of the command line tool, and no map, and that it stays under a byte budget.
+After the first paint (the load event, then two animation frames, then an idle moment), the app fetches the map and the example boards, so a board opens at once and still opens if the server has stopped.
+If a script cannot load, the user sees a short notice, and the rest of the app keeps working.
+Sending feedback to a folder still writes `feedback.json` when the text of the `.anatomy/` files cannot load.
+
+`scripts/firstLoad.test.ts` builds the app and checks that the first script holds no example board, no part of the command line tool, and no map view, that it does not load any of them at start, and that it stays under a byte budget.
 
 ## Safety
 
@@ -511,5 +517,5 @@ The app has these safety rules:
 
 - The app renders board text as React text nodes. A small local parser reads the Markdown subset and never uses `innerHTML`.
 - The app shows paths in references as text and never opens them.
-- The app makes no network requests after the page loads, except for its own files on the same local server: the map, the example boards, the how-to dialog, a lesson, and the `anatomy` tool load on their own scripts. The map and the examples are fetched once the page is idle, so they open at once and still open if the server has stopped. Inter is bundled with the app.
+- The app makes no network requests after the page loads, except for its own files on the same local server: the map view, the example boards, the how-to dialog, the text of the `.anatomy/` files, a lesson, and the `anatomy` tool load on their own scripts. Inter is bundled with the app.
 - The `anatomy` tool imports only `node:fs`, `node:path`, and `node:url`. It reads the board, the `feedback.json` next to it, and a patch, only as regular files and with a size cap, writes only the board and its `board.prev.json` (`fmt` and `apply`, each through a new file that must not exist yet, renamed over the old one), and never runs anything from them. A patch path may not contain `__proto__`, `constructor`, or `prototype`, and a patch is capped at 500 operations, 1,000,000 bytes, and 16 levels. Its first import, `src/cli/jitless.ts`, turns off the code generation of Zod before any schema loads, so it never calls `Function`. A test runs the bundle with `Function` trapped to prove it.

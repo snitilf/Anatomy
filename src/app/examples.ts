@@ -54,16 +54,22 @@ export function loadExample(example: Example): Promise<string> {
   return example.load()
 }
 
-/** Loads an example and hands its text on. When it cannot load, the user is told and nothing changes. */
+let latest = 0
+
+/**
+ * Loads an example and hands its text on. When it cannot load, the user is told and nothing changes. An example that
+ * arrives after the user asked for another one is dropped.
+ */
 export async function openExample(example: Example, open: (fileName: string, text: string) => void): Promise<void> {
+  const mine = ++latest
   let text: string
   try {
     text = await loadExample(example)
   } catch {
-    toast.error('Could not load that example. Reload the page and try again.')
+    if (mine === latest) toast.error('Could not load that example.')
     return
   }
-  open(example.fileName, text)
+  if (mine === latest) open(example.fileName, text)
 }
 
 /** Loads every example, so one still opens if the local server has stopped. Run it when the page is idle. */
