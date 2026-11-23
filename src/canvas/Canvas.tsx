@@ -42,7 +42,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredTop, fitBounds, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { contentBounds, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { bundleSelection } from '../app/state'
@@ -50,6 +50,7 @@ import { usePhone } from '../app/usePhone'
 import { frameConnection } from './bundleFrame'
 import { bundleWords, type BundleWords } from './bundleWords'
 import { bundleGroups, connectionsOf } from './bundles'
+import { useRouteBox } from './useRouteBox'
 import { sharedBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup } from './FarLayer'
@@ -394,16 +395,18 @@ export function Canvas() {
         : undefined,
     [solved, bundlesFor],
   )
-  const bounds = useMemo(
-    () =>
-      board && solved ? fitBounds(contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals), routesBox, mapSize) : undefined,
-    [board, solved, marks, proposals, routesBox, mapSize],
+  const baseBounds = useMemo(
+    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
+    [board, solved, marks, proposals],
   )
   // The opening view frames the parts. A mark drawn far from them does not pull it off the board.
-  const partsBounds = useMemo(
-    () => (board && solved ? fitBounds(contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals), routesBox, mapSize) : undefined),
-    [board, solved, proposals, routesBox, mapSize],
+  const basePartsBounds = useMemo(
+    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
+    [board, solved, proposals],
   )
+  const routes = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize))
+  const bounds = useMemo(() => fitBounds(baseBounds, () => routes, mapSize), [baseBounds, routes, mapSize])
+  const partsBounds = useMemo(() => fitBounds(basePartsBounds, () => routes, mapSize), [basePartsBounds, routes, mapSize])
   const limits = useMemo(() => zoomLimits(bounds, mapSize), [bounds, mapSize])
   const boundsRef = useRef(bounds)
   const partsBoundsRef = useRef(partsBounds)

@@ -111,6 +111,9 @@ A connection keeps its route and label when its cards did not move or change siz
 
 The camera in `src/canvas/camera.ts` keeps the map inside limits.
 The app works out the limits from the content: cards, group areas, marks, and proposed parts.
+When a fit would land in the far view, the content also includes the routes of the far-view lines, which run around the outside of the cards.
+The fit asks for those routes only then.
+The app solves them off the frame that commits a new layout, except in the far view and on the first open.
 The map zooms out only until the whole content fits, and never needs more than 100%.
 It zooms in to 200%.
 Panning stops a margin past the content.
