@@ -8,8 +8,9 @@ export default defineConfig({
   plugins: [react(), anatomyCli()],
   server: { host: '127.0.0.1', strictPort: true },
   preview: { host: '127.0.0.1', strictPort: true },
-  // The app loads from the local machine, so one main chunk of React, React Flow, and Zod is fine.
-  build: { chunkSizeWarningLimit: 800 },
+  // The first script holds React, Base UI, and Zod, which every screen needs. The map, the examples, the how-to dialog, the
+  // lessons, and the command line tool load on their own scripts. `scripts/firstLoad.test.ts` holds the same line in bytes.
+  build: { chunkSizeWarningLimit: 950 },
   test: {
     environment: 'jsdom',
     exclude: [...configDefaults.exclude, 'e2e/**'],
