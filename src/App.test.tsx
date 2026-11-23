@@ -149,6 +149,8 @@ describe('App', () => {
     press(within(screen.getByRole('banner')).getByRole('button', { name: 'Local file' }))
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Open' })).getByRole('button', { name: /Anatomy itself/ }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Open' })).not.toBeInTheDocument())
+    // The example loads on demand, so the board changes a moment after the popover closes.
+    expect(await within(screen.getByTestId('inspector')).findByRole('heading', { name: 'Anatomy: how a board becomes a map' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: refund.title })).not.toBeInTheDocument()
   })
 

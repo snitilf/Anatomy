@@ -1,4 +1,4 @@
-import { EXAMPLES } from './examples'
+import { EXAMPLES, openExample } from './examples'
 import styles from './ExamplesMenu.module.css'
 import { useWorkspace } from './workspaceContext'
 
@@ -14,7 +14,7 @@ export function ExampleList({ onChosen }: { onChosen?: () => void }) {
             className={styles.item}
             onClick={() => {
               onChosen?.()
-              openText(example.fileName, example.raw, 'example')
+              void openExample(example, (fileName, text) => openText(fileName, text, 'example'))
             }}
           >
             <span className={styles.itemTitle}>{example.title}</span>

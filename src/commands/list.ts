@@ -41,7 +41,7 @@ import {
   Undo2,
   X,
 } from 'lucide-react'
-import { EXAMPLES } from '../app/examples'
+import { EXAMPLES, openExample } from '../app/examples'
 import type { Selection } from '../app/state'
 import { copyText } from '../app/clipboard'
 import { trailOf } from '../app/crumbs'
@@ -538,7 +538,7 @@ export function boardCommands(c: CommandContext): Command[] {
     group: 'Board',
     label: `Open example: ${example.title}`,
     icon: BookOpen,
-    run: (ctx) => ctx.workspace.openText(example.fileName, example.raw, 'example'),
+    run: (ctx) => void openExample(example, (fileName, text) => ctx.workspace.openText(fileName, text, 'example')),
   }))
   if (!board) return out
   for (const scenario of board.scenarios) {

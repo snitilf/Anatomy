@@ -4,8 +4,10 @@ import '@fontsource-variable/inter'
 import './index.css'
 import { initTheme } from './theme/theme'
 import App from './App.tsx'
+import { preloadExamples } from './app/examples'
 
 initTheme()
+preloadExamples()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
