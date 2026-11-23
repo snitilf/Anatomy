@@ -265,6 +265,7 @@
       "to": "context-window",
       "kind": "stores-in",
       "label": "token numbers",
+      "explanation": "The tokenizer turns your text into a list of token numbers and puts them in the context window. The model works with these numbers, not with letters.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -275,6 +276,7 @@
       "to": "embeddings",
       "kind": "sends-data-to",
       "label": "tokens in the window",
+      "explanation": "The tokens in the window are passed on, and each token number is looked up as a vector. Vectors can be compared, which numbers cannot.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -285,6 +287,7 @@
       "to": "attention",
       "kind": "sends-data-to",
       "label": "one vector per token",
+      "explanation": "Each token arrives as one vector. Attention can then compare tokens with each other.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -295,6 +298,7 @@
       "to": "feed-forward",
       "kind": "sends-data-to",
       "label": "vectors with context mixed in",
+      "explanation": "Each vector now carries some information from the tokens that matter to it. The feed-forward layer transforms each one further.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -305,6 +309,7 @@
       "to": "next-token",
       "kind": "sends-data-to",
       "label": "the last layer's vector",
+      "explanation": "After the last layer, the vector of the final token is used to score every possible next token.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -315,6 +320,7 @@
       "to": "sampling",
       "kind": "sends-data-to",
       "label": "probabilities",
+      "explanation": "The scores become probabilities, one per possible token. Sampling picks from them, so the same prompt can give different answers.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -353,6 +359,7 @@
       "to": "fine-tuning",
       "kind": "sends-data-to",
       "label": "a model that continues text",
+      "explanation": "Pretraining gives a model that can only continue text. Fine-tuning then teaches it to follow instructions and be helpful.",
       "source": {
         "kind": "agent-explanation"
       }

@@ -298,6 +298,7 @@
       "to": "agent-loop",
       "kind": "sends-data-to",
       "label": "your prompt",
+      "explanation": "Your prompt starts the loop. Claude Code adds it to the task and works until it judges the task is done.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -308,6 +309,7 @@
       "to": "context-window",
       "kind": "stores-in",
       "label": "prompts, replies, and results",
+      "explanation": "Each prompt, each reply, and each tool result is added to the context, so the model has the story so far on its next step.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -329,6 +331,7 @@
       "to": "permission-check",
       "kind": "calls",
       "label": "may this tool call run?",
+      "explanation": "Before a tool call runs, the loop asks the permission check. A call that is not allowed never reaches the tool.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -356,6 +359,7 @@
       "to": "tools",
       "kind": "triggers",
       "label": "runs the approved call",
+      "explanation": "Only a call that passed the check is sent to a tool. The tool then runs it, for example by reading a file or running a command.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -366,6 +370,7 @@
       "to": "your-files",
       "kind": "reads-from",
       "label": "files, search matches, git state",
+      "explanation": "Reading tools return file contents, search matches, and git state without changing anything. This is how Claude learns what is in your repository.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -376,6 +381,7 @@
       "to": "your-files",
       "kind": "stores-in",
       "label": "edits, new files, shell effects",
+      "explanation": "Editing and shell tools change your files and run commands. This is where the change you asked for lands.",
       "source": {
         "kind": "agent-explanation"
       }
@@ -386,6 +392,7 @@
       "to": "context-window",
       "kind": "sends-data-to",
       "label": "tool results",
+      "explanation": "Every tool result goes back into the context. The next step of the loop is based on what the tool found or did.",
       "source": {
         "kind": "documented-intent",
         "references": [
@@ -449,6 +456,7 @@
       "to": "mcp-and-skills",
       "kind": "calls",
       "label": "outside tool calls",
+      "explanation": "Some tool calls go to an MCP server, which reaches outside data or services. The result comes back like the result of any other tool.",
       "source": {
         "kind": "agent-explanation"
       }
