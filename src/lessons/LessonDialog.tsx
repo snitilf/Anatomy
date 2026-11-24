@@ -1,9 +1,10 @@
-/* oxlint-disable react/static-components -- the lazy component is memoized per lesson id */
-import { Suspense, lazy, useEffect, useMemo, useRef } from 'react'
+/* oxlint-disable react/static-components -- the lazy components are created once per lesson id, in loader.ts */
+import { Suspense, useEffect, useRef } from 'react'
 import clsx from 'clsx'
 import { X } from 'lucide-react'
 import buttons from '../app/buttons.module.css'
 import { findLesson } from './catalog'
+import { lessonComponent } from './loader'
 import styles from './LessonDialog.module.css'
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
 export function LessonDialog({ lessonId, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const entry = findLesson(lessonId)
-  const Lesson = useMemo(() => (entry ? lazy(entry.load) : null), [entry])
+  const Lesson = entry ? lessonComponent(entry) : null
 
   useEffect(() => {
     const dialog = ref.current
