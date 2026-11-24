@@ -182,11 +182,11 @@
 
 /* A title that runs the whole first line keeps clear of a mark at the top. At the title level the title is centred, away from the corner. */
 .card[data-start='tr'] .label {
-  padding-right: 6px;
+  padding-right: calc(18px * var(--label-scale, 1) - 10px);
 }
 
 .card[data-start='tl'] .label {
-  padding-left: 6px;
+  padding-left: calc(18px * var(--label-scale, 1) - 10px);
 }
 
 :global([data-detail='title']) .card[data-start] .label {

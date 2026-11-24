@@ -73,7 +73,7 @@ It keeps its size on screen at every detail level, the way a label does.
 It sits inside the card, so it dims and lifts with the card, and nothing that keeps off the card can cover it.
 
 A line label can still land on a card in a crowded gap, so the mark takes the first of the top right, the top left, and the bottom right corner that no line label covers at any zoom from 100 percent down to the far end of the title level (`startCorner`, from `freeCorner` in `src/canvas/startMarks.ts`).
-A title that would run into a mark at the top leaves it 6 px.
+A title that would run into a mark at the top leaves it 4 px of room at every zoom.
 In the far view a tile has no text but its name, so the mark is drawn by the far layer inside the tile, at the bottom right or left, as large as fits from 14 px down to 11 px, clear of the names of the groups that sit over tiles.
 A tile that the name of a group covers too much of has no mark.
 `e2e/flow-start.spec.ts` checks that no mark leaves its card or touches a label, a group name, a count, a note dot, or a word of the card.
