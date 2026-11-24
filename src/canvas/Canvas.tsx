@@ -1168,7 +1168,7 @@ export function Canvas() {
             </div>
           )}
           <WheelZoom />
-          <LabelScale far={far} />
+          <LabelScale detail={detail} />
           <MapHint mapWidth={mapSize.width} onChange={measureMap} />
         </ReactFlow>
       </CameraContext.Provider>

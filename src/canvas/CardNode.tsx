@@ -1,10 +1,10 @@
 import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProps } from '@xyflow/react'
 import { GraduationCap } from 'lucide-react'
-import { memo } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
-import { nameLines } from './far'
+import { nameLines, titleLines } from './far'
 import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
@@ -15,6 +15,8 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
   const mine = data.noteCount
   // A tile wide enough on screen carries the part's name in the far view. It renders on the crossing, not on every zoom.
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
+  // How many title lines a title-only card holds. It changes only on a few zooms just above the far view.
+  const heading = useStore((s) => (data.far ? 3 : titleLines(s.transform[2], data.height)))
   const tip = useTipClamp(data.far, selected === true || data.highlighted)
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
@@ -32,6 +34,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-dimmed={data.dimmed ? 'true' : undefined}
         data-faded={data.faded ? 'true' : undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
+        style={{ '--title-lines': heading } as CSSProperties}
       >
         {data.far && mine > 0 && <span className={styles.dot} aria-hidden="true" />}
         {lines > 0 && (

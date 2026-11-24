@@ -69,11 +69,27 @@ export function labelScale(zoom: number, far: boolean): number {
   return Math.ceil(needed * NEAR_STEP - 1e-6) / NEAR_STEP
 }
 
-/** How much card titles grow on the board so they never draw under 11px on screen. */
-export function titleScale(zoom: number): number {
-  const needed = MIN_TEXT_PX / (TITLE_BASE_PX * Math.max(zoom, 0.01))
+/**
+ * How much card titles grow on the board so they never draw under `px` on screen: 11px on a full card, and
+ * `TITLE_LEVEL_PX` on a title-only card.
+ */
+export function titleScale(zoom: number, px = MIN_TEXT_PX): number {
+  const needed = px / (TITLE_BASE_PX * Math.max(zoom, 0.01))
   if (needed <= 1) return 1
   return Math.ceil(needed * NEAR_STEP - 1e-6) / NEAR_STEP
+}
+
+/** A title-only card draws its title at this size on screen, a step above the 11px line labels around it. */
+export const TITLE_LEVEL_PX = 12
+/** The line height of a title-only card's title, as a share of its font size. Matches `CardNode.module.css`. */
+export const TITLE_LINE_HEIGHT = 17 / 13
+/** The padding above and below a title-only card's title, in board pixels: `--space-3`. */
+export const TITLE_PADDING = 12
+
+/** How many lines of title a title-only card of this height holds at this zoom, from one to three. */
+export function titleLines(zoom: number, height: number): number {
+  const line = TITLE_BASE_PX * TITLE_LINE_HEIGHT * titleScale(zoom, TITLE_LEVEL_PX)
+  return Math.max(1, Math.min(3, Math.floor((height - 2 * TITLE_PADDING) / line)))
 }
 
 /** What the current view hides, in plain words, or undefined when all lines and labels are shown. */

@@ -9,7 +9,7 @@ import type { Rect } from '../layout/geometry'
 import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 import { blockRect } from './bundleFrame'
-import { detailFor, FAR_ENTER, labelScale, nextDetail, titleScale, type DetailLevel } from './far'
+import { detailFor, FAR_ENTER, labelScale, nextDetail, TITLE_LEVEL_PX, titleScale, type DetailLevel } from './far'
 
 const STEP_MS = 220
 const RESIZE_MS = 150
@@ -283,23 +283,24 @@ export const LABELS_ZOOM = 0.9
 
 /**
  * Sets `--label-scale` and `--title-scale` on the map so card titles and line labels never draw under 11 px on screen
- * at any detail level (D143). Writes to `style` only when the quantized step changes, so zooming never triggers
- * redundant style recalculations.
+ * at any detail level (D143), and the title of a title-only card at `TITLE_LEVEL_PX`. Writes to `style` only when the
+ * quantized step changes, so zooming never triggers redundant style recalculations.
  */
-export function LabelScale({ far }: { far: boolean }) {
+export function LabelScale({ detail }: { detail: DetailLevel }) {
   const map = useStore((s) => s.domNode)
   const store = useStoreApi()
   useLayoutEffect(() => {
     if (!map) return
     let lastLabel = ''
     let lastTitle = ''
+    const far = detail === 'far'
     const apply = (zoom: number) => {
       const nextLabel = labelScale(zoom, far).toFixed(far ? 2 : 1)
       if (nextLabel !== lastLabel) {
         lastLabel = nextLabel
         map.style.setProperty('--label-scale', nextLabel)
       }
-      const nextTitle = titleScale(zoom).toFixed(1)
+      const nextTitle = (detail === 'title' ? titleScale(zoom, TITLE_LEVEL_PX) : titleScale(zoom)).toFixed(1)
       if (nextTitle !== lastTitle) {
         lastTitle = nextTitle
         map.style.setProperty('--title-scale', nextTitle)
@@ -309,7 +310,7 @@ export function LabelScale({ far }: { far: boolean }) {
     return store.subscribe((state, prev) => {
       if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
     })
-  }, [map, store, far])
+  }, [map, store, detail])
   return null
 }
 
