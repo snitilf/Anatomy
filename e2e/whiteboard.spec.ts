@@ -29,6 +29,8 @@ async function openFolder(page: Page, file: string) {
   )
   await page.goto('/')
   await page.getByRole('button', { name: 'Open folder' }).click()
+  await page.waitForTimeout(300)
+  if (await page.getByTestId('overview').isVisible()) await page.getByRole('tab', { name: 'Map' }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
   await page.waitForTimeout(400)
 }

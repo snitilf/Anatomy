@@ -8,7 +8,7 @@ const RP_LOOP = 'src/canvas/fixtures/rp-loop.board.json'
 test.use({ reducedMotion: 'reduce' })
 
 for (const size of [
-  { width: 390, height: 844, far: true },
+  { width: 340, height: 844, far: true },
   { width: 1440, height: 900, far: false },
 ]) {
   test(`Fit keeps every drawn line and card of the loop board inside the map at ${size.width}x${size.height}`, async ({ page }) => {

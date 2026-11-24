@@ -64,9 +64,6 @@ const cell = (board: string, window: string, check: Check) => `${board} @ ${wind
 const EXPECTED_FAILURES: Record<string, string> = {
   // 21.1 "Mid width": the sidebar slides over the map at 1024 px, so a small board fits at a zoom where it reads.
   [cell('claude code harness', '1024x768', 'readable')]: '21.1',
-  [cell('large language model', '1024x768', 'readable')]: '21.1',
-  [cell('refund approval', '1024x768', 'readable')]: '21.1',
-  [cell('url shortener', '1024x768', 'readable')]: '21.1',
 }
 
 /** The checks that apply to a board on a window. At 1024x768 a small board is held to "readable" too, which waits for 21.1. */

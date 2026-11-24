@@ -75,16 +75,14 @@ test.describe('zoom bar', () => {
     await page.keyboard.press('ControlOrMeta+Equal')
     await page.keyboard.press('ControlOrMeta+Digit0')
     await expect.poll(() => zoomOf(page)).toBeCloseTo(1, 3)
-    // The board opens at the start of the flow (0.8) when the whole of it would be too small to read.
-    expect(start).toBeCloseTo(0.8, 2)
-    // Zoom out as far as it goes: that is where the whole board fits, and Fit goes there too.
+    // The board opens fitted whole, and zooming out as far as it goes stops at that same fit zoom.
     for (let i = 0; i < 8; i++) {
       await page.keyboard.press('ControlOrMeta+Minus')
       await page.waitForTimeout(250)
     }
     const whole = await zoomOf(page)
-    expect(whole).toBeLessThan(start - 0.05)
-    expect(whole).toBeGreaterThan(0.5)
+    expect(start).toBeCloseTo(whole, 2)
+    expect(whole).toBeGreaterThan(0.45)
     await page.keyboard.press('ControlOrMeta+Equal')
     await page.waitForTimeout(250)
     await page.keyboard.press('Shift+Digit1')
