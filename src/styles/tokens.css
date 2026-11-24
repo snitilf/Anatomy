@@ -8,15 +8,15 @@
   --hit: 32px;
 }
 
-/* Every neutral shares the accent's hue (OKLCH 278) at low chroma: shell, canvas, cards, in that order in both themes. */
+/* Every neutral shares the cool slate-violet family at low chroma: frame, shell, canvas, cards, in that order in both themes. */
 :root,
 :root[data-theme='light'] {
   /* Surfaces: the shell (panel) recedes, the canvas sits above it, cards and floating bars are the highest plane. */
-  --bg: #ebecf3;
-  --panel: #e3e4ed;
-  /* The frame around the content panel: one step darker and greyer than the shell. The top bar sits on it. */
-  --frame: #dadbe5;
-  --raised: #fafaff;
+  --bg: #e6e7ea;
+  --panel: #dfe1e5;
+  /* The frame around the content panel: one step darker than the shell. The top bar sits on it. */
+  --frame: #d8dade;
+  --raised: #ffffff;
   --hover: rgb(26 27 35 / 0.05);
   --active: rgb(26 27 35 / 0.08);
   --border: rgb(26 27 35 / 0.09);
@@ -25,7 +25,7 @@
   --card-edge: rgb(26 27 35 / 0.52);
   /* The hairline around a group area. */
   --group-edge: color-mix(in srgb, var(--fg) 18%, transparent);
-  --card-shadow: 0 1px 2px rgb(26 27 50 / 0.06);
+  --card-shadow: 0 1px 2px rgb(20 22 30 / 0.07);
   /* How much of the label color a faded label keeps. */
   --faded-label: 80%;
   /* How much of a line is left when it steps back (a part is selected, a card is hovered, a walkthrough plays). Every agent line has one ink, so one share serves them all. */
@@ -40,16 +40,16 @@
   --wash-share: 5.2%;
   --wash-share-2: 10.1%;
   /* How much amber a sticky note takes from the card color. */
-  --sticky-mix: 26%;
+  --sticky-mix: 22%;
 
   /* Text. Every text token passes 4.5 to 1 on every surface it sits on: canvas, shell, frame and card, each with the hover or active fill and the accent, amber or danger tint, and the two together. */
   --fg: #1a1b23;
-  --fg-2: #505361;
-  --fg-3: #545665;
+  --fg-2: #484b58;
+  --fg-3: #4a4d5b;
 
   /* The accent marks the agent's content in focus: selection, focus, the primary action. */
   --accent: #4d51cb;
-  --accent-text: #4649b7;
+  --accent-text: #3c3fa9;
   /* A selected or hovered connection: its stroke, arrowhead and label. Stronger than every rest line. */
   --accent-line: #3a3eb8;
   --accent-tint: rgb(91 95 214 / 0.1);
@@ -59,19 +59,19 @@
   --guide: rgb(29 151 163 / 0.7);
 
   /* Yours: everything the user made. Amber is used for nothing else. */
-  --yours: #b4690a;
-  --yours-text: #814a02;
+  --yours: #c88200;
+  --yours-text: #6d4500;
   /* The amber of a thin line (the not-sent glyph): darker than --yours so a 1.5px ring holds 3.5 to 1 on the shell and the cards. */
-  --yours-ink: #a35f08;
-  --yours-tint: rgb(232 160 40 / 0.12);
+  --yours-ink: #9c6400;
+  --yours-tint: rgb(232 166 28 / 0.14);
 
-  --danger: #a82028;
+  --danger: #961c24;
   --danger-tint: rgb(179 34 43 / 0.08);
   --danger-fill: #b3222b;
 
   --focus: rgb(91 95 214 / 0.85);
   --scrim: rgb(26 27 35 / 0.32);
-  --shadow-float: 0 1px 2px rgb(26 27 50 / 0.06), 0 8px 24px -4px rgb(26 27 50 / 0.12);
+  --shadow-float: 0 1px 2px rgb(20 22 30 / 0.06), 0 8px 24px -4px rgb(20 22 30 / 0.11);
 
   color-scheme: light;
 }
