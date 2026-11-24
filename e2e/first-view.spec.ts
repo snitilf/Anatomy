@@ -62,48 +62,6 @@ const cell = (board: string, window: string, check: Check) => `${board} @ ${wind
  * Every other cell passes today and must keep passing.
  */
 const EXPECTED_FAILURES: Record<string, string> = {
-  // 18.3 "Open fitted, three detail levels, say what is hidden": the board opens fitted, so every card is in view.
-  [cell('anatomy', '1440x900', 'in view')]: '18.3',
-  [cell('anatomy', '1280x800', 'in view')]: '18.3',
-  [cell('anatomy', '1024x768', 'in view')]: '18.3',
-  [cell('claude code harness', '1440x900', 'in view')]: '18.3',
-  [cell('claude code harness', '1280x800', 'in view')]: '18.3',
-  [cell('claude code harness', '1024x768', 'in view')]: '18.3',
-  [cell('large language model', '1440x900', 'in view')]: '18.3',
-  [cell('large language model', '1280x800', 'in view')]: '18.3',
-  [cell('large language model', '1024x768', 'in view')]: '18.3',
-  [cell('refund approval', '1280x800', 'in view')]: '18.3',
-  [cell('refund approval', '1024x768', 'in view')]: '18.3',
-  [cell('url shortener', '1024x768', 'in view')]: '18.3',
-
-  // 18.3: titles and labels never under 11 px, the title level keeps every line and label, and the map carries `data-detail`.
-  [cell('claude code harness', '1440x900', 'readable')]: '18.3',
-  [cell('claude code harness', '1280x800', 'readable')]: '18.3',
-  [cell('large language model', '1440x900', 'readable')]: '18.3',
-  [cell('large language model', '1280x800', 'readable')]: '18.3',
-  [cell('refund approval', '1440x900', 'readable')]: '18.3',
-  [cell('refund approval', '1280x800', 'readable')]: '18.3',
-  [cell('url shortener', '1440x900', 'readable')]: '18.3',
-  [cell('url shortener', '1280x800', 'readable')]: '18.3',
-
-  // 18.3: the map carries `data-detail`, and `hidden-detail` says what the view hides.
-  [cell('anatomy', '1440x900', 'says what it hides')]: '18.3',
-  [cell('anatomy', '1280x800', 'says what it hides')]: '18.3',
-  [cell('anatomy', '1024x768', 'says what it hides')]: '18.3',
-  [cell('claude code harness', '1024x768', 'says what it hides')]: '18.3',
-  [cell('large language model', '1024x768', 'says what it hides')]: '18.3',
-  [cell('refund approval', '1024x768', 'says what it hides')]: '18.3',
-  [cell('url shortener', '1024x768', 'says what it hides')]: '18.3',
-  [cell('sixteen parts', '1440x900', 'says what it hides')]: '18.3',
-  [cell('sixteen parts', '1280x800', 'says what it hides')]: '18.3',
-  [cell('sixteen parts', '1024x768', 'says what it hides')]: '18.3',
-  [cell('forty parts', '1440x900', 'says what it hides')]: '18.3',
-  [cell('forty parts', '1280x800', 'says what it hides')]: '18.3',
-  [cell('forty parts', '1024x768', 'says what it hides')]: '18.3',
-  [cell('sixty parts', '1440x900', 'says what it hides')]: '18.3',
-  [cell('sixty parts', '1280x800', 'says what it hides')]: '18.3',
-  [cell('sixty parts', '1024x768', 'says what it hides')]: '18.3',
-
   // 21.1 "Mid width": the sidebar slides over the map at 1024 px, so a small board fits at a zoom where it reads.
   [cell('claude code harness', '1024x768', 'readable')]: '21.1',
   [cell('large language model', '1024x768', 'readable')]: '21.1',

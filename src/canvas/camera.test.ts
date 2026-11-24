@@ -94,15 +94,15 @@ describe('clampViewport', () => {
 })
 
 describe('framing', () => {
-  it('fits a board that stays readable, and shows the start of the flow at a readable zoom otherwise', () => {
+  it('opens every board fitted whole, centered in the map', () => {
     const roomy = { x: 0, y: 0, width: 900, height: 500 }
     const fit = frameViewport(zoomLimits(roomy, map), { ...map, top: 0 }, { readable: true })
-    expect(fit.zoom).toBeGreaterThanOrEqual(READABLE_ZOOM)
-    const big = frameViewport(zoomLimits(board, map), { ...map, top: 0 }, { readable: true, start: { x: 0, y: 300, width: 240, height: 112 } })
-    expect(big.zoom).toBe(START_ZOOM)
-    // The left edge of the board is near the left of the map.
-    expect(big.x).toBeGreaterThan(0)
-    expect(big.x).toBeLessThan(40)
+    expect(fit.zoom).toBe(1)
+    const big = frameViewport(zoomLimits(board, map), { ...map, top: 0 }, { readable: true })
+    expect(big.zoom).toBeCloseTo(zoomLimits(board, map).fitZoom, 6)
+    // The whole board fits inside the map area: left edge >= 0 and right edge <= map.width.
+    expect(board.x * big.zoom + big.x).toBeGreaterThanOrEqual(0)
+    expect((board.x + board.width) * big.zoom + big.x).toBeLessThanOrEqual(map.width)
   })
 })
 
