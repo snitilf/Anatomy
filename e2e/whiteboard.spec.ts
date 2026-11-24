@@ -29,7 +29,14 @@ async function openFolder(page: Page, file: string) {
   )
   await page.goto('/')
   await page.getByRole('button', { name: 'Open folder' }).click()
-  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  // A board that opens in the far view on a phone opens on the Overview. These tests are about the map, so they go there.
+  // The map decides at its first fit, so wait for the Overview or a fitted map.
+  const overview = page.getByTestId('overview')
+  const card = page.locator('.react-flow__node-card').first()
+  const fitted = () => page.evaluate(() => document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')
+  await expect.poll(async () => (await overview.isVisible()) || ((await fitted()) !== '' && (await fitted()) !== 'translate(0px, 0px) scale(1)')).toBe(true)
+  if (await overview.isVisible()) await page.getByRole('tab', { name: 'Map' }).click()
+  await expect(card).toBeVisible()
   await page.waitForTimeout(400)
 }
 

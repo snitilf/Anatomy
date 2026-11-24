@@ -1,24 +1,23 @@
 import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProps } from '@xyflow/react'
 import { GraduationCap } from 'lucide-react'
-import { memo } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
-import { nameLines } from './far'
+import { nameLines, titleLines } from './far'
 import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
-
-/** Below this zoom a summary would draw under 9px on screen, so the card shows its title alone. */
-export const SUMMARY_ZOOM = 0.75
 
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
 
 export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Node<CardData>>) {
   const mine = data.noteCount
-  const small = useStore((s) => s.transform[2] < SUMMARY_ZOOM)
   // A tile wide enough on screen carries the part's name in the far view. It renders on the crossing, not on every zoom.
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
+  // How many title lines a title-only card holds. It changes only on a few zooms just above the far view.
+  const foot = data.hasLesson || mine > 0
+  const heading = useStore((s) => (data.far ? 3 : titleLines(s.transform[2], data.height, foot)))
   const tip = useTipClamp(data.far, selected === true || data.highlighted)
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
@@ -36,6 +35,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-dimmed={data.dimmed ? 'true' : undefined}
         data-faded={data.faded ? 'true' : undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
+        style={{ '--title-lines': heading } as CSSProperties}
       >
         {data.far && mine > 0 && <span className={styles.dot} aria-hidden="true" />}
         {lines > 0 && (
@@ -44,10 +44,10 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
         <div className={styles.label}>{data.label}</div>
-        <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }} data-small={small || undefined}>
+        <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }}>
           {data.summary}
         </p>
-        {(data.hasLesson || mine > 0) && (
+        {foot && (
           <div className={styles.foot}>
             {data.hasLesson && (
               <span className={styles.lesson} role="img" aria-label="Has a lesson" title="Has a lesson">

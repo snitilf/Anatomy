@@ -147,7 +147,7 @@ test.describe('the far view of a crowded board', () => {
   })
 
   test('a tile wide enough on screen names its part inside it, at about 11px, on one or two lines, and a narrower one does not', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.setViewportSize({ width: 1180, height: 768 })
     await open(page, 'e2e/fixtures/sixteen-parts.board.json')
     await expect(farOn(page)).toHaveCount(1)
     const names = page.locator('.react-flow__node-card [class*="tileName"]')
@@ -178,7 +178,7 @@ test.describe('the far view of a crowded board', () => {
   })
 
   test('the name on a tile and the hover name exist only in the far view', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.setViewportSize({ width: 1180, height: 768 })
     await open(page, 'e2e/fixtures/sixteen-parts.board.json')
     await expect(page.locator('.react-flow__node-card [class*="tileName"]')).toHaveCount(16)
     await expect(page.locator('.react-flow__node [class*="tip"]')).toHaveCount(16)
@@ -229,7 +229,7 @@ for (const size of [
     { name: 'sixty', file: SIXTY },
     { name: 'forty', file: FORTY },
   ]) {
-    test(`far view labels cover no other label and no card at 0.67 zoom and at fit: ${board.name}, ${size.width}px`, async ({ page }) => {
+    test(`far view labels cover no other label and no card at 0.33 zoom and at fit: ${board.name}, ${size.width}px`, async ({ page }) => {
       await page.setViewportSize(size)
       await open(page, board.file)
       const check = async (what: string) => {
@@ -248,11 +248,10 @@ for (const size of [
       await check('fit')
       await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
       await page.keyboard.press('Shift+Digit0')
-      await page.keyboard.press('ControlOrMeta+Minus')
-      await page.keyboard.press('ControlOrMeta+Minus')
-      await expect.poll(async () => zoomOf(page)).toBeLessThan(0.69)
-      expect(await zoomOf(page)).toBeGreaterThan(0.55)
-      await check('0.67')
+      for (let i = 0; i < 4; i++) await page.keyboard.press('ControlOrMeta+Minus')
+      await expect.poll(async () => zoomOf(page)).toBeLessThan(0.45)
+      expect(await zoomOf(page)).toBeGreaterThan(0.28)
+      await check('0.33')
     })
   }
 }
@@ -286,11 +285,11 @@ test.describe('the spotlight on a selection', () => {
     expect(fade.filter((o) => o <= 0.25).length).toBe(fade.length - 1)
   })
 
-  test('the examples open as they always did, and never in the far view', async ({ page }) => {
+  test('the examples open fitted, and never in the far view', async ({ page }) => {
     for (const file of ['src/examples/claude-code-harness.board.json', 'src/examples/how-an-llm-works.board.json', 'e2e/fixtures/refund-approval.board.json', 'e2e/fixtures/url-shortener.board.json', 'src/examples/anatomy.board.json']) {
       await open(page, file)
       await expect(farOn(page)).toHaveCount(0)
-      expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.75)
+      expect(await zoomOf(page)).toBeGreaterThanOrEqual(0.45)
     }
   })
 })

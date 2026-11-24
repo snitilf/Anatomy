@@ -1,11 +1,11 @@
 import { Handle, NodeResizeControl, Position, useStore, type Node, type NodeProps } from '@xyflow/react'
-import { memo, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type MarkNodeData, type ProposalData, type Side } from '../canvas/buildGraph'
 import cards from '../canvas/CardNode.module.css'
 import styles from './nodes.module.css'
 import { STICKY_MAX, STICKY_MIN } from './sizes'
-import { nameLines } from '../canvas/far'
+import { nameLines, titleLines } from '../canvas/far'
 import { YoursEdge } from '../canvas/YoursEdge'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
@@ -42,11 +42,13 @@ function Grip({ min, max }: { min: { width: number; height: number }; max: { wid
 /** A part the user proposed: a card edged in the user's dash and dot, linked and moved like any part. */
 export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeProps<Node<ProposalData>>) {
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
+  // How many title lines the card holds at the title level, as on a part's card.
+  const heading = useStore((s) => (data.far ? 3 : titleLines(s.transform[2], data.height, data.noteCount > 0)))
   return (
     <>
       <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={cards.handle} />
       <Handle id={EDGE_OUT_HANDLE} type="source" position={Position.Top} isConnectable={false} className={cards.handle} />
-      <div className={cards.card} data-yours="" data-selected={selected || undefined}>
+      <div className={cards.card} data-yours="" data-selected={selected || undefined} style={{ '--title-lines': heading } as CSSProperties}>
         {data.far && data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
         {lines > 0 && (
           <div className={cards.tileName} data-lines={lines} aria-hidden="true">

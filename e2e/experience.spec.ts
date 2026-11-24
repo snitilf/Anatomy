@@ -56,8 +56,11 @@ test('the map hint is not shown on a narrow screen and is not used up there', as
 
 test('Ctrl and wheel changes the zoom by at most about 20 per cent per event', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
-  // A board that does not fit at its start zoom, so there is room to zoom out.
+  // A board opens fitted, at the lowest zoom, so it is zoomed in to 100% first to leave room to zoom out.
   await open(page, SHORTENER)
+  await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
+  await page.keyboard.press('Shift+Digit0')
+  await expect.poll(() => zoomOf(page)).toBeCloseTo(1, 3)
   const before = await zoomOf(page)
   const box = (await page.locator('.react-flow__pane').boundingBox())!
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)

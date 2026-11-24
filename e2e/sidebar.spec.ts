@@ -12,7 +12,8 @@ async function openStates(page: Page) {
   await seedFolder(page, text, layer)
   await page.goto('/')
   await page.getByRole('button', { name: 'Open folder' }).click()
-  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  // The map, at whatever detail level the window gives it: on a phone the board can open in the far view, with no full cards.
+  await expect(page.locator('[data-detail]')).toBeAttached()
 }
 
 test.describe('the Overview page order', () => {
@@ -102,9 +103,12 @@ test.describe('the status key', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 390, height: 844 })
     await openStates(page)
-    // On a phone the sidebar is a sheet that starts low. Raise it, then open the key.
+    // A board that opens in the far view lands on the Overview on a phone. The sidebar sheet is on the map.
+    await page.getByRole('tab', { name: 'Map' }).click()
+    // On a phone the sidebar is a sheet. Raise it if it starts low, then open the key.
     const sheet = page.getByRole('region', { name: 'Sidebar' })
-    await sheet.getByRole('button', { name: /Show details/ }).click()
+    const header = sheet.getByRole('button', { name: /Show details|Lower the sheet/ })
+    if (/Show details/.test((await header.getAttribute('aria-label')) ?? '')) await header.click()
     await sheet.getByRole('button', { name: 'Status key' }).click()
     const key = page.getByRole('dialog', { name: 'Status key' })
     await expect(key).toBeVisible()

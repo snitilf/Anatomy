@@ -199,8 +199,8 @@
 
 .label {
   margin: 0;
-  font-size: var(--text-md);
-  line-height: var(--leading-md);
+  font-size: calc(var(--text-md) * var(--title-scale, 1));
+  line-height: calc(var(--leading-md) * var(--title-scale, 1));
   font-weight: var(--weight-medium);
   color: var(--fg);
   overflow-wrap: anywhere;
@@ -211,8 +211,11 @@
   flex: none;
 }
 
-/* Too small to read: the summary stays in the page for screen readers and drops out of the picture. */
-.summary[data-small] {
+/*
+ * The title level: a card shows its title alone, centred, at 12px on screen. The summary stays in the page for screen
+ * readers and drops out of the picture. `--title-lines` is how many lines of title the card holds at this zoom.
+ */
+:global([data-detail='title']) .summary {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -220,6 +223,29 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+:global([data-detail='title']) .card {
+  justify-content: center;
+  gap: 0;
+  text-align: center;
+}
+
+:global([data-detail='title']) .label {
+  line-height: calc(17px * var(--title-scale, 1));
+  -webkit-line-clamp: var(--title-lines, 3);
+  text-wrap: balance;
+}
+
+/*
+ * The lesson and note badges sit centred under the title and grow with it, so they read at the size the title does.
+ * `zoom` grows the room they take too, which `titleLines` in `far.ts` keeps free: a 16px row and 4px above it.
+ */
+:global([data-detail='title']) .foot {
+  justify-content: center;
+  height: 16px;
+  margin-top: 4px;
+  zoom: var(--title-scale, 1);
 }
 
 .summary {

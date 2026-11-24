@@ -1,7 +1,6 @@
 import { useReactFlow, useStore, useStoreApi, type Viewport } from '@xyflow/react'
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { LABEL_GROWTH } from './buildGraph'
 import { useAppStore } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import { hasRememberedView, writeHash } from '../app/view'
@@ -10,7 +9,7 @@ import type { Rect } from '../layout/geometry'
 import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 import { blockRect } from './bundleFrame'
-import { FAR_ENTER, farLabelScale, nextFar } from './far'
+import { detailFor, FAR_ENTER, labelScale, nextDetail, TITLE_LEVEL_PX, titleScale, type DetailLevel } from './far'
 
 const STEP_MS = 220
 const RESIZE_MS = 150
@@ -49,7 +48,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
     (picked: boolean) => {
       if (!selection || selection.type === 'board' || !board) return
       const size = camera.size()
-      const area = covered ? { ...size, height: size.height / 2 } : size
+      // The controls at the bottom of the map sit under the sheet, so the half above it has none.
+      const area = covered ? { ...size, height: size.height / 2, bottom: 0 } : size
       const narrow = width > 0 && width < 600
       if (selection.type === 'relationship') {
         const r = board.relationships.find((x) => x.id === selection.id)
@@ -103,9 +103,9 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
 }
 
 /**
- * Frames the map in the room that notices leave free. The first frame shows the whole board when it is readable that
- * way, else the start of the flow at a readable zoom. A walkthrough step frames the parts it is about, and the whole
- * board when it names none. A resize of the map keeps the middle of the view, once nothing is held.
+ * Frames the map in the room that notices and the controls at the bottom leave free. The first frame shows the whole
+ * board (D141). A walkthrough step frames the parts it is about, and the whole board when it names none. A resize of
+ * the map fits a view the reader has not moved again, and otherwise keeps the middle of the view, once nothing is held.
  */
 export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean; rectOf: (id: string) => Rect | undefined }) {
   const camera = useCamera()
@@ -185,13 +185,15 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
   }, [stepKey, fit])
 
   // A new size of the map, such as the sidebar opening, closing, or changing width, keeps what is in the middle of the
-  // view where it was. The zoom stays unless the new limits ask for another one.
+  // view where it was. The zoom stays unless the new limits ask for another one. A view still fitted is fitted again.
   const keepMiddle = useCallback(() => {
     if (!map) return
     const now = map.getBoundingClientRect()
     const before = framed.current
     framed.current = now
     if (!before || sameSize(before, now)) return
+    // A view the reader has not moved since it was fitted is fitted again, or already was.
+    if (camera.refit()) return
     const view = flow.getViewport()
     camera.move({ x: view.x + (now.width - before.width) / 2, y: view.y + (now.height - before.height) / 2, zoom: view.zoom })
   }, [camera, flow, map])
@@ -220,17 +222,28 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
  * When the limits change, after a drop or when the map changes size, a view that is now out of bounds glides back in.
  * React Flow keeps the user's own panning inside the limits, but it does not move a view that the limits moved past.
  */
-export function KeepInLimits({ limits }: { limits: Limits }) {
+export function KeepInLimits({ limits, opening }: { limits: Limits; opening: () => boolean }) {
   const flow = useReactFlow()
   const camera = useCamera()
   useEffect(() => {
+    // A fitted view in a new room, or while the board is still opening, is fitted again. A view fitted before a card
+    // moved is not: it is pulled back inside the limits like any other.
+    if (camera.refit(opening()) === 'framed') return
     const now = flow.getViewport()
     const size = camera.size()
     if (size.width === 0 || size.height === 0) return
     const next = clampViewport(now, limits, size)
-    const far = Math.abs(next.x - now.x) > 0.5 || Math.abs(next.y - now.y) > 0.5 || Math.abs(next.zoom - now.zoom) > 1e-4
-    if (far) camera.move(next, prefersStillness() ? 0 : GLIDE_MS)
-  }, [limits, flow, camera])
+    const zoomed = Math.abs(next.zoom - now.zoom) > 1e-4
+    const far = zoomed || Math.abs(next.x - now.x) > 0.5 || Math.abs(next.y - now.y) > 0.5
+    if (!far) return
+    // A view that still shows everything on the map stays where it is: a card dropped near the edge of a fitted map lands
+    // under the pointer, and when the hint goes from under a fitted view, the view is not zoomed in. Only an empty margin
+    // is past the new limits, or the zoom is a little under the lowest, and the reader's next move takes it in.
+    const b = limits.bounds
+    const shows = b.x * now.zoom + now.x >= 0 && b.y * now.zoom + now.y >= 0 && (b.x + b.width) * now.zoom + now.x <= size.width && (b.y + b.height) * now.zoom + now.y <= size.height
+    if (shows && now.zoom <= next.zoom) return
+    camera.move(next, prefersStillness() ? 0 : GLIDE_MS)
+  }, [limits, flow, camera, opening])
   return null
 }
 
@@ -260,6 +273,8 @@ export function WheelZoom() {
       const limit = Math.log2(WHEEL_STEP)
       const limits = camera.limits()
       const view: Viewport = flow.getViewport()
+      // At or under the lowest zoom, as when the hint has gone from under a fitted view, there is nothing further out.
+      if (octaves < 0 && view.zoom <= limits.minZoom + 1e-6) return
       const next = Math.min(limits.maxZoom, Math.max(limits.minZoom, view.zoom * 2 ** Math.max(-limit, Math.min(limit, octaves))))
       if (next === view.zoom) return
       // Zoomed all the way out, the whole board is in view.
@@ -277,76 +292,70 @@ export function WheelZoom() {
   return null
 }
 
-/** Zoom at and above which every connection label shows. */
+/** Zoom at and above which every connection label shows on a crowded map. */
 export const LABELS_ZOOM = 0.9
-/** Below this zoom label text is too small to read on any board. */
-const TINY_ZOOM = 0.6
 
 /**
- * Reports how labels show on the map: all of them when zoomed in, or on a quiet map only those of the selection
- * and of the card under the pointer. A crowded board is quiet below `LABELS_ZOOM`, and every board is quiet when the
- * text would be too small to read. Only a change across a threshold renders.
+ * Sets `--label-scale` and `--title-scale` on the map so card titles and line labels never draw under 11 px on screen
+ * at any detail level (D143), and the title of a title-only card at `TITLE_LEVEL_PX`. Writes to `style` only when the
+ * quantized step changes, so zooming never triggers redundant style recalculations.
  */
-/** Below this zoom, line and group labels are drawn larger on the board, so they stay about this size on screen. */
-const LABEL_FLOOR_PX = 9
-const LABEL_BASE_PX = 11
-const LABEL_MAX_SCALE = LABEL_GROWTH
-
-/**
- * Sets `--label-scale` on the map: how much line and group labels grow so they never render under 9px on screen.
- * It is 1 from about 0.82 zoom up, so zooming in the normal range writes nothing, and it never passes 1.3.
- */
-export function LabelScale({ far }: { far: boolean }) {
+export function LabelScale({ detail }: { detail: DetailLevel }) {
   const map = useStore((s) => s.domNode)
   const store = useStoreApi()
   useLayoutEffect(() => {
     if (!map) return
+    let lastLabel = ''
+    let lastTitle = ''
+    const far = detail === 'far'
     const apply = (zoom: number) => {
-      // Steps of a tenth, rounded up so the floor holds. Placement of labels is worked out at 1x, so the growth stays small.
-      // The far view draws labels as large as it takes to hold their base size on screen.
-      if (far) {
-        map.style.setProperty('--label-scale', farLabelScale(zoom).toFixed(2))
-        return
+      const nextLabel = labelScale(zoom, far).toFixed(far ? 2 : 1)
+      if (nextLabel !== lastLabel) {
+        lastLabel = nextLabel
+        map.style.setProperty('--label-scale', nextLabel)
       }
-      const scale = Math.min(LABEL_MAX_SCALE, Math.max(1, Math.ceil((LABEL_FLOOR_PX / (LABEL_BASE_PX * zoom)) * 10 - 1e-6) / 10))
-      map.style.setProperty('--label-scale', scale.toFixed(1))
+      const nextTitle = (detail === 'title' ? titleScale(zoom, TITLE_LEVEL_PX) : titleScale(zoom)).toFixed(1)
+      if (nextTitle !== lastTitle) {
+        lastTitle = nextTitle
+        map.style.setProperty('--title-scale', nextTitle)
+      }
     }
     apply(store.getState().transform[2])
     return store.subscribe((state, prev) => {
       if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
     })
-  }, [map, store, far])
+  }, [map, store, detail])
   return null
 }
 
 /**
- * Reports whether the map is in the far view. The two crossings differ (see `FAR_ENTER` and `FAR_EXIT`), so a zoom at
- * rest near the threshold does not flip it. Only a crossing renders.
+ * Reports the map's detail level (`full`, `title`, or `far`). Opening a board picks the level from its fit zoom alone
+ * (never from an earlier board's state); later zoom changes apply hysteresis at both boundaries so a small resize does
+ * not flip the level back and forth. Only a crossing renders.
  */
-export function FarMode({ onChange }: { onChange: (far: boolean) => void }) {
+export function DetailMode({ onChange }: { onChange: (detail: DetailLevel) => void }) {
   const store = useStoreApi()
   useLayoutEffect(() => {
-    let far = false
-    const apply = (zoom: number) => {
-      const next = nextFar(far, zoom)
-      if (next === far) return
-      far = next
-      onChange(far)
-    }
-    // A new start is never far: what the map showed before this effect ran is not known here.
-    onChange(false)
-    apply(store.getState().transform[2])
+    let detail: DetailLevel = detailFor(store.getState().transform[2])
+    onChange(detail)
     return store.subscribe((state, prev) => {
-      if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
+      if (state.transform[2] === prev.transform[2]) return
+      const next = nextDetail(detail, state.transform[2])
+      if (next === detail) return
+      detail = next
+      onChange(detail)
     })
   }, [store, onChange])
   return null
 }
 
+/**
+ * Reports whether connection labels step back on a crowded map below `LABELS_ZOOM`.
+ * Uncrowded boards keep every line label shown across both `full` and `title` levels.
+ */
 export function LabelMode({ crowded, onChange }: { crowded: boolean; onChange: (quiet: boolean) => void }) {
   const near = useStore((s) => s.transform[2] >= LABELS_ZOOM)
-  const tiny = useStore((s) => s.transform[2] < TINY_ZOOM)
-  const quiet = !near && (crowded || tiny)
+  const quiet = !near && crowded
   useLayoutEffect(() => onChange(quiet), [quiet, onChange])
   return null
 }

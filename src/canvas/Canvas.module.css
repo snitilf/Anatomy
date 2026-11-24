@@ -119,3 +119,30 @@
   /* The map's own scale takes the line down with the board, so the width is multiplied back to screen pixels. */
   stroke-width: calc(2px * var(--label-scale, 1)) !important;
 }
+
+/* Quiet status pill in the bottom right telling the reader what the current zoom level hides. */
+.hiddenDetail {
+  composes: surface from '../app/float.module.css';
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5;
+  padding: 6px 10px;
+  color: var(--fg-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .hiddenDetail {
+    right: 8px;
+    bottom: calc(var(--sheet-peek, 64px) + 8px);
+  }
+
+  :global([data-playing]) .hiddenDetail {
+    display: none;
+  }
+}

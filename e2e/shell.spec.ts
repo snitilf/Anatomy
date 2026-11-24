@@ -77,7 +77,7 @@ test('widening the map clamps zoom to its new fit minimum', async ({ page }) => 
       .toBe(true)
     return value
   }
-  // Fit with the sidebar open. The board opens at the start of the flow when the whole of it is too small to read.
+  // Fit with the sidebar open.
   await page.keyboard.press('Shift+Digit1')
   const previous = await settled()
   const before = (await page.locator('.react-flow').boundingBox())!

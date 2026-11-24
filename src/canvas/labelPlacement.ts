@@ -1,4 +1,5 @@
 import { inflate, type Point, type Rect } from '../layout/geometry'
+import { FAR_ENTER, labelScale } from './far'
 import { charWidth, textWidth } from './textMeasure'
 
 export interface LabelSpot {
@@ -34,10 +35,16 @@ export function pillHeight(lines: number): number {
 }
 
 /**
- * The room a pill keeps from other labels. A label grows on screen at low zoom (up to this share, see `LABEL_MAX_SCALE`),
- * and placement does not know the zoom, so each label holds back the room it may grow into.
+ * The room a pill keeps from other labels. A label is drawn larger as the map zooms out, so its words hold 11px on screen
+ * (`labelScale` in `far.ts`), and placement does not know the zoom, so each label holds back room to grow into.
+ * Every label keeps at least this much.
  */
 export const LABEL_GROWTH = 1.3
+/**
+ * The room a pill keeps from other labels when the map has it: as large as a label grows just above the far view, at
+ * the low end of the title level. A label that finds no place this far from the others takes `LABEL_GROWTH`.
+ */
+export const LABEL_ROOM = labelScale(FAR_ENTER, false)
 
 /** The box of a pill centered on a spot, grown by `room`. */
 export function pillRect(spot: { x: number; y: number; width: number; lines: number }, room = 1): Rect {
@@ -157,14 +164,21 @@ export interface LabelContext {
   cards: readonly Rect[]
   /** The name band of every group. */
   bands: readonly Rect[]
-  /** The pills placed so far. */
+  /** The pills placed so far, each with the room of `LABEL_GROWTH`. */
   taken: readonly Rect[]
+  /** The same pills with the room of `LABEL_ROOM`, tried first when given. */
+  roomy?: readonly Rect[]
+  /** How much a new pill is grown, about its middle, before it is checked against `taken`. */
+  grow?: number
   lines: RunIndex
   /** The number the line was added to `lines` under. */
   own: number
   /** What Fit frames: the cards and the group areas. A label outside it would be cut off a fitted map. */
   frame?: Rect
 }
+
+/** A box grown by `k` about its middle. */
+const scaled = (box: Rect, k: number): Rect => ({ x: box.x - (box.width * (k - 1)) / 2, y: box.y - (box.height * (k - 1)) / 2, width: box.width * k, height: box.height * k })
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
@@ -189,7 +203,8 @@ export function blocker(box: Rect, ctx: LabelContext, host?: Run): 'frame' | 'ca
   if (f && (box.x < f.x || box.y < f.y || box.x + box.width > f.x + f.width || box.y + box.height > f.y + f.height)) return 'frame'
   for (const c of ctx.cards) if (overlaps(box, textArea(c))) return 'card'
   for (const b of ctx.bands) if (overlaps(box, b)) return 'band'
-  for (const t of ctx.taken) if (overlaps(box, inflate(t, 3))) return 'label'
+  const grown = ctx.grow && ctx.grow !== 1 ? scaled(box, ctx.grow) : box
+  for (const t of ctx.taken) if (overlaps(grown, inflate(t, 3))) return 'label'
   return ctx.lines.hits(inflate(box, 2), ctx.own, host) ? 'line' : undefined
 }
 
@@ -219,10 +234,14 @@ export function placeLabel(runs: readonly Run[], text: string, ctx: LabelContext
     return { ...mid, width: 0, lines: 1, hidden: true }
   }
   if (sizes.length === 0 || runs.length === 0) return fallback()
-  // The usual wrap first. Two lines only when one finds no place: a narrower pill fits a shorter run.
-  for (const size of sizes) {
-    const spot = placeSized(runs, size, ctx)
-    if (spot) return spot
+  // Clear of the room other labels grow into at the title level first, then of the room every label keeps.
+  // The usual wrap first in each. Two lines only when one finds no place: a narrower pill fits a shorter run.
+  const tiers = ctx.roomy ? [{ ...ctx, taken: ctx.roomy, grow: LABEL_ROOM }, ctx] : [ctx]
+  for (const tier of tiers) {
+    for (const size of sizes) {
+      const spot = placeSized(runs, size, tier)
+      if (spot) return spot
+    }
   }
   return fallback()
 }
@@ -272,12 +291,28 @@ function placeSized(runs: readonly Run[], size: { lines: number; width: number }
         // Beside the run, the box and the run bound a strip that no other line may cross either.
         if (!labelFits(side === 0 ? box : reaching(box, px, py), ctx, run)) continue
         const mid = before + t
-        const cost = (side === 0 ? 0 : 40) + (level ? 0 : 12) + Math.abs(mid - total / 2) / 12 + (k === runs.length - 1 ? 6 : 0) + (side === 0 ? 0 : overhang(t, len, along) / 4)
+        const cost = (side === 0 ? 0 : 40) + (level ? 0 : 12) + Math.abs(mid - total / 2) / 12 + (k === runs.length - 1 ? 6 : 0) + (side === 0 ? 0 : overhang(t, len, along) / 4) + crowding(box, ctx)
         if (!best || cost < best.cost) best = { spot: { x: cx, y: cy, width: size.width, lines: size.lines }, cost }
       }
     }
   })
   return best?.spot
+}
+
+/**
+ * Where a label could only keep the room every label keeps, the cost of how far it grows into the others at the low end
+ * of the title level: the shared area of the two grown pills, so the place that clashes least wins.
+ */
+function crowding(box: Rect, ctx: LabelContext): number {
+  if (!ctx.roomy || ctx.grow) return 0
+  const grown = scaled(box, LABEL_ROOM)
+  let area = 0
+  for (const r of ctx.roomy) {
+    const w = Math.min(grown.x + grown.width, r.x + r.width) - Math.max(grown.x, r.x)
+    const h = Math.min(grown.y + grown.height, r.y + r.height) - Math.max(grown.y, r.y)
+    if (w > 0 && h > 0) area += w * h
+  }
+  return area / 40
 }
 
 /** The box and the point on its line that it sits beside: everything between them counts as under the label. */

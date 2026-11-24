@@ -1,6 +1,6 @@
 import { useStore } from '@xyflow/react'
 import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import styles from './MapHint.module.css'
 
 const KEY = 'anatomy:map-hint-seen'
@@ -31,11 +31,17 @@ function narrowWindow(): boolean {
 }
 
 /** Tells a first-time visitor that cards move and that a card's edge dot draws a link. Gone for good after the first use. */
-export function MapHint() {
+export function MapHint({ mapWidth, onChange }: { mapWidth?: number; onChange?: () => void }) {
   const [open, setOpen] = useState(() => !seen())
-  const width = useStore((s) => s.width)
+  const storeWidth = useStore((s) => s.width)
+  const width = mapWidth && mapWidth > 0 ? mapWidth : storeWidth
   // The hint is for a screen with room. On a phone it is never shown, so it is not used up either.
   const roomy = width >= ROOMY_MAP && !narrowWindow()
+  const shown = open && roomy
+
+  useLayoutEffect(() => {
+    onChange?.()
+  }, [shown, width, onChange])
 
   useEffect(() => {
     if (!open || !roomy) return
