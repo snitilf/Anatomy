@@ -6,7 +6,7 @@ import { serveUnderSubpath, type Served } from '../scripts/lib/subpathServer.ts'
 import { expect, test } from './test.ts'
 
 // The hosted copy lives at https://snitilf.github.io/Anatomy/, so every file of it must load from under /Anatomy/ and nothing from the site root.
-// This spec builds the app the way the Pages workflow does (`npm run build:pages`) and serves the result under that subpath on loopback.
+// This spec builds the app the way the Pages workflow does (`npm run build`, the same build as the release zip) and serves the result under that subpath on loopback.
 const SUBPATH = '/Anatomy/'
 const EXAMPLES = [
   { name: /How the Claude Code harness works/, title: 'How the Claude Code harness works' },
@@ -19,7 +19,7 @@ let origin: string
 
 test.beforeAll(async () => {
   test.setTimeout(180_000)
-  execFileSync('npm', ['run', 'build:pages'], { cwd: process.cwd(), stdio: 'pipe', timeout: 150_000 })
+  execFileSync('npm', ['run', 'build', '--', '--outDir', 'dist-pages', '--emptyOutDir'], { cwd: process.cwd(), stdio: 'pipe', timeout: 150_000 })
   server = await serveUnderSubpath(join(process.cwd(), 'dist-pages'), SUBPATH)
   origin = `http://127.0.0.1:${(server.address as AddressInfo).port}`
 })
