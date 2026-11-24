@@ -59,14 +59,14 @@ function markers(page: Page): Promise<Marker[]> {
 const byPart = (list: Marker[]) => Object.fromEntries(list.map((m) => [m.part, m]))
 const zoomOf = async (page: Page) => Number.parseFloat(/scale\(([\d.]+)\)/.exec(await viewport(page))?.[1] ?? 'NaN')
 
-/** A marker that is big enough to read as a shape, and that sits on the top left corner of its card. */
+/** A marker that is big enough to read as a shape, and that sits on the top right corner of its card. */
 function expectReadableMarker(m: Marker, level: string) {
   expect(Math.min(m.box.width, m.box.height), `size of the marker of ${m.part} at ${level}`).toBeGreaterThanOrEqual(14)
   expect(Math.max(m.box.width, m.box.height), `size of the marker of ${m.part} at ${level}`).toBeLessThanOrEqual(30)
   // It overlaps the corner of its card: it is part of the card, not a label floating near it.
   const cx = m.box.left + m.box.width / 2
   const cy = m.box.top + m.box.height / 2
-  expect(Math.abs(cx - m.card.left), `corner of ${m.part} at ${level}`).toBeLessThanOrEqual(m.box.width)
+  expect(Math.abs(cx - (m.card.left + m.card.width)), `corner of ${m.part} at ${level}`).toBeLessThanOrEqual(m.box.width)
   expect(Math.abs(cy - m.card.top), `corner of ${m.part} at ${level}`).toBeLessThanOrEqual(m.box.height)
   // Readable without color: a shape, in a luminance that stands apart from the card and from its own disc.
   expect(m.hasShape, `a shape in the marker of ${m.part}`).toBe(true)

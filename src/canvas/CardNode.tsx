@@ -64,7 +64,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
       </div>
-      {/* Where a walkthrough starts: a play mark on the corner, a shape and not a color. The card clips its own paint, so it sits beside it. */}
+      {/* Where a walkthrough starts: a play mark on the top right corner, a shape and not a color. The card clips its own paint, so it sits beside it. */}
       {data.starts.length > 0 && (
         <span className={styles.start} data-flow-start="" data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} title={startsLabel(data.starts)} aria-hidden="true">
           <svg viewBox="0 0 16 16" width="100%" height="100%">
