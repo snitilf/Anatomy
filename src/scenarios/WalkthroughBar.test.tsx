@@ -132,6 +132,55 @@ describe('walkthroughs', () => {
     expect(screen.queryByRole('region', { name: /^Walkthrough:/ })).not.toBeInTheDocument()
   })
 
+  it('names the main button Next on every step but the last', async () => {
+    render(<App />)
+    await loadRefund()
+    play()
+    const player = within(bar())
+    for (let step = 1; step < walk.steps.length; step++) {
+      expect(player.getByRole('button', { name: 'Next' })).toHaveTextContent('Next')
+      expect(player.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
+      fireEvent.click(player.getByRole('button', { name: 'Next' }))
+    }
+    expect(player.getByText(`Step ${walk.steps.length} of ${walk.steps.length}`)).toBeInTheDocument()
+  })
+
+  it('names the last step button Done, and it closes the walkthrough', async () => {
+    render(<App />)
+    await loadRefund()
+    const start = play()
+    const player = within(bar())
+    for (let step = 1; step < walk.steps.length; step++) fireEvent.click(player.getByRole('button', { name: 'Next' }))
+    expect(player.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+    const done = player.getByRole('button', { name: 'Done' })
+    // It is a live button, not a dimmed one, and it keeps the focus that Next had.
+    expect(done).not.toHaveAttribute('aria-disabled')
+    fireEvent.click(done)
+    expect(screen.queryByRole('region', { name: /^Walkthrough:/ })).not.toBeInTheDocument()
+    await waitFor(() => expect(start).toHaveFocus())
+  })
+
+  it('keeps the arrow key at the end of the walkthrough, so only Done closes it', async () => {
+    render(<App />)
+    await loadRefund()
+    play()
+    for (let i = 0; i < walk.steps.length + 3; i++) fireEvent.keyDown(bar(), { key: 'ArrowRight' })
+    expect(within(bar()).getByText(`Step ${walk.steps.length} of ${walk.steps.length}`)).toBeInTheDocument()
+    expect(within(bar()).getByRole('button', { name: 'Done' })).toBeInTheDocument()
+  })
+
+  it('keeps Previous and Close as icon buttons that name themselves', async () => {
+    render(<App />)
+    await loadRefund()
+    play()
+    const player = within(bar())
+    expect(player.getByRole('button', { name: 'Previous' })).toHaveTextContent('')
+    expect(player.getByRole('button', { name: 'Close' })).toHaveTextContent('')
+    // Moving forward turns Previous on.
+    fireEvent.click(player.getByRole('button', { name: 'Next' }))
+    expect(player.getByRole('button', { name: 'Previous' })).not.toHaveAttribute('aria-disabled')
+  })
+
   it('marks the highlighted parts and dims the others', async () => {
     const { container } = render(<App />)
     await loadRefund()
