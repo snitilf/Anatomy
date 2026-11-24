@@ -10,6 +10,7 @@ import {
   isOpacity,
   isStepped,
   keyAlphaOf,
+  keyLiftOf,
   pinOf,
   planRun,
   poseAt,
@@ -291,5 +292,77 @@ describe('delivery', () => {
       else if (hidden) expect(now.push, `at ${t} ms`).toBeLessThanOrEqual(0.51)
     }
     expect(hidden).toBe(true)
+  })
+})
+
+describe('edit, keys and reset', () => {
+  const to = (events: LessonEvent[]) =>
+    events.reduce<{ state: LessonState; pose: Pose }>(
+      (acc, e) => {
+        const played = play(e, acc.state, acc.pose)
+        return played ? { state: played.next, pose: end(played.run) } : acc
+      },
+      { state: initialState, pose: rest0() },
+    )
+  const runOf = (setup: LessonEvent[], event: LessonEvent) => {
+    const { state, pose } = to(setup)
+    const played = play(event, state, pose)
+    if (!played) throw new Error('no run')
+    return { ...played, state }
+  }
+  const samples = (run: Run) => Array.from({ length: Math.ceil(run.duration / 5) + 2 }, (_, i) => poseAt(run, i * 5))
+
+  it('keeps the card in place and fully drawn through an edit, and slides the tab to the next slot', () => {
+    const { run, next } = runOf([], 'edit')
+    const all = samples(run)
+    for (const pose of all) {
+      expect(pose.cardAlpha).toBe(1)
+      expect(pose.card).toBe(0)
+    }
+    expect(end(run).tabSlot).toBe(next.version)
+    const middle = all.filter((p) => p.tabSlot > 1.05 && p.tabSlot < 1.95)
+    expect(middle.length).toBeGreaterThan(3)
+  })
+
+  it('swaps the stamp under a short dip, never while it is fully drawn', () => {
+    const { run } = runOf([], 'edit')
+    let last = poseAt(run, 0)
+    for (const pose of samples(run)) {
+      if (pose.cardVersion !== last.cardVersion) expect(last.stampAlpha).toBeLessThan(0.2)
+      last = pose
+    }
+    expect(end(run).stampAlpha).toBe(1)
+  })
+
+  it('never shows two keys at full strength: the old key fades out as the new one drops in', () => {
+    const { run } = runOf(['approve', 'edit'], 'approve')
+    const old = samples(run).map((p) => p[keyAlphaOf(1)])
+    const fresh = samples(run).map((p) => p[keyAlphaOf(2)])
+    samples(run).forEach((_, i) => expect((old[i] ?? 0) + (fresh[i] ?? 0), `at ${i * 5} ms`).toBeLessThanOrEqual(1.0001))
+    for (let i = 1; i < old.length; i++) {
+      expect(old[i] ?? 0).toBeLessThanOrEqual((old[i - 1] ?? 0) + 1e-9)
+      expect(fresh[i] ?? 0).toBeGreaterThanOrEqual((fresh[i - 1] ?? 0) - 1e-9)
+    }
+    expect(old.at(-1)).toBe(0)
+    expect(fresh.at(-1)).toBe(1)
+  })
+
+  it('lifts a finger only once its key is nearly down: cause, then effect', () => {
+    const { run } = runOf([], 'approve')
+    const all = samples(run)
+    const first = all.findIndex((p) => p.finger1 > 0.01)
+    expect(first).toBeGreaterThan(0)
+    expect(all[first]?.[keyLiftOf(1)]).toBeLessThan(0.1)
+    expect(all[first]?.[keyAlphaOf(1)]).toBeGreaterThan(0.9)
+  })
+
+  it('fades the outbox card and the key out on reset, and never raises them', () => {
+    const { run } = runOf(['approve', 'trySend'], 'reset')
+    const all = samples(run)
+    for (let i = 1; i < all.length; i++) {
+      expect(all[i]?.outboxAlpha ?? 0).toBeLessThanOrEqual((all[i - 1]?.outboxAlpha ?? 0) + 1e-9)
+      expect(all[i]?.[keyAlphaOf(1)] ?? 0).toBeLessThanOrEqual((all[i - 1]?.[keyAlphaOf(1)] ?? 0) + 1e-9)
+    }
+    expect(end(run).outboxAlpha).toBe(0)
   })
 })
