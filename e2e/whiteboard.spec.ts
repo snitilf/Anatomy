@@ -244,6 +244,34 @@ test('the command menu on a phone has no drawing tools and no shortcuts, and a d
   await expect(menu.locator('kbd').first()).toBeVisible()
 })
 
+test('a tool picked on a wide window is put down when the window shrinks to a phone, and Select is on after it widens', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openFolder(page, 'e2e/fixtures/refund-approval.board.json')
+  const toolbar = page.getByRole('toolbar', { name: 'Whiteboard tools' })
+  await toolbar.getByRole('button', { name: 'Pen' }).click()
+  await expect(page.locator('[data-draw-surface]')).toHaveCount(1)
+  await page.setViewportSize({ width: 390, height: 844 })
+  // No tool bar and no Select command on a phone, so nothing may stay on: taps must not draw.
+  await expect(page.locator('[data-draw-surface]')).toHaveCount(0)
+  await expect(toolbar).toBeHidden()
+  await expect(page.locator('[data-tool]').first()).toHaveAttribute('data-tool', 'select')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(toolbar.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(toolbar.getByRole('button', { name: 'Pen' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('Hand picked on a wide window is put down on a phone too', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openFolder(page, 'e2e/fixtures/refund-approval.board.json')
+  const toolbar = page.getByRole('toolbar', { name: 'Whiteboard tools' })
+  await toolbar.getByRole('button', { name: 'Hand' }).click()
+  await expect(page.locator('[data-tool]').first()).toHaveAttribute('data-tool', 'hand')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.locator('[data-tool]').first()).toHaveAttribute('data-tool', 'select')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(toolbar.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test.describe('coarse pointer', () => {
   test.use({ hasTouch: true, viewport: { width: 1440, height: 900 } })
 
