@@ -21,8 +21,9 @@ export function focusTargets(part: string): HTMLElement[] {
   const headings = all('[data-testid="inspector"] h2[tabindex="-1"]').filter(onScreen)
   const panel = all('[data-testid="inspector"] button').filter(usable)
   const overview = all('[data-testid="overview"]').filter(usable)
-  const shell = all('button[aria-label="Show sidebar"], button[aria-label="Search"]').filter(usable)
-  return [...rows, ...headings, ...panel, ...overview, ...shell]
+  const show = all('button[aria-label="Show sidebar"]').filter(usable)
+  const search = all('button[aria-label="Search"]').filter(usable)
+  return [...rows, ...headings, ...panel, ...overview, ...show, ...search]
 }
 
 /** Focuses the best target that takes it. With `onlyIfLost`, does nothing while focus is already somewhere in the page. */

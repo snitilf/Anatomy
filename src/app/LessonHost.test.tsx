@@ -237,3 +237,21 @@ describe('closing the lesson', () => {
     expect(seen).not.toHaveBeenCalled()
   })
 })
+
+describe('the order of the last places', () => {
+  it('prefers the Show sidebar button to Search, whichever comes first in the page', async () => {
+    const { ui, wrap } = setup()
+    render(
+      wrap(
+        <>
+          <button aria-label="Search">search</button>
+          <button aria-label="Show sidebar">toggle</button>
+          <LessonHost />
+        </>,
+      ),
+    )
+    act(() => ui.openLesson('approval-gate', PART))
+    fireEvent.click(screen.getByRole('button', { name: 'Close lesson' }))
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-label', 'Show sidebar'))
+  })
+})
