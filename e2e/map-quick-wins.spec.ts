@@ -67,7 +67,7 @@ for (const size of WINDOWS) {
             }
             const cards = [...document.querySelectorAll('.react-flow__node-card')].filter(shown).map((el) => ({ id: (el as HTMLElement).dataset.id ?? '', ...box(el.getBoundingClientRect()) }))
             const controls = [...document.querySelectorAll('.react-flow [role="toolbar"]')].filter(shown).map((el) => box(el.getBoundingClientRect()))
-            const walkthrough = document.querySelector('section[aria-label^="Walkthrough"]')
+            const walkthrough = document.querySelector('section[aria-label^="Walkthrough:"]')
             const bar = walkthrough ? box(walkthrough.getBoundingClientRect()) : undefined
             return { map, toast: t, cards, controls, bar }
           })
@@ -90,6 +90,13 @@ for (const size of WINDOWS) {
           if (!bar) {
             const lowest = Math.max(...read.cards.map((c) => c.bottom))
             expect(t.top, 'below the last row of cards').toBeGreaterThanOrEqual(lowest)
+          }
+          // The first-run hint shows in the same place, so it steps aside while the toast shows and comes back after.
+          if (hint && size.width > 760) {
+            const note = page.getByRole('note')
+            await expect(note).toBeHidden()
+            await expect(toast).toBeHidden({ timeout: 8000 })
+            await expect(note).toBeVisible()
           }
         })
       })
@@ -140,6 +147,9 @@ test.describe('a link being dragged', () => {
     await page.mouse.up()
     await expect(page.locator('.react-flow__edge[data-id^="manual:"]')).toHaveCount(1)
     await expect(drawn).toHaveCount(0)
+    // The new link is selected, which draws it in the accent. Once it is not, it rests in the pattern of the line that was dragged.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.react-flow__edge[data-id^="manual:"] [data-active]')).toHaveCount(0)
     // It already looks as the link it becomes: same pattern, width, color, and ends.
     expect(await look('.react-flow__edge[data-id^="manual:"] .react-flow__edge-path')).toEqual(dragging)
   })
