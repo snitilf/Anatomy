@@ -5,6 +5,10 @@ import { contentSecurityPolicy } from './scripts/lib/csp.ts'
 
 // Anatomy is a local tool. The dev and preview servers listen on loopback only.
 export default defineConfig({
+  // Every file the built page asks for is relative to the page, so one build runs from the root of a server, from a folder, and from a
+  // subpath such as the hosted copy at /Anatomy/. The release zip, the hosted copy, and `e2e/pages.spec.ts` all use this build.
+  // The dev server ignores this value and serves from the root.
+  base: './',
   // anatomyCli bundles the `anatomy` tool that the app writes into a project as `.anatomy/anatomy.mjs`.
   plugins: [react(), anatomyCli(), contentSecurityPolicy()],
   server: { host: '127.0.0.1', strictPort: true },
