@@ -117,7 +117,7 @@ export function HowToDialog({ open, onClose }: { open: boolean; onClose: () => v
         </label>
         <textarea id="agent-prompt" name="agent-prompt" ref={prompt} className={styles.prompt} readOnly rows={15} value={AGENT_PROMPT} />
         <div className={styles.row}>
-          <button type="button" className={clsx(buttons.button, buttons.primary)} onClick={copy}>
+          <button type="button" className={clsx(buttons.button, buttons.primary, buttons.large)} onClick={copy}>
             <Copy size={16} strokeWidth={1.5} aria-hidden="true" />
             Copy prompt
           </button>

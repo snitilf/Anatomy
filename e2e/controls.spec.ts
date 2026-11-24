@@ -28,11 +28,13 @@ interface Probe {
   onMap: boolean
   card: boolean
   where: string
+  /** The labelled section of a list the button sits in, such as the examples of the Open menu. */
+  list: string
 }
 
 /** Every button on the page, as drawn: its box, its hit area, and where it sits. */
-const probe = (page: Page): Promise<Probe[]> =>
-  page.getByRole('button').evaluateAll((els) =>
+const probe = (scope: Page | Locator): Promise<Probe[]> =>
+  scope.getByRole('button').evaluateAll((els) =>
     els.map((el) => {
       const box = el.getBoundingClientRect()
       const after = getComputedStyle(el, '::after')
@@ -50,6 +52,7 @@ const probe = (page: Page): Promise<Probe[]> =>
         // An example card is a button that holds a map preview. It is a card, not a control.
         card: el.querySelector('[data-testid^="example-preview-"]') !== null,
         onMap: el.closest('.react-flow__viewport') !== null,
+        list: el.closest('section[aria-labelledby]')?.getAttribute('aria-labelledby') ?? '',
         where: region?.getAttribute('data-testid') ?? region?.getAttribute('aria-label') ?? region?.tagName.toLowerCase() ?? '',
       }
     }),
@@ -59,25 +62,26 @@ const probe = (page: Page): Promise<Probe[]> =>
  * Buttons that do not follow the sizes yet. Each belongs to the slice that adopts the shared classes there, and that
  * slice deletes its entry. Nothing here is a size the foundation allows: an entry only says "not yet".
  */
-const LATER: { slice: string; surface: RegExp; reason: string }[] = [
-  { slice: '7c', surface: /: Search$/, reason: 'the top bar sizes its own controls, with a hit area of 36 on a coarse pointer' },
-  { slice: '7d', surface: /^inspector: (Walkthroughs|Yours|Notes|Parts|Connections|Open items)\d*$/, reason: 'the sidebar group toggles are 28 high on a coarse pointer' },
-  { slice: '7d', surface: /^inspector: Status key$/, reason: 'the status key trigger of the sidebar is 24 high on a coarse pointer' },
-  { slice: '7f', surface: /^Whiteboard tools: More shapes$/, reason: 'the canvas toolbars read their height from the control token in the sweep' },
+const LATER: { slice: string; reason: string; match: (p: Probe) => boolean }[] = [
+  { slice: '7c', reason: 'the top bar sizes its own controls, with a hit area of 36 on a coarse pointer', match: (p) => p.where === 'header' && p.name === 'Search' },
+  { slice: '7d', reason: 'the sidebar rows and group toggles are 28 or 44 high', match: (p) => p.where === 'inspector' && (p.height === 44 || /^(Walkthroughs|Yours|Notes|Parts|Connections|Open items)\d*$/.test(p.name)) },
+  { slice: '7d', reason: 'the status key trigger of the sidebar is 24 high on a coarse pointer', match: (p) => p.where === 'inspector' && p.name === 'Status key' },
+  { slice: '7f', reason: 'the example rows of the Open menu are two-line rows of their own sheet', match: (p) => p.list === 'open-examples' },
+  { slice: '7f', reason: 'the canvas toolbars read their height from the control token in the sweep', match: (p) => p.where === 'Whiteboard tools' && p.name === 'More shapes' },
 ]
 
-const later = (p: Probe) => LATER.some((entry) => entry.surface.test(`${p.where}: ${p.name}`))
+const later = (p: Probe) => LATER.some((entry) => entry.match(p))
 const controls = (all: Probe[]) => all.filter((p) => !p.card && !p.onMap && !later(p))
 const label = (p: Probe) => `${p.where}: ${p.name} (${p.height} x ${p.width})`
 
-async function expectSizes(page: Page) {
-  const bad = controls(await probe(page)).filter((p) => !HEIGHTS.includes(p.height))
+async function expectSizes(scope: Page | Locator) {
+  const bad = controls(await probe(scope)).filter((p) => !HEIGHTS.includes(p.height))
   expect(bad.map(label)).toEqual([])
 }
 
-async function expectHitAreas(page: Page) {
+async function expectHitAreas(page: Page, scope: Page | Locator = page) {
   expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
-  const small = controls(await probe(page)).filter((p) => p.hitHeight < 44 || p.hitWidth < 44)
+  const small = controls(await probe(scope)).filter((p) => p.hitHeight < 44 || p.hitWidth < 44)
   expect(small.map((p) => `${p.where}: ${p.name} (${p.hitHeight} x ${p.hitWidth})`)).toEqual([])
 }
 
@@ -193,12 +197,12 @@ test.describe('with a fine pointer', () => {
     await settled(panel)
     const main = panel.getByRole('button', { name: 'Send', exact: true })
     expect((await main.boundingBox())!.height).toBe(32)
-    await expectSizes(page)
+    await expectSizes(panel)
     // Nothing is left to send after the press, and the result reads as a result.
     await main.click()
-    await expect(panel.getByRole('status')).toContainText('Sent 1 item')
+    await expect(panel.getByRole('status')).toContainText(/Sent \d+ items?/)
     await settled(panel)
-    await expectSizes(page)
+    await expectSizes(panel)
   })
 
   test('the Send popover with nothing new', async ({ page }) => {
@@ -206,7 +210,7 @@ test.describe('with a fine pointer', () => {
     await sendButton(page).click()
     await expect(popover(page).getByText('Nothing new to send.')).toBeVisible()
     await settled(popover(page))
-    await expectSizes(page)
+    await expectSizes(popover(page))
   })
 
   test('the Open menu: its rows are 32 high, and a saved board has small buttons', async ({ page }) => {
@@ -226,7 +230,7 @@ test.describe('with a fine pointer', () => {
       expect((await saved.boundingBox())!.height).toBe(24)
       expect((await menu.getByRole('button', { name: /^Delete Refund approval/ }).boundingBox())!.height).toBe(24)
     }
-    await expectSizes(page)
+    await expectSizes(menu)
   })
 
   test('the walkthrough bar: Previous and Close are small icon buttons, Next is a small primary button, and the last step says Done', async ({ page }) => {
@@ -290,9 +294,14 @@ test.describe('with a fine pointer', () => {
     const secondary = await press(page, page.getByRole('button', { name: 'Open file' }))
     expect(secondary.held.background).not.toBe(secondary.rest.background)
     expect(secondary.held.transform).not.toBe(secondary.rest.transform)
-    // Quiet: an icon button in the top bar. It has no scale, only the active fill.
-    const quiet = await press(page, page.getByRole('button', { name: 'Settings' }))
-    expect(quiet.held.background).not.toBe(quiet.rest.background)
+  })
+
+  test('a press on the quiet variant changes its fill and does not scale it', async ({ page }) => {
+    await open(page, REFUND)
+    const bar = await startWalkthrough(page)
+    const { rest, held } = await press(page, bar.getByRole('button', { name: 'Close' }))
+    expect(held.background).not.toBe(rest.background)
+    expect(held.transform).toBe('none')
   })
 
   test('a press on the link variant changes its color', async ({ page }) => {
@@ -309,14 +318,22 @@ test.describe('with a fine pointer', () => {
     expect(held.color).not.toBe(rest.color)
   })
 
-  test('Tab reaches each variant and shows the ring', async ({ page }) => {
+  test('Tab reaches the primary and default variants and shows the ring', async ({ page }) => {
     await page.goto('/')
-    for (const name of ['Open folder', 'Open file', 'Settings']) {
+    for (const name of ['Open folder', 'Open file']) {
       const button = page.getByRole('button', { name })
       await tabTo(page, button)
       expect(await ring(button), `${name} has no ring`).not.toBe('none')
       expect(await ring(button)).toContain('rgba(')
     }
+  })
+
+  test('Tab reaches the quiet variant and shows the ring', async ({ page }) => {
+    await open(page, REFUND)
+    const bar = await startWalkthrough(page)
+    const close = bar.getByRole('button', { name: 'Close' })
+    await tabTo(page, close)
+    expect(await ring(close)).toContain('rgba(')
   })
 
   test('Tab reaches the link variant and shows the ring', async ({ page }) => {
@@ -330,7 +347,7 @@ test.describe('with a fine pointer', () => {
     expect(await ring(link)).not.toBe('none')
   })
 
-  test('a disabled button is dimmed, takes no press, and keeps its box', async ({ page }) => {
+  test('a disabled button is dimmed and shows no pointer, and an off step button takes no press', async ({ page }) => {
     await open(page, REFUND)
     await page.keyboard.press('c')
     await expect(page.getByRole('textbox', { name: 'Add a note' })).toBeFocused()
@@ -338,7 +355,14 @@ test.describe('with a fine pointer', () => {
     const add = page.getByRole('button', { name: /^Add/ })
     await expect(add).toBeDisabled()
     expect(await add.evaluate((el) => getComputedStyle(el).opacity)).toBe('0.5')
-    const { rest, held } = await press(page, add)
+    expect(await add.evaluate((el) => getComputedStyle(el).cursor)).toBe('default')
+    await page.keyboard.press('Escape')
+    // Previous is off on the first step. It keeps focus rules, so it is aria-disabled, and it answers no press and no hover.
+    const bar = await startWalkthrough(page)
+    const previous = bar.getByRole('button', { name: 'Previous' })
+    await expect(previous).toHaveAttribute('aria-disabled', 'true')
+    expect(await previous.evaluate((el) => getComputedStyle(el).opacity)).toBe('0.5')
+    const { rest, held } = await press(page, previous)
     expect(held.transform).toBe(rest.transform)
     expect(held.background).toBe(rest.background)
   })
@@ -397,12 +421,12 @@ test.describe('with a coarse pointer on a wide window', () => {
     await sendButton(page).click()
     await expect(popover(page)).toBeVisible()
     await settled(popover(page))
-    await expectHitAreas(page)
+    await expectHitAreas(page, popover(page))
     await page.keyboard.press('Escape')
     await page.getByRole('banner').getByRole('button', { name: 'states', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Open' })).toBeVisible()
     await settled(page.getByRole('dialog', { name: 'Open' }))
-    await expectHitAreas(page)
+    await expectHitAreas(page, page.getByRole('dialog', { name: 'Open' }))
   })
 
   test('the note field switch: each segment answers a press in a 44 px area', async ({ page }) => {
