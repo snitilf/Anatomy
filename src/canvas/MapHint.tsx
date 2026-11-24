@@ -40,7 +40,8 @@ export function MapHint({ mapWidth, onChange }: { mapWidth?: number; onChange?: 
   const roomy = width >= ROOMY_MAP && !narrowWindow()
   const shown = open && roomy
   // A toast takes the hint's place for as long as it shows. The hint keeps its room, so nothing on the map moves.
-  const toasting = useSonner().toasts.length > 0
+  // A toast of the dialog, which has a toaster of its own, is not one.
+  const toasting = useSonner().toasts.some((t) => t.toasterId === undefined)
 
   useLayoutEffect(() => {
     onChange?.()

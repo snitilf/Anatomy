@@ -319,7 +319,7 @@
  * same width. The title level puts the count back under the title, below.
  */
 :global([data-detail='full']) .card[data-corner] .label {
-  padding-right: calc(40px - 14px);
+  padding-right: calc(48px - 14px);
 }
 
 :global([data-detail='full']) .card[data-corner] .foot {

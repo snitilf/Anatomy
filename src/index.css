@@ -22,17 +22,17 @@
 }
 
 /*
- * Centered on the map, not on the window. The toaster has no width of its own, since its toasts are positioned, so each toast
- * centers itself on the toaster's left edge, which is the middle of the map. On a phone, Sonner's own layout takes the full width.
+ * Centered on the window, or on the map for the toaster of the page. The toaster has no width of its own, since its toasts are
+ * positioned, so each toast centers itself on the toaster's left edge. On a phone, Sonner's own layout takes the full width.
  */
 @media (min-width: 601px) {
+  [data-sonner-toaster][data-x-position='center'] [data-sonner-toast] {
+    translate: -50% 0;
+  }
+
   body [data-sonner-toaster].map-toaster[data-x-position='center'] {
     left: var(--toast-x, 50%);
     transform: none;
-  }
-
-  .map-toaster [data-sonner-toast] {
-    translate: -50% 0;
   }
 }
 

@@ -183,8 +183,8 @@ export function coveredTop(map: HTMLElement): number {
   return top
 }
 
-/** One toast, border included, and the gap above it: the room a toast takes above the bottom controls. */
-export const TOAST_ROOM = 48
+/** The room a toast takes above the bottom controls: the same as the first-run hint, one line of it and its 8 px gap. */
+export const TOAST_ROOM = 46
 
 /** The room at the bottom of the map that the toolbars cover. A toast sits right above it. */
 function toolbarRoom(map: HTMLElement): number {

@@ -356,21 +356,37 @@ export function Canvas() {
   // put it now, or the map changes size. From then on the lowest zoom is Fit's.
   const bottomFloor = useRef(0)
   const measuredSize = useRef({ width: 0, height: 0 })
+  // Toasts sit in the slot above the bottom controls, centered on the map. The toaster reads these two values. The map stays
+  // mounted, hidden, under the Overview, where a toast goes in the middle of the window, so they are only set on the map.
+  const screen = useUi((u) => u.view)
+  const screenRef = useRef(screen)
+  const publishToast = useCallback(() => {
+    const el = mapBox.current
+    const root = document.documentElement
+    if (!el || screenRef.current !== 'map') {
+      root.style.removeProperty('--toast-base')
+      root.style.removeProperty('--toast-x')
+      return
+    }
+    const place = toastPlace(el)
+    root.style.setProperty('--toast-base', `${Math.ceil(place.bottom)}px`)
+    root.style.setProperty('--toast-x', `${Math.round(place.center)}px`)
+  }, [])
+  useLayoutEffect(() => {
+    screenRef.current = screen
+    publishToast()
+  }, [screen, publishToast])
   const measureMap = useCallback(() => {
     const el = mapBox.current
     if (!el) return
     const r = el.getBoundingClientRect()
     if (r.width !== measuredSize.current.width || r.height !== measuredSize.current.height) bottomFloor.current = 0
     measuredSize.current = { width: r.width, height: r.height }
-    // Toasts sit in the slot above the bottom controls, centered on the map. The toaster reads these two values.
-    const place = toastPlace(el)
-    const root = document.documentElement
-    root.style.setProperty('--toast-base', `${Math.ceil(place.bottom)}px`)
-    root.style.setProperty('--toast-x', `${Math.round(place.center)}px`)
+    publishToast()
     const bottom = Math.max(coveredBottom(el), bottomFloor.current)
     bottomFloor.current = bottom
     setMapSize((s) => (s.width === r.width && s.height === r.height && s.bottom === bottom ? s : { width: r.width, height: r.height, bottom }))
-  }, [])
+  }, [publishToast])
   useLayoutEffect(() => {
     const el = mapBox.current
     if (!el) return

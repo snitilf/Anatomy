@@ -83,8 +83,8 @@ export function contentSize(c: { label: string; summary: string; lesson?: string
   return { width: CARD_WIDTH, height: clamp(Math.ceil(height / GRID) * GRID, CARD_MIN.height, CARD_MAX.height) }
 }
 
-/** The width the note count takes beside the title, with the card's own padding. Matches `CardNode.module.css`. */
-export const NOTE_BADGE_ROOM = 40
+/** The width from the card's right edge that the title leaves for the note count, with the card's own padding and room for two digits. Matches `CardNode.module.css`. */
+export const NOTE_BADGE_ROOM = 48
 
 /**
  * How many summary lines fit on a card of this size. The card clamps its summary to this.
@@ -94,7 +94,8 @@ export const NOTE_BADGE_ROOM = 40
  */
 export function summaryLinesFor(c: { label: string; lesson?: string | undefined }, size: Size, notes = 0): number {
   const corner = notes > 0 && c.lesson === undefined
-  const inner = size.width - CARD_TEXT.padX * 2 - (corner ? NOTE_BADGE_ROOM : 0)
+  // The room already counts the card's right padding, which `inner` has taken off.
+  const inner = size.width - CARD_TEXT.padX * 2 - (corner ? NOTE_BADGE_ROOM - CARD_TEXT.padX : 0)
   const title = Math.min(CARD_TEXT.titleLines, lineCount(c.label, inner, CARD_TEXT.titleChar))
   const foot = c.lesson !== undefined ? CARD_TEXT.gap + CARD_TEXT.foot : 0
   const room = size.height - CARD_TEXT.padY * 2 - title * CARD_TEXT.titleLine - CARD_TEXT.gap - foot
