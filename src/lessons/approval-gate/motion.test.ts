@@ -388,3 +388,55 @@ describe('text follows the picture', () => {
     }
   })
 })
+
+describe('restart', () => {
+  const approvedAndSent = () => {
+    let state = initialState
+    let pose = rest0()
+    for (const event of ['approve', 'trySend', 'edit', 'approve', 'reject'] as const) {
+      const played = play(event, state, pose)
+      if (!played) continue
+      state = played.next
+      pose = end(played.run)
+    }
+    return { state, pose }
+  }
+  const restartRun = (reduced: boolean) => {
+    const { state, pose } = approvedAndSent()
+    const played = play('restart', state, pose, reduced)
+    if (!played) throw new Error('no run')
+    return played.run
+  }
+
+  it('leaves every finger, pin, key and the shutter exactly where it was, and dims the press and returns it', () => {
+    const run = restartRun(false)
+    const channels = Object.keys(run.from) as Channel[]
+    const still = channels.filter((c) => /^(finger|pin|keyLift|keyAlpha)\d$/.test(c) || c === 'shutter')
+    let peak = 0
+    for (let t = 0; t <= run.duration + 5; t += 5) {
+      const pose = poseAt(run, t)
+      for (const channel of still) expect(pose[channel], `${channel} at ${t} ms`).toBe(run.from[channel])
+      peak = Math.max(peak, pose.dim)
+    }
+    expect(peak).toBeGreaterThan(0.3)
+    expect(poseAt(run, run.duration + 1).dim).toBe(0)
+    expect(poseAt(run, run.duration + 1).power).toBe(1)
+  })
+
+  it('turns the switch off and back on', () => {
+    const run = restartRun(false)
+    const powers = Array.from({ length: Math.ceil(run.duration / 5) }, (_, i) => poseAt(run, i * 5).power)
+    expect(Math.min(...powers)).toBe(0)
+  })
+
+  it('with reduced motion dims the press as an opacity change of 120 ms or less, and moves nothing', () => {
+    const run = restartRun(true)
+    const dims = run.tracks.filter((t) => t.channel === 'dim')
+    expect(dims.length).toBeGreaterThanOrEqual(2)
+    for (const track of run.tracks) {
+      if (track.channel === 'dim') expect(track.duration).toBeLessThanOrEqual(120)
+      else expect(isOpacity(track.channel) ? track.duration <= 150 : track.duration === 0).toBe(true)
+    }
+    expect(Math.max(...Array.from({ length: Math.ceil(run.duration / 5) + 1 }, (_, i) => poseAt(run, i * 5).dim))).toBeGreaterThan(0.3)
+  })
+})
