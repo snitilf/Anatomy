@@ -232,8 +232,15 @@ export function KeepInLimits({ limits, opening }: { limits: Limits; opening: () 
     const size = camera.size()
     if (size.width === 0 || size.height === 0) return
     const next = clampViewport(now, limits, size)
-    const far = Math.abs(next.x - now.x) > 0.5 || Math.abs(next.y - now.y) > 0.5 || Math.abs(next.zoom - now.zoom) > 1e-4
-    if (far) camera.move(next, prefersStillness() ? 0 : GLIDE_MS)
+    const zoomed = Math.abs(next.zoom - now.zoom) > 1e-4
+    const far = zoomed || Math.abs(next.x - now.x) > 0.5 || Math.abs(next.y - now.y) > 0.5
+    if (!far) return
+    // A view that still shows everything on the map stays where it is, so a card dropped near the edge of a fitted map
+    // lands under the pointer. Only an empty margin is past the new limits, and the reader's next pan takes it in.
+    const b = limits.bounds
+    const shows = b.x * now.zoom + now.x >= 0 && b.y * now.zoom + now.y >= 0 && (b.x + b.width) * now.zoom + now.x <= size.width && (b.y + b.height) * now.zoom + now.y <= size.height
+    if (!zoomed && shows) return
+    camera.move(next, prefersStillness() ? 0 : GLIDE_MS)
   }, [limits, flow, camera, opening])
   return null
 }
