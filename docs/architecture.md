@@ -603,7 +603,7 @@ Sending feedback to a folder still writes `feedback.json` when the text of the `
 
 ## The icon and the mark
 
-The page has an SVG icon, `public/favicon.svg`, which `index.html` links by an absolute path that Vite rewrites for the base path, so the hosted copy finds it under `/Anatomy/`.
+The page has an SVG icon, `public/favicon.svg`, which `index.html` links by a path that Vite rewrites to a relative one, so the hosted copy finds it under `/Anatomy/` and the zip finds it in its folder.
 The file draws in the colors of the tokens and switches with `prefers-color-scheme` inside the SVG.
 The same drawing, a part, a connection, and the part it leads to, is `BrandMark` in `src/app/BrandMark.tsx`, which sits beside the word "Anatomy" in the top bar of the empty screen and takes its colors from the tokens.
 The page has two `theme-color` tags, one for each color scheme, in the color of the top bar (`--frame`).
@@ -615,19 +615,20 @@ The page has two `theme-color` tags, one for each color scheme, in the color of 
 The hosted copy is the built app on GitHub Pages, at https://snitilf.github.io/Anatomy/.
 It is the same app, and it has no server of its own.
 
-`npm run build:pages` builds it into `dist-pages/` with the Vite base path `/Anatomy/`.
-Every other build, the dev server, and the browser tests keep the base path `/`.
+There is one build, `npm run build`, with the Vite base path `./`.
+Every file the built page asks for is addressed relative to the page, so the same build serves the hosted copy under `/Anatomy/`, the release zip from its folder, and the browser tests from the root.
+The dev server serves from the root.
 `.github/workflows/pages.yml` builds and deploys it on each push to `main` and when someone runs it by hand.
 Its jobs run only while the repository is public.
 Once, after the repository is public, set Source to GitHub Actions under Settings, Pages.
 
 Nothing in the app assumes that it sits at the root of the site.
-Vite writes the base path into `index.html`, the font addresses in the stylesheet, and the entry script's preload helper.
+Vite writes relative addresses into `index.html`, the font addresses in the stylesheet, and the entry script's preload helper.
 The map and the example boards load as scripts, by a path relative to the script that asks for them.
 The app keeps the path of its own page when it changes the address.
 The Content Security Policy is the same, so the page requests only its own files, and every one of them is under `/Anatomy/`.
 
-`e2e/pages.spec.ts` builds the app with `npm run build:pages` and serves it under `/Anatomy/` on the loopback interface (`scripts/lib/subpathServer.ts`).
+`e2e/pages.spec.ts` builds the app with `npm run build` into `dist-pages/` and serves it under `/Anatomy/` on the loopback interface (`scripts/lib/subpathServer.ts`).
 That server answers 404 for anything outside the subpath, as GitHub Pages does.
 For each example, the test fails on a console error, on a policy violation, on a response with an error status, and on a request outside the subpath.
 
@@ -647,6 +648,21 @@ What works on the hosted copy, checked in Chrome:
 The browser keeps work for each site, so work on the hosted copy is not in a copy that runs on `127.0.0.1`.
 Your agent still runs on your machine.
 It reads `.anatomy/` in your folder, or the file that Send downloaded, because the hosted page has no other way to reach it.
+
+## The release zip
+
+A tag that starts with `v` runs `.github/workflows/release.yml`.
+It stops at once when the tag is not `v` plus `version` in `package.json`, or when `docs/release-notes/<version>.md` is missing.
+Then it runs the same gates as CI, builds the app again without the `e2e` mode, and zips one folder, `anatomy-<version>`.
+`scripts/package-release.ts` makes that folder from `dist/`, `scripts/release/serve.mjs`, and `scripts/release/README-run.txt`.
+The workflow unzips the result, starts the server, and checks that the page loads, before it creates the GitHub Release with the notes file.
+
+A page that uses ES modules does not run from `file://`, so the zip needs a server.
+`serve.mjs` is one file with no packages, so the only requirement is Node.js.
+It listens on `127.0.0.1` only, serves `GET` and `HEAD`, and answers 404 for any path that leaves the build folder.
+`scripts/release.test.ts` tests it, and `e2e/release.spec.ts` stages the folder the same way, starts the server, and opens an example with no console error and no request outside the page's own origin.
+`docs/release-checklist.md` lists what a person checks before tagging, including the real folder picker, which the browser tests replace with a stand-in.
+`npm run test:browsers` runs `e2e/journey.spec.ts` in WebKit and Firefox by hand, and CI leaves them out.
 
 ## Safety
 
