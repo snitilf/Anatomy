@@ -61,12 +61,22 @@ The other cards follow the layout each time a board opens.
 
 ### Where a walkthrough starts
 
-A part where a walkthrough starts carries a play mark on its top right corner.
+A part where a walkthrough starts carries a small play mark inside its card.
 A walkthrough starts at the first thing its first step is about: that part, or the part a connection runs from.
 A first step about nothing is about the whole board, so that walkthrough marks no part.
 When several walkthroughs start at one part, the part carries one mark.
-The mark is a dark disc with a play shape, so it reads without color, and it keeps its size on screen at every detail level.
-`flowStarts` in `src/scenarios/starts.ts` works it out, and the part's description for a screen reader says "Starts the walkthrough" and its title after the summary.
+`flowStarts` in `src/scenarios/starts.ts` works it out, and the description of the part for a screen reader says "Starts the walkthrough" and its title after the summary.
+
+The mark is quiet and in the family of the lesson icon: an outlined circle, 14 px on screen, with a play shape, in `--fg-3`.
+It is a shape and a border and has no fill, so it reads without color, and under forced colors it takes the text color of the system.
+It keeps its size on screen at every detail level, the way a label does.
+It sits inside the card, so it dims and lifts with the card, and nothing that keeps off the card can cover it.
+
+A line label can still land on a card in a crowded gap, so the mark takes the first of the top right, the top left, and the bottom right corner that no line label covers at any zoom from 100 percent down to the far end of the title level (`startCorner`, from `freeCorner` in `src/canvas/startMarks.ts`).
+A title that would run into a mark at the top leaves it 6 px.
+In the far view a tile has no text but its name, so the mark is drawn by the far layer inside the tile, at the bottom right or left, as large as fits from 14 px down to 11 px, clear of the names of the groups that sit over tiles.
+A tile that the name of a group covers too much of has no mark.
+`e2e/flow-start.spec.ts` checks that no mark leaves its card or touches a label, a group name, a count, a note dot, or a word of the card.
 
 ### The layout
 
