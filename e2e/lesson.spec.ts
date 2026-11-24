@@ -47,26 +47,38 @@ test('the card body is drawn once, under every arch, and the tab is layered betw
   expect(order).toEqual(['card', 'pusher', 'tab:3', 'arch:ledger', 'tab:2', 'arch:gate', 'tab:1', 'arch:lock', 'tab:0'])
 })
 
-test('the stamp stays in front when the card stops at the ledger', async ({ page }) => {
+/** The middle of the tab must be the tab, not a bar, a post or a shutter drawn over it. */
+const tabInView = (page: Page) =>
+  page.evaluate(() => {
+    const tab = document.querySelector('[data-part="tab"]:not([display="none"])')
+    if (!tab) return false
+    const box = tab.getBoundingClientRect()
+    return Boolean(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)?.closest('[data-part="tab"]'))
+  })
+
+const atStop = (lesson: Locator, stop: string) => lesson.locator(`[data-part="card"][data-stop="${stop}"]:not([display="none"])`)
+
+test('the tab touches the lit finger in plain view when nobody approved', async ({ page }) => {
+  const lesson = await openLesson(page)
+  await lesson.getByRole('button', { name: /^Send/ }).click()
+  await expect(atStop(lesson, 'gate')).toHaveCount(1)
+  expect(await tabInView(page)).toBe(true)
+})
+
+test('the tab touches the shutter in plain view after a rejection', async ({ page }) => {
+  const lesson = await openLesson(page)
+  await lesson.getByRole('button', { name: /^Reject/ }).click()
+  await lesson.getByRole('button', { name: /^Send/ }).click()
+  await expect(atStop(lesson, 'lockout')).toHaveCount(1)
+  expect(await tabInView(page)).toBe(true)
+})
+
+test('the tab touches the dropped pin in plain view on a second send', async ({ page }) => {
   const lesson = await openLesson(page)
   await lesson.getByRole('button', { name: /^Approve/ }).click()
   await lesson.getByRole('button', { name: /^Send/ }).click()
   await settle(lesson)
   await lesson.getByRole('button', { name: /^Send/ }).click()
-  await expect(lesson.locator('[data-part="card"][data-stop="ledger"]:not([display="none"])')).toHaveCount(1)
-  // The middle of the stamp, laid on the card's top face. The gate's near post hides the outer corners of the stamp from this
-  // camera, which is a real cover, so only the middle is held to the card.
-  const inside = await page.evaluate(() => {
-    const stamp = [...document.querySelectorAll<SVGTextElement>('[data-part="card"] text')].find((t) => /^v\d$/.test(t.textContent ?? ''))
-    const svg = stamp?.ownerSVGElement
-    const matrix = stamp?.getScreenCTM()
-    if (!stamp || !svg || !matrix) return false
-    const box = stamp.getBBox()
-    const point = svg.createSVGPoint()
-    point.x = box.x + box.width / 2
-    point.y = box.y + box.height / 2
-    const screen = point.matrixTransform(matrix)
-    return Boolean(document.elementFromPoint(screen.x, screen.y)?.closest('[data-part="card"]'))
-  })
-  expect(inside).toBe(true)
+  await expect(atStop(lesson, 'ledger')).toHaveCount(1)
+  expect(await tabInView(page)).toBe(true)
 })
