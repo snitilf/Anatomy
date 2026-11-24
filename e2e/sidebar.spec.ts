@@ -13,7 +13,6 @@ async function openStates(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Open folder' }).click()
   await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
-  await page.waitForTimeout(400)
 }
 
 test.describe('the Overview page order', () => {
@@ -35,6 +34,16 @@ test.describe('the Overview page order', () => {
     // Scope and the first walkthrough are on the screen the page opens on, with no scrolling.
     await expect(overview.getByRole('heading', { name: 'Scope' })).toBeInViewport()
     await expect(overview.getByRole('button', { name: /^Play / }).first()).toBeInViewport()
+  })
+
+  test('Needs you comes before the scope when something waits for the user', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openStates(page)
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    const overview = page.getByTestId('overview')
+    const needs = (await overview.getByText('Needs you', { exact: true }).boundingBox())!.y
+    const scope = (await overview.getByRole('heading', { name: 'Scope' }).boundingBox())!.y
+    expect(needs).toBeLessThan(scope)
   })
 })
 
