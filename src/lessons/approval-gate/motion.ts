@@ -217,6 +217,18 @@ export function crossTime(track: Track, value: number): number {
 }
 
 const FEED_FROM = 6
+const LEAVE_MS = 180
+/** How long the outbox card takes to fade to nothing you can see. The exit curve is front loaded, so it is well short of its whole duration. */
+const LEAVE_CLEAR = (() => {
+  let lo = 0
+  let hi = 1
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2
+    if (1 - OUT(mid) > 0.05) lo = mid
+    else hi = mid
+  }
+  return hi * LEAVE_MS
+})()
 /** A card that has travelled leaves when the back edge of its footprint is clear of the ledger pins. */
 export const PIN_CLEAR = PIN_FACE + 2 * PIN_R - CARD.x + 0.5
 const STOPS = [REACH_LOCK, REACH_GATE, REACH_LEDGER]
@@ -344,8 +356,19 @@ function planSent(plan: Plan, next: LessonState, t0: number) {
   plan.beat(deliver, 'deliver')
   plan.beat(deliver, 'commit')
   plan.go(pinOf(next.version), 1, deliver, 200, FALL)
+  if (travel && plan.cur.outboxAlpha > 0.05) {
+    // The card already in the outbox sinks and fades when the new card's front passes the ledger pins,
+    // early enough that it is gone before the front reaches its back edge.
+    const pinsPassed = crossTime(travel, PIN_FACE + 2 * PIN_R - CARD.x - CARD.w)
+    const touching = crossTime(travel, TRAVEL_END - CARD.w)
+    const leave = Math.max(t0, Math.min(pinsPassed, touching - LEAVE_CLEAR - 10))
+    plan.beat(leave, 'outboxOut')
+    plan.go('outboxAlpha', 0, leave, LEAVE_MS, OUT)
+    plan.go('outboxDrop', 2.5, leave, LEAVE_MS, OUT)
+  }
   // The card arrives and becomes the outbox card. A fresh copy of it feeds in behind the pusher.
   const arrive = t0 + duration
+  plan.go('outboxDrop', 0, arrive, 0)
   plan.go('outboxVersion', next.version, arrive, 0)
   plan.go('outboxAlpha', 1, arrive, 0)
   plan.go('cardAlpha', 0, arrive, 0)
