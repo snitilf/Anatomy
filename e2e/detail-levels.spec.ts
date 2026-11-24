@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { expect, test } from './test.ts'
 import type { Page } from '@playwright/test'
-import { open, viewport } from './helpers.ts'
+import { open, pickPart, viewport } from './helpers.ts'
 
 const FORTY = 'e2e/fixtures/forty-parts.board.json'
 const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
@@ -110,7 +110,7 @@ test.describe('detail levels with keyboard and reduced motion', () => {
     expect(['full', 'title']).toContain(initial)
     for (const width of [1436, 1444, 1438, 1442]) {
       await page.setViewportSize({ width, height: 900 })
-      await page.waitForTimeout(200)
+      await settled(page)
       expect(await map.getAttribute('data-detail')).toBe(initial)
     }
   })
@@ -176,6 +176,57 @@ test.describe('the title level', () => {
   })
 })
 
+test.describe('a title-only card with badges', () => {
+  /** Every card whose badges overlap a line of its title, or stick out of the card. */
+  const clashes = (page: Page) =>
+    page.evaluate(() => {
+      const out: string[] = []
+      for (const node of document.querySelectorAll<HTMLElement>('.react-flow__node-card')) {
+        const card = node.querySelector('[data-card]')
+        const foot = card?.querySelector('[class*="foot"]')
+        const title = card?.querySelector('[class*="label"]')
+        if (!card || !foot || !title) continue
+        const c = card.getBoundingClientRect()
+        const f = foot.getBoundingClientRect()
+        const words = document.createRange()
+        words.selectNodeContents(title)
+        const lines = [...words.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
+        if (lines.some((l) => Math.min(l.right, f.right) - Math.max(l.left, f.left) > 0.5 && Math.min(l.bottom, f.bottom) - Math.max(l.top, f.top) > 0.5)) out.push(`${node.dataset.id}: badges over the title`)
+        if (f.left < c.left || f.right > c.right || f.top < c.top || f.bottom > c.bottom) out.push(`${node.dataset.id}: badges out of the card`)
+        for (const l of lines) if (l.top < c.top - 0.5 || l.bottom > c.bottom + 0.5) out.push(`${node.dataset.id}: title out of the card`)
+      }
+      return out
+    })
+
+  test('keeps its badges clear of a two-line title, down to the far view', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await open(page, CLAUDE)
+    const inspector = page.getByRole('complementary', { name: 'Sidebar' })
+    // A two-line title with a note, and a two-line title with a note and a lesson.
+    for (const id of ['your-files', 'permission-check']) {
+      await pickPart(page, id)
+      await inspector.getByRole('textbox', { name: 'Add a note' }).fill(`A note on ${id}`)
+      await inspector.getByRole('button', { name: 'Add', exact: true }).click()
+      await expect(inspector.getByRole('region', { name: 'Notes' }).getByText(`A note on ${id}`)).toBeVisible()
+    }
+    await page.keyboard.press('Escape')
+    const map = page.locator('[data-detail]')
+    for (const size of [
+      { width: 1280, height: 800 },
+      { width: 1120, height: 700 },
+      { width: 1060, height: 660 },
+    ]) {
+      await page.setViewportSize(size)
+      await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
+      await page.keyboard.press('Shift+Digit1')
+      await settled(page)
+      await expect(map).toHaveAttribute('data-detail', 'title')
+      await expect(page.locator('.react-flow__node-card [class*="foot"]')).toHaveCount(2)
+      expect(await clashes(page), `at ${size.width}x${size.height}, zoom ${await zoomOf(page)}`).toEqual([])
+    }
+  })
+})
+
 test.describe('labels at the opening view', () => {
   const boards = [
     ['anatomy', 'src/examples/anatomy.board.json'],
@@ -227,6 +278,58 @@ test.describe('the opening view', () => {
     await open(page, SIXTEEN)
     await settled(page)
     await expectWholeAndCentred(page)
+  })
+
+  test('after the hint is dismissed, Fit is as far out as the zoom goes, by button and by wheel', async ({ page }) => {
+    // A board that fits by its height, so the room the hint took decides its zoom.
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, SIXTEEN)
+    await settled(page)
+    await page.getByRole('note').getByRole('button', { name: 'Dismiss' }).click()
+    await expect(page.getByRole('note')).toHaveCount(0)
+    await page.keyboard.press('Shift+Digit1')
+    await settled(page)
+    const fit = await zoomOf(page)
+    const out = page.getByRole('toolbar', { name: 'Zoom' }).getByRole('button', { name: 'Zoom out' })
+    await expect(out).toBeDisabled()
+    // The wheel neither goes below Fit nor bounces back to it.
+    const box = (await page.locator('.react-flow__pane').boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    const seen: number[] = []
+    for (let i = 0; i < 3; i++) {
+      await page.mouse.wheel(0, 200)
+      for (let j = 0; j < 6; j++) {
+        await page.waitForTimeout(40)
+        seen.push(await zoomOf(page))
+      }
+    }
+    expect(Math.min(...seen)).toBeCloseTo(fit, 4)
+    expect(Math.max(...seen)).toBeCloseTo(fit, 4)
+  })
+
+  test('after the hint and the sidebar go, zooming out stops at Fit and stays there', async ({ page }) => {
+    // On a narrow map the hint stacks over the tool bar and takes the most room.
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await open(page, 'src/examples/how-an-llm-works.board.json')
+    await settled(page)
+    await page.getByRole('note').getByRole('button', { name: 'Dismiss' }).click()
+    await page.keyboard.press(']')
+    await expect(page.getByRole('complementary', { name: 'Sidebar' })).toBeHidden()
+    await settled(page)
+    await page.keyboard.press('Shift+Digit1')
+    await settled(page)
+    const fit = await zoomOf(page)
+    const out = page.getByRole('toolbar', { name: 'Zoom' }).getByRole('button', { name: 'Zoom out' })
+    await expect(out).toBeDisabled()
+    await page.keyboard.press('ControlOrMeta+Equal')
+    await settled(page)
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press('ControlOrMeta+Minus')
+      await settled(page)
+      expect(await zoomOf(page)).toBeGreaterThanOrEqual(fit - 1e-4)
+    }
+    expect(await zoomOf(page)).toBeCloseTo(fit, 4)
+    await expect(out).toBeDisabled()
   })
 
   test('stays where it is when the hint is dismissed', async ({ page }) => {
