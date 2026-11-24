@@ -93,8 +93,9 @@ test.describe('the status key', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 390, height: 844 })
     await openStates(page)
-    // On a phone the sidebar is a sheet, and the board opens on the Overview or the map.
+    // On a phone the sidebar is a sheet that starts low. Raise it, then open the key.
     const sheet = page.getByRole('region', { name: 'Sidebar' })
+    await sheet.getByRole('button', { name: /Show details/ }).click()
     await sheet.getByRole('button', { name: 'Status key' }).click()
     const key = page.getByRole('dialog', { name: 'Status key' })
     await expect(key).toBeVisible()
