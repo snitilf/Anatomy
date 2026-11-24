@@ -7,6 +7,7 @@ import type { Board } from '../board/schema'
 import { useCommands } from '../commands/context'
 import type { Layer } from '../layer/model'
 import { StatusGlyph } from '../status/StatusGlyph'
+import { StatusKey } from '../status/StatusKey'
 import { itemState, STATE_WORD, type ItemState } from '../status/state'
 import { targetName } from '../notes/targets'
 import { Group, Heading, Prop, Props } from './bits'
@@ -85,11 +86,14 @@ function Yours({ board, layer }: { board: Board; layer: Layer }) {
           )
         })}
       </ul>
-      {rows.length > YOURS_SHOWN && (
-        <button type="button" className={styles.more} aria-expanded={all} onClick={() => setAll(!all)}>
-          {all ? 'Show less' : `Show all ${rows.length}`}
-        </button>
-      )}
+      <div className={styles.foot}>
+        {rows.length > YOURS_SHOWN && (
+          <button type="button" className={styles.more} aria-expanded={all} onClick={() => setAll(!all)}>
+            {all ? 'Show less' : `Show all ${rows.length}`}
+          </button>
+        )}
+        <StatusKey />
+      </div>
     </Group>
   )
 }

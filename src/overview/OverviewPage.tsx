@@ -50,8 +50,8 @@ function Prop({ label, children }: { label: string; children: React.ReactNode })
 const LESSON_SET: ReadonlySet<string> = new Set(LESSON_IDS)
 
 /**
- * The Overview of a board: the goal, the properties, what waits for the user, where to start, every part by group,
- * the connections between groups, the scope, and the open questions. It covers the map, reads what the store already holds,
+ * The Overview of a board: the goal, what waits for the user, the scope, where to start, the properties, every part by group,
+ * the connections between groups, and the open questions. It covers the map, reads what the store already holds,
  * and every row and count opens its item on the map.
  */
 export function OverviewPage() {
@@ -161,6 +161,94 @@ export function OverviewPage() {
           )}
         </header>
 
+        {showNeeds && (
+          <section className={styles.section} aria-labelledby="ov-needs" data-section="needs">
+            <h3 id="ov-needs" className={styles.heading}>
+              Needs you
+            </h3>
+            <ul className={styles.list}>
+              {needs.map(({ key, state, text, group }) => (
+                <li key={key}>
+                  <button type="button" className={styles.line} data-row={`needs:${key}`} onClick={() => actions.openReview(group, `needs:${key}`)}>
+                    {state ? <StatusGlyph state={state} withWord /> : <Diff className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />}
+                    {text}
+                  </button>
+                </li>
+              ))}
+              {unsent > 0 && (
+                <li className={styles.unsent}>
+                  <span className={styles.lineStatic}>
+                    <StatusGlyph state="unsent" withWord />
+                    <span className={styles.yoursText}>{plural(unsent, 'item', 'items')} not sent</span>
+                  </span>
+                  <button type="button" className={styles.action} data-row="needs:send" onClick={() => ui.setSendOpen(true)}>
+                    Send to agent
+                  </button>
+                </li>
+              )}
+            </ul>
+            {response && <p className={styles.note}>{response}</p>}
+          </section>
+        )}
+
+        {(board.scope.includes.length > 0 || board.scope.excludes.length > 0) && (
+          <section className={styles.section} aria-labelledby="ov-scope" data-section="scope">
+            <h3 id="ov-scope" className={styles.heading}>
+              Scope
+            </h3>
+            <div className={styles.scope}>
+              {board.scope.includes.length > 0 && (
+                <div>
+                  <h4 className={styles.sub}>Covers</h4>
+                  <ul className={styles.bullets}>
+                    {board.scope.includes.map((t, i) => (
+                      <li key={i}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {board.scope.excludes.length > 0 && (
+                <div>
+                  <h4 className={styles.sub}>Does not cover</h4>
+                  <ul className={styles.bullets}>
+                    {board.scope.excludes.map((t, i) => (
+                      <li key={i}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {(board.scenarios.length > 0 || lessons.length > 0) && (
+          <section className={styles.section} aria-labelledby="ov-start" data-section="start">
+            <h3 id="ov-start" className={styles.heading}>
+              Start here
+            </h3>
+            <ul className={styles.list}>
+              {board.scenarios.map((s) => (
+                <li key={s.id}>
+                  <button type="button" className={styles.line} data-row={`walk:${s.id}`} aria-label={`Play ${s.title}`} onClick={() => actions.play(s.id, `walk:${s.id}`)}>
+                    <Play className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                    <span className={styles.grow}>{s.title}</span>
+                    <span className={styles.end}>{plural(s.steps.length, 'step', 'steps')}</span>
+                  </button>
+                </li>
+              ))}
+              {lessons.map(({ part, lesson: l }) => (
+                <li key={part.id}>
+                  <button type="button" className={styles.line} data-row={`lesson:${part.id}`} onClick={() => setLesson({ id: l.id, row: `lesson:${part.id}` })}>
+                    <GraduationCap className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                    <span className={styles.grow}>{l.title}</span>
+                    <span className={styles.end}>on {part.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <dl className={styles.props}>
           <Prop label="Revision">
             <span className={styles.num}>{board.revision}</span>
@@ -220,64 +308,6 @@ export function OverviewPage() {
           </Prop>
         </dl>
 
-        {showNeeds && (
-          <section className={styles.section} aria-labelledby="ov-needs" data-section="needs">
-            <h3 id="ov-needs" className={styles.heading}>
-              Needs you
-            </h3>
-            <ul className={styles.list}>
-              {needs.map(({ key, state, text, group }) => (
-                <li key={key}>
-                  <button type="button" className={styles.line} data-row={`needs:${key}`} onClick={() => actions.openReview(group, `needs:${key}`)}>
-                    {state ? <StatusGlyph state={state} withWord /> : <Diff className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />}
-                    {text}
-                  </button>
-                </li>
-              ))}
-              {unsent > 0 && (
-                <li className={styles.unsent}>
-                  <span className={styles.lineStatic}>
-                    <StatusGlyph state="unsent" withWord />
-                    <span className={styles.yoursText}>{plural(unsent, 'item', 'items')} not sent</span>
-                  </span>
-                  <button type="button" className={styles.action} data-row="needs:send" onClick={() => ui.setSendOpen(true)}>
-                    Send to agent
-                  </button>
-                </li>
-              )}
-            </ul>
-            {response && <p className={styles.note}>{response}</p>}
-          </section>
-        )}
-
-        {(board.scenarios.length > 0 || lessons.length > 0) && (
-          <section className={styles.section} aria-labelledby="ov-start" data-section="start">
-            <h3 id="ov-start" className={styles.heading}>
-              Start here
-            </h3>
-            <ul className={styles.list}>
-              {board.scenarios.map((s) => (
-                <li key={s.id}>
-                  <button type="button" className={styles.line} data-row={`walk:${s.id}`} aria-label={`Play ${s.title}`} onClick={() => actions.play(s.id, `walk:${s.id}`)}>
-                    <Play className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
-                    <span className={styles.grow}>{s.title}</span>
-                    <span className={styles.end}>{plural(s.steps.length, 'step', 'steps')}</span>
-                  </button>
-                </li>
-              ))}
-              {lessons.map(({ part, lesson: l }) => (
-                <li key={part.id}>
-                  <button type="button" className={styles.line} data-row={`lesson:${part.id}`} onClick={() => setLesson({ id: l.id, row: `lesson:${part.id}` })}>
-                    <GraduationCap className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
-                    <span className={styles.grow}>{l.title}</span>
-                    <span className={styles.end}>on {part.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
         <PartsSection
           groups={groups}
           filter={filter}
@@ -288,36 +318,6 @@ export function OverviewPage() {
         />
 
         <BetweenSection board={board} layer={layer} actions={actions} />
-
-        {(board.scope.includes.length > 0 || board.scope.excludes.length > 0) && (
-          <section className={styles.section} aria-labelledby="ov-scope" data-section="scope">
-            <h3 id="ov-scope" className={styles.heading}>
-              Scope
-            </h3>
-            <div className={styles.scope}>
-              {board.scope.includes.length > 0 && (
-                <div>
-                  <h4 className={styles.sub}>Covers</h4>
-                  <ul className={styles.bullets}>
-                    {board.scope.includes.map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {board.scope.excludes.length > 0 && (
-                <div>
-                  <h4 className={styles.sub}>Does not cover</h4>
-                  <ul className={styles.bullets}>
-                    {board.scope.excludes.map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
 
         {questionTotal > 0 && (
           <section className={styles.section} aria-labelledby="ov-questions" data-section="questions">

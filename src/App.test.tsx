@@ -19,7 +19,7 @@ async function loadRefund() {
 const refund = JSON.parse(refundRaw) as {
   title: string
   components: { id: string; label: string; explanation?: string; source: { kind: SourceKind } }[]
-  relationships: { id: string; from: string; to: string; kind: string; label: string }[]
+  relationships: { id: string; from: string; to: string; kind: string; label: string; source: { kind: SourceKind } }[]
 }
 
 const key = (k: string, mods: { meta?: boolean; shift?: boolean } = {}, target: Element = document.body) =>
@@ -58,6 +58,32 @@ describe('App', () => {
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' })).toBeInTheDocument()
   })
 
+  it('opens the Overview page on the goal, then the scope, then where to start, before the numbers and the parts', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /How the Claude Code harness works/ }))
+    await screen.findByTestId('inspector')
+    press(screen.getByRole('tab', { name: 'Overview' }))
+    const page = within(screen.getByTestId('overview'))
+    const goal = page.getByRole('heading', { level: 2 }).nextElementSibling!
+    const scope = page.getByRole('heading', { name: 'Scope' })
+    const start = page.getByRole('heading', { name: 'Start here' })
+    const numbers = page.getByText('Revision')
+    const parts = page.getByRole('heading', { name: /^Parts/ })
+    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(before(goal, scope)).toBe(true)
+    expect(before(scope, start)).toBe(true)
+    expect(before(start, numbers)).toBe(true)
+    expect(before(start, parts)).toBe(true)
+  })
+
+  it('draws the line key button as a key, not a question mark', async () => {
+    render(<App />)
+    await loadRefund()
+    const button = screen.getByRole('button', { name: 'Line key' })
+    expect(button.querySelector('.lucide-key-round')).not.toBeNull()
+    expect(button.querySelector('.lucide-circle-help, .lucide-circle-question-mark')).toBeNull()
+  })
+
   it('shows a part with its explanation and source label', async () => {
     render(<App />)
     await loadRefund()
@@ -70,14 +96,26 @@ describe('App', () => {
     expect(within(panel).getByRole('region', { name: 'Outgoing' })).toBeInTheDocument()
   })
 
-  it('shows no source line for the default, the agent explanation', async () => {
+  it('shows the source of a part even when it is the agent explanation', async () => {
     render(<App />)
     await loadRefund()
     const part = refund.components.find((c) => c.source.kind === 'agent-explanation')!
     const panel = screen.getByTestId('inspector')
     openPart(part.label)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
-    expect(within(panel).queryByText(SOURCE_LABEL['agent-explanation'])).not.toBeInTheDocument()
+    const row = within(panel).getByText('Source').closest('div')!
+    expect(row).toHaveTextContent(SOURCE_LABEL['agent-explanation'])
+    expect(row.querySelector('svg')).not.toBeNull()
+  })
+
+  it.each(['agent-explanation', 'agent-proposal'] as const)('shows the Source row of a connection whose source is %s', async (kind) => {
+    render(<App />)
+    await loadRefund()
+    const rel = refund.relationships.find((r) => r.source.kind === kind)!
+    const panel = screen.getByTestId('inspector')
+    await openConnection(rel.label)
+    expect(within(panel).getByRole('heading', { name: rel.label })).toBeInTheDocument()
+    expect(within(panel).getByText('Source').closest('div')).toHaveTextContent(SOURCE_LABEL[kind])
   })
 
   it('shows a connection in plain words', async () => {

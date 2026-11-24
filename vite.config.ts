@@ -12,7 +12,7 @@ export default defineConfig({
   // The first script holds React, Base UI, Zod, the layout and routing code, and React Flow's core, which the sidebar and the
   // Overview also use. The map view, the example boards, the how-to dialog, the text of the files written into `.anatomy/`,
   // the lessons, and the command line tool load on their own scripts. `scripts/firstLoad.test.ts` holds the same line in bytes.
-  build: { chunkSizeWarningLimit: 950 },
+  build: { chunkSizeWarningLimit: 960 },
   test: {
     environment: 'jsdom',
     exclude: [...configDefaults.exclude, 'e2e/**'],

@@ -74,7 +74,7 @@ Open a built-in example: How the Claude Code harness works, Anatomy itself, or H
 - A big board that folds into its groups when you zoom out, with one bundled line for each pair of groups.
 - Walkthroughs that play a journey step by step, one highlight at a time.
 - Honest sources: each claim says if the user said it, the agent read it, a plan states it, or the agent proposes it and nobody decided it yet.
-- An Overview page with the goal, the scope, where to start, and every open question.
+- An Overview page that opens on the goal, the scope, and where to start, then lists every part, connection, and open question.
 - A whiteboard on top: pen, shapes, arrows, text, sticky notes, and parts you propose.
 - A Review tab with every answer from your agent, plus undo and redo for your last 100 steps.
 - Light and dark themes, a command menu on <kbd>⌘</kbd> <kbd>K</kbd> or <kbd>Ctrl</kbd> <kbd>K</kbd>, and full keyboard control.
