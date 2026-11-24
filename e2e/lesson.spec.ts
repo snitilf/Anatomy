@@ -127,3 +127,11 @@ test.describe('with reduced motion the picture shows the frame that explains', (
     await expect(lesson.getByText('v1 approved · sent v1', { exact: true })).toBeVisible()
   })
 })
+
+test('the keys on the plate work as soon as the lesson opens, without a click inside', async ({ page }) => {
+  const lesson = await openLesson(page)
+  await page.keyboard.press('a')
+  await expect(lesson.getByText('v1 approved · sent none', { exact: true })).toBeVisible()
+  await page.keyboard.press('e')
+  await expect(lesson.getByText('v2 undecided · old key v1 · sent none', { exact: true })).toBeVisible()
+})
