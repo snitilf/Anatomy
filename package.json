@@ -30,7 +30,8 @@
     "tokens": "node scripts/tokens.ts",
     "eval": "node eval/run.ts",
     "agent-files": "node scripts/agent-files.ts",
-    "anatomy": "node bin/anatomy.ts"
+    "anatomy": "node bin/anatomy.ts",
+    "readme-images": "node scripts/readme-images.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
