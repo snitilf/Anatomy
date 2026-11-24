@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyLayer, type Layer, type Note } from '../layer/model'
 import { fingerprintTarget, fingerprintValue } from '../layer/fingerprint'
 import { clone, refundBoard } from '../layer/testBoards'
-import { itemState, noteBadgeLabel, partStates, topState } from './state'
+import { ITEM_STATES, itemState, noteBadgeLabel, partStates, STATE_MEANING, STATE_WORD, topState } from './state'
 
 const board = refundBoard()
 const part = board.components[0]!
@@ -63,5 +63,19 @@ describe('item state', () => {
     expect(noteBadgeLabel(1, 'unsent', 1)).toBe('1 note or question from you, not sent')
     expect(noteBadgeLabel(3, 'answered', 1)).toBe('3 notes or questions from you, 1 answered')
     expect(noteBadgeLabel(2, 'sent', 2)).toBe('2 notes or questions from you, sent')
+  })
+})
+
+describe('STATE_MEANING', () => {
+  it('says what each state means in one short sentence that does not repeat the word', () => {
+    for (const state of ITEM_STATES) {
+      const text = STATE_MEANING[state]
+      expect(text, state).toMatch(/\S/)
+      expect(text.length, state).toBeLessThanOrEqual(48)
+      expect(text, state).toMatch(/\.$/)
+      expect(text, state).not.toContain('\u2014')
+      expect(text.toLowerCase(), state).not.toBe(STATE_WORD[state].toLowerCase() + '.')
+    }
+    expect(new Set(ITEM_STATES.map((s) => STATE_MEANING[s])).size).toBe(ITEM_STATES.length)
   })
 })

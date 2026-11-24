@@ -10,6 +10,7 @@ import refundRaw from '../e2e/fixtures/refund-approval.board.json?raw'
 import { openConnection, openPart } from './test/openOnMap'
 import { openBoardFile } from './test/openFile'
 import { press } from './test/press'
+import { ITEM_STATES, STATE_MEANING, STATE_WORD } from './status/state'
 
 // A test can make saving fail by setting this. The store itself stays the real one.
 const failing = vi.hoisted(() => ({ on: false }))
@@ -281,6 +282,30 @@ describe('your links', () => {
     fireEvent.click(panel().getByRole('button', { name: 'Delete' }))
     expect(panel().getByRole('heading', { name: refund.title })).toBeInTheDocument()
     expect(await screen.findByText('Link deleted')).toBeInTheDocument()
+  })
+})
+
+describe('status key', () => {
+  it('is not offered while there is nothing of yours to read', async () => {
+    render(<App />)
+    await loadRefund()
+    expect(panel().queryByRole('button', { name: 'Status key' })).not.toBeInTheDocument()
+  })
+
+  it('explains every status glyph, with its word and what it means, from the Yours list', async () => {
+    render(<App />)
+    await loadRefund()
+    addNote('Ask legal who signs off')
+    press(await panel().findByRole('button', { name: 'Status key' }))
+    const key = await screen.findByRole('dialog', { name: 'Status key' })
+    const rows = within(key).getAllByRole('listitem')
+    expect(rows).toHaveLength(ITEM_STATES.length)
+    ITEM_STATES.forEach((state, i) => {
+      const row = rows[i]!
+      expect(row.querySelector(`svg[data-state="${state}"]`)).not.toBeNull()
+      expect(row).toHaveTextContent(STATE_WORD[state])
+      expect(row).toHaveTextContent(STATE_MEANING[state])
+    })
   })
 })
 
