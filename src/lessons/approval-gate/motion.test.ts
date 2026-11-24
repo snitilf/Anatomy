@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CARD, LIFT, REACH_GATE, REACH_LEDGER, REACH_LOCK, SHUTTER_LIFT, TRAVEL_END } from './geometry'
+import { BLOCK_Z, CARD, FINGER_FACE, LIFT, REACH_GATE, REACH_LEDGER, REACH_LOCK, SHUTTER_LIFT, TAB_TIP, TAB_TOP, TRAVEL_END } from './geometry'
 import { canEdit, initialState, step, type LessonEvent, type LessonState } from './model'
 import {
   IN_OUT,
@@ -47,12 +47,39 @@ function play(event: LessonEvent, state: LessonState, from: Pose, reduced = fals
 const end = (run: Run) => poseAt(run, run.duration + 1)
 const rest0 = () => restPose(initialState, 'home')
 
-/**
- * The world units one unit of a channel moves. The fastest planned move, the pusher coming home, covers about 17 units in one frame.
- * A snap is a whole distance at once: the shortest, the lockout stop, is 14 units from home, and the rest are 43 and more.
- */
+/** The world units one unit of a channel moves. */
 const UNITS: Partial<Record<string, number>> = { card: 1, push: 1, tabSlot: 6, outboxDrop: 1, shutter: SHUTTER_LIFT, bumpLock: 1, bumpFinger: 1, bumpPin: 1 }
 const unitsOf = (channel: Channel) => (/^(finger|pin)\d$/.test(channel) ? LIFT : /^keyLift/.test(channel) ? 12 : (UNITS[channel] ?? 0))
+
+/**
+ * The most a part may move between two frames at 60 fps, in world units. The pusher coming home covers about 18 units in a frame and the
+ * card about 13. Every other part moves 5 or fewer, so a whole finger, pin, key or shutter in one frame is a snap, and so is a tab that
+ * jumps a slot.
+ */
+const BOUND = (channel: Channel) => (channel === 'push' ? 20 : channel === 'card' ? 14 : 5)
+
+/** Every frame at which a visible part moves further than its bound, as text. */
+function snaps(run: Run, start: Pose): string[] {
+  const frame = 1000 / 60
+  const found: string[] = []
+  let last = start
+  for (let t = 0; t <= run.duration + frame; t += frame) {
+    const now = poseAt(run, t)
+    for (const channel of Object.keys(now) as Channel[]) {
+      const units = unitsOf(channel)
+      if (!units || isStepped(channel) || isOpacity(channel)) continue
+      // The card and its tab can change place while they are not drawn. On arrival the card is swapped for the outbox card in the same place.
+      if ((channel === 'card' || channel === 'tabSlot') && Math.min(now.cardAlpha, last.cardAlpha) <= 0.05) continue
+      // A key that is not drawn can be put back above its finger.
+      const key = /^keyLift(\d)$/.exec(channel)
+      if (key && Math.min(now[`keyAlpha${key[1]}` as Channel], last[`keyAlpha${key[1]}` as Channel]) <= 0.05) continue
+      const moved = Math.abs(now[channel] - last[channel]) * units
+      if (moved >= BOUND(channel)) found.push(`${channel} moved ${moved.toFixed(1)} at ${Math.round(t)} ms`)
+    }
+    last = now
+  }
+  return found
+}
 
 describe('cubicBezier', () => {
   it('starts at 0, ends at 1, and rises in between', () => {
@@ -119,8 +146,7 @@ describe('the rest invariant', () => {
 })
 
 describe('no teleport while visible', () => {
-  it('moves no visible part by more than 20 world units between two frames, even when an event cuts into a running run', () => {
-    const frame = 1000 / 60
+  it('moves no visible part past its own per-frame bound, even when an event cuts into a running run', () => {
     for (let seed = 1; seed <= 300; seed++) {
       const rand = random(seed * 7919)
       let state = initialState
@@ -129,26 +155,33 @@ describe('no teleport while visible', () => {
         const played = play(event, state, pose)
         if (!played) continue
         const { next, run } = played
-        // Sample the new run, starting from the pose the old run had reached.
-        let last = pose
-        for (let t = 0; t <= run.duration + frame; t += frame) {
-          const now = poseAt(run, t)
-          for (const channel of Object.keys(now) as Channel[]) {
-            const units = unitsOf(channel)
-            if (!units || isStepped(channel) || isOpacity(channel)) continue
-            const cardPart = channel === 'card' || channel === 'tabSlot'
-            // The card and its tab can change place while they are not drawn. On arrival the card is swapped for the outbox card in the same place. Everything else is always on screen.
-            if (cardPart && Math.min(now.cardAlpha, last.cardAlpha) <= 0.05) continue
-            expect(Math.abs(now[channel] - last[channel]) * units, `seed ${seed} ${event} ${channel} at ${Math.round(t)} ms`).toBeLessThan(20)
-          }
-          last = now
-        }
+        expect(snaps(run, pose), `seed ${seed} ${event}`).toEqual([])
         // The next event cuts in at a random moment, or after the run is over.
-        const cut = rand() < 0.6 ? rand() * run.duration : run.duration + 1
-        pose = poseAt(run, cut)
+        pose = poseAt(run, rand() < 0.6 ? rand() * run.duration : run.duration + 1)
         state = next
       }
     }
+  })
+
+  it('catches a finger that snaps in one frame', () => {
+    const approved = step(initialState, 'approve')
+    const played = play('approve', initialState, rest0())
+    if (!played) throw new Error('no run')
+    expect(snaps(played.run, rest0())).toEqual([])
+    const snapped: Run = { ...played.run, tracks: played.run.tracks.map((t) => (t.channel === 'finger1' ? { ...t, duration: 0 } : t)) }
+    expect(snaps(snapped, rest0()).some((text) => text.startsWith('finger1'))).toBe(true)
+    expect(approved.approvedVersion).toBe(1)
+  })
+
+  it('catches a shutter, a pin and a card that snap', () => {
+    const rejected = play('reject', initialState, rest0())
+    if (!rejected) throw new Error('no run')
+    const snapShutter: Run = { ...rejected.run, tracks: rejected.run.tracks.map((t) => (t.channel === 'shutter' ? { ...t, duration: 0 } : t)) }
+    expect(snaps(snapShutter, rest0()).some((text) => text.startsWith('shutter'))).toBe(true)
+    const blocked = play('trySend', initialState, rest0())
+    if (!blocked) throw new Error('no run')
+    const snapCard: Run = { ...blocked.run, tracks: blocked.run.tracks.map((t) => (t.channel === 'card' && t.to === REACH_GATE ? { ...t, duration: 0 } : t)) }
+    expect(snaps(snapCard, rest0()).some((text) => text.startsWith('card'))).toBe(true)
   })
 })
 
@@ -438,5 +471,100 @@ describe('restart', () => {
       else expect(isOpacity(track.channel) ? track.duration <= 150 : track.duration === 0).toBe(true)
     }
     expect(Math.max(...Array.from({ length: Math.ceil(run.duration / 5) + 1 }, (_, i) => poseAt(run, i * 5).dim))).toBeGreaterThan(0.3)
+  })
+})
+
+describe('review fixes', () => {
+  const approved = step(initialState, 'approve')
+
+  it('never drives the tab through a gate finger that is still below it, however soon a send follows an approval', () => {
+    const first = play('approve', initialState, rest0())
+    if (!first) throw new Error('no run')
+    const clearance = (TAB_TOP - BLOCK_Z) / LIFT
+    for (let cut = 0; cut <= 300; cut += 10) {
+      const from = poseAt(first.run, cut)
+      const second = play('trySend', approved, from)
+      if (!second) throw new Error('no run')
+      for (let t = 0; t <= second.run.duration; t += 5) {
+        const now = poseAt(second.run, t)
+        if (now.finger1 < clearance) expect(TAB_TIP + now.card, `cut at ${cut} ms, ${t} ms into the send`).toBeLessThanOrEqual(FINGER_FACE + 0.05)
+      }
+      expect(snaps(second.run, from)).toEqual([])
+    }
+  })
+
+  it('keeps lifting a finger that is already lifting, and does not freeze it for another 200 ms', () => {
+    const first = play('approve', initialState, rest0())
+    if (!first) throw new Error('no run')
+    const from = poseAt(first.run, 260)
+    expect(from.finger1).toBeGreaterThan(0.05)
+    const again = play('approve', approved, from)
+    if (!again) throw new Error('no run')
+    expect(poseAt(again.run, 40).finger1).toBeGreaterThan(from.finger1)
+  })
+
+  it('draws the card fully before it travels when a send cuts into the feed-in of a fresh card', () => {
+    // Approve and send version 1, then find the moment the fresh card has just started to appear.
+    const a = play('approve', initialState, rest0())
+    if (!a) throw new Error('no run')
+    const sent = play('trySend', a.next, end(a.run))
+    if (!sent) throw new Error('no run')
+    let hidden = false
+    let cut = -1
+    for (let t = 0; t <= sent.run.duration; t += 2) {
+      const pose = poseAt(sent.run, t)
+      if (pose.cardAlpha <= 0.05) hidden = true
+      else if (hidden) {
+        cut = t
+        break
+      }
+    }
+    expect(cut).toBeGreaterThan(0)
+    // An edit and an approval land in the same instant, then the send.
+    let state = sent.next
+    let pose = poseAt(sent.run, cut)
+    expect(pose.cardAlpha).toBeLessThan(0.3)
+    for (const event of ['edit', 'approve'] as const) {
+      const played = play(event, state, pose)
+      if (!played) throw new Error('no run')
+      state = played.next
+      pose = poseAt(played.run, 0)
+    }
+    const send = play('trySend', state, pose)
+    if (!send) throw new Error('no run')
+    expect(send.next.lastOutcome).toBe('sent')
+    for (let t = 0; t <= send.run.duration; t += 5) {
+      const now = poseAt(send.run, t)
+      if (now.card > 8 && now.card < TRAVEL_END - 1) expect(now.cardAlpha, `${t} ms`).toBe(1)
+    }
+    expect(snaps(send.run, pose)).toEqual([])
+  })
+
+  it('restarts twice under reduced motion without losing the dim', () => {
+    const first = play('restart', initialState, rest0(), true)
+    if (!first) throw new Error('no run')
+    const from = poseAt(first.run, 130)
+    expect(from.dim).toBeGreaterThan(0.3)
+    const second = play('restart', first.next, from, true)
+    if (!second) throw new Error('no run')
+    for (let t = 0; t <= 400; t += 20) expect(poseAt(second.run, t).dim, `${t} ms`).toBeGreaterThanOrEqual(from.dim - 1e-9)
+    expect(poseAt(second.run, second.run.duration + 1).dim).toBe(0)
+  })
+
+  it('does not swap the stamp while it is drawn when a send cuts into an edit', () => {
+    const edit = play('edit', initialState, rest0())
+    if (!edit) throw new Error('no run')
+    const from = poseAt(edit.run, 20)
+    expect(from.cardVersion).toBe(1)
+    expect(from.stampAlpha).toBeLessThan(1)
+    const send = play('trySend', edit.next, from)
+    if (!send) throw new Error('no run')
+    let last = from
+    for (let t = 0; t <= send.run.duration; t += 5) {
+      const now = poseAt(send.run, t)
+      if (now.cardVersion !== last.cardVersion) expect(last.stampAlpha, `${t} ms`).toBeLessThanOrEqual(0.2)
+      last = now
+    }
+    expect(end(send.run).cardVersion).toBe(2)
   })
 })
