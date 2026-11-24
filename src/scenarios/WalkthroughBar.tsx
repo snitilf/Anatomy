@@ -81,6 +81,7 @@ export function WalkthroughBar() {
       <p className={styles.caption} aria-live="polite" aria-atomic="true">
         {step.caption}
       </p>
+      <p className={styles.note}>Teaching sequence. Nothing runs.</p>
       <div className={styles.controls}>
         <p className={styles.title}>{step.scenario.title}</p>
         <StepButton view={previous} label="Previous" disabled={step.index === 0} />

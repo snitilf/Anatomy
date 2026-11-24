@@ -54,6 +54,7 @@ import { toast } from 'sonner'
 import { currentTrail, rememberStep, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
 import type { Rect } from '../layout/geometry'
+import { onPhone } from '../app/usePhone'
 import type { Tool } from '../whiteboard/tools'
 import type { Command, CommandContext } from './types'
 
@@ -138,7 +139,8 @@ const tool = (id: Tool, label: string, icon: Command['icon'], key: string, keywo
   icon,
   keys: [key],
   keywords: ['whiteboard', 'draw', ...keywords],
-  visible: (c) => hasBoard(c) && !playing(c) && onMap(c),
+  // A phone is for reading and answering (D139): it has no tool bar, so a tool picked there could not be put down again.
+  visible: (c) => hasBoard(c) && !playing(c) && onMap(c) && !onPhone(),
   checked: (c) => c.ui.tool === id,
   run: (c) => {
     c.uiApi.setEditing(undefined)

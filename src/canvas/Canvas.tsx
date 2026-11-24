@@ -588,6 +588,8 @@ export function Canvas() {
     [board, proposals],
   )
   const phone = usePhone()
+  // A walkthrough and a phone show the map as it is: the phone has no tool bar to put a tool down with (D139).
+  const activeTool = step || phone ? 'select' : tool
   /** A bundle opens as a bundle, and one that holds a single connection opens that connection, at a zoom where it reads. */
   const openBundle = useCallback(
     (b: Bundle) => {
@@ -657,10 +659,10 @@ export function Canvas() {
     },
     [saveKeyMoves],
   )
-  // A walkthrough shows the map as it is. Tools come back to Select when one starts.
+  // Tools come back to Select when a walkthrough starts, and when the window becomes a phone.
   useEffect(() => {
-    if (step && chosenTool !== 'select') uiApi.setTool('select')
-  }, [step, chosenTool, uiApi])
+    if ((step || phone) && chosenTool !== 'select') uiApi.setTool('select')
+  }, [step, phone, chosenTool, uiApi])
 
   const [connecting, setConnecting] = useState(false)
   const connectEndedAt = useRef(-Infinity)
@@ -1005,7 +1007,7 @@ export function Canvas() {
   }, [dispatch])
 
   const handles = useMemo<EndHandle[]>(() => {
-    if (tool !== 'select' || !selection || !geometryNow || step) return []
+    if (activeTool !== 'select' || !selection || !geometryNow) return []
     const pair = (kind: EndRef['kind'], id: string, a: Point | undefined, b: Point | undefined): EndHandle[] =>
       a && b
         ? [
@@ -1024,7 +1026,7 @@ export function Canvas() {
       return ends ? pair('arrow', selection.id, ends.a, ends.b) : []
     }
     return []
-  }, [tool, selection, geometryNow, reconnects, marks, scene, step])
+  }, [activeTool, selection, geometryNow, reconnects, marks, scene])
 
   const editingItem = useMemo(() => {
     if (!editing?.id) return undefined
@@ -1035,7 +1037,7 @@ export function Canvas() {
   }, [editing, marks, proposals])
 
   if (!board || !graph) return null
-  const props = mapProps(step ? 'select' : tool)
+  const props = mapProps(activeTool)
 
   return (
     <div
@@ -1051,7 +1053,7 @@ export function Canvas() {
       onPointerDownCapture={(e) => {
         pressedAt.current = { x: e.clientX, y: e.clientY }
       }}
-      data-tool={tool}
+      data-tool={activeTool}
       data-hover-scope=""
     >
       <style ref={hoverStyle} />
@@ -1106,14 +1108,14 @@ export function Canvas() {
           <FarMode onChange={setFar} />
           {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
-          <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={tool === 'select' && !step} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
+          <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={activeTool === 'select'} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}
           </InkLayer>
-          {isDrawing(tool) && !step && <DrawSurface tool={tool} scene={getScene} onDrawn={onDrawn} />}
+          {isDrawing(activeTool) && <DrawSurface tool={activeTool} scene={getScene} onDrawn={onDrawn} />}
           {editing && (!editing.id || editingItem) && (
             <Editor key={`${editing.kind}:${editing.id ?? `${editing.x},${editing.y}`}`} editing={editing} initial={editingItem?.initial ?? {}} size={editingItem?.size} onDone={onTyped} />
           )}
-          {!step && <Toolbar />}
+          {!step && !phone && <Toolbar />}
           <SpaceHand />
           <ZoomBar />
           <WheelZoom />

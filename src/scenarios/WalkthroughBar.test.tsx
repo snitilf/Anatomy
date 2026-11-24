@@ -58,6 +58,23 @@ describe('walkthroughs', () => {
     expect(player.getByRole('button', { name: 'Previous' })).toHaveAttribute('aria-disabled', 'true')
   })
 
+  it('says in one quiet line that it is a teaching sequence and nothing runs, on every step', async () => {
+    render(<App />)
+    await loadRefund()
+    play()
+    const player = within(bar())
+    const line = player.getByText('Teaching sequence. Nothing runs.')
+    // One line of its own: not part of the caption that a screen reader announces at each step.
+    expect(line.tagName).toBe('P')
+    expect(line).not.toHaveAttribute('aria-live')
+    expect(player.getByText(walk.steps[0]!.caption)).not.toContainElement(line)
+    fireEvent.click(player.getByRole('button', { name: 'Next' }))
+    expect(player.getByText('Teaching sequence. Nothing runs.')).toBeInTheDocument()
+    // The line shows only while a walkthrough plays.
+    fireEvent.click(player.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByText('Teaching sequence. Nothing runs.')).not.toBeInTheDocument()
+  })
+
   it('moves with Next, Previous, and the arrow keys, and stops at both ends', async () => {
     render(<App />)
     await loadRefund()

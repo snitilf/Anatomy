@@ -220,6 +220,58 @@ test('phones only view the map: no tool bar', async ({ page }) => {
   await expect(page.getByRole('toolbar', { name: 'Whiteboard tools' })).toBeHidden()
 })
 
+test('the command menu on a phone has no drawing tools and no shortcuts, and a drawing key does nothing', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openFolder(page, 'e2e/fixtures/refund-approval.board.json')
+  // The key a phone with a keyboard could press: nothing starts, and the tool bar is still on Select at a wide width.
+  await page.keyboard.press('p')
+  await page.keyboard.press('ControlOrMeta+k')
+  const menu = page.getByRole('dialog', { name: 'Command menu' })
+  await expect(menu).toBeVisible()
+  await expect(menu.getByText('Tools', { exact: true })).toHaveCount(0)
+  await expect(menu.locator('kbd')).toHaveCount(0)
+  await menu.getByRole('combobox').fill('pen')
+  await expect(menu.getByRole('option', { name: /^Pen/ })).toHaveCount(0)
+  await menu.getByRole('combobox').fill('sticky')
+  await expect(menu.getByRole('option', { name: /^Sticky note/ })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(page.getByRole('toolbar', { name: 'Whiteboard tools' }).getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
+  // The same menu on a wide screen still has them.
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(menu.getByText('Tools', { exact: true })).toBeVisible()
+  await expect(menu.getByRole('option', { name: /^Pen/ })).toBeVisible()
+  await expect(menu.locator('kbd').first()).toBeVisible()
+})
+
+test('a tool picked on a wide window is put down when the window shrinks to a phone, and Select is on after it widens', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openFolder(page, 'e2e/fixtures/refund-approval.board.json')
+  const toolbar = page.getByRole('toolbar', { name: 'Whiteboard tools' })
+  await toolbar.getByRole('button', { name: 'Pen' }).click()
+  await expect(page.locator('[data-draw-surface]')).toHaveCount(1)
+  await page.setViewportSize({ width: 390, height: 844 })
+  // No tool bar and no Select command on a phone, so nothing may stay on: taps must not draw.
+  await expect(page.locator('[data-draw-surface]')).toHaveCount(0)
+  await expect(toolbar).toBeHidden()
+  await expect(page.locator('[data-tool]').first()).toHaveAttribute('data-tool', 'select')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(toolbar.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(toolbar.getByRole('button', { name: 'Pen' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('Hand picked on a wide window is put down on a phone too', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openFolder(page, 'e2e/fixtures/refund-approval.board.json')
+  const toolbar = page.getByRole('toolbar', { name: 'Whiteboard tools' })
+  await toolbar.getByRole('button', { name: 'Hand' }).click()
+  await expect(page.locator('[data-tool]').first()).toHaveAttribute('data-tool', 'hand')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.locator('[data-tool]').first()).toHaveAttribute('data-tool', 'select')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(toolbar.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test.describe('coarse pointer', () => {
   test.use({ hasTouch: true, viewport: { width: 1440, height: 900 } })
 
