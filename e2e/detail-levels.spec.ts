@@ -189,7 +189,7 @@ test.describe('labels at the opening view', () => {
       [1440, 900],
       [1280, 800],
     ] as const) {
-      test(`no label covers another, grown to 11 px on screen: ${name} at ${width}x${height}`, async ({ page }) => {
+      test(`no label's words cover another's, grown to 11 px on screen: ${name} at ${width}x${height}`, async ({ page }) => {
         await page.setViewportSize({ width, height })
         await open(page, file)
         await settled(page)
@@ -200,13 +200,17 @@ test.describe('labels at the opening view', () => {
           }
           const labels = [...document.querySelectorAll<HTMLElement>('[data-label][data-edge]')]
             .filter((el) => !el.hasAttribute('data-hidden') && shown(el))
-            .map((el) => ({ id: el.dataset.edge, r: el.getBoundingClientRect() }))
+            .map((el) => {
+              // The words of the label, line by line, not the padding of its pill, which may touch a neighbour's.
+              const words = document.createRange()
+              words.selectNodeContents(el)
+              return { id: el.dataset.edge, lines: [...words.getClientRects()].filter((r) => r.width > 0 && r.height > 0) }
+            })
           const out: string[] = []
           for (let i = 0; i < labels.length; i++) {
             for (let j = i + 1; j < labels.length; j++) {
-              const a = labels[i]!.r
-              const b = labels[j]!.r
-              if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 2 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2) out.push(`${labels[i]!.id} and ${labels[j]!.id}`)
+              const clash = labels[i]!.lines.some((a) => labels[j]!.lines.some((b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 2 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2))
+              if (clash) out.push(`${labels[i]!.id} and ${labels[j]!.id}`)
             }
           }
           return out
