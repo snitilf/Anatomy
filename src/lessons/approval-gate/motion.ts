@@ -244,7 +244,15 @@ interface Formation {
 function formUp(plan: Plan): Formation {
   const from = plan.from
   const visible = from.cardAlpha > 0.05
-  if (visible && Math.abs(from.card) < 7) return { ready: 0, hidden: null }
+  if (visible && Math.abs(from.card) < 7) {
+    // A card that is at home and fully drawn needs nothing. One that is still feeding in is finished first, so that it never
+    // travels half drawn, and the pusher is home before it moves.
+    if (from.cardAlpha >= 0.999 && Math.abs(from.card) < 0.05 && Math.abs(from.push) < 0.05) return { ready: 0, hidden: null }
+    plan.go('card', 0, 0, 240, OUT)
+    plan.go('push', 0, 0, 240, OUT)
+    plan.go('cardAlpha', 1, 0, 200, OUT)
+    return { ready: 240, hidden: null }
+  }
   if (visible && STOPS.some((stop) => Math.abs(from.card - stop) < 2.5)) {
     const duration = returnMs(Math.max(from.card, from.push))
     plan.go('card', 0, 0, duration, IN_OUT)
@@ -283,6 +291,18 @@ function changeVersion(plan: Plan, version: number, hidden: number | null) {
   plan.go('stampAlpha', 1, 100, 140, OUT)
 }
 
+/** How long a key that is `left` of its drop away from its finger has been dropping, in ms. */
+function dropElapsed(left: number): number {
+  let lo = 0
+  let hi = 1
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2
+    if (1 - OUT(mid) > left) lo = mid
+    else hi = mid
+  }
+  return hi * 240
+}
+
 /** The fingers, the keys, the shutter and the pins follow the decisions. */
 function settleParts(plan: Plan, target: Pose, skipPin: number | null) {
   // A key that is still on screen leaves first. The key that replaces it starts once it is gone, so the two never add up to more than one.
@@ -292,18 +312,27 @@ function settleParts(plan: Plan, target: Pose, skipPin: number | null) {
     const finger = fingerOf(v)
     const lift = keyLiftOf(v)
     const alpha = keyAlphaOf(v)
+    let fingerStart = entry + 200
     if (target[alpha] > plan.cur[alpha]) {
-      // The key drops onto its finger, and then that finger lifts.
+      // The key drops onto its finger, and then that finger lifts. A key that is already on its way down has less to cover,
+      // so its finger waits only for what is left.
       if (plan.cur[alpha] <= 0.05) plan.go(lift, 1, entry, 0)
-      plan.go(lift, 0, entry, 240, OUT)
+      const left = plan.cur[lift]
+      plan.go(lift, 0, entry, Math.round(240 * Math.max(left, 0.25)), OUT)
       plan.go(alpha, 1, entry, 120, OUT)
+      fingerStart = entry + Math.max(0, 200 - dropElapsed(left))
     } else if (target[alpha] < plan.cur[alpha]) {
       plan.go(alpha, 0, 0, 160, OUT)
       plan.go(lift, 1, 0, 160, OUT)
+    } else if (plan.cur[lift] > 0 && target[lift] === 0) {
+      plan.go(lift, 0, 0, 120, OUT)
     }
     if (plan.cur[finger] !== target[finger]) {
-      if (target[finger] > plan.cur[finger]) plan.go(finger, 1, entry + 200, 260, IN_OUT)
-      else plan.go(finger, 0, 0, 220, IN_OUT)
+      if (target[finger] > plan.cur[finger]) {
+        // A finger that is already lifting goes on lifting. It does not wait again.
+        const lifting = plan.cur[finger] > 0
+        plan.go(finger, 1, lifting ? 0 : fingerStart, Math.max(60, Math.round(260 * (1 - plan.cur[finger]))), IN_OUT)
+      } else plan.go(finger, 0, 0, 220, IN_OUT)
     }
 
     const pin = pinOf(v)
@@ -354,6 +383,15 @@ function planBlocked(plan: Plan, next: LessonState, t0: number) {
   plan.go(bump, 0, contact + 70, 110, IN_OUT)
 }
 
+/** The finger of the version being sent must be above the tab before the tab reaches it. Returns when the card may start. */
+function startAfterFinger(plan: Plan, version: number, ready: number): number {
+  const lift = plan.tracks.filter((track) => track.channel === fingerOf(version)).at(-1)
+  if (!lift || lift.to !== 1) return ready
+  const clear = crossTime(lift, 0.5)
+  const trial: Track = { channel: 'card', from: plan.cur.card, to: TRAVEL_END, start: 0, duration: travelMs(TRAVEL_END - plan.cur.card), ease: IN_OUT }
+  return Math.max(ready, Math.ceil(clear + 15 - crossTime(trial, REACH_GATE)))
+}
+
 function planSent(plan: Plan, next: LessonState, t0: number) {
   const duration = travelMs(TRAVEL_END - plan.cur.card)
   const travel = plan.go('card', TRAVEL_END, t0, duration, IN_OUT)
@@ -402,12 +440,12 @@ function compress(run: Run, restart: boolean): Run {
   const tracks: Track[] = []
   // The restart ends where it began, so it has no end pose to jump to. It keeps the dim, as a fade that holds for a moment.
   if (restart) {
-    tracks.push({ channel: 'dim', from: 0, to: DIM, start: 0, duration: 120, ease: OUT }, { channel: 'dim', from: DIM, to: 0, start: 520, duration: 120, ease: OUT })
+    tracks.push({ channel: 'dim', from: run.from.dim, to: DIM, start: 0, duration: 120, ease: OUT }, { channel: 'dim', from: DIM, to: 0, start: 520, duration: 120, ease: OUT })
   }
   for (const channel of Object.keys(run.end) as Channel[]) {
     const from = run.from[channel]
     const to = run.end[channel]
-    if (from === to) continue
+    if (from === to || (restart && channel === 'dim')) continue
     const duration = channel === 'dim' ? 120 : isOpacity(channel) ? 150 : 0
     tracks.push({ channel, from, to, start: 0, duration, ease: OUT })
   }
@@ -426,13 +464,14 @@ export function planRun(event: LessonEvent, _before: LessonState, next: LessonSt
   const formation = formUp(plan)
   const sent = event === 'trySend' && next.lastOutcome === 'sent'
 
+  // A version that an earlier edit left half changed is finished first, whatever the event is.
+  changeVersion(plan, next.version, formation.hidden)
   if (event === 'trySend') {
     settleParts(plan, target, sent ? next.version : null)
     settleOutbox(plan, sent ? { ...target, outboxVersion: plan.cur.outboxVersion, outboxAlpha: plan.cur.outboxAlpha } : target)
-    if (sent) planSent(plan, next, formation.ready)
+    if (sent) planSent(plan, next, startAfterFinger(plan, next.version, formation.ready))
     else planBlocked(plan, next, formation.ready)
   } else {
-    changeVersion(plan, next.version, formation.hidden)
     settleParts(plan, target, null)
     settleOutbox(plan, target)
     if (event === 'restart') planRestart(plan)
