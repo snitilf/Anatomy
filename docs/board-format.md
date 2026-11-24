@@ -104,6 +104,8 @@ It can also have a `summary`.
 Each step has a `caption` and a `highlight` list of component and relationship IDs.
 A scenario is a teaching sequence.
 Playing it does not run anything.
+The map marks the part where a scenario starts: the first part in the highlight of its first step, or the part a highlighted connection runs from.
+A first step with an empty highlight is about the whole board, so it marks no part.
 
 ## Responses
 

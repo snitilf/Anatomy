@@ -59,6 +59,15 @@ A resized card stays between 224 by 112 and 480 by 320.
 The app stores only the cards that the user moved or resized.
 The other cards follow the layout each time a board opens.
 
+### Where a walkthrough starts
+
+A part where a walkthrough starts carries a play mark on its top right corner.
+A walkthrough starts at the first thing its first step is about: that part, or the part a connection runs from.
+A first step about nothing is about the whole board, so that walkthrough marks no part.
+When several walkthroughs start at one part, the part carries one mark.
+The mark is a dark disc with a play shape, so it reads without color, and it keeps its size on screen at every detail level.
+`flowStarts` in `src/scenarios/starts.ts` works it out, and the part's description for a screen reader says "Starts the walkthrough" and its title after the summary.
+
 ### The layout
 
 The layout in `src/layout/autoLayout.ts` is a left-to-right flow that follows the connections.
@@ -118,6 +127,13 @@ The search adds a cost for each of these:
 
 Tracks are 16 units apart.
 A gap between cards holds as many lines as it has tracks, so parallel lines do not run on top of each other.
+
+Every connection ends in an arrowhead.
+The head is the same size for every kind of line, so the kind shows in the dash and the width only.
+It is 8 px long and 7 px across on screen, from the far end of the title level up to 100 percent, and above that it grows with the board as the lines do.
+The marker is measured in board units and not in the width of the line, so a selected line does not grow its head.
+The map's style scales it by `--label-scale`, the way it scales a label (`Canvas.module.css`).
+`e2e/arrowheads.spec.ts` measures the heads from the page at 100 percent and at the title level.
 
 While the user drags or resizes a card, the app redraws only the connections of that card.
 It draws them as plain elbows and hides their labels.
@@ -560,6 +576,15 @@ If a script cannot load, the user sees a short notice, and the rest of the app k
 Sending feedback to a folder still writes `feedback.json` when the text of the `.anatomy/` files cannot load.
 
 `scripts/firstLoad.test.ts` builds the app and checks that the first script holds no example board, no part of the command line tool, and no map view, that it does not load any of them at start, and that it stays under a byte budget.
+
+## The icon and the mark
+
+The page has an SVG icon, `public/favicon.svg`, which `index.html` links by an absolute path that Vite rewrites for the base path, so the hosted copy finds it under `/Anatomy/`.
+The file draws in the colors of the tokens and switches with `prefers-color-scheme` inside the SVG.
+The same drawing, a part, a connection, and the part it leads to, is `BrandMark` in `src/app/BrandMark.tsx`, which sits beside the word "Anatomy" in the top bar of the empty screen and takes its colors from the tokens.
+The page has two `theme-color` tags, one for each color scheme, in the color of the top bar (`--frame`).
+`public/theme.js` and `src/theme/theme.ts` give both tags the color of the theme in use, so the browser bar follows a stored choice and the settings menu.
+`scripts/identity.test.ts` holds the colors of the icon and of the tags to the tokens.
 
 ## The hosted copy
 
