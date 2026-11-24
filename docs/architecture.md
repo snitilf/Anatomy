@@ -186,6 +186,7 @@ The room at the bottom also holds one toast, in the slot above the tool bars whe
 The fit leaves the same room with the hint and without it, so a toast never lands on a card of a fitted view.
 The map sets `--toast-base` (the toast's distance from the bottom of the window) and `--toast-x` (the middle of the map), and the toaster reads them.
 A walkthrough bar sets `--toast-floor` instead, which puts the toast above the bar.
+The map sets the two values only while the map is in front: under the Overview, and in the how-to dialog, a toast sits in the middle of the window.
 
 The map has three detail levels, chosen from the zoom:
 - `full`, at 75% and up: cards show their title, summary, and badges, with every line and label.
