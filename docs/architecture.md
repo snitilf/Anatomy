@@ -389,6 +389,13 @@ It shows a Review tab while a new revision, a note, or an answer needs a look.
 The app keeps the width of the sidebar (300 to 520) and whether it is open, for each browser.
 On a screen 760 px wide or less, the sidebar is a bottom sheet with three stops.
 The user drags the sheet by its header only.
+A lesson dialog is not part of the sidebar, so resizing across that width keeps it open, with its run.
+The open lesson is held in the screen state and drawn once, by the shell (`src/app/LessonHost.tsx`).
+It closes when another board opens, when the board closes, or when a new revision of the same board no longer has the part that opened it with that lesson.
+Closing it returns focus to the lesson row that stands on the screen then.
+Inert, hidden, and below-the-screen places are skipped.
+If no row can take it, focus goes to the panel heading, then the first control of the panel, then the Overview page, then the Show sidebar button, then Search (`src/app/lessonFocus.ts`).
+Focus never falls to the page.
 A part and a connection always show a Source row, also when the source is the agent's own explanation.
 Once the user has made something, the Yours list on the overview has a Status key button.
 It opens the seven status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).

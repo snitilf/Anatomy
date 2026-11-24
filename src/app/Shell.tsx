@@ -11,6 +11,7 @@ import { FIRST_BOARD_PROMPT } from './agentPrompts'
 import { copyText } from './clipboard'
 import { Dialogs } from './Dialogs'
 import { EmptyState } from './EmptyState'
+import { LessonHost } from './LessonHost'
 import { ChunkBoundary } from './ChunkBoundary'
 import { Notices } from './Notices'
 import { readFileText } from './openFile'
@@ -277,6 +278,7 @@ function ShellBody() {
         <input ref={input} type="file" name="board-file" accept=".json,application/json" hidden onChange={onPicked} aria-label="Board file" />
         <RestoreFocus pending={restoreFocus} restore={() => focusIfLost(lastOnMap.current)} />
         <Dialogs />
+        <LessonHost />
         {howToSeen && (
           <ChunkBoundary
             fallback={null}

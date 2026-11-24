@@ -19,6 +19,11 @@ export interface UiState {
   /** The Send to agent popover. */
   sendOpen: boolean
   howToOpen: boolean
+  /**
+   * The lesson dialog that is open. It is held here, not in the row that opened it, so it survives the sidebar becoming the phone sheet.
+   * `opener` names the row to give focus back to when it closes: the id of the part the lesson belongs to.
+   */
+  lesson?: { id: string; opener: string } | undefined
   lineKeyOpen: boolean
   /** The phone bottom sheet: 0 shows only its header, 1 half the screen, 2 the full height. */
   sheet: 0 | 1 | 2
@@ -85,6 +90,8 @@ export interface UiApi {
   setMenuOpen(open: boolean): void
   setSendOpen(open: boolean): void
   setHowToOpen(open: boolean): void
+  openLesson(id: string, opener: string): void
+  closeLesson(): void
   setLineKeyOpen(open: boolean): void
   setSheet(stop: UiState['sheet']): void
   askLinkPicker(): void
@@ -131,6 +138,8 @@ export function createUi(): UiApi {
     setMenuOpen: (menuOpen) => store.setState({ menuOpen }),
     setSendOpen: (sendOpen) => store.setState({ sendOpen }),
     setHowToOpen: (howToOpen) => store.setState({ howToOpen }),
+    openLesson: (id, opener) => store.setState({ lesson: { id, opener } }),
+    closeLesson: () => store.setState((s) => (s.lesson === undefined ? s : { lesson: undefined })),
     setLineKeyOpen: (lineKeyOpen) => store.setState({ lineKeyOpen }),
     setSheet: (sheet) => store.setState({ sheet }),
     askLinkPicker: () => store.setState((s) => ({ linkPicker: s.linkPicker + 1 })),
