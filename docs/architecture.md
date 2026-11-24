@@ -143,15 +143,26 @@ Panning stops a margin past the content.
 React Flow applies the limits only to panning by the user.
 For this reason, every camera move that the app makes goes through `clampViewport`.
 
-When a board opens, the camera always fits the whole board in the free map area (leaving room for notices at the top and floating controls at the bottom).
-The map has three detail levels driven by the zoom, with hysteresis bands at both boundaries so a small resize does not flip the level back and forth:
-- `full` (75% and up, exiting `title` at 79%): cards show titles, summaries, and badges, with all lines and labels.
-- `title` (45% to 75%, exiting `far` at 49%): cards show titles alone and keep every individual line and label.
-- `far` (below 45%): groups show as named blocks and lines bundle per pair of groups.
-Opening a board picks the detail level from its fit zoom alone.
-Across all levels, card titles and line labels scale up so they never draw under 11 px on screen.
+When a board opens, the camera fits the whole board in the free part of the map: below the notices, and above the hint, the tool bars, and the line that says what is hidden.
+The view stays fitted while the reader leaves it alone.
+A new size of the map, or of what covers it, frames the whole board again.
+Until the reader first presses, types, or scrolls, so does the first layout settling, for example when the fonts load and the cards are measured again.
+Once the reader has moved the view, a new size of the map keeps the middle of the view and the zoom.
+
+The map has three detail levels, chosen from the zoom:
+- `full`, at 75% and up: cards show their title, summary, and badges, with every line and label.
+- `title`, from 45% to 75%: cards show their title alone, centred at 12 px on screen, and keep every line and label.
+  A card holds as many lines of title as fit inside it, from one to three.
+- `far`, below 45%: groups show as named blocks, and lines bundle per pair of groups.
+
+Opening a board picks the level from its fit zoom alone.
+After that, each boundary has a band: the map leaves the title level for full cards only at 79%, and leaves the far view only at 49%.
+For this reason, a resize of a few pixels at a boundary does not flip the level back and forth.
+At every level, card titles and line labels are drawn larger on the board so that they are never under 11 px on screen.
+Label placement does not know the zoom, so each label keeps clear of the room that the labels around it grow into at the low end of the title level.
+A label that finds no such place keeps clear of a smaller room, and takes the place that overlaps the others least.
 On a crowded map, connection labels show below 90% zoom only for the selection and for the card under the pointer.
-Whenever a view hides lines or labels, a status line in the bottom right says what is hidden.
+Whenever a view hides lines or labels, a quiet line in the bottom right of the map says what is hidden.
 
 ## User layer, version 2
 
