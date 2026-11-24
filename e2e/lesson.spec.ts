@@ -82,3 +82,18 @@ test('the tab touches the dropped pin in plain view on a second send', async ({ 
   await expect(atStop(lesson, 'ledger')).toHaveCount(1)
   expect(await tabInView(page)).toBe(true)
 })
+
+test('after two sends the outbox holds the second card, and both pins are down', async ({ page }) => {
+  const lesson = await openLesson(page)
+  await lesson.getByRole('button', { name: /^Approve/ }).click()
+  await lesson.getByRole('button', { name: /^Send/ }).click()
+  await settle(lesson)
+  await lesson.getByRole('button', { name: /^Edit message/ }).click()
+  await lesson.getByRole('button', { name: /^Approve/ }).click()
+  await lesson.getByRole('button', { name: /^Send/ }).click()
+  await settle(lesson)
+  await expect(lesson.locator('[data-part="outbox"]')).toHaveAttribute('data-version', '2')
+  await expect(part(lesson, 'pin', 1)).toHaveAttribute('data-pose', 'down')
+  await expect(part(lesson, 'pin', 2)).toHaveAttribute('data-pose', 'down')
+  await expect(part(lesson, 'pin', 3)).toHaveAttribute('data-pose', 'up')
+})

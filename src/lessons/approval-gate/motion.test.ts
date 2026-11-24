@@ -214,3 +214,82 @@ describe('reduced motion', () => {
     expect(end(played.run).card).toBe(REACH_GATE)
   })
 })
+
+describe('delivery', () => {
+  const to = (events: LessonEvent[]) =>
+    events.reduce<{ state: LessonState; pose: Pose }>(
+      (acc, e) => {
+        const played = play(e, acc.state, acc.pose)
+        return played ? { state: played.next, pose: end(played.run) } : acc
+      },
+      { state: initialState, pose: rest0() },
+    )
+  const secondSend = () => {
+    const { state, pose } = to(['approve', 'trySend', 'edit', 'approve'])
+    const played = play('trySend', state, pose)
+    if (!played) throw new Error('no run')
+    return played.run
+  }
+
+  it('never drives the card through the outbox card that is already there', () => {
+    const run = secondSend()
+    const backOfOutbox = CARD.x + TRAVEL_END
+    let seen = false
+    for (let t = 0; t <= run.duration; t += 5) {
+      const pose = poseAt(run, t)
+      if (pose.outboxAlpha > 0.05 && pose.cardAlpha > 0.05) {
+        seen = true
+        expect(CARD.x + CARD.w + pose.card, `at ${t} ms`).toBeLessThanOrEqual(backOfOutbox + 0.01)
+      }
+    }
+    expect(seen).toBe(true)
+  })
+
+  it('sinks the previous outbox card on a beat, and has no such beat for the first delivery', () => {
+    expect(secondSend().beats.filter((b) => b.kind === 'outboxOut')).toHaveLength(1)
+    const { state, pose } = to(['approve'])
+    const first = play('trySend', state, pose)
+    expect(first?.run.beats.some((b) => b.kind === 'outboxOut')).toBe(false)
+  })
+
+  it('changes the stamp of the outbox card only while no outbox card is drawn', () => {
+    const run = secondSend()
+    let last = poseAt(run, 0)
+    for (let t = 5; t <= run.duration; t += 5) {
+      const now = poseAt(run, t)
+      if (now.outboxVersion !== last.outboxVersion) expect(last.outboxAlpha, `at ${t} ms`).toBeLessThanOrEqual(0.05)
+      last = now
+    }
+  })
+
+  it('keeps the pusher out of the card at every moment the card is drawn', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const rand = random(seed * 104729)
+      let state = initialState
+      let pose = rest0()
+      for (const event of sequence(rand, 2 + Math.floor(rand() * 10))) {
+        const played = play(event, state, pose)
+        if (!played) continue
+        for (let t = 0; t <= played.run.duration; t += 8) {
+          const now = poseAt(played.run, t)
+          if (now.cardAlpha > 0.05) expect(now.push, `seed ${seed} ${event} at ${t} ms`).toBeLessThanOrEqual(now.card + 0.01)
+        }
+        state = played.next
+        pose = poseAt(played.run, rand() < 0.5 ? rand() * played.run.duration : played.run.duration + 1)
+      }
+    }
+  })
+
+  it('feeds the fresh card in only after the pusher has come home', () => {
+    const { state, pose } = to(['approve'])
+    const played = play('trySend', state, pose)
+    if (!played) throw new Error('no run')
+    let hidden = false
+    for (let t = 0; t <= played.run.duration; t += 5) {
+      const now = poseAt(played.run, t)
+      if (now.cardAlpha <= 0.05) hidden = true
+      else if (hidden) expect(now.push, `at ${t} ms`).toBeLessThanOrEqual(0.51)
+    }
+    expect(hidden).toBe(true)
+  })
+})
