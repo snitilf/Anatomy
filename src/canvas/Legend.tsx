@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
-import { CircleHelp } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { Tip } from '../app/Tip'
 import { SOURCE_LABEL } from '../app/labels'
 import { useUi, useUiApi } from '../app/ui'
@@ -18,7 +18,7 @@ export function LineKey() {
     <Popover.Root open={open} onOpenChange={ui.setLineKeyOpen}>
       <Tip label="Line key" side="top">
         <Popover.Trigger className={styles.button} aria-label="Line key">
-          <CircleHelp size={16} strokeWidth={1.5} aria-hidden="true" />
+          <KeyRound size={16} strokeWidth={1.5} aria-hidden="true" />
         </Popover.Trigger>
       </Tip>
       <Popover.Portal>
