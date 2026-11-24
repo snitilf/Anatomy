@@ -313,19 +313,25 @@ function settleParts(plan: Plan, target: Pose, skipPin: number | null) {
     const lift = keyLiftOf(v)
     const alpha = keyAlphaOf(v)
     let fingerStart = entry + 200
+    let dropping = false
     if (target[alpha] > plan.cur[alpha]) {
-      // The key drops onto its finger, and then that finger lifts. A key that is already on its way down has less to cover,
-      // so its finger waits only for what is left.
+      // The key drops onto its finger, and then that finger lifts.
       if (plan.cur[alpha] <= 0.05) plan.go(lift, 1, entry, 0)
-      const left = plan.cur[lift]
-      plan.go(lift, 0, entry, Math.round(240 * Math.max(left, 0.25)), OUT)
       plan.go(alpha, 1, entry, 120, OUT)
-      fingerStart = entry + Math.max(0, 200 - dropElapsed(left))
+      dropping = true
     } else if (target[alpha] < plan.cur[alpha]) {
       plan.go(alpha, 0, 0, 160, OUT)
       plan.go(lift, 1, 0, 160, OUT)
-    } else if (plan.cur[lift] > 0 && target[lift] === 0) {
-      plan.go(lift, 0, 0, 120, OUT)
+    } else {
+      // The key is already drawn, and may still be on its way down.
+      dropping = target[alpha] === 1
+    }
+    if (dropping) {
+      // A key that has already dropped part of the way has less to cover, and its finger waits only for what is left.
+      const left = plan.cur[lift]
+      const elapsed = dropElapsed(left)
+      if (left > 0) plan.go(lift, 0, entry, Math.max(40, Math.round(240 - elapsed)), OUT)
+      fingerStart = entry + Math.max(0, 200 - elapsed)
     }
     if (plan.cur[finger] !== target[finger]) {
       if (target[finger] > plan.cur[finger]) {
