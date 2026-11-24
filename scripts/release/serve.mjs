@@ -3,7 +3,7 @@
 // It has no packages to install and makes no request of its own.
 import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
-import { dirname, extname, join } from 'node:path'
+import { dirname, extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HOST = '127.0.0.1'
@@ -22,18 +22,25 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 }
 
-/** The file inside `dist` for a request path, or `undefined` when the path is not valid or leaves the folder. */
+/**
+ * The file inside `dist` for a request path, or `undefined` when the path is not valid or leaves the folder.
+ * The raw path is checked before any URL parsing, because a parser reads `//host/...` and `/\\host` as another host and
+ * folds `%2e%2e` away before the segments can be checked.
+ */
 function fileFor(rawUrl) {
-  let pathname
+  const raw = rawUrl.split(/[?#]/, 1)[0] ?? ''
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return undefined
+  let rest
   try {
-    pathname = decodeURIComponent(new URL(rawUrl, 'http://host').pathname)
+    rest = decodeURIComponent(raw.slice(1))
   } catch {
     return undefined
   }
-  const rest = pathname.slice(1)
   if (rest.startsWith('/') || rest.includes('\0') || rest.includes('\\')) return undefined
-  if (rest.split('/').some((part) => part === '..')) return undefined
-  return rest === '' || rest.endsWith('/') ? `${rest}index.html` : rest
+  if (rest.split('/').some((part) => part === '..' || part === '.')) return undefined
+  const file = rest === '' || rest.endsWith('/') ? `${rest}index.html` : rest
+  // A last guard: the resolved file must sit inside the build folder.
+  return resolve(folder, file).startsWith(folder + sep) ? file : undefined
 }
 
 const server = createServer((req, res) => {
@@ -56,14 +63,14 @@ const server = createServer((req, res) => {
 })
 
 const requested = process.argv[2]
-const port = requested === undefined ? DEFAULT_PORT : Number(requested)
+const port = requested === undefined ? DEFAULT_PORT : /^\d+$/.test(requested) ? Number(requested) : Number.NaN
 if (!Number.isInteger(port) || port < 0 || port > 65535) {
   console.error(`"${requested}" is not a port. Use a number from 0 to 65535, for example: node serve.mjs 4200`)
   process.exit(1)
 }
 
 server.once('error', (error) => {
-  console.error(error.code === 'EADDRINUSE' ? `Port ${port} is in use. Try another one, for example: node serve.mjs ${port + 1}` : error.message)
+  console.error(error.code === 'EADDRINUSE' ? `Port ${port} is in use. Try another one, for example: node serve.mjs ${port === 65535 ? 4200 : port + 1}` : error.message)
   process.exit(1)
 })
 server.listen(port, HOST, () => {
