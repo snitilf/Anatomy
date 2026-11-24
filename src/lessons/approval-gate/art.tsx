@@ -1,5 +1,5 @@
 /** Static art for the dispatch press, built from the geometry module. Parts that move are wrapped by the lesson. */
-import type { Ref } from 'react'
+import { useMemo, type Ref } from 'react'
 import { Dots, FaceText, Line, Solid } from '../kit/react/draw'
 import {
   BASE_ART,
@@ -19,6 +19,7 @@ import {
   NUMBER_SIZE,
   PIN_ART,
   PUSHER_ART,
+  SLOTS,
   SHUTTER_ART,
   STACK_SHIFT,
   STAMP_SIZE,
@@ -215,7 +216,13 @@ export interface GateProps {
   litVersion: number | null
 }
 
+/** One ref callback per slot, so React keeps the same callback between renders and never detaches a part. */
+function useSlotRefs(ref: (version: number, node: SVGGElement | null) => void) {
+  return useMemo(() => Array.from({ length: SLOTS }, (_, i) => (node: SVGGElement | null) => ref(i + 1, node)), [ref])
+}
+
 export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProps) {
+  const fingerRefs = useSlotRefs(fingerRef)
   return (
     <g>
       <Post parts={GATE_ARCH.far} />
@@ -224,7 +231,7 @@ export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProp
       {FINGER_ART.fingers.map((finger) => {
         const key = FINGER_ART.keys[finger.v - 1]
         return (
-          <g key={finger.v} ref={(node) => fingerRef(finger.v, node)} data-part="finger" data-slot={finger.v} data-pose="down">
+          <g key={finger.v} ref={fingerRefs[finger.v - 1]} data-part="finger" data-slot={finger.v} data-pose="down">
             <Solid paths={finger.body} tone="mid" lit={litVersion === finger.v} />
             <Line d={finger.eye} tone="lo" />
             <Line d={finger.groove} tone="faint" />
@@ -256,6 +263,7 @@ export interface LedgerProps {
 }
 
 export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
+  const pinRefs = useSlotRefs(pinRef)
   return (
     <g>
       <Post parts={LEDGER_ARCH.far} />
@@ -265,7 +273,7 @@ export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
         const down = dropped.includes(pin.v)
         const lit = litVersion === pin.v
         return (
-          <g key={pin.v} ref={(node) => pinRef(pin.v, node)} data-part="pin" data-slot={pin.v} data-pose="up">
+          <g key={pin.v} ref={pinRefs[pin.v - 1]} data-part="pin" data-slot={pin.v} data-pose="up">
             <Solid paths={pin.rod} tone={down ? 'hi' : 'mid'} lit={lit} crease="none" />
             <Line d={pin.band} tone="faint" />
             <Solid paths={pin.cap} tone={down ? 'hi' : 'mid'} lit={lit} />

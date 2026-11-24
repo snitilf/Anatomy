@@ -402,11 +402,9 @@ export default function ApprovalGateLesson() {
   const lit = litOf(state)
   const litFinger = lit.kind === 'finger' ? lit.version : null
   const litPin = lit.kind === 'pin' ? lit.version : null
-  const setIn = (list: RefObject<Array<SVGGElement | null>>) => (index: number, node: SVGGElement | null) => {
-    list.current[index] = node
-  }
-  const setFinger = setIn(fingerRefs)
-  const setPin = setIn(pinRefs)
+  const setFinger = useCallback((version: number, node: SVGGElement | null) => void (fingerRefs.current[version - 1] = node), [])
+  const setPin = useCallback((version: number, node: SVGGElement | null) => void (pinRefs.current[version - 1] = node), [])
+  const setKey = useCallback((node: SVGGElement | null) => void (keyRef.current = node), [])
   const setLayer = (list: RefObject<Array<SVGGElement | null>>, layer: number) => (node: SVGGElement | null) => {
     list.current[layer] = node
   }
@@ -439,7 +437,7 @@ export default function ApprovalGateLesson() {
             {slide(3)}
             <LedgerArch pinRef={setPin} dropped={visual.delivered} litVersion={litPin} />
             {slide(2)}
-            <GateArch fingerRef={setFinger} keyRef={(node) => void (keyRef.current = node)} keyVersion={visual.keyVersion} litVersion={litFinger} />
+            <GateArch fingerRef={setFinger} keyRef={setKey} keyVersion={visual.keyVersion} litVersion={litFinger} />
             {slide(1)}
             <LockArch shutterRef={shutterRef} lit={lit.kind === 'shutter'} />
             {slide(0)}
