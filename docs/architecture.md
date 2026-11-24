@@ -143,10 +143,15 @@ Panning stops a margin past the content.
 React Flow applies the limits only to panning by the user.
 For this reason, every camera move that the app makes goes through `clampViewport`.
 
-When a board opens, the camera fits the whole board if the fit leaves text readable, which means a zoom of 75% or more.
-If the fit is below 75%, the camera shows the start of the flow at 80%.
-A board with more than 15 parts always opens fitted whole.
+When a board opens, the camera always fits the whole board in the free map area (leaving room for notices at the top and floating controls at the bottom).
+The map has three detail levels driven by the zoom, with hysteresis bands at both boundaries so a small resize does not flip the level back and forth:
+- `full` (75% and up, exiting `title` at 79%): cards show titles, summaries, and badges, with all lines and labels.
+- `title` (45% to 75%, exiting `far` at 49%): cards show titles alone and keep every individual line and label.
+- `far` (below 45%): groups show as named blocks and lines bundle per pair of groups.
+Opening a board picks the detail level from its fit zoom alone.
+Across all levels, card titles and line labels scale up so they never draw under 11 px on screen.
 On a crowded map, connection labels show below 90% zoom only for the selection and for the card under the pointer.
+Whenever a view hides lines or labels, a status line in the bottom right says what is hidden.
 
 ## User layer, version 2
 
