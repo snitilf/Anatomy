@@ -44,7 +44,7 @@ React components read from the app state and dispatch actions.
 | `src/scenarios/` | The walkthrough bar: step state, highlights, captions. | `src/app/`, `src/commands/` |
 | `src/notes/` | Note targets in words, the review counts after an update, and the undo toast. | `src/layer/`, `src/app/` |
 | `src/theme/` | Theme choice (system, light, dark), stored in `localStorage` and applied as `data-theme` on `<html>`. An inline script in `index.html` applies it before the first paint. | `react` |
-| `src/styles/` | Design tokens: colors for both themes (white cards on a cool low-chroma ground in light mode, clean amber for user marks, and a full contrast matrix checked in `tokens.test.ts`), type scale, spacing, radii, and the one shadow for floating surfaces. | none |
+| `src/styles/` | Design tokens: colors for both themes (checked for contrast in `tokens.test.ts`), type scale, spacing, radii, and the one shadow for floating surfaces. | none |
 
 ## Cards and the map
 
