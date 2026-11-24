@@ -7,7 +7,7 @@ import { useTheme } from '../../theme/theme'
 import './lesson.css'
 import { HEIGHT, LIFT, PITCH, REACH_GATE, REACH_LEDGER, REACH_LOCK, SHUTTER_LIFT, SLOTS, SWITCH_TRAVEL, TAB_TIP, TRAVEL_END, WIDTH, shift } from './geometry'
 import { MAX_VERSION, canEdit, caption, initialState, readout, step as stepModel, type LessonEvent, type LessonState } from './model'
-import { fingerOf, keyAlphaOf, keyLiftOf, pinOf, planRun, poseAt, restPose, type Pose, type Run } from './motion'
+import { fingerOf, keyAlphaOf, keyLiftOf, pinOf, planRun, poseAt, restPose, shownAfter, type Pose, type Run } from './motion'
 import { litOf, tabLayerOf } from './scene'
 
 const TAB_LAYERS = [0, 1, 2, 3] as const
@@ -71,8 +71,24 @@ interface Engine {
   /** The pose on screen now. A new run starts from it, so nothing snaps. */
   pose: Pose
   run: Run | null
+  /** How many beats of the run have fired. */
+  fired: number
   /** The frame time the run started at. Null until its first frame. */
   startedAt: number | null
+}
+
+/** The polite live region. It clears and sets again, so a repeated outcome is read out again. */
+function Announcer({ text, count }: { text: string; count: number }) {
+  const region = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const node = region.current
+    if (!node) return
+    node.textContent = ''
+    if (count === 0) return
+    const timer = window.setTimeout(() => void (node.textContent = text), 60)
+    return () => window.clearTimeout(timer)
+  }, [text, count])
+  return <div ref={region} className="ag-sr" role="status" aria-live="polite" />
 }
 
 const LABEL =
@@ -84,10 +100,14 @@ export default function ApprovalGateLesson() {
   const dark = useTheme() === 'dark'
   const still = useStillness()
   const stillRef = useRef(still)
+  /** What the model says now. It enables the buttons and feeds the next event. */
   const [state, setState] = useState<LessonState>(initialState)
-  const [announcement, setAnnouncement] = useState('')
+  /** What the picture has shown so far. The words, the readout and the lit part follow it, so they never run ahead of the picture. */
+  const [shown, setShown] = useState<LessonState>(initialState)
+  const [commits, setCommits] = useState(0)
   const stateRef = useRef(state)
-  const engine = useRef<Engine>({ pose: restPose(initialState, 'home'), run: null, startedAt: null })
+  const shownRef = useRef(shown)
+  const engine = useRef<Engine>({ pose: restPose(initialState, 'home'), run: null, fired: 0, startedAt: null })
   const stage = useRef<HTMLDivElement>(null)
   const visible = useVisible(stage)
 
@@ -105,7 +125,6 @@ export default function ApprovalGateLesson() {
   const shutterRef = useRef<SVGGElement | null>(null)
   const knobRef = useRef<SVGGElement | null>(null)
   const lampRef = useRef<SVGGElement | null>(null)
-  const announceTimer = useRef(0)
 
   useEffect(() => {
     stillRef.current = still
@@ -172,6 +191,22 @@ export default function ApprovalGateLesson() {
     put(lampRef.current, 'opacity', clamp01(p.power))
   }, [])
 
+  /** Fires the beats of the running run that are due by `upTo` ms, or every one that is left. */
+  const fire = useCallback((upTo: number) => {
+    const e = engine.current
+    const run = e.run
+    if (!run) return
+    const due = run.beats.slice(e.fired).filter((beat) => beat.at <= upTo)
+    if (due.length === 0) return
+    e.fired += due.length
+    const next = shownAfter(shownRef.current, run, due)
+    if (next !== shownRef.current) {
+      shownRef.current = next
+      setShown(next)
+      setCommits((n) => n + 1)
+    }
+  }, [])
+
   const tick = useCallback(
     (now: number) => {
       const e = engine.current
@@ -179,14 +214,16 @@ export default function ApprovalGateLesson() {
       if (!run) return false
       e.startedAt ??= now
       const t = now - e.startedAt
+      fire(t)
       e.pose = poseAt(run, t)
       write(e.pose)
       if (t < run.duration) return true
+      fire(Infinity)
       e.run = null
       put(root.current, 'data-settled', 'true')
       return false
     },
-    [write],
+    [write, fire],
   )
 
   const kick = useFrameLoop(tick, visible)
@@ -200,23 +237,20 @@ export default function ApprovalGateLesson() {
     (event: LessonEvent) => {
       const before = stateRef.current
       if (event === 'edit' && !canEdit(before)) return
+      // Whatever the running run still has to say is said now, so the words catch up with the model before the next event starts.
+      fire(Infinity)
       const next = stepModel(before, event)
       stateRef.current = next
       setState(next)
       const e = engine.current
       e.run = planRun(event, before, next, e.pose, stillRef.current)
+      e.fired = 0
       e.startedAt = null
-      const text = caption(next)
-      window.clearTimeout(announceTimer.current)
-      setAnnouncement('')
-      announceTimer.current = window.setTimeout(() => setAnnouncement(text), 60)
       put(root.current, 'data-settled', 'false')
       kick()
     },
-    [kick],
+    [kick, fire],
   )
-
-  useEffect(() => () => window.clearTimeout(announceTimer.current), [])
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
@@ -226,7 +260,7 @@ export default function ApprovalGateLesson() {
     dispatch(action)
   }
 
-  const lit = litOf(state)
+  const lit = litOf(shown)
   const litFinger = lit.kind === 'finger' ? lit.version : null
   const litPin = lit.kind === 'pin' ? lit.version : null
   const setFinger = useCallback((version: number, node: SVGGElement | null) => void (fingerRefs.current[version - 1] = node), [])
@@ -249,12 +283,12 @@ export default function ApprovalGateLesson() {
         fig="Fig 1"
         title="Approval gate"
         hint="Keys: A approve · R reject · E edit · S send"
-        readout={readout(state)}
+        readout={readout(shown)}
         keys={[{ mark: 'lit', label: 'The lit part shows why' }]}
-        caption={caption(state)}
+        caption={caption(shown)}
       >
         <div className="iso-stage" ref={stage}>
-          <svg className="iso-svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${LABEL} ${readout(state)}.`} focusable="false">
+          <svg className="iso-svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${LABEL} ${readout(shown)}.`} focusable="false">
             <Base />
             <Deck />
             <g ref={cardRef} data-part="card" data-stop="home" data-version="1">
@@ -265,7 +299,7 @@ export default function ApprovalGateLesson() {
             </g>
             <Outbox groupRef={outboxRef} tabRef={outboxTabRef} stampRef={setOutboxStamp} />
             {tabLayer(3)}
-            <LedgerArch pinRef={setPin} dropped={state.sent} litVersion={litPin} />
+            <LedgerArch pinRef={setPin} dropped={shown.sent} litVersion={litPin} />
             {tabLayer(2)}
             <GateArch fingerRef={setFinger} keyRef={setKey} litVersion={litFinger} />
             {tabLayer(1)}
@@ -299,9 +333,7 @@ export default function ApprovalGateLesson() {
         </button>
       </div>
 
-      <div className="ag-sr" role="status" aria-live="polite">
-        {announcement}
-      </div>
+      <Announcer text={caption(shown)} count={commits} />
 
       <section className="ag-notes" aria-label="About this model">
         <div>

@@ -26,15 +26,15 @@ describe('ApprovalGateLesson', () => {
     expect(screen.getAllByRole('term')).toHaveLength(3)
   })
 
-  it('follows the model through the buttons and keys', () => {
+  it('follows the model through the buttons and keys', async () => {
     render(<ApprovalGateLesson />)
     expect(screen.getByText('v1 undecided · sent none')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Approve/ }))
-    expect(screen.getByText('v1 approved · sent none')).toBeInTheDocument()
+    expect(await screen.findByText('v1 approved · sent none')).toBeInTheDocument()
     fireEvent.keyDown(screen.getByRole('group', { name: 'Approval gate lesson' }), { key: 'e' })
-    expect(screen.getByText('v2 undecided · old key v1 · sent none')).toBeInTheDocument()
+    expect(await screen.findByText('v2 undecided · old key v1 · sent none')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Reset lesson/ }))
-    expect(screen.getByText('v1 undecided · sent none')).toBeInTheDocument()
+    expect(await screen.findByText('v1 undecided · sent none')).toBeInTheDocument()
   })
 
   it('announces the outcome in a polite live region once the picture shows it', async () => {

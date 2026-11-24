@@ -44,7 +44,7 @@ test('the card body is drawn once, under every arch, and the tab is layered betw
       return part ? [part] : []
     })
   })
-  expect(order).toEqual(['card', 'pusher', 'tab:3', 'arch:ledger', 'tab:2', 'arch:gate', 'tab:1', 'arch:lock', 'tab:0'])
+  expect(order).toEqual(['card', 'pusher', 'outbox', 'tab:3', 'arch:ledger', 'tab:2', 'arch:gate', 'tab:1', 'arch:lock', 'tab:0'])
 })
 
 /** The middle of the tab must be the tab, not a bar, a post or a shutter drawn over it. */
