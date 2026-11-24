@@ -129,7 +129,9 @@ export function caption(state: LessonState): string {
     case 'approved':
       return `Approved version ${v}. The key is cut for version ${v}, so only a card stamped ${v} can pass the gate.`
     case 'rejected':
-      return `Rejected version ${v}. The lockout bar is down, and this version can never be sent.`
+      return isSent(state)
+        ? `Rejected version ${v} after it went out. The lockout bar is down, and the saved record already stops a second send.`
+        : `Rejected version ${v}. The lockout bar is down, and this version can never be sent.`
     case 'edited':
       return hasStaleApproval(state)
         ? `Edited to version ${v}. The old key still fits version ${state.approvedVersion}, not version ${v}, so it no longer counts.`
