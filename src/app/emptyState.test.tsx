@@ -1,11 +1,13 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { commandById } from '../commands/list'
+import { EXAMPLE_OUTLINES } from './exampleOutlines.generated'
 import { EXAMPLES } from './examples'
+import { unpackOutline } from './outline'
 
 interface OutlineRect {
   x: number
@@ -26,6 +28,7 @@ interface ExpectedOutline {
 }
 
 const root = process.cwd()
+const outlineOf = (example: { fileName: string }) => unpackOutline(EXAMPLE_OUTLINES[example.fileName]) as ExpectedOutline | undefined
 const boards = import.meta.glob('../examples/*.board.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 const byFile = new Map(Object.entries(boards).map(([path, text]) => [path.split('/').pop()!, JSON.parse(text) as { components: unknown[]; relationships: unknown[]; groups?: unknown[]; scenarios?: unknown[] }]))
 
@@ -44,7 +47,7 @@ describe('example outlines', () => {
   it.each(EXAMPLES.map((e) => [e.id, e] as const))('%s has a precomputed outline matching its real board', (_id, example) => {
     const board = byFile.get(example.fileName)
     expect(board).toBeDefined()
-    const outline = example.outline as ExpectedOutline | undefined
+    const outline = outlineOf(example)
     expect(outline, `${example.id} has an outline`).toBeDefined()
     expect(outline!.width).toBeGreaterThan(0)
     expect(outline!.height).toBeGreaterThan(0)
@@ -67,15 +70,16 @@ describe('example outlines', () => {
 })
 
 describe('the empty screen', () => {
-  it('draws a live SVG map preview for every example matching its outline', () => {
+  it('draws a live SVG map preview for every example matching its outline', async () => {
     render(<App />)
     const main = within(screen.getByRole('main'))
     for (const example of EXAMPLES) {
-      const outline = example.outline as ExpectedOutline | undefined
+      const outline = outlineOf(example)
       expect(outline, `${example.id} has an outline`).toBeDefined()
       const preview = main.getByTestId(`example-preview-${example.id}`)
+      // The outlines load on a script of their own, right after the screen first paints.
+      await waitFor(() => expect(preview.querySelector('svg'), `${example.id} renders an SVG preview`).not.toBeNull())
       const svg = preview.querySelector('svg')
-      expect(svg, `${example.id} renders an SVG preview`).not.toBeNull()
       expect(svg!.querySelectorAll('[data-outline-card]')).toHaveLength(outline!.cards.length)
       expect(svg!.querySelectorAll('[data-outline-line]')).toHaveLength(outline!.lines.length)
       expect(svg!.querySelectorAll('[data-outline-group]')).toHaveLength(outline!.groups.length)

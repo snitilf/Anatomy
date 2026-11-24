@@ -1,25 +1,16 @@
 import clsx from 'clsx'
+import { lazy, Suspense, useId, type ReactNode } from 'react'
 import { useCommand } from '../commands/context'
 import buttons from './buttons.module.css'
+import { ChunkBoundary } from './ChunkBoundary'
 import styles from './EmptyState.module.css'
-import { EXAMPLES, openExample } from './examples'
-import type { BoardOutline } from './outline'
+import { EXAMPLES, openExample, type Example } from './examples'
 import { SavedBoardList } from './SavedBoards'
 import { useWorkspace } from './workspaceContext'
 
-const STEPS = [
-  ['Open your project', 'Pick a folder to watch, or open a board file.', ''],
-  ['Paste the prompt', 'Give it to your agent to write ', '.anatomy/board.json'],
-  ['The map opens here', 'Explore it, mark it up, and send questions back.', ''],
-] as const
-
-const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`
-
-function outlineMeta(o: BoardOutline | undefined): string | null {
-  if (!o) return null
-  const parts = plural(o.parts, 'part')
-  return o.walkthroughs > 0 ? `${parts} · ${plural(o.walkthroughs, 'walkthrough')}` : parts
-}
+// The outlines and the code that draw them load on their own script, right after the start screen first paints. A card still works without them.
+const MapPreview = lazy(() => import('./ExamplePreview').then((m) => ({ default: m.MapPreview })))
+const MapCounts = lazy(() => import('./ExamplePreview').then((m) => ({ default: m.MapCounts })))
 
 /** The first line, an optional second line, and the actions, which depend on the folder and the browser. */
 function Lead() {
@@ -31,12 +22,12 @@ function Lead() {
 
   if (folder?.state === 'missing') {
     return (
-      <header>
-        <h2>{folder.name} has no board yet.</h2>
-        <p>
-          It opens here when your agent writes <code>.anatomy/board.json</code>.
+      <header className={styles.lead}>
+        <h2 className={styles.title}>{folder.name} has no board yet.</h2>
+        <p className={styles.hint}>
+          It opens here when your agent writes <code className={styles.path}>.anatomy/board.json</code>.
         </p>
-        <div>
+        <div className={styles.actions}>
           <button type="button" className={primary} onClick={copyPrompt.run}>
             Copy prompt
           </button>
@@ -53,10 +44,10 @@ function Lead() {
     </button>
   )
   return (
-    <header>
-      <h2>Open a repository to see its anatomy.</h2>
-      {!canOpenFolder && <p>This browser cannot open folders. Chrome and Edge can.</p>}
-      <div>
+    <header className={styles.lead}>
+      <h2 className={styles.title}>Open a repository to see its anatomy.</h2>
+      {!canOpenFolder && <p className={styles.hint}>This browser cannot open folders. Chrome and Edge can.</p>}
+      <div className={styles.actions}>
         {canOpenFolder && folder?.state === 'reopen' && (
           <>
             <button type="button" className={primary} onClick={reopenFolder}>
@@ -78,86 +69,123 @@ function Lead() {
   )
 }
 
+interface Step {
+  title: string
+  body: ReactNode
+}
+
+/** What to do with your own agent. The prompt lives in the how-to dialog in every browser, and only a browser that can open folders watches one. */
+function Steps() {
+  const { canOpenFolder } = useWorkspace()
+  const howTo = useCommand('howto')
+  const steps: readonly Step[] = [
+    { title: 'Copy the prompt', body: `Open Settings, then ${howTo.label}.` },
+    {
+      title: 'Give it to your agent',
+      body: canOpenFolder ? (
+        <>
+          It writes <code className={styles.path}>.anatomy/board.json</code> in your project.
+        </>
+      ) : (
+        'Save the JSON it writes as a file.'
+      ),
+    },
+    { title: canOpenFolder ? 'Open the project folder' : 'Open that file', body: 'The map opens here. Explore it, mark it up, and send questions back.' },
+  ]
+  return (
+    <section className={clsx(styles.section, styles.steps)} aria-labelledby="steps-title">
+      <h3 className={styles.sectionTitle} id="steps-title">
+        With your own agent
+      </h3>
+      <ol className={styles.stepList} data-testid="start-steps">
+        {steps.map((step, i) => (
+          <li key={step.title} className={styles.step}>
+            <span aria-hidden="true">
+              {i + 1}
+            </span>
+            <span>
+              <span>{step.title}</span>
+              <span>{step.body}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+/** One example as a button. The title names it, and the description and counts are its description. */
+function ExampleCard({ example }: { example: Example }) {
+  const { openText } = useWorkspace()
+  const id = useId()
+  return (
+    <button
+      type="button"
+      className={styles.card}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-text ${id}-meta`}
+      onClick={() => {
+        void openExample(example, (fileName, text) => openText(fileName, text, 'example'))
+      }}
+    >
+      <span className={styles.preview} data-testid={`example-preview-${example.id}`} aria-hidden="true">
+        <ChunkBoundary fallback={null}>
+          <Suspense fallback={null}>
+            <MapPreview example={example} className={styles.map} />
+          </Suspense>
+        </ChunkBoundary>
+      </span>
+      <span className={styles.cardBody}>
+        <strong id={`${id}-title`}>
+          {example.title}
+        </strong>
+        <span id={`${id}-text`}>
+          {example.description}
+        </span>
+        <small>
+          <ChunkBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <MapCounts example={example} id={`${id}-meta`} />
+            </Suspense>
+          </ChunkBoundary>
+        </small>
+      </span>
+    </button>
+  )
+}
+
 export function EmptyState() {
-  const { saved, unavailable, openText } = useWorkspace()
+  const { saved, unavailable } = useWorkspace()
   return (
     <div className={styles.empty}>
-      <div>
+      <div className={styles.column}>
         <Lead />
         {unavailable && (
-          <p role="status">
+          <p className={styles.problem} role="status">
             This browser blocks storage here, so nothing is saved. Download a copy to keep your work.
           </p>
         )}
         {saved.length > 0 && (
-          <section aria-labelledby="recent-title">
-            <h3 id="recent-title">Recent</h3>
+          <section className={clsx(styles.section, styles.recent)} aria-labelledby="recent-title">
+            <h3 className={styles.sectionTitle} id="recent-title">
+              Recent
+            </h3>
             <SavedBoardList />
           </section>
         )}
-        <section aria-labelledby="examples-title">
-          <h3 id="examples-title">Examples</h3>
-          <ul>
-            {EXAMPLES.map((example) => {
-              const o = example.outline
-              const meta = outlineMeta(o)
-              return (
-                <li key={example.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void openExample(example, (fileName, text) => openText(fileName, text, 'example'))
-                    }}
-                  >
-                    <div data-testid={`example-preview-${example.id}`} aria-hidden="true">
-                      <svg viewBox={`0 0 ${o && o.width > 0 ? o.width : 40} ${o && o.height > 0 ? o.height : 25}`} preserveAspectRatio="xMidYMid meet">
-                        {o?.groups.map((g, i) => (
-                          <rect key={i} data-outline-group="" x={g.x} y={g.y} width={g.w} height={g.h} rx={2.5} />
-                        ))}
-                        {o?.lines.map((d, i) => (
-                          <path key={i} data-outline-line="" d={d} />
-                        ))}
-                        {o?.cards.map((c, i) => (
-                          <g key={i} data-outline-card="">
-                            <rect x={c.x} y={c.y} width={c.w} height={c.h} rx={1.5} />
-                            <rect x={c.x + 3} y={c.y + c.h * 0.28} width={c.w * 0.54} height={Math.max(1.2, c.h * 0.13)} rx={0.8} />
-                            <rect x={c.x + 3} y={c.y + c.h * 0.56} width={c.w * 0.72} height={Math.max(1, c.h * 0.1)} rx={0.6} />
-                          </g>
-                        ))}
-                      </svg>
-                    </div>
-                    <span>
-                      <strong>{example.title}</strong>
-                      <span>{example.description}</span>
-                      {meta && <small>{meta}</small>}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-        <section aria-labelledby="steps-title">
-          <h3 id="steps-title">With your own agent</h3>
-          <ol data-testid="start-steps">
-            {STEPS.map(([title, body, code], i) => (
-              <li key={title}>
-                <span aria-hidden="true">{i + 1}</span>
-                <div>
-                  <p>{title}</p>
-                  <p>
-                    {body}
-                    {code && (
-                      <>
-                        <code>{code}</code>.
-                      </>
-                    )}
-                  </p>
-                </div>
+        <section className={styles.section} aria-labelledby="examples-title">
+          <h3 className={styles.sectionTitle} id="examples-title">
+            Examples
+          </h3>
+          <ul className={styles.examples}>
+            {EXAMPLES.map((example) => (
+              <li key={example.id} className={styles.item}>
+                <ExampleCard example={example} />
               </li>
             ))}
-          </ol>
+          </ul>
         </section>
+        <Steps />
       </div>
     </div>
   )

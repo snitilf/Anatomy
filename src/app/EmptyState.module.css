@@ -9,8 +9,8 @@
   background: var(--bg);
 }
 
-/* Centered workspace-width column so the three example maps sit side by side on desktop. */
-.empty > div {
+/* A centered workspace-width column, so the three example maps sit side by side on desktop. */
+.column {
   display: grid;
   gap: var(--space-6);
   width: min(960px, 100%);
@@ -18,47 +18,47 @@
   margin-block: auto;
 }
 
-.empty header {
+.lead {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
 }
 
-.empty h2 {
+.title {
   margin: 0;
-  font-size: 24px;
-  line-height: 30px;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-2xl);
   font-weight: var(--weight-semibold);
   letter-spacing: -0.02em;
   text-wrap: balance;
   color: var(--fg);
 }
 
-.empty header > p {
+.hint {
   margin: calc(var(--space-1) * -1) 0 0;
   color: var(--fg-2);
   text-wrap: pretty;
 }
 
-.empty code {
+.path {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   white-space: nowrap;
 }
 
-.empty header > div {
+.actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.empty > div > p[role='status'] {
+.problem {
   margin: 0;
   color: var(--danger);
   text-wrap: pretty;
 }
 
-.empty h3 {
+.sectionTitle {
   margin: 0;
   color: var(--fg-2);
   font-size: var(--text-sm);
@@ -66,18 +66,23 @@
   font-weight: var(--weight-medium);
 }
 
-.empty section {
+.section {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
 }
 
-.empty section[aria-labelledby='recent-title'] {
+.recent {
   gap: var(--space-2);
   width: min(520px, 100%);
 }
 
-.empty section[aria-labelledby='examples-title'] > ul {
+/* The saved boards sit flush with the column, their hover reaching into the gutter. */
+.recent > ul {
+  margin: 0 calc(var(--space-2) * -1);
+}
+
+.examples {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
@@ -87,12 +92,12 @@
   min-width: 0;
 }
 
-.empty section[aria-labelledby='examples-title'] > ul > li {
+.item {
   display: flex;
   min-width: 0;
 }
 
-.empty section[aria-labelledby='examples-title'] button {
+.card {
   appearance: none;
   display: flex;
   flex-direction: column;
@@ -114,22 +119,22 @@
     transform 140ms var(--ease-out);
 }
 
-.empty section[aria-labelledby='examples-title'] button:hover {
+.card:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-float);
   transform: translateY(-1px);
 }
 
-.empty section[aria-labelledby='examples-title'] button:active {
+.card:active {
   transform: translateY(0);
 }
 
-.empty section[aria-labelledby='examples-title'] button:focus-visible {
+.card:focus-visible {
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
 
-.empty section[aria-labelledby='examples-title'] button > div {
+.preview {
   display: grid;
   place-items: center;
   width: 100%;
@@ -141,25 +146,25 @@
   overflow: hidden;
 }
 
-.empty section[aria-labelledby='examples-title'] svg {
+.map {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.empty [data-outline-group],
-.empty [data-outline-line],
-.empty [data-outline-card] > rect:first-child {
+.map [data-outline-group],
+.map [data-outline-line],
+.map [data-outline-card] > rect:first-child {
   vector-effect: non-scaling-stroke;
 }
 
-.empty [data-outline-group] {
+.map [data-outline-group] {
   fill: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
   stroke: var(--group-edge);
   stroke-width: 1px;
 }
 
-.empty [data-outline-line] {
+.map [data-outline-line] {
   fill: none;
   stroke: var(--line);
   stroke-width: 1.15px;
@@ -168,34 +173,34 @@
   transition: stroke 140ms var(--ease-out);
 }
 
-.empty [data-outline-card] > rect:first-child {
+.map [data-outline-card] > rect:first-child {
   fill: var(--raised);
   stroke: var(--card-edge);
   stroke-width: 1px;
   transition: stroke 140ms var(--ease-out);
 }
 
-.empty [data-outline-card] > rect:nth-child(2) {
+.map [data-outline-card] > rect:nth-child(2) {
   fill: var(--fg);
   opacity: 0.34;
 }
 
-.empty [data-outline-card] > rect:nth-child(3) {
+.map [data-outline-card] > rect:nth-child(3) {
   fill: var(--fg);
   opacity: 0.14;
 }
 
-.empty section[aria-labelledby='examples-title'] button:hover [data-outline-line],
-.empty section[aria-labelledby='examples-title'] button:focus-visible [data-outline-line] {
+.card:hover [data-outline-line],
+.card:focus-visible [data-outline-line] {
   stroke: var(--accent-line);
 }
 
-.empty section[aria-labelledby='examples-title'] button:hover [data-outline-card] > rect:first-child,
-.empty section[aria-labelledby='examples-title'] button:focus-visible [data-outline-card] > rect:first-child {
+.card:hover [data-outline-card] > rect:first-child,
+.card:focus-visible [data-outline-card] > rect:first-child {
   stroke: var(--fg-2);
 }
 
-.empty section[aria-labelledby='examples-title'] button > span {
+.cardBody {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -204,7 +209,7 @@
   padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
-.empty section[aria-labelledby='examples-title'] strong {
+.cardBody > strong {
   font-size: var(--text-md);
   line-height: var(--leading-md);
   font-weight: var(--weight-semibold);
@@ -212,28 +217,29 @@
   overflow-wrap: anywhere;
 }
 
-.empty section[aria-labelledby='examples-title'] button > span > span {
+.cardBody > span {
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   color: var(--fg-2);
   overflow-wrap: anywhere;
 }
 
-.empty section[aria-labelledby='examples-title'] small {
+.cardBody > small {
   margin-top: auto;
   padding-top: var(--space-2);
   font-size: var(--text-xs);
   line-height: var(--leading-xs);
+  min-height: var(--leading-xs);
   color: var(--fg-3);
   font-variant-numeric: tabular-nums;
 }
 
-.empty section[aria-labelledby='steps-title'] {
+.steps {
   padding-top: var(--space-5);
   border-top: 1px solid var(--border);
 }
 
-.empty ol {
+.stepList {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
@@ -243,19 +249,19 @@
   min-width: 0;
 }
 
-.empty ol > li {
+.step {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   min-width: 0;
 }
 
-.empty ol > li > span {
+.step > span:first-child {
   flex: none;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: var(--space-5);
+  height: var(--space-5);
   margin-top: 1px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
@@ -267,25 +273,21 @@
   font-variant-numeric: tabular-nums;
 }
 
-.empty ol > li > div {
+.step > span:last-child {
   display: grid;
   gap: 2px;
   min-width: 0;
-}
-
-.empty ol p {
-  margin: 0;
   overflow-wrap: anywhere;
 }
 
-.empty ol p:first-child {
+.step > span:last-child > span:first-child {
   font-size: var(--text-md);
   line-height: var(--leading-md);
   font-weight: var(--weight-medium);
   color: var(--fg);
 }
 
-.empty ol p:last-child {
+.step > span:last-child > span:last-child {
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   color: var(--fg-2);
@@ -296,48 +298,48 @@
     padding: var(--space-5) var(--space-4);
   }
 
-  .empty > div {
+  .column {
     gap: var(--space-5);
     margin-block: 0;
   }
 
-  .empty h2 {
+  .title {
     font-size: var(--text-xl);
     line-height: var(--leading-xl);
   }
 
-  .empty section[aria-labelledby='examples-title'] > ul,
-  .empty ol {
+  .examples,
+  .stepList {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
   }
 }
 
 @media (hover: none) {
-  .empty section[aria-labelledby='examples-title'] button:hover {
+  .card:hover {
     border-color: var(--border);
     box-shadow: var(--card-shadow);
     transform: none;
   }
 
-  .empty section[aria-labelledby='examples-title'] button:hover [data-outline-line] {
+  .card:hover [data-outline-line] {
     stroke: var(--line);
   }
 
-  .empty section[aria-labelledby='examples-title'] button:hover [data-outline-card] > rect:first-child {
+  .card:hover [data-outline-card] > rect:first-child {
     stroke: var(--card-edge);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .empty section[aria-labelledby='examples-title'] button,
-  .empty [data-outline-line],
-  .empty [data-outline-card] > rect:first-child {
+  .card,
+  .map [data-outline-line],
+  .map [data-outline-card] > rect:first-child {
     transition: none;
   }
 
-  .empty section[aria-labelledby='examples-title'] button:hover,
-  .empty section[aria-labelledby='examples-title'] button:active {
+  .card:hover,
+  .card:active {
     transform: none;
   }
 }
