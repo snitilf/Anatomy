@@ -10,9 +10,21 @@
   background: var(--frame);
 }
 
+/* The mark and the word, on one line. The mark sits 6px from the word and is as high as its capitals and a little more. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2);
+}
+
+.mark {
+  display: block;
+  flex: none;
+}
+
 .wordmark {
   margin: 0;
-  padding: 0 var(--space-2);
   font-size: var(--text-md);
   line-height: var(--leading-md);
   font-weight: var(--weight-semibold);

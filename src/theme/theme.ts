@@ -27,9 +27,23 @@ function resolve(): Theme {
   return mode === 'system' ? systemTheme() : mode
 }
 
+/**
+ * The page offers a theme color for each color scheme, and a browser picks by the scheme of the system. The page may be in the other theme
+ * (a stored choice, or the settings menu), so every theme-color meta takes the color of the theme in use. `public/theme.js` does the same before the first paint.
+ */
+function syncThemeColor(theme: Theme) {
+  const metas = [...document.head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')]
+  // The color of each scheme is remembered the first time, since the content is overwritten.
+  for (const meta of metas) meta.dataset.color ??= meta.content
+  const own = metas.find((m) => m.media.includes(theme))?.dataset.color
+  if (own) for (const meta of metas) meta.content = own
+}
+
 function apply() {
   if (typeof document === 'undefined') return
-  document.documentElement.dataset.theme = resolve()
+  const theme = resolve()
+  document.documentElement.dataset.theme = theme
+  syncThemeColor(theme)
 }
 
 function notify() {

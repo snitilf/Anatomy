@@ -5,6 +5,7 @@ import { useCommand } from '../commands/context'
 import { ariaShortcut } from '../commands/keys'
 import buttons from './buttons.module.css'
 import { BoardCrumbs } from './BoardCrumbs'
+import { BrandMark } from './BrandMark'
 import { useCrumbRoom } from './crumbRoom'
 import { OpenMenu } from './OpenMenu'
 import { SaveStatus } from './SaveStatus'
@@ -59,7 +60,10 @@ export function TopBar() {
           </div>
         </>
       ) : (
-        <h1 className={styles.wordmark}>Anatomy</h1>
+        <div className={styles.brand}>
+          <BrandMark className={styles.mark} />
+          <h1 className={styles.wordmark}>Anatomy</h1>
+        </div>
       )}
       <div className={styles.end}>
         <div className={styles.group}>
