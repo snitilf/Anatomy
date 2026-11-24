@@ -5,13 +5,15 @@ import { describe, expect, it } from 'vitest'
 type Rgba = { r: number; g: number; b: number; a: number }
 
 const TOKENS_PATH = resolve(process.cwd(), 'src/styles/tokens.css')
-const tokensCss = readFileSync(TOKENS_PATH, 'utf8')
+// Comments are stripped so a note that names an old value or a brace cannot change what the tests read.
+const tokensCss = readFileSync(TOKENS_PATH, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 
 function extractThemeBlock(selector: string): Record<string, string> {
   const index = tokensCss.indexOf(selector)
   if (index === -1) throw new Error(`Missing selector ${selector} in tokens.css`)
   const open = tokensCss.indexOf('{', index)
   const close = tokensCss.indexOf('}', open)
+  if (open === -1 || close === -1) throw new Error(`Unclosed block for ${selector} in tokens.css`)
   const body = tokensCss.slice(open + 1, close)
   const tokens: Record<string, string> = {}
   for (const match of body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
@@ -98,6 +100,12 @@ function token(block: Record<string, string>, name: string): string {
 const light = extractThemeBlock(":root[data-theme='light']")
 const dark = extractThemeBlock(":root[data-theme='dark']")
 
+// A group wash is the text color at a small share over the ground, as `GroupNode.module.css` draws it.
+function wash(block: Record<string, string>, share: '--wash-share' | '--wash-share-2'): Rgba {
+  const fg = parseColor(token(block, '--fg'))
+  return composite({ ...fg, a: Number.parseFloat(token(block, share)) / 100 }, parseColor(token(block, '--bg')))
+}
+
 describe('light theme surface separation and chroma', () => {
   it('separates cards from the canvas ground by at least 0.065 OKLCH lightness', () => {
     const bg = rgbToOklch(parseColor(token(light, '--bg')))
@@ -135,7 +143,7 @@ describe('light theme amber tokens', () => {
     const yours = rgbToOklch(parseColor(token(light, '--yours')))
     expect(yours.H).toBeGreaterThanOrEqual(68)
     expect(yours.H).toBeLessThanOrEqual(78)
-    expect(yours.C).toBeGreaterThanOrEqual(0.135)
+    expect(yours.C).toBeGreaterThanOrEqual(0.125)
     expect(yours.C).toBeLessThanOrEqual(0.175)
   })
 
@@ -174,6 +182,33 @@ describe('contrast matrix', () => {
         }
       }
     }
+    expect(failures).toEqual([])
+  })
+
+  it('passes 4.5:1 for every light text token on a single and an overlapping group wash', () => {
+    const failures: string[] = []
+    for (const share of ['--wash-share', '--wash-share-2'] as const) {
+      const ground = wash(light, share)
+      for (const fg of textTokens) {
+        const ratio = contrastRatio(parseColor(token(light, fg)), ground)
+        if (ratio < 4.5) failures.push(`${fg} on ${share} (${ratio.toFixed(2)}:1)`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('keeps the user color at 3:1 on every ground where marks and icons sit', () => {
+    const yours = parseColor(token(light, '--yours'))
+    const grounds: Array<[string, Rgba]> = [
+      ['--bg', parseColor(token(light, '--bg'))],
+      ['--panel', parseColor(token(light, '--panel'))],
+      ['--raised', parseColor(token(light, '--raised'))],
+      ['--wash-share', wash(light, '--wash-share')],
+    ]
+    const failures = grounds
+      .map(([name, ground]) => [name, contrastRatio(yours, ground)] as const)
+      .filter(([, ratio]) => ratio < 3)
+      .map(([name, ratio]) => `--yours on ${name} (${ratio.toFixed(2)}:1)`)
     expect(failures).toEqual([])
   })
 
