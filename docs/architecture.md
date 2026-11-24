@@ -264,6 +264,7 @@ The tool in use is screen state and is not part of the history.
 Escape or V returns to Select.
 Every tool except the pen returns to Select after one use.
 In a walkthrough or on a phone screen, only Select is available.
+A tool that is on when the window narrows to a phone goes back to Select.
 On a phone the command menu lists no tool and prints no shortcuts, and the tool keys do nothing.
 
 Under Select, the map behaves as before.

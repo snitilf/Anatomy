@@ -11,10 +11,10 @@ import styles from './CommandMenu.module.css'
 import { SELECTION_COMMANDS, selectionName } from './selectionSection'
 import { GROUP_ORDER, type Command, type CommandContext } from './types'
 
-function Row({ command, ctx, onRun, inContext = false }: { command: Command; ctx: CommandContext; onRun: (c: Command) => void; inContext?: boolean }) {
+function Row({ command, ctx, onRun, phone, inContext = false }: { command: Command; ctx: CommandContext; onRun: (c: Command) => void; phone: boolean; inContext?: boolean }) {
   const Icon = command.icon
   // A phone has no keys to press.
-  const keys = usePhone() ? undefined : command.keys?.[0]
+  const keys = phone ? undefined : command.keys?.[0]
   const checked = command.checked?.(ctx) ?? false
   return (
     <Cmdk.Item
@@ -72,6 +72,8 @@ function MenuBody({ onClose }: { onClose: () => void }) {
   const { context, run } = useCommands()
   const store = useAppStoreApi()
   const [search, setSearch] = useState('')
+  // Read here, once for the menu, so a resize across phone width while it is open lists the commands again.
+  const phone = usePhone()
   // The menu reads the state as it opens, and again when it changes under it, such as a command that was run a frame ago.
   const state = useAppStore((s) => s)
   const ctx = useMemo(() => ({ ...context(), state }), [context, state])
@@ -101,7 +103,7 @@ function MenuBody({ onClose }: { onClose: () => void }) {
         {name !== undefined && here.length > 0 && (
           <Cmdk.Group heading={name} className={styles.group} data-selection="">
             {here.map((c) => (
-              <Row key={c.id} command={c} ctx={ctx} onRun={go} inContext />
+              <Row key={c.id} command={c} ctx={ctx} onRun={go} phone={phone} inContext />
             ))}
           </Cmdk.Group>
         )}
@@ -111,7 +113,7 @@ function MenuBody({ onClose }: { onClose: () => void }) {
           return (
             <Cmdk.Group key={group} heading={group} className={styles.group}>
               {rows.map((c) => (
-                <Row key={c.id} command={c} ctx={ctx} onRun={go} />
+                <Row key={c.id} command={c} ctx={ctx} onRun={go} phone={phone} />
               ))}
             </Cmdk.Group>
           )
