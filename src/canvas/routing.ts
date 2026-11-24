@@ -340,9 +340,12 @@ function laneValues(edges: { lo: number; hi: number }[]): number[] {
   return values
 }
 
-/** The lanes of the grid. The exact values asked for are kept, and the lanes near them give way, so a run can start and end where it must. */
-function mergeLanes(exact: readonly number[], raw: readonly number[]): number[] {
-  const kept = uniqueSorted([...raw]).filter((v) => !exact.some((e) => Math.abs(e - v) <= 3))
+/**
+ * The lanes of the grid. `sorted` is the lanes of the cards, sorted and thinned once (see `uniqueSorted`). The exact values
+ * asked for are kept, and the lanes near them give way, so a run can start and end where it must.
+ */
+function mergeLanes(exact: readonly number[], sorted: readonly number[]): number[] {
+  const kept = sorted.filter((v) => !exact.some((e) => Math.abs(e - v) <= 3))
   return [...new Set([...kept, ...exact])].sort((a, b) => a - b)
 }
 
@@ -461,6 +464,9 @@ export class Obstacles {
   private readonly buckets = new Map<number, number[]>()
   private readonly rawX: number[]
   private readonly rawY: number[]
+  /** The lanes of the cards, sorted and thinned the first time a search asks, and kept for every search after it. */
+  private sortedX: number[] | undefined
+  private sortedY: number[] | undefined
 
   constructor(cards: readonly Rect[], groups: readonly (Rect & { label?: string })[] = []) {
     this.cards = cards
@@ -551,7 +557,9 @@ export class Obstacles {
   }
 
   lanes(extraX: number[], extraY: number[]): [number[], number[]] {
-    return [mergeLanes(extraX, this.rawX), mergeLanes(extraY, this.rawY)]
+    this.sortedX ??= uniqueSorted(this.rawX)
+    this.sortedY ??= uniqueSorted(this.rawY)
+    return [mergeLanes(extraX, this.sortedX), mergeLanes(extraY, this.sortedY)]
   }
 }
 
