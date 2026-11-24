@@ -29,7 +29,8 @@ import {
 
 export const WIDTH = 760
 export const HEIGHT = 440
-export const AZIMUTH = 122
+/** 108 turns the press far enough that the tab touching a blocker is never behind the lockout arch. At 122 it was. */
+export const AZIMUTH = 108
 export const ELEVATION = 40
 
 export const SLOTS = 8
