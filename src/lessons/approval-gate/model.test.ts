@@ -138,6 +138,14 @@ describe('readout and caption', () => {
     expect(caption(run(['reject']))).toMatch(/can never be sent/)
   })
 
+  it('does not say a rejected version never goes out once it went out, when a send is blocked', () => {
+    const text = caption(run(['approve', 'trySend', 'reject', 'trySend']))
+    expect(text).not.toMatch(/never goes out/)
+    expect(text).toMatch(/already went out/)
+    expect(caption(run(['approve', 'trySend', 'reject', 'approve']))).toMatch(/already went out/)
+    expect(caption(run(['reject', 'trySend']))).toMatch(/never goes out/)
+  })
+
   it('has a caption for every outcome that names the true version', () => {
     const cases: Array<[LessonEvent[], RegExp]> = [
       [[], /fresh lesson/],
