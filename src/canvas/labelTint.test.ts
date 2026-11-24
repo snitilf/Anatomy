@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FAR_ENTER, farLabelScale } from './far'
 import { labelTint, readTint } from './labelTint'
 
 const group = { x: 0, y: 0, width: 200, height: 100 }
@@ -24,7 +25,8 @@ describe('labelTint', () => {
   })
 
   it('leaves out an area only just out of reach', () => {
-    expect(labelTint([group], 200 + 90, 50, 100, 1, false)).toBe('')
+    const reach = (100 / 2) * farLabelScale(FAR_ENTER) + 8
+    expect(labelTint([group], 200 + Math.ceil(reach) + 2, 50, 100, 1, false)).toBe('')
   })
 
   it('reads a held-back label at its widest', () => {
