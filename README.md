@@ -142,6 +142,7 @@ See [the hosted copy](docs/architecture.md#the-hosted-copy) for what it does.
 | `npm run tokens` | Prints the size of the generated agent README, each guide section and topic, each example board, and the output of the `anatomy` tool. |
 | `npm run agent-files -- <folder>` | Writes the agent files into `<folder>/.anatomy/`, the way Copy prompt does. |
 | `npm run eval` | Prints the evaluation tasks in `eval/` and scores a board file against them. |
+| `npm run readme-images` | Builds the app and retakes the two pictures at the top of this file, `docs/images/map-light.png` and `docs/images/map-dark.png`, with Chrome. Options: `-- --example claude-code --walkthrough "Fix a failing test" --step 2 --out <folder>`. |
 
 The dev and preview servers listen on the loopback interface only.
 
