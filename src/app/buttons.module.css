@@ -1,11 +1,23 @@
+/*
+ * The button system. One file owns what a button looks like; the list rows and the segmented control have their own files.
+ *
+ * Variants: the default (secondary), `primary` (the one main action of a surface), `quiet` (toolbars, icon buttons, inline
+ * actions with an icon), and `link` (a word that acts). Sizes: `small`, the default, and `large`. `icon` makes the button a square.
+ * Every size reads its height from a token, so a coarse pointer gets taller buttons without a rule of its own.
+ *
+ * A control answers a press at once: the fill and the scale change on pointer-down with no transition, and ease back on release.
+ */
+
 .button {
+  --size: var(--control-md);
   position: relative;
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 28px;
+  box-sizing: border-box;
+  height: var(--size);
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -19,20 +31,50 @@
   transition:
     background-color 120ms var(--ease-out),
     border-color 120ms var(--ease-out),
+    color 120ms var(--ease-out),
     transform 120ms var(--ease-out);
-}
-
-.button:hover {
-  background: color-mix(in srgb, var(--raised), var(--fg) 5%);
-  border-color: var(--border-strong);
-}
-
-.button:active {
-  transform: scale(0.97);
 }
 
 .button svg {
   flex: none;
+}
+
+/* The hit area grows to --hit through the box around the button, without changing how it looks. The 1px is the border. */
+.button::after {
+  content: '';
+  position: absolute;
+  inset-block: min(-1px, calc((var(--size) - var(--hit)) / 2 - 1px));
+  inset-inline: 0;
+}
+
+.small {
+  --size: var(--control-sm);
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.large {
+  --size: var(--control-lg);
+  padding: 0 14px;
+}
+
+/* A word on a touch screen is at least as wide as the hit area, so a short word such as Edit has room for a thumb. */
+@media (pointer: coarse) {
+  .button {
+    min-width: var(--hit);
+  }
+}
+
+/* A square button that holds one icon. Its name lives in aria-label. It follows its size, so it stays after the size rules. */
+.icon {
+  width: var(--size);
+  min-width: 0;
+  padding: 0;
+}
+
+.icon::after {
+  inset-inline: min(-1px, calc((var(--size) - var(--hit)) / 2 - 1px));
 }
 
 .primary {
@@ -41,107 +83,110 @@
   color: var(--on-accent);
 }
 
-.primary:hover {
-  background: color-mix(in srgb, var(--accent), black 8%);
-  border-color: transparent;
-}
-
 .quiet {
   border-color: transparent;
   background: transparent;
   color: var(--fg-2);
 }
 
-.quiet:hover {
+.link {
+  padding-inline: var(--space-1);
   border-color: transparent;
-  background: var(--hover);
+  background: transparent;
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* A popover that is open holds its trigger down. */
+.button[data-popup-open] {
+  background: color-mix(in srgb, var(--raised), var(--fg) 8%);
+}
+
+.primary[data-popup-open] {
+  background: color-mix(in srgb, var(--accent), black 8%);
+}
+
+.quiet[data-popup-open] {
+  background: var(--active);
   color: var(--fg);
 }
 
-.button::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((28px - var(--hit)) / 2));
-  inset-inline: 0;
+.link[data-popup-open] {
+  background: transparent;
 }
 
-@media (pointer: coarse) {
-  .button::after {
-    inset-block: min(0px, calc((36px - var(--hit)) / 2));
-  }
-}
-
-/* A square button that holds one icon. Its name lives in aria-label. */
-.icon {
-  width: 28px;
-  padding: 0;
-}
-
-@media (pointer: coarse) {
-  .button {
-    min-height: 36px;
+/* Hover answers only a fine pointer. A phone has no hover, so a touch does not leave a button looking pressed. */
+@media (hover: hover) and (pointer: fine) {
+  .button:not(:disabled, [aria-disabled='true']):hover {
+    background: color-mix(in srgb, var(--raised), var(--fg) 5%);
+    border-color: var(--border-strong);
   }
 
-  .icon {
-    width: 36px;
-  }
-}
-
-@media (hover: none) {
-  .button:hover {
-    background: var(--raised);
-    border-color: var(--border);
-  }
-
-  .primary:hover {
-    background: var(--accent);
+  .primary:not(:disabled, [aria-disabled='true']):hover {
+    background: color-mix(in srgb, var(--accent), black 8%);
     border-color: transparent;
   }
 
-  .quiet:hover {
+  .quiet:not(:disabled, [aria-disabled='true']):hover {
+    border-color: transparent;
+    background: var(--hover);
+    color: var(--fg);
+  }
+
+  .link:not(:disabled, [aria-disabled='true']):hover {
+    border-color: transparent;
     background: transparent;
-    color: var(--fg-2);
+    text-decoration-color: var(--fg);
   }
 }
 
-.button:disabled {
-  cursor: default;
-  color: var(--fg-3);
-  opacity: 0.6;
+/* Pressed: on pointer-down, with no transition on the way in. The ease back out is the one on .button. */
+.button:not(:disabled, [aria-disabled='true']):active {
+  background: color-mix(in srgb, var(--raised), var(--fg) 8%);
+  border-color: var(--border-strong);
+  transform: scale(0.97);
+  transition: none;
 }
 
-.button:disabled:hover {
-  background: var(--raised);
-  border-color: var(--border);
-}
-
-.quiet:disabled:hover {
-  background: transparent;
+.primary:not(:disabled, [aria-disabled='true']):active {
+  background: color-mix(in srgb, var(--accent), black 12%);
   border-color: transparent;
 }
 
-.button:disabled:active {
+.quiet:not(:disabled, [aria-disabled='true']):active {
+  border-color: transparent;
+  background: var(--active);
+  color: var(--fg);
   transform: none;
 }
 
-/* A smaller button for inline actions, such as those beside the save status. */
-.small {
-  min-height: 24px;
-  padding: 0 var(--space-2);
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
+.link:not(:disabled, [aria-disabled='true']):active {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fg-2);
+  transform: none;
 }
 
-.small::after {
-  inset-block: min(0px, calc((24px - var(--hit)) / 2));
+/* Off: dimmed, no hover, no press. aria-disabled keeps focus on a button that has just run out of things to do. */
+.button:disabled,
+.button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
 }
 
-.icon::after {
-  inset-inline: min(0px, calc((28px - var(--hit)) / 2));
+.link:disabled,
+.link[aria-disabled='true'] {
+  color: var(--fg-3);
+  text-decoration-color: transparent;
+  opacity: 1;
 }
 
-@media (pointer: coarse) {
-  .icon::after {
-    inset-inline: min(0px, calc((36px - var(--hit)) / 2));
+/* Less motion: a press changes the fill and nothing scales. */
+@media (prefers-reduced-motion: reduce) {
+  .button:not(:disabled, [aria-disabled='true']):active {
+    transform: none;
   }
 }
