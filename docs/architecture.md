@@ -59,6 +59,25 @@ A resized card stays between 224 by 112 and 480 by 320.
 The app stores only the cards that the user moved or resized.
 The other cards follow the layout each time a board opens.
 
+### Where a walkthrough starts
+
+A part where a walkthrough starts carries a small play mark inside its card.
+A walkthrough starts at the first thing its first step is about: that part, or the part a connection runs from.
+A first step about nothing is about the whole board, so that walkthrough marks no part.
+When several walkthroughs start at one part, the part carries one mark.
+`flowStarts` in `src/scenarios/starts.ts` works it out, and the description of the part for a screen reader says "Starts the walkthrough" and its title after the summary.
+
+The mark is quiet and in the family of the lesson icon: an outlined circle, 14 px on screen, with a play shape, in `--fg-3`.
+It is a shape and a border and has no fill, so it reads without color, and under forced colors it takes the text color of the system.
+It keeps its size on screen at every detail level, the way a label does.
+It sits inside the card, so it dims and lifts with the card, and nothing that keeps off the card can cover it.
+
+A line label can still land on a card in a crowded gap, so the mark takes the first of the top right, the top left, and the bottom right corner that no line label covers at any zoom from 100 percent down to the far end of the title level (`startCorner`, from `freeCorner` in `src/canvas/startMarks.ts`).
+A title that would run into a mark at the top leaves it 4 px of room at every zoom.
+In the far view a tile has no text but its name, so the mark is drawn by the far layer inside the tile, at the bottom right or left, as large as fits from 14 px down to 11 px, clear of the names of the groups that sit over tiles.
+A tile that the name of a group covers too much of has no mark.
+`e2e/flow-start.spec.ts` checks that no mark leaves its card or touches a label, a group name, a count, a note dot, or a word of the card.
+
 ### The layout
 
 The layout in `src/layout/autoLayout.ts` is a left-to-right flow that follows the connections.
@@ -118,6 +137,13 @@ The search adds a cost for each of these:
 
 Tracks are 16 units apart.
 A gap between cards holds as many lines as it has tracks, so parallel lines do not run on top of each other.
+
+Every connection ends in an arrowhead.
+The head is the same size for every kind of line, so the kind shows in the dash and the width only.
+It is 8 px long and 7 px across on screen, from the far end of the title level up to 100 percent, and above that it grows with the board as the lines do.
+The marker is measured in board units and not in the width of the line, so a selected line does not grow its head.
+The map's style scales it by `--label-scale`, the way it scales a label (`Canvas.module.css`).
+`e2e/arrowheads.spec.ts` measures the heads from the page at 100 percent and at the title level.
 
 While the user drags or resizes a card, the app redraws only the connections of that card.
 It draws them as plain elbows and hides their labels.
@@ -560,6 +586,15 @@ If a script cannot load, the user sees a short notice, and the rest of the app k
 Sending feedback to a folder still writes `feedback.json` when the text of the `.anatomy/` files cannot load.
 
 `scripts/firstLoad.test.ts` builds the app and checks that the first script holds no example board, no part of the command line tool, and no map view, that it does not load any of them at start, and that it stays under a byte budget.
+
+## The icon and the mark
+
+The page has an SVG icon, `public/favicon.svg`, which `index.html` links by an absolute path that Vite rewrites for the base path, so the hosted copy finds it under `/Anatomy/`.
+The file draws in the colors of the tokens and switches with `prefers-color-scheme` inside the SVG.
+The same drawing, a part, a connection, and the part it leads to, is `BrandMark` in `src/app/BrandMark.tsx`, which sits beside the word "Anatomy" in the top bar of the empty screen and takes its colors from the tokens.
+The page has two `theme-color` tags, one for each color scheme, in the color of the top bar (`--frame`).
+`public/theme.js` and `src/theme/theme.ts` give both tags the color of the theme in use, so the browser bar follows a stored choice and the settings menu.
+`scripts/identity.test.ts` holds the colors of the icon and of the tags to the tokens.
 
 ## The hosted copy
 

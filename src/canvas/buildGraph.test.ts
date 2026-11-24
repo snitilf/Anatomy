@@ -201,6 +201,44 @@ describe('arrowheads', () => {
     }
     expect(byColor.size).toBeLessThan(edges.length)
   })
+
+  it('are sized in board units, so a line of any width carries the same head', () => {
+    for (const board of [refundBoard(), forty()]) {
+      const { edges } = buildGraph(board, placeCards(board, { positions: {}, sizes: {} }), undefined)
+      expect(edges.length).toBeGreaterThan(0)
+      for (const e of edges) expect(e.markerEnd).toMatchObject({ markerUnits: 'userSpaceOnUse', width: 20, height: 20 })
+    }
+  })
+})
+
+describe('where a walkthrough starts', () => {
+  it('marks the first part of each walkthrough, with the names of its walkthroughs', () => {
+    const board = refundBoard()
+    const { nodes } = buildGraph(board, placeCards(board, { positions: {}, sizes: {} }), undefined)
+    const starts = Object.fromEntries(nodes.filter((n) => n.type === 'card').map((n) => [n.id, (n.data as { starts?: string[] }).starts]))
+    expect(starts['refund-request']).toEqual(['Approve and pay'])
+    expect(starts['payout-ledger']).toEqual(['A repeated payout is blocked'])
+    expect(starts['policy-check']).toEqual([])
+  })
+
+  it('puts the mark in a corner of the card that the card can hold it in, and only on parts that start a walkthrough', () => {
+    const board = refundBoard()
+    const { nodes } = buildGraph(board, placeCards(board, { positions: {}, sizes: {} }), undefined)
+    for (const n of nodes.filter((n) => n.type === 'card')) {
+      const data = n.data as { starts: string[]; startCorner: string }
+      expect(['tr', 'tl', 'br']).toContain(data.startCorner)
+      if (data.starts.length === 0) expect(data.startCorner).toBe('tr')
+    }
+  })
+
+  it('says so in the description a screen reader reads after the summary', () => {
+    const board = refundBoard()
+    const { nodes } = buildGraph(board, placeCards(board, { positions: {}, sizes: {} }), undefined)
+    const description = (id: string) => (nodes.find((n) => n.id === id)?.domAttributes as { 'aria-description'?: string } | undefined)?.['aria-description'] ?? ''
+    expect(description('refund-request')).toContain('Starts the walkthrough Approve and pay.')
+    expect(description('refund-request')).toContain(board.components.find((c) => c.id === 'refund-request')!.summary)
+    expect(description('policy-check')).not.toContain('Starts')
+  })
 })
 
 describe('RunIndex', () => {

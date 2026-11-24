@@ -4,6 +4,7 @@ import { memo, type CSSProperties } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
+import { startsLabel } from '../scenarios/starts'
 import { nameLines, titleLines } from './far'
 import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
@@ -35,9 +36,18 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-dimmed={data.dimmed ? 'true' : undefined}
         data-faded={data.faded ? 'true' : undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
+        data-start={data.starts.length > 0 && !data.far ? data.startCorner : undefined}
         style={{ '--title-lines': heading } as CSSProperties}
       >
         {data.far && mine > 0 && <span className={styles.dot} aria-hidden="true" />}
+        {/* Where a walkthrough starts: a small outlined play mark inside the card, in the ink of the other icons. A shape, not a color. */}
+        {data.starts.length > 0 && !data.far && (
+          <span className={styles.start} data-flow-start="" data-corner={data.startCorner} title={startsLabel(data.starts)} aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="100%" height="100%">
+              <path d="M6.3 4.9 L11.2 8 L6.3 11.1 Z" />
+            </svg>
+          </span>
+        )}
         {lines > 0 && (
           <div className={styles.tileName} data-lines={lines} aria-hidden="true">
             {data.label}

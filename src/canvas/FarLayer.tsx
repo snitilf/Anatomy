@@ -7,6 +7,8 @@ import { spotlight } from './emphasis'
 import { farLabelScale } from './far'
 import { YOURS_DASH, YOURS_FAR_DASH } from './kinds'
 import { farNames, isMixed, placeCounts, type FarName } from './farLabels'
+import { farMark } from './startMarks'
+import { startsLabel } from '../scenarios/starts'
 import { clampTip } from './useTipClamp'
 import styles from './FarLayer.module.css'
 
@@ -15,6 +17,14 @@ export interface FarGroup {
   label: string
   count: number
   area: Rect
+}
+
+/** A tile where a walkthrough starts, with the walkthroughs by title, and whether the tile is filled with the accent. */
+export interface FarStart {
+  id: string
+  rect: Rect
+  titles: readonly string[]
+  lit: boolean
 }
 
 /** How far a press may travel and still count as a click, in screen pixels. Past it, the map was being dragged. */
@@ -39,6 +49,7 @@ export const FarLayer = memo(function FarLayer({
   groups,
   bundles,
   tiles,
+  starts,
   selected,
   selectedEnds,
   words,
@@ -49,6 +60,8 @@ export const FarLayer = memo(function FarLayer({
   bundles: readonly Bundle[]
   /** Every card, which a count keeps off. */
   tiles: readonly Rect[]
+  /** The tiles where a walkthrough starts. Each draws a small mark inside it, clear of the names of the groups. */
+  starts: readonly FarStart[]
   /** The key of the selected bundle. */
   selected?: string | undefined
   /** The two ends of the selected bundle. The names of the other groups step back. */
@@ -73,6 +86,14 @@ export const FarLayer = memo(function FarLayer({
     const groupNames = groups.map((g) => (names.get(g.id) as FarName).rect)
     return placeCounts(bundles, [...tiles, ...groupNames], scale)
   }, [groups, bundles, tiles, scale, names])
+  // The marks of the start tiles: inside the tile, clear of the names that sit over it. A tile too low for one is left without.
+  const marks = useMemo(() => {
+    const avoid = groups.map((g) => (names.get(g.id) as FarName).rect)
+    return starts.flatMap((t) => {
+      const mark = farMark(t.rect, scale, avoid)
+      return mark ? [{ ...t, box: mark.box }] : []
+    })
+  }, [starts, groups, names, scale])
   // Heads that would pile into a ladder at a block's edge are dropped. This follows the quantized scale, so it runs on a
   // threshold crossing and never per frame.
   const heads = useMemo(() => visibleArrows(bundles, scale), [bundles, scale])
@@ -184,6 +205,13 @@ export const FarLayer = memo(function FarLayer({
               <span className={styles.number}>{g.count}</span>
             </button>
           </div>
+        ))}
+        {marks.map((m) => (
+          <span key={m.id} className={styles.start} data-flow-start="" data-for={m.id} data-lit={m.lit || undefined} title={startsLabel(m.titles)} aria-hidden="true" style={{ left: m.box.x, top: m.box.y, width: m.box.width, height: m.box.height, borderWidth: scale }}>
+            <svg viewBox="0 0 16 16" width="100%" height="100%">
+              <path d="M6.3 4.9 L11.2 8 L6.3 11.1 Z" />
+            </svg>
+          </span>
         ))}
         {bundles.map((b) => {
           const at = placed.get(b.id)

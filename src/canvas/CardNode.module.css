@@ -146,6 +146,59 @@
   box-shadow: 0 0 0 calc(1.5px * var(--label-scale, 1)) var(--raised);
 }
 
+/*
+ * Where a walkthrough starts: a small outlined circle with a play shape, inside a corner of the card, in the ink of the other
+ * icons (`--fg-3`). It is a shape and a border, so it reads without color, and it takes its border and glyph from the text color
+ * when the system forces colors. It sits inside the card, so it dims and lifts with it. The corner is the first of the top right, the
+ * top left, and the bottom right that no line label covers (`startCorner`), so a label that lands on the card never covers it.
+ * Like a label it holds its size on screen (`--label-scale`). The far view draws its marks on its own layer (`FarLayer`).
+ */
+.start {
+  position: absolute;
+  top: calc(4px * var(--label-scale, 1));
+  right: calc(4px * var(--label-scale, 1));
+  box-sizing: border-box;
+  width: calc(14px * var(--label-scale, 1));
+  height: calc(14px * var(--label-scale, 1));
+  border: calc(1px * var(--label-scale, 1)) solid currentColor;
+  border-radius: 50%;
+  color: var(--fg-3);
+}
+
+.start[data-corner='tl'] {
+  right: auto;
+  left: calc(4px * var(--label-scale, 1));
+}
+
+.start[data-corner='br'] {
+  top: auto;
+  bottom: calc(4px * var(--label-scale, 1));
+}
+
+.start svg {
+  display: block;
+  fill: currentColor;
+}
+
+/* A title that runs the whole first line keeps clear of a mark at the top. At the title level the title is centred, away from the corner. */
+.card[data-start='tr'] .label {
+  padding-right: calc(18px * var(--label-scale, 1) - 10px);
+}
+
+.card[data-start='tl'] .label {
+  padding-left: calc(18px * var(--label-scale, 1) - 10px);
+}
+
+:global([data-detail='title']) .card[data-start] .label {
+  padding-inline: 0;
+}
+
+@media (forced-colors: active) {
+  .start {
+    color: CanvasText;
+  }
+}
+
 /* The name of a part in the far view: on the tile under the pointer, and on the selected one. */
 .tip {
   display: none;
