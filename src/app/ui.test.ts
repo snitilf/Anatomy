@@ -29,3 +29,14 @@ describe('sidebar groups', () => {
     expect(createUi().store.getState().groups).toEqual({ notes: false })
   })
 })
+
+describe('the open lesson', () => {
+  it('starts closed, and holds the lesson and the part whose row opened it', () => {
+    const ui = createUi()
+    expect(ui.store.getState().lesson).toBeUndefined()
+    ui.openLesson('approval-gate', 'permission-check')
+    expect(ui.store.getState().lesson).toEqual({ id: 'approval-gate', opener: 'permission-check' })
+    ui.closeLesson()
+    expect(ui.store.getState().lesson).toBeUndefined()
+  })
+})

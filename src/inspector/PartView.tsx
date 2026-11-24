@@ -1,24 +1,22 @@
 import { ChevronRight, GraduationCap } from 'lucide-react'
-import { useRef, useState } from 'react'
 import type { Board, BoardComponent } from '../board/schema'
 import { findLesson } from '../lessons/catalog'
-import { LessonDialog } from '../lessons/LessonDialog'
+import { useUiApi } from '../app/ui'
 import { Cited, Explanation, Group, Heading, OpenItems, Prop, Props, SourceLine } from './bits'
 import { FlowBlock } from './Flow'
 import { usePlainFlow } from './hooks'
 import { NotesSection } from './notes'
 import styles from './view.module.css'
 
-function Lesson({ id }: { id: string }) {
-  const [open, setOpen] = useState(false)
-  const opener = useRef<HTMLButtonElement>(null)
+function Lesson({ id, part }: { id: string; part: string }) {
+  const ui = useUiApi()
   const lesson = findLesson(id)
   if (!lesson) return null
   return (
     <Group name="lesson" title="Lesson">
       <ul className={styles.rows}>
         <li>
-          <button ref={opener} type="button" className={`${styles.row} ${styles.lesson}`} onClick={() => setOpen(true)}>
+          <button type="button" className={`${styles.row} ${styles.lesson}`} data-lesson-opener={part} onClick={() => ui.openLesson(lesson.id, part)}>
             <GraduationCap className={styles.rowIcon} size={16} strokeWidth={1.5} aria-hidden="true" />
             <span className={styles.rowMain}>
               <span className={styles.rowTitle}>{lesson.title}</span>
@@ -28,15 +26,6 @@ function Lesson({ id }: { id: string }) {
           </button>
         </li>
       </ul>
-      {open && (
-        <LessonDialog
-          lessonId={lesson.id}
-          onClose={() => {
-            setOpen(false)
-            requestAnimationFrame(() => opener.current?.focus())
-          }}
-        />
-      )}
     </Group>
   )
 }
@@ -80,7 +69,7 @@ export function PartView({ board, component }: { board: Board; component: BoardC
       </Props>
       <FlowBlock partId={component.id} />
       {(component.explanation || hasPlain) && <Explanation source={component.explanation ?? ''} extra={<Takes plain={plain} />} />}
-      {component.lesson !== undefined && <Lesson id={component.lesson} />}
+      {component.lesson !== undefined && <Lesson id={component.lesson} part={component.id} />}
       <OpenItems items={items} />
       <Cited source={component.source} />
       <NotesSection target={{ type: 'component', id: component.id }} />

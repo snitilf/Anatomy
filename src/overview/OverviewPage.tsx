@@ -10,7 +10,6 @@ import { shortDate } from '../inspector/names'
 import { StatusGlyph } from '../status/StatusGlyph'
 import type { ItemState } from '../status/state'
 import { findLesson, LESSON_IDS } from '../lessons/catalog'
-import { LessonDialog } from '../lessons/LessonDialog'
 import { hasChanges, reviewCounts } from '../notes/review'
 import { useOverviewActions } from './actions'
 import { overviewMemory } from './memory'
@@ -62,7 +61,6 @@ export function OverviewPage() {
   const boardId = board?.id ?? ''
   const actions = useOverviewActions(boardId)
   const [filter, setFilter] = useState<PartFilter>({ query: '', mode: 'all' })
-  const [lesson, setLesson] = useState<{ id: string; row: string } | undefined>()
   const [goalOpen, setGoalOpen] = useState(false)
   const [goalLong, setGoalLong] = useState(false)
   const goal = useRef<HTMLParagraphElement>(null)
@@ -238,7 +236,7 @@ export function OverviewPage() {
               ))}
               {lessons.map(({ part, lesson: l }) => (
                 <li key={part.id}>
-                  <button type="button" className={styles.line} data-row={`lesson:${part.id}`} onClick={() => setLesson({ id: l.id, row: `lesson:${part.id}` })}>
+                  <button type="button" className={styles.line} data-row={`lesson:${part.id}`} data-lesson-opener={part.id} onClick={() => ui.openLesson(l.id, part.id)}>
                     <GraduationCap className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
                     <span className={styles.grow}>{l.title}</span>
                     <span className={styles.end}>on {part.label}</span>
@@ -346,16 +344,6 @@ export function OverviewPage() {
           </section>
         )}
       </div>
-      {lesson && (
-        <LessonDialog
-          lessonId={lesson.id}
-          onClose={() => {
-            const row = lesson.row
-            setLesson(undefined)
-            requestAnimationFrame(() => [...(page.current?.querySelectorAll<HTMLElement>('[data-row]') ?? [])].find((r) => r.dataset.row === row)?.focus())
-          }}
-        />
-      )}
     </div>
   )
 }
