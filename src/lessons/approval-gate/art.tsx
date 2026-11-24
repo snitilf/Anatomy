@@ -1,10 +1,9 @@
 /** Static art for the dispatch press, built from the geometry module. Parts that move are wrapped by the lesson. */
-import { useMemo, type Ref } from 'react'
+import { memo, useMemo, type Ref } from 'react'
 import { Dots, FaceText, Line, Solid } from '../kit/react/draw'
 import {
   BASE_ART,
   CARD_ART,
-  CARD_H,
   DECK_ART,
   FINGER_ART,
   GATE_ARCH,
@@ -21,14 +20,19 @@ import {
   PUSHER_ART,
   SLOTS,
   SHUTTER_ART,
-  STACK_SHIFT,
   STAMP_SIZE,
   SWITCH_ART,
-  shift,
 } from './geometry'
 
 type Arch = typeof GATE_ARCH
 type Comb = typeof GATE_COMB
+
+/** One ref callback per slot, so React keeps the same callback between renders and never detaches a part. */
+function useSlotRefs(ref: (version: number, node: SVGGElement | null) => void) {
+  return useMemo(() => Array.from({ length: SLOTS }, (_, i) => (node: SVGGElement | null) => ref(i + 1, node)), [ref])
+}
+
+const VERSIONS = Array.from({ length: SLOTS }, (_, i) => i + 1)
 
 export function Base() {
   const b = BASE_ART
@@ -128,26 +132,34 @@ export function PusherArt() {
   )
 }
 
-/** The slab of the card with its rules and its stamp. It stays under every overhead part, so it is drawn once. */
-export function CardBody({ version }: { version: number }) {
+/**
+ * The slab of the card with its rules and its stamps. It stays under every overhead part, so it is drawn once.
+ * Every version has a stamp. The lesson shows the one that matches the card and hides the rest.
+ */
+export const CardBody = memo(function CardBody({ stampRef }: { stampRef: (version: number, node: SVGGElement | null) => void }) {
   const c = CARD_ART
+  const stampRefs = useSlotRefs(stampRef)
   return (
     <g>
       <Solid paths={c.slab} tone="hi" />
       <Line d={c.inset} tone="faint" />
       <Line d={c.slotTicks} tone="lo" />
       <Line d={c.rules} tone="lo" free />
-      <FaceText transform={c.stampMatrix} size={STAMP_SIZE} tone="hi">
-        {`v${version}`}
-      </FaceText>
+      {VERSIONS.map((v) => (
+        <g key={v} ref={stampRefs[v - 1]} data-stamp={v} display={v === 1 ? undefined : 'none'}>
+          <FaceText transform={c.stampMatrix} size={STAMP_SIZE} tone="hi">
+            {`v${v}`}
+          </FaceText>
+        </g>
+      ))}
       <Dots points={c.corners} size={0.4} tone="mid" />
     </g>
   )
-}
+})
 
-/** The tab that names the version. It is the only part of the card that rises into the overhead parts. */
-export function CardTab({ version, lit }: { version: number; lit: boolean }) {
-  const tab = CARD_ART.tabs[version - 1]
+/** The tab that names the version. It is the only part of the card that rises into the overhead parts. It is built for slot 1 and slid across. */
+export const CardTab = memo(function CardTab({ lit }: { lit: boolean }) {
+  const tab = CARD_ART.tabs[0]
   if (!tab) return null
   return (
     <g>
@@ -156,21 +168,19 @@ export function CardTab({ version, lit }: { version: number; lit: boolean }) {
       <Line d={tab.edge} tone="faint" />
     </g>
   )
-}
+})
 
-/** Cards already delivered to the outbox. Each one rests on the one below it. */
-export function Stack({ delivered }: { delivered: readonly number[] }) {
+/** The card in the outbox: the last one delivered. The lesson shows it, slides its tab to the right slot, and sinks it when the next one comes. */
+export const Outbox = memo(function Outbox({ groupRef, tabRef, stampRef }: { groupRef: Ref<SVGGElement>; tabRef: Ref<SVGGElement>; stampRef: (version: number, node: SVGGElement | null) => void }) {
   return (
-    <g>
-      {delivered.map((version, index) => (
-        <g key={version} transform={shift(STACK_SHIFT, 0, index * CARD_H)}>
-          <CardBody version={version} />
-          <CardTab version={version} lit={false} />
-        </g>
-      ))}
+    <g ref={groupRef} data-part="outbox" data-version="0" display="none">
+      <CardBody stampRef={stampRef} />
+      <g ref={tabRef}>
+        <CardTab lit={false} />
+      </g>
     </g>
   )
-}
+})
 
 function Post({ parts }: { parts: Arch['far'] }) {
   return (
@@ -218,18 +228,13 @@ function CombFront({ comb }: { comb: Comb }) {
 
 export interface GateProps {
   fingerRef: (version: number, node: SVGGElement | null) => void
-  keyRef: (node: SVGGElement | null) => void
-  keyVersion: number | null
+  keyRef: (version: number, node: SVGGElement | null) => void
   litVersion: number | null
 }
 
-/** One ref callback per slot, so React keeps the same callback between renders and never detaches a part. */
-function useSlotRefs(ref: (version: number, node: SVGGElement | null) => void) {
-  return useMemo(() => Array.from({ length: SLOTS }, (_, i) => (node: SVGGElement | null) => ref(i + 1, node)), [ref])
-}
-
-export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProps) {
+export function GateArch({ fingerRef, keyRef, litVersion }: GateProps) {
   const fingerRefs = useSlotRefs(fingerRef)
+  const keyRefs = useSlotRefs(keyRef)
   return (
     <g data-part="arch" data-arch="gate">
       <Post parts={GATE_ARCH.far} />
@@ -243,8 +248,8 @@ export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProp
             <Line d={finger.eye} tone="lo" />
             <Line d={finger.groove} tone="faint" />
             <Line d={finger.notch} tone="faint" />
-            {keyVersion === finger.v && key ? (
-              <g ref={keyRef} data-part="key" data-slot={finger.v} data-pose="hidden">
+            {key ? (
+              <g ref={keyRefs[finger.v - 1]} data-part="key" data-slot={finger.v} data-pose="hidden" display="none" opacity="0">
                 <Solid paths={key.stem} tone="hi" crease="none" lit={litVersion === finger.v} />
                 <Solid paths={key.tooth} tone="hi" crease="none" lit={litVersion === finger.v} />
                 <Solid paths={key.bow} tone="hi" lit={litVersion === finger.v} />

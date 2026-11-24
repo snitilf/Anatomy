@@ -4,13 +4,13 @@ import ApprovalGateLesson from './ApprovalGateLesson'
 
 const realMatchMedia = window.matchMedia
 
-/** Reduced motion makes every pose settle on the next frame, so a test reads the end pose without waiting. */
+/** Reduced motion moves every part at once and keeps only fades of 150 ms or less, so a test reads the end pose after the fades. */
 function stillMotion() {
   window.matchMedia = (query: string) =>
     ({ matches: query.includes('prefers-reduced-motion'), media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }) as MediaQueryList
 }
 
-const frame = () => act(async () => void (await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))))
+const frame = () => act(async () => void (await new Promise<void>((resolve) => setTimeout(resolve, 220))))
 
 const poseOf = (part: string, slot: number) => document.querySelector(`[data-part="${part}"][data-slot="${slot}"]`)?.getAttribute('data-pose')
 const poses = (part: string) => Array.from({ length: 8 }, (_, i) => poseOf(part, i + 1))

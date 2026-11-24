@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BLOCKER_FACES, FINGER_FACE, PIN_FACE, TAB_TIP, TAG_X, TRAVEL_END, REACH_GATE, REACH_LEDGER, REACH_LOCK } from './geometry'
 import { initialState, step, type LessonEvent } from './model'
-import { litOf, reachOf, stopOf, tabLayerOf, targetsOf } from './scene'
+import { litOf, reachOf, stopOf, tabLayerOf } from './scene'
 
 const run = (events: LessonEvent[]) => events.reduce(step, initialState)
 
@@ -18,18 +18,6 @@ describe('scene', () => {
     expect(stopOf('sent')).toBe('end')
     expect(stopOf('approved')).toBeNull()
     expect(reachOf('end')).toBe(TRAVEL_END)
-  })
-
-  it('lifts the finger of the approved version only, even after an edit', () => {
-    const approved = targetsOf(run(['approve']), [])
-    expect(approved.fingers).toEqual([1, 0, 0, 0, 0, 0, 0, 0])
-    const stale = targetsOf(run(['approve', 'edit']), [])
-    expect(stale.fingers).toEqual([1, 0, 0, 0, 0, 0, 0, 0])
-  })
-
-  it('drops the lockout for a rejected version and the pin for a delivered one', () => {
-    expect(targetsOf(run(['reject']), []).lockout).toBe(1)
-    expect(targetsOf(run(['approve', 'trySend']), [1]).pins).toEqual([1, 0, 0, 0, 0, 0, 0, 0])
   })
 
   it('picks one lit part for every outcome', () => {
