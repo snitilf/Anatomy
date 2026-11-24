@@ -26,6 +26,7 @@
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run test",
     "schema": "node scripts/generate-schema.ts",
+    "outlines": "node scripts/generate-outlines.ts",
     "tokens": "node scripts/tokens.ts",
     "eval": "node eval/run.ts",
     "agent-files": "node scripts/agent-files.ts",

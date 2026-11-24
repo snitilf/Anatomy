@@ -1,4 +1,6 @@
 import { toast } from 'sonner'
+import { EXAMPLE_OUTLINES } from './exampleOutlines.generated'
+import type { BoardOutline } from './outline'
 
 /**
  * What the menus need to list an example, kept apart from the boards. A board is about 20 kB, and the start screen
@@ -16,11 +18,8 @@ export interface Example {
   boardId: string
   /** The text of the board file. Called once the user opens the example. */
   load: () => Promise<string>
-  /**
-   * Room for a small precomputed outline of the board, so the start screen can draw a preview without loading it.
-   * Nothing reads it yet.
-   */
-  outline?: Readonly<Record<string, unknown>>
+  /** Precomputed geometry snapshot of the board, so the start screen draws a preview without loading the board file. */
+  outline?: BoardOutline | undefined
 }
 
 export const EXAMPLES: readonly Example[] = [
@@ -31,6 +30,7 @@ export const EXAMPLES: readonly Example[] = [
     fileName: 'claude-code-harness.board.json',
     boardId: 'claude-code-harness',
     load: () => import('../examples/claude-code-harness.board.json?raw').then((m) => m.default),
+    outline: EXAMPLE_OUTLINES['claude-code-harness.board.json'],
   },
   {
     id: 'anatomy',
@@ -39,6 +39,7 @@ export const EXAMPLES: readonly Example[] = [
     fileName: 'anatomy.board.json',
     boardId: 'anatomy-app',
     load: () => import('../examples/anatomy.board.json?raw').then((m) => m.default),
+    outline: EXAMPLE_OUTLINES['anatomy.board.json'],
   },
   {
     id: 'llm',
@@ -47,6 +48,7 @@ export const EXAMPLES: readonly Example[] = [
     fileName: 'how-an-llm-works.board.json',
     boardId: 'how-an-llm-works',
     load: () => import('../examples/how-an-llm-works.board.json?raw').then((m) => m.default),
+    outline: EXAMPLE_OUTLINES['how-an-llm-works.board.json'],
   },
 ]
 
