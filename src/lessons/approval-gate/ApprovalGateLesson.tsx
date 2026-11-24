@@ -124,7 +124,10 @@ export default function ApprovalGateLesson() {
       put(card, 'data-version', String(version))
       put(card, 'display', drawn ? 'inline' : 'none')
     }
-    cardStamps.current.forEach((node, i) => put(node, 'display', i + 1 === version ? 'inline' : 'none'))
+    cardStamps.current.forEach((node, i) => {
+      put(node, 'display', i + 1 === version ? 'inline' : 'none')
+      put(node, 'opacity', clamp01(p.stampAlpha))
+    })
     put(pushRef.current, 'transform', shift(p.push))
     const layer = tabLayerOf(TAB_TIP + p.card)
     const slide = shift(p.card, (p.tabSlot - 1) * PITCH)

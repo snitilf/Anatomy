@@ -269,7 +269,7 @@ function formUp(plan: Plan): Formation {
   return { ready: feed + 240, hidden }
 }
 
-/** A new version: the card blinks out, shows the new tab and stamp, and comes back. */
+/** A new version: the tab slides to its slot, and the stamp is swapped under a short dip. The card itself stays put and drawn. */
 function changeVersion(plan: Plan, version: number, hidden: number | null) {
   if (plan.cur.cardVersion === version && plan.cur.tabSlot === version) return
   if (hidden !== null) {
@@ -277,27 +277,33 @@ function changeVersion(plan: Plan, version: number, hidden: number | null) {
     plan.go('tabSlot', version, hidden, 0)
     return
   }
-  plan.go('cardAlpha', 0, 0, 100, OUT)
+  plan.go('tabSlot', version, 0, 240, IN_OUT)
+  plan.go('stampAlpha', 0, 0, 100, OUT)
   plan.go('cardVersion', version, 100, 0)
-  plan.go('tabSlot', version, 100, 0)
-  plan.go('cardAlpha', 1, 100, 140, OUT)
+  plan.go('stampAlpha', 1, 100, 140, OUT)
 }
 
 /** The fingers, the keys, the shutter and the pins follow the decisions. */
 function settleParts(plan: Plan, target: Pose, skipPin: number | null) {
+  // A key that is still on screen leaves first. The key that replaces it starts once it is gone, so the two never add up to more than one.
+  const leaving = SLOT_LIST.some((v) => target[keyAlphaOf(v)] < plan.cur[keyAlphaOf(v)] && plan.cur[keyAlphaOf(v)] > 0.05)
+  const entry = leaving ? 100 : 0
   for (const v of SLOT_LIST) {
     const finger = fingerOf(v)
-    if (plan.cur[finger] !== target[finger]) plan.go(finger, target[finger], 0, target[finger] > plan.cur[finger] ? 260 : 220, IN_OUT)
-
     const lift = keyLiftOf(v)
     const alpha = keyAlphaOf(v)
     if (target[alpha] > plan.cur[alpha]) {
-      if (plan.cur[alpha] <= 0.05) plan.go(lift, 1, 0, 0)
-      plan.go(lift, 0, 0, 240, OUT)
-      plan.go(alpha, 1, 0, 160, OUT)
+      // The key drops onto its finger, and then that finger lifts.
+      if (plan.cur[alpha] <= 0.05) plan.go(lift, 1, entry, 0)
+      plan.go(lift, 0, entry, 240, OUT)
+      plan.go(alpha, 1, entry, 120, OUT)
     } else if (target[alpha] < plan.cur[alpha]) {
       plan.go(alpha, 0, 0, 160, OUT)
       plan.go(lift, 1, 0, 160, OUT)
+    }
+    if (plan.cur[finger] !== target[finger]) {
+      if (target[finger] > plan.cur[finger]) plan.go(finger, 1, entry + 200, 260, IN_OUT)
+      else plan.go(finger, 0, 0, 220, IN_OUT)
     }
 
     const pin = pinOf(v)
