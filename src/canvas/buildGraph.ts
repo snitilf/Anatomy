@@ -481,11 +481,18 @@ function stable<T extends Node | Edge>(cache: Map<string, T>, next: T): T {
   return next
 }
 
+/**
+ * An arrowhead is one marker per ink. Its box is 20 board units, the size of its own drawing, and it is measured in board units
+ * and not in the width of the line it ends: the kinds of line differ by dash and width only (D119), so a dotted line of 1.5 and a solid
+ * one of 1.25 carry the same head, and a selected line does not grow its head. The size on screen comes from the map's style, which
+ * scales the head with `--label-scale` (see `Canvas.module.css`) so it stays at about 8 px from 45 to 100 percent.
+ */
+const MARKER_BOX = 20
 const markers = new Map<string, EdgeMarker>()
 function markerFor(color: string): EdgeMarker {
   let marker = markers.get(color)
   if (!marker) {
-    marker = { type: MarkerType.ArrowClosed, color, width: 12, height: 12 }
+    marker = { type: MarkerType.ArrowClosed, color, width: MARKER_BOX, height: MARKER_BOX, markerUnits: 'userSpaceOnUse', strokeWidth: 0 }
     markers.set(color, marker)
   }
   return marker
