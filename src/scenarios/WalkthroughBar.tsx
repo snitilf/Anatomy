@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type Ref } from 'react'
+import clsx from 'clsx'
+import { ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import buttons from '../app/buttons.module.css'
 import { lastInputWasKeyboard } from '../app/inputMode'
 import { useAppStore } from '../app/store'
 import { Tip } from '../app/Tip'
@@ -7,12 +10,19 @@ import { useCommand, type CommandView } from '../commands/context'
 import { currentStep } from './step'
 import styles from './WalkthroughBar.module.css'
 
-function StepButton({ view, label, disabled, buttonRef, quietFocus }: { view: CommandView; label: string; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; quietFocus?: () => boolean }) {
+/** Previous and Close: quiet icon buttons. A button that is off keeps its place and its focus. */
+function IconStep({ view, label, disabled }: { view: CommandView; label: string; disabled?: boolean }) {
   const Icon = view.command.icon
   return (
-    <Tip label={label} keys={view.shortcut} side="top" {...(quietFocus ? { consumeReturnFocus: quietFocus } : {})}>
-      <button ref={buttonRef} type="button" className={styles.button} aria-label={label} aria-disabled={disabled || undefined} onClick={() => !disabled && view.run()}>
-        <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
+    <Tip label={label} keys={view.shortcut} side="top">
+      <button
+        type="button"
+        className={clsx(buttons.button, buttons.quiet, buttons.small, buttons.icon)}
+        aria-label={label}
+        aria-disabled={disabled || undefined}
+        onClick={() => !disabled && view.run()}
+      >
+        <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
       </button>
     </Tip>
   )
@@ -76,6 +86,7 @@ export function WalkthroughBar() {
 
   if (!step) return null
   const total = step.scenario.steps.length
+  const last = step.index === total - 1
   return (
     <section ref={bar} className={styles.bar} aria-label={`Walkthrough: ${step.scenario.title}`} data-instant={instant || undefined}>
       <p className={styles.caption} aria-live="polite" aria-atomic="true">
@@ -84,7 +95,7 @@ export function WalkthroughBar() {
       <p className={styles.note}>Teaching sequence. Nothing runs.</p>
       <div className={styles.controls}>
         <p className={styles.title}>{step.scenario.title}</p>
-        <StepButton view={previous} label="Previous" disabled={step.index === 0} />
+        <IconStep view={previous} label="Previous" disabled={step.index === 0} />
         <p className={styles.count}>
           <span aria-hidden="true">
             {step.index + 1} / {total}
@@ -93,8 +104,25 @@ export function WalkthroughBar() {
             Step {step.index + 1} of {total}
           </span>
         </p>
-        <StepButton view={next} label="Next" disabled={step.index === total - 1} buttonRef={nextButton} quietFocus={quietFocus} />
-        <StepButton view={close} label="Close" />
+        {/* One button for the main action, so it keeps its place and its focus from the first step to the last. */}
+        <Tip label={last ? 'Done' : 'Next'} keys={(last ? close : next).shortcut} side="top" consumeReturnFocus={quietFocus}>
+          <button
+            ref={nextButton}
+            type="button"
+            className={clsx(buttons.button, buttons.primary, buttons.small, styles.main)}
+            onClick={() => (last ? close : next).run()}
+          >
+            {last ? (
+              'Done'
+            ) : (
+              <>
+                Next
+                <ChevronRight size={14} strokeWidth={1.5} aria-hidden="true" />
+              </>
+            )}
+          </button>
+        </Tip>
+        <IconStep view={close} label="Close" />
       </div>
     </section>
   )

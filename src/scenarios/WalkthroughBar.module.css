@@ -48,8 +48,8 @@
 .controls {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 28px;
+  gap: var(--space-1);
+  min-height: var(--control-md);
 }
 
 .title {
@@ -74,43 +74,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.button {
-  appearance: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-2);
-  cursor: pointer;
-}
-
-.button[aria-disabled] {
-  color: color-mix(in srgb, var(--fg-3) 50%, transparent);
-  cursor: default;
-}
-
-.button:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .button {
-    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-  }
-
-  .button:hover:not([aria-disabled]) {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-.button:active:not([aria-disabled]) {
-  background: var(--active);
+.main {
+  min-width: 64px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -134,14 +99,4 @@
     bottom: calc(64px + 8px);
     width: calc(100% - 16px);
   }
-}
-
-.button {
-  position: relative;
-}
-
-.button::after {
-  content: '';
-  position: absolute;
-  inset: min(0px, calc((28px - var(--hit)) / 2));
 }
