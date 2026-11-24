@@ -42,7 +42,8 @@ export function frameBundle(camera: Camera, board: Board, a: string, b: string):
 export function frameConnection(camera: Camera, from: Rect | undefined, to: Rect | undefined, covered = 0): void {
   const both = boundsOf([from, to])
   const size = camera.size()
-  const area = { ...size, height: size.height * (1 - covered) }
+  // Above a sheet, the controls at the bottom of the map are under the sheet.
+  const area = { ...size, height: size.height * (1 - covered), ...(covered > 0 ? { bottom: 0 } : {}) }
   const show = (options: Frame) => {
     if (covered === 0) camera.frame(options, glide())
     else camera.move(frameViewport(camera.limits(), area, options), glide())

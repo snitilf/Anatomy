@@ -48,7 +48,8 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
     (picked: boolean) => {
       if (!selection || selection.type === 'board' || !board) return
       const size = camera.size()
-      const area = covered ? { ...size, height: size.height / 2 } : size
+      // The controls at the bottom of the map sit under the sheet, so the half above it has none.
+      const area = covered ? { ...size, height: size.height / 2, bottom: 0 } : size
       const narrow = width > 0 && width < 600
       if (selection.type === 'relationship') {
         const r = board.relationships.find((x) => x.id === selection.id)
