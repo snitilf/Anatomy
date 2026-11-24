@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAppStore, useAppStoreApi } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
+import { usePhone } from '../app/usePhone'
 import { formatKeys } from './keys'
 import { boardCommands, COMMANDS, isEnabled, isListed } from './list'
 import { useCommands } from './context'
@@ -12,7 +13,8 @@ import { GROUP_ORDER, type Command, type CommandContext } from './types'
 
 function Row({ command, ctx, onRun, inContext = false }: { command: Command; ctx: CommandContext; onRun: (c: Command) => void; inContext?: boolean }) {
   const Icon = command.icon
-  const keys = command.keys?.[0]
+  // A phone has no keys to press.
+  const keys = usePhone() ? undefined : command.keys?.[0]
   const checked = command.checked?.(ctx) ?? false
   return (
     <Cmdk.Item

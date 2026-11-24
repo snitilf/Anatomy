@@ -38,6 +38,13 @@
   overflow-wrap: anywhere;
 }
 
+.note {
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+}
+
 .controls {
   display: flex;
   align-items: center;

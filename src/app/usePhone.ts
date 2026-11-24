@@ -13,3 +13,8 @@ function subscribePhone(listener: () => void) {
 export function usePhone(): boolean {
   return useSyncExternalStore(subscribePhone, () => typeof window.matchMedia === 'function' && window.matchMedia(PHONE).matches, () => false)
 }
+
+/** The same answer outside a component, for a command that asks when it runs. */
+export function onPhone(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(PHONE).matches
+}

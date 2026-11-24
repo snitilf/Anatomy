@@ -41,7 +41,7 @@ React components read from the app state and dispatch actions.
 | `src/canvas/` | React Flow map: cards, group areas, connections, user links. | `@xyflow/react`, `src/app/` |
 | `src/whiteboard/` | The tool bar, the draw surface, the ink layer, text and sticky notes, proposed parts, the in-place editor, and the end handles that move line ends. Arrow geometry and end drops are pure functions. | `@xyflow/react`, `perfect-freehand`, `src/app/`, `src/layer/` |
 | `src/inspector/` | The sidebar: the overview, a view for every kind of selection, the flow block, notes and the agent's answers, the Review tab, and the bottom sheet on a phone. | `src/app/`, `src/commands/`, `src/text/` |
-| `src/scenarios/` | The walkthrough bar: step state, highlights, captions. | `src/app/`, `src/commands/` |
+| `src/scenarios/` | The walkthrough bar: step state, highlights, captions, and its one line that says nothing runs. | `src/app/`, `src/commands/` |
 | `src/notes/` | Note targets in words, the review counts after an update, and the undo toast. | `src/layer/`, `src/app/` |
 | `src/theme/` | Theme choice (system, light, dark), stored in `localStorage` and applied as `data-theme` on `<html>`. An inline script in `index.html` applies it before the first paint. | `react` |
 | `src/styles/` | Design tokens: colors for both themes (checked for contrast in `tokens.test.ts`), type scale, spacing, radii, and the one shadow for floating surfaces. | none |
@@ -264,6 +264,7 @@ The tool in use is screen state and is not part of the history.
 Escape or V returns to Select.
 Every tool except the pen returns to Select after one use.
 In a walkthrough or on a phone screen, only Select is available.
+On a phone the command menu lists no tool and prints no shortcuts, and the tool keys do nothing.
 
 Under Select, the map behaves as before.
 Under Hand, the map pans from anywhere.
