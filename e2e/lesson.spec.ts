@@ -33,7 +33,7 @@ test('an approved and sent version lifts its finger, drops its pin, and leaves p
 test('the card body is drawn once, under every arch, and the tab is layered between them', async ({ page }) => {
   const lesson = await openLesson(page)
   await expect(lesson.locator('[data-part="card"]')).toHaveCount(1)
-  // Document order is paint order: the body and the pusher first, then each arch with the tab layer that sits behind it just before it.
+  // Document order is paint order: the body and the pusher first, then each arch with the tab layer that sits behind it just before it, and last the veil that a restart dims the press through.
   const order = await page.evaluate(() => {
     const svg = document.querySelector('.ag svg.iso-svg')
     const kids = [...(svg?.children ?? [])]
@@ -44,7 +44,7 @@ test('the card body is drawn once, under every arch, and the tab is layered betw
       return part ? [part] : []
     })
   })
-  expect(order).toEqual(['card', 'pusher', 'outbox', 'tab:3', 'arch:ledger', 'tab:2', 'arch:gate', 'tab:1', 'arch:lock', 'tab:0'])
+  expect(order).toEqual(['card', 'pusher', 'outbox', 'tab:3', 'arch:ledger', 'tab:2', 'arch:gate', 'tab:1', 'arch:lock', 'tab:0', 'veil'])
 })
 
 /** The middle of the tab must be the tab, not a bar, a post or a shutter drawn over it. */
