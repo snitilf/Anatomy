@@ -16,6 +16,7 @@ import {
   poseAt,
   restFor,
   restPose,
+  shownAfter,
   type Channel,
   type Pose,
   type Run,
@@ -364,5 +365,26 @@ describe('edit, keys and reset', () => {
       expect(all[i]?.[keyAlphaOf(1)] ?? 0).toBeLessThanOrEqual((all[i - 1]?.[keyAlphaOf(1)] ?? 0) + 1e-9)
     }
     expect(end(run).outboxAlpha).toBe(0)
+  })
+})
+
+describe('text follows the picture', () => {
+  it('moves the shown state on a commit beat and on no other beat', () => {
+    const approved = step(initialState, 'approve')
+    const played = play('trySend', approved, restPose(approved, 'home'))
+    if (!played) throw new Error('no run')
+    const { run } = played
+    expect(shownAfter(approved, run, [])).toBe(approved)
+    for (const kind of ['deliver', 'outboxOut'] as const) expect(shownAfter(approved, run, [{ at: 0, kind }])).toBe(approved)
+    expect(shownAfter(approved, run, [{ at: 0, kind: 'commit' }])).toBe(run.state)
+  })
+
+  it('puts the commit of a send after the start of the move, so the words trail the click', () => {
+    const approved = step(initialState, 'approve')
+    for (const state of [initialState, approved]) {
+      const played = play('trySend', state, restPose(state, 'home'))
+      const commit = played?.run.beats.find((b) => b.kind === 'commit')
+      expect(commit?.at ?? 0).toBeGreaterThan(200)
+    }
   })
 })

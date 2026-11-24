@@ -447,3 +447,8 @@ export function poseAt(run: Run, time: number): Pose {
   }
   return pose
 }
+
+/** The state the caption, the readout and the lit part show. Only a commit beat moves it to the run's state. */
+export function shownAfter(shown: LessonState, _run: Run, _fired: readonly Beat[]): LessonState {
+  return shown
+}

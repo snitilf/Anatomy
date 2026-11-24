@@ -37,13 +37,18 @@ describe('ApprovalGateLesson', () => {
     expect(screen.getByText('v1 undecided · sent none')).toBeInTheDocument()
   })
 
-  it('announces the outcome in a polite live region', async () => {
+  it('announces the outcome in a polite live region once the picture shows it', async () => {
     render(<ApprovalGateLesson />)
     fireEvent.click(screen.getByRole('button', { name: /Send/ }))
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 120))
-    })
-    expect(screen.getByRole('status')).toHaveTextContent('Nobody approved version 1')
+    expect(await screen.findByText(/Nobody approved version 1/, { selector: '[role="status"]' })).toBeInTheDocument()
+  })
+
+  it('keeps the caption and the readout on the old state until the card has reached the blocker', async () => {
+    render(<ApprovalGateLesson />)
+    fireEvent.click(screen.getByRole('button', { name: /Send/ }))
+    expect(screen.getByText(/A fresh lesson/)).toBeInTheDocument()
+    expect(await screen.findByText(/Blocked\. Nobody approved version 1/, { selector: '.iso-caption' })).toBeInTheDocument()
+    expect(screen.queryByText(/A fresh lesson/)).not.toBeInTheDocument()
   })
 
   describe('the moving parts follow the model', () => {
