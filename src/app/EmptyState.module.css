@@ -1,36 +1,48 @@
 .empty {
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
-  place-items: center;
-  padding: var(--space-8) var(--space-4);
+  justify-items: center;
+  align-items: start;
+  padding: var(--space-8) var(--space-6);
   background: var(--bg);
 }
 
-/* One left-aligned column, centered on the page. */
+/* A centered workspace-width column, so the three example maps sit side by side on desktop. */
 .column {
   display: grid;
-  gap: var(--space-4);
-  width: min(360px, 100%);
+  gap: var(--space-6);
+  width: min(960px, 100%);
+  min-width: 0;
+  margin-block: auto;
 }
 
-.line {
+.lead {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.title {
   margin: 0;
-  font-size: var(--text-xl);
-  line-height: var(--leading-xl);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-2xl);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
   color: var(--fg);
 }
 
 .hint {
-  margin: calc(var(--space-2) * -1) 0 0;
+  margin: calc(var(--space-1) * -1) 0 0;
   color: var(--fg-2);
   text-wrap: pretty;
 }
 
 .path {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
@@ -46,21 +58,288 @@
   text-wrap: pretty;
 }
 
-.list {
-  display: grid;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-
-.listTitle {
+.sectionTitle {
   margin: 0;
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
 }
 
-/* The lists sit flush with the column, their hover reaching into the gutter. */
-.list > ul {
+.section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.recent {
+  gap: var(--space-2);
+  width: min(520px, 100%);
+}
+
+/* The saved boards sit flush with the column, their hover reaching into the gutter. */
+.recent > ul {
   margin: 0 calc(var(--space-2) * -1);
+}
+
+.examples {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.item {
+  display: flex;
+  min-width: 0;
+}
+
+.card {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  color: var(--fg);
+  text-align: left;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-float);
+  transform: translateY(-1px);
+}
+
+.card:active {
+  transform: translateY(0);
+}
+
+.card:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.preview {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: var(--space-3);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.map [data-outline-group],
+.map [data-outline-line],
+.map [data-outline-card] > rect:first-child {
+  vector-effect: non-scaling-stroke;
+}
+
+.map [data-outline-group] {
+  fill: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
+  stroke: var(--group-edge);
+  stroke-width: 1px;
+}
+
+.map [data-outline-line] {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.15px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 140ms var(--ease-out);
+}
+
+.map [data-outline-card] > rect:first-child {
+  fill: var(--raised);
+  stroke: var(--card-edge);
+  stroke-width: 1px;
+  transition: stroke 140ms var(--ease-out);
+}
+
+.map [data-outline-card] > rect:nth-child(2) {
+  fill: var(--fg);
+  opacity: 0.34;
+}
+
+.map [data-outline-card] > rect:nth-child(3) {
+  fill: var(--fg);
+  opacity: 0.14;
+}
+
+.card:hover [data-outline-line],
+.card:focus-visible [data-outline-line] {
+  stroke: var(--accent-line);
+}
+
+.card:hover [data-outline-card] > rect:first-child,
+.card:focus-visible [data-outline-card] > rect:first-child {
+  stroke: var(--fg-2);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.cardBody > strong {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.cardBody > span {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.cardBody > small {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  min-height: var(--leading-xs);
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.steps {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.stepList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.step > span:first-child {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--space-5);
+  height: var(--space-5);
+  margin-top: 1px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--fg-2);
+  font-size: var(--text-xs);
+  line-height: 1;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.step > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.step > span:last-child > span:first-child {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.step > span:last-child > span:last-child {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--fg-2);
+}
+
+@media (max-width: 760px) {
+  .empty {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .column {
+    gap: var(--space-5);
+    margin-block: 0;
+  }
+
+  .title {
+    font-size: var(--text-xl);
+    line-height: var(--leading-xl);
+  }
+
+  .examples,
+  .stepList {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (hover: none) {
+  .card:hover {
+    border-color: var(--border);
+    box-shadow: var(--card-shadow);
+    transform: none;
+  }
+
+  .card:hover [data-outline-line] {
+    stroke: var(--line);
+  }
+
+  .card:hover [data-outline-card] > rect:first-child {
+    stroke: var(--card-edge);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .map [data-outline-line],
+  .map [data-outline-card] > rect:first-child {
+    transition: none;
+  }
+
+  .card:hover,
+  .card:active {
+    transform: none;
+  }
 }

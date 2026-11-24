@@ -70,6 +70,17 @@ describe('the first script', () => {
     }
   })
 
+  it('has the map outlines of the examples in a script of its own, which loads after the first paint', () => {
+    const file = join(root, 'src/app/exampleOutlines.generated.ts')
+    // The longest packed line string of the first example: path text that minified code keeps as it is.
+    const line = (readFileSync(file, 'utf8').match(/"M[^"]{40,}"/g) ?? []).sort((a, b) => b.length - a.length)[0]!.slice(1, 41)
+    expect(line.length).toBe(40)
+    expect(entry.code.includes(line), 'the outlines are in the first script').toBe(false)
+    const own = chunks.find((c) => !c.isEntry && c.code.includes(line))
+    expect(own, 'the outlines have a script of their own').toBeDefined()
+    expect(loadedAtStart().has(own!.fileName), 'the outlines load at start').toBe(false)
+  })
+
   it('has no part of the bundled command line tool in it', () => {
     // The usage line of its help text is only in the tool.
     const mark = '<command> [file] [options]'

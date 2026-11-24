@@ -132,6 +132,7 @@ See [the hosted copy](docs/architecture.md#the-hosted-copy) for what it does.
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
 | `npm run test:e2e` | Builds the app in the `e2e` mode and runs the browser tests with the installed Google Chrome. |
 | `npm run schema` | Writes `schema/board.v1.schema.json` and the field list `schema/board.v1.fields.txt` from the Zod schema. Run it after a schema change. |
+| `npm run outlines` | Writes `src/app/exampleOutlines.generated.ts` from `src/examples/*.board.json` so the start screen previews match the real boards. |
 | `npm run anatomy -- <command>` | Runs the `anatomy` tool from the source, for example `npm run anatomy -- validate path/to/board.json`. See [Board format](docs/board-format.md#check-a-board-outside-the-app). |
 | `npm run tokens` | Prints the size of the generated agent README, each guide section and topic, each example board, and the output of the `anatomy` tool. |
 | `npm run agent-files -- <folder>` | Writes the agent files into `<folder>/.anatomy/`, the way Copy prompt does. |

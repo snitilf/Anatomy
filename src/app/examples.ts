@@ -4,6 +4,7 @@ import { toast } from 'sonner'
  * What the menus need to list an example, kept apart from the boards. A board is about 20 kB, and the start screen
  * shows only titles, so a board loads when the user opens it (`loadExample`). `examples.test.ts` checks every entry
  * against the real board files.
+ * The map outlines the start screen draws are in `ExamplePreview.tsx`, a script of its own, so the first script stays small.
  */
 export interface Example {
   /** A short name for the command menu and for tests. */
@@ -16,11 +17,6 @@ export interface Example {
   boardId: string
   /** The text of the board file. Called once the user opens the example. */
   load: () => Promise<string>
-  /**
-   * Room for a small precomputed outline of the board, so the start screen can draw a preview without loading it.
-   * Nothing reads it yet.
-   */
-  outline?: Readonly<Record<string, unknown>>
 }
 
 export const EXAMPLES: readonly Example[] = [
