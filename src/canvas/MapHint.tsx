@@ -1,6 +1,7 @@
 import { useStore } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useState } from 'react'
+import { useSonner } from 'sonner'
 import styles from './MapHint.module.css'
 
 const KEY = 'anatomy:map-hint-seen'
@@ -38,6 +39,9 @@ export function MapHint({ mapWidth, onChange }: { mapWidth?: number; onChange?: 
   // The hint is for a screen with room. On a phone it is never shown, so it is not used up either.
   const roomy = width >= ROOMY_MAP && !narrowWindow()
   const shown = open && roomy
+  // A toast takes the hint's place for as long as it shows. The hint keeps its room, so nothing on the map moves.
+  // A toast of the dialog, which has a toaster of its own, is not one.
+  const toasting = useSonner().toasts.some((t) => t.toasterId === undefined)
 
   useLayoutEffect(() => {
     onChange?.()
@@ -62,7 +66,7 @@ export function MapHint({ mapWidth, onChange }: { mapWidth?: number; onChange?: 
 
   if (!open || !roomy) return null
   return (
-    <div className={styles.hint} role="note">
+    <div className={styles.hint} role="note" data-yielding={toasting || undefined}>
       <span>Drag a card to move it, its edge dot to link. Scroll to zoom. Draw with the tools below.</span>
       <button
         type="button"

@@ -43,7 +43,8 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { MANUAL_LINE } from './kinds'
+import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, toastPlace, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, DetailMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { hiddenDetailText, type DetailLevel } from './far'
@@ -355,24 +356,58 @@ export function Canvas() {
   // put it now, or the map changes size. From then on the lowest zoom is Fit's.
   const bottomFloor = useRef(0)
   const measuredSize = useRef({ width: 0, height: 0 })
+  // Toasts sit in the slot above the bottom controls, centered on the map. The toaster reads these two values. The map stays
+  // mounted, hidden, under the Overview, where a toast goes in the middle of the window, so they are only set on the map.
+  const screen = useUi((u) => u.view)
+  const screenRef = useRef(screen)
+  const publishToast = useCallback(() => {
+    const el = mapBox.current
+    const root = document.documentElement
+    if (!el || screenRef.current !== 'map') {
+      root.style.removeProperty('--toast-base')
+      root.style.removeProperty('--toast-x')
+      return
+    }
+    const place = toastPlace(el)
+    root.style.setProperty('--toast-base', `${Math.ceil(place.bottom)}px`)
+    root.style.setProperty('--toast-x', `${Math.round(place.center)}px`)
+  }, [])
+  useLayoutEffect(() => {
+    screenRef.current = screen
+    publishToast()
+  }, [screen, publishToast])
   const measureMap = useCallback(() => {
     const el = mapBox.current
     if (!el) return
     const r = el.getBoundingClientRect()
     if (r.width !== measuredSize.current.width || r.height !== measuredSize.current.height) bottomFloor.current = 0
     measuredSize.current = { width: r.width, height: r.height }
+    publishToast()
     const bottom = Math.max(coveredBottom(el), bottomFloor.current)
     bottomFloor.current = bottom
     setMapSize((s) => (s.width === r.width && s.height === r.height && s.bottom === bottom ? s : { width: r.width, height: r.height, bottom }))
-  }, [])
+  }, [publishToast])
   useLayoutEffect(() => {
     const el = mapBox.current
     if (!el) return
     measureMap()
-    if (typeof ResizeObserver === 'undefined') return
+    const root = document.documentElement
+    const leave = () => {
+      root.style.removeProperty('--toast-base')
+      root.style.removeProperty('--toast-x')
+    }
+    if (typeof ResizeObserver === 'undefined') return leave
     const observer = new ResizeObserver(measureMap)
     observer.observe(el)
-    return () => observer.disconnect()
+    // A toolbar, the hint, or the line that says what is hidden comes or goes: they are the direct children of the map.
+    const controls = el.querySelector('.react-flow')
+    const changes = typeof MutationObserver === 'undefined' || !controls ? undefined : new MutationObserver(measureMap)
+    if (controls) changes?.observe(controls, { childList: true })
+    return () => {
+      observer.disconnect()
+      changes?.disconnect()
+      leave()
+    }
   }, [board, measureMap])
 
   // The limits follow what is on the map once it is solved, never a card in hand.
@@ -1182,6 +1217,7 @@ export function Canvas() {
           translateExtent={limits.extent}
           nodesConnectable={props.nodesConnectable}
           connectionMode={ConnectionMode.Loose}
+          connectionLineStyle={MANUAL_LINE}
           onConnect={onConnect}
           onConnectStart={() => setConnecting(true)}
           onConnectEnd={onConnectEnd}

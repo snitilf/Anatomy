@@ -11,8 +11,17 @@ export type Corner = 'tr' | 'tl' | 'br' | 'bl'
 
 /** The corners to try on a card, in order. The bottom left is the row of the lesson and note badges, so the mark never takes it. */
 export const CARD_CORNERS: readonly Corner[] = ['tr', 'tl', 'br']
+const NO_TOP_RIGHT: readonly Corner[] = ['tl', 'br']
 /** The corners to try on a tile: the top ones belong to the names of the groups and to the note dot. */
 export const TILE_CORNERS: readonly Corner[] = ['br', 'bl']
+
+/**
+ * The corners to try on a card. A card with a count of notes and no lesson carries the count in its top right corner at the full
+ * level (`NOTE_BADGE_ROOM` in `layout/cards.ts`), so the mark takes the top left or the bottom right.
+ */
+export function cardCorners(countAtTopRight: boolean): readonly Corner[] {
+  return countAtTopRight ? NO_TOP_RIGHT : CARD_CORNERS
+}
 
 const touches = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 

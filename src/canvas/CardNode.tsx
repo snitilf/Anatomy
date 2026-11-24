@@ -18,6 +18,8 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   // How many title lines a title-only card holds. It changes only on a few zooms just above the far view.
   const foot = data.hasLesson || mine > 0
+  // Without a lesson, the count of notes has no row: at the full level it sits in the corner, beside the title.
+  const corner = mine > 0 && !data.hasLesson
   const heading = useStore((s) => (data.far ? 3 : titleLines(s.transform[2], data.height, foot)))
   const tip = useTipClamp(data.far, selected === true || data.highlighted)
   // The dots sit beside the card, not inside it: the card clips its own paint.
@@ -35,6 +37,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-highlighted={data.highlighted ? 'true' : undefined}
         data-dimmed={data.dimmed ? 'true' : undefined}
         data-faded={data.faded ? 'true' : undefined}
+        data-count-corner={corner || undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
         data-start={data.starts.length > 0 && !data.far ? data.startCorner : undefined}
         style={{ '--title-lines': heading } as CSSProperties}

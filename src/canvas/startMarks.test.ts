@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Rect } from '../layout/geometry'
-import { farMark, freeCorner, markBox, MARK_INSET, MARK_PX } from './startMarks'
+import { cardCorners, farMark, freeCorner, markBox, MARK_INSET, MARK_PX } from './startMarks'
 
 const card: Rect = { x: 100, y: 200, width: 240, height: 112 }
 const inside = (box: Rect, outer: Rect) => box.x >= outer.x && box.y >= outer.y && box.x + box.width <= outer.x + outer.width && box.y + box.height <= outer.y + outer.height
@@ -71,5 +71,16 @@ describe('farMark', () => {
   it('moves to the bottom left when the bottom right is covered', () => {
     const cover: Rect[] = [{ x: 150, y: 70, width: 90, height: 42 }]
     expect(farMark(tile, 1, cover)?.corner).toBe('bl')
+  })
+})
+
+describe('cardCorners', () => {
+  it('offers the top right, the top left, and the bottom right of a card', () => {
+    expect(cardCorners(false)).toEqual(['tr', 'tl', 'br'])
+  })
+
+  it('leaves out the top right when the count of notes sits there', () => {
+    expect(cardCorners(true)).not.toContain('tr')
+    expect(cardCorners(true)).toEqual(['tl', 'br'])
   })
 })

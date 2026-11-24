@@ -3,7 +3,7 @@ import { memo, useState, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
 import type { ManualEdgeData } from './buildGraph'
-import { MANUAL_STYLE, SELECTED_WIDTH, YOURS_FAR_DASH } from './kinds'
+import { MANUAL_LINE, SELECTED_WIDTH, YOURS_FAR_DASH } from './kinds'
 import { LabelCutout } from './LabelCutout'
 import styles from './RelationshipEdge.module.css'
 
@@ -35,10 +35,8 @@ export const ManualEdge = memo(function ManualEdge(props: EdgeProps<Edge<ManualE
           {...(markerEnd ? { markerEnd } : {})}
           interactionWidth={interactionWidth ?? 28}
           style={{
-            stroke: emphasized ? 'var(--accent-line)' : 'var(--yours)',
-            strokeWidth: emphasized ? SELECTED_WIDTH : MANUAL_STYLE.width,
-            strokeDasharray: MANUAL_STYLE.dash,
-            strokeLinecap: 'round',
+            ...MANUAL_LINE,
+            ...(emphasized ? { stroke: 'var(--accent-line)', strokeWidth: SELECTED_WIDTH } : {}),
           }}
         />
       </g>

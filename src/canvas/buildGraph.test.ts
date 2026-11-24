@@ -231,6 +231,18 @@ describe('where a walkthrough starts', () => {
     }
   })
 
+  it('keeps the mark off the corner where the count of notes sits', () => {
+    const board = refundBoard()
+    const rects = placeCards(board, { positions: {}, sizes: {} })
+    const corner = (notes: number) => {
+      const { nodes } = buildGraph(board, rects, undefined, undefined, [], new Map([['refund-request', notes]]))
+      return (nodes.find((n) => n.id === 'refund-request')!.data as { startCorner: string }).startCorner
+    }
+    expect(corner(0)).toBe('tr')
+    expect(corner(1)).not.toBe('tr')
+    expect(corner(12)).not.toBe('tr')
+  })
+
   it('says so in the description a screen reader reads after the summary', () => {
     const board = refundBoard()
     const { nodes } = buildGraph(board, placeCards(board, { positions: {}, sizes: {} }), undefined)

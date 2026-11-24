@@ -29,6 +29,14 @@ export const YOURS_DASH = '7 3 1.5 3'
 /** The links the user draws: the user's own color and their dash and dot, unlike any connection from the agent. */
 export const MANUAL_STYLE = { dash: YOURS_DASH, width: 1.25 } as const
 
+/** How a link of the user's is drawn at rest, and how the line looks while it is dragged from a card's dot to another card. */
+export const MANUAL_LINE = {
+  stroke: 'var(--yours)',
+  strokeWidth: MANUAL_STYLE.width,
+  strokeDasharray: MANUAL_STYLE.dash,
+  strokeLinecap: 'round',
+} as const
+
 /**
  * A dash pattern held at its size on screen. The far view scales the board down, which would shrink a dash to specks, so each
  * length is multiplied back by `--label-scale`, as the far view does for the width of its lines.

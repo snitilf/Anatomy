@@ -183,11 +183,30 @@ export function coveredTop(map: HTMLElement): number {
   return top
 }
 
-/** The room at the bottom of the map that floating controls (toolbars, hint, detail notice) cover. */
-export function coveredBottom(map: HTMLElement): number {
+/** The room a toast takes above the bottom controls: the same as the first-run hint, one line of it and its 8 px gap. */
+export const TOAST_ROOM = 46
+
+/** The room at the bottom of the map that the toolbars cover. A toast sits right above it. */
+function toolbarRoom(map: HTMLElement): number {
   const box = map.getBoundingClientRect()
   let bottom = CORNER_ROOM
-  for (const el of map.querySelectorAll('[role="toolbar"], [role="note"], [data-testid="hidden-detail"]')) {
+  for (const el of map.querySelectorAll('[role="toolbar"]')) {
+    if (el.closest('.react-flow__viewport')) continue
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0 && r.top < box.bottom) bottom = Math.max(bottom, box.bottom - r.top + 8)
+  }
+  return bottom
+}
+
+/**
+ * The room at the bottom of the map that floating controls (toolbars, hint, detail notice) cover, and the toast slot above the
+ * toolbars. The slot is where the first-run hint sits, so a fit leaves the same room with the hint and without it, and a toast
+ * never lands on a card of a fitted view.
+ */
+export function coveredBottom(map: HTMLElement): number {
+  const box = map.getBoundingClientRect()
+  let bottom = toolbarRoom(map) + TOAST_ROOM
+  for (const el of map.querySelectorAll('[role="note"], [data-testid="hidden-detail"]')) {
     if (el.closest('.react-flow__viewport')) continue
     const r = el.getBoundingClientRect()
     if (r.width > 0 && r.height > 0 && r.top < box.bottom) {
@@ -195,6 +214,15 @@ export function coveredBottom(map: HTMLElement): number {
     }
   }
   return bottom
+}
+
+/**
+ * Where a toast goes: its bottom edge's distance from the bottom of the window, and the middle of the map across the window.
+ * The toast sits in the slot above the toolbars, centered on the map, which the sidebar makes off-center in the window.
+ */
+export function toastPlace(map: HTMLElement): { bottom: number; center: number } {
+  const box = map.getBoundingClientRect()
+  return { bottom: Math.max(0, window.innerHeight - box.bottom) + toolbarRoom(map), center: (box.left + box.right) / 2 }
 }
 
 /**

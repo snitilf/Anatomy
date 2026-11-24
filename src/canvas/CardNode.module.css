@@ -313,6 +313,23 @@
   overflow: hidden;
 }
 
+/*
+ * The full level: the count of a card with notes and no lesson sits in the top right corner, in line with the first line of
+ * the title, so it takes no row from the summary. The title gives it room. `NOTE_BADGE_ROOM` in `layout/cards.ts` is the
+ * same width. The title level puts the count back under the title, below.
+ */
+:global([data-detail='full']) .card[data-count-corner] .label {
+  padding-right: calc(48px - 14px);
+}
+
+:global([data-detail='full']) .card[data-count-corner] .foot {
+  position: absolute;
+  top: var(--space-3);
+  right: 10px;
+  height: 20px;
+  margin: 0;
+}
+
 .foot {
   display: flex;
   align-items: center;

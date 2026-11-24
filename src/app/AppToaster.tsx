@@ -2,6 +2,12 @@ import type { CSSProperties } from 'react'
 import { Toaster } from 'sonner'
 import { useTheme } from '../theme/theme'
 
+/**
+ * How far up from the bottom of the window a toast sits. The map sets `--toast-base`: right above its bottom controls, in the
+ * room a fit keeps free. A walkthrough bar sets `--toast-floor`, which wins, so a toast sits above the bar.
+ */
+const FLOOR = 'var(--toast-floor, var(--toast-base))'
+
 const LOOK = {
   '--normal-bg': 'var(--raised)',
   '--normal-text': 'var(--fg)',
@@ -17,12 +23,16 @@ const LOOK = {
  */
 export function AppToaster({ id }: { id?: string }) {
   const theme = useTheme()
+  // A toaster in a dialog sits at a fixed height, since the map behind the dialog does not set where it goes.
+  const floor = id ? '72px' : FLOOR
   return (
     <Toaster
       {...(id ? { id } : {})}
       position="bottom-center"
-      offset={{ bottom: 'var(--toast-floor)' }}
-      mobileOffset={{ bottom: 'var(--toast-floor)' }}
+      // The toaster of the page follows the map. The one inside a dialog stays centered in the window.
+      {...(id ? {} : { className: 'map-toaster' })}
+      offset={{ bottom: floor }}
+      mobileOffset={{ bottom: floor }}
       theme={theme}
       duration={2500}
       visibleToasts={1}

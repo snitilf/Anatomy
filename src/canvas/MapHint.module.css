@@ -25,6 +25,11 @@
   color: var(--fg-3);
 }
 
+/* A toast shows in the same place, so the hint steps aside while it does. It keeps its room, so the fit does not change. */
+.hint[data-yielding] {
+  visibility: hidden;
+}
+
 /* A narrow map lifts the tool bar above the zoom bar, so the hint goes higher too. */
 @container map (max-width: 860px) {
   .hint {
