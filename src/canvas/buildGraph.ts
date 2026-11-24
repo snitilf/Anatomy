@@ -7,7 +7,7 @@ import { overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
-import { LABEL_GROWTH, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
+import { LABEL_GROWTH, LABEL_ROOM, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { labelTint } from './labelTint'
 import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
@@ -361,8 +361,13 @@ export function* geometrySteps(
   routes.forEach((r, i) => lines.add(i, r.route.runs ?? []))
   const movedAreas = movedBoxes.map(textArea)
   const taken: Rect[] = []
+  const roomy: Rect[] = []
+  const take = (shape: Pick<EdgeShape, 'labelX' | 'labelY' | 'labelWidth' | 'labelLines'>) => {
+    taken.push(pillBox(shape, LABEL_GROWTH))
+    roomy.push(pillBox(shape, LABEL_ROOM))
+  }
   const edges = new Map<string, EdgeShape>()
-  const context: LabelContext = { cards: boxes, bands: groups.map(groupBand), taken, lines, own: -1, ...(boxes.length > 0 ? { frame: frameOf([...boxes, ...groups]) } : {}) }
+  const context: LabelContext = { cards: boxes, bands: groups.map(groupBand), taken, roomy, lines, own: -1, ...(boxes.length > 0 ? { frame: frameOf([...boxes, ...groups]) } : {}) }
   const shapeOf = (r: (typeof routes)[number], label: { x: number; y: number; width: number; lines: number; hidden?: true }): EdgeShape => ({
     id: r.id,
     from: r.from,
@@ -384,7 +389,7 @@ export function* geometrySteps(
       return
     }
     const label = placeLabel(r.route.runs ?? [], r.text, { ...context, own: i })
-    if (!label.hidden) taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }, LABEL_GROWTH))
+    if (!label.hidden) take({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines })
     edges.set(r.id, shapeOf(r, label))
   }
   // A label stays where it was while no moved card's text, no group name, no label placed before it, and no line is under it.
@@ -399,7 +404,7 @@ export function* geometrySteps(
       edges.set(r.id, old)
       continue
     }
-    taken.push(pillBox({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines }, LABEL_GROWTH))
+    take({ labelX: label.x, labelY: label.y, labelWidth: label.width, labelLines: label.lines })
     edges.set(r.id, shapeOf(r, label))
   }
   for (const [i, r] of routes.entries()) {
@@ -413,7 +418,7 @@ export function* geometrySteps(
       const box = pillBox(old)
       const clear = !movedAreas.some((a) => overlaps(box, a)) && labelFits(box, { ...context, own: i }, undefined)
       if (clear) {
-        taken.push(pillBox(old, LABEL_GROWTH))
+        take(old)
         edges.set(r.id, old)
         continue
       }
