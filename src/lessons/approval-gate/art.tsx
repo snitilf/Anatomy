@@ -224,13 +224,13 @@ export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProp
       {FINGER_ART.fingers.map((finger) => {
         const key = FINGER_ART.keys[finger.v - 1]
         return (
-          <g key={finger.v} ref={(node) => fingerRef(finger.v, node)}>
+          <g key={finger.v} ref={(node) => fingerRef(finger.v, node)} data-part="finger" data-slot={finger.v} data-pose="down">
             <Solid paths={finger.body} tone="mid" lit={litVersion === finger.v} />
             <Line d={finger.eye} tone="lo" />
             <Line d={finger.groove} tone="faint" />
             <Line d={finger.notch} tone="faint" />
             {keyVersion === finger.v && key ? (
-              <g ref={keyRef}>
+              <g ref={keyRef} data-part="key" data-slot={finger.v} data-pose="hidden">
                 <Solid paths={key.stem} tone="hi" crease="none" lit={litVersion === finger.v} />
                 <Solid paths={key.tooth} tone="hi" crease="none" lit={litVersion === finger.v} />
                 <Solid paths={key.bow} tone="hi" lit={litVersion === finger.v} />
@@ -265,7 +265,7 @@ export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
         const down = dropped.includes(pin.v)
         const lit = litVersion === pin.v
         return (
-          <g key={pin.v} ref={(node) => pinRef(pin.v, node)}>
+          <g key={pin.v} ref={(node) => pinRef(pin.v, node)} data-part="pin" data-slot={pin.v} data-pose="up">
             <Solid paths={pin.rod} tone={down ? 'hi' : 'mid'} lit={lit} crease="none" />
             <Line d={pin.band} tone="faint" />
             <Solid paths={pin.cap} tone={down ? 'hi' : 'mid'} lit={lit} />
@@ -286,7 +286,7 @@ export function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; li
       <Post parts={LOCK_ARCH.far} />
       <Bar arch={LOCK_ARCH} numbers={null} />
       <Line d={s.grooves} tone="faint" />
-      <g ref={shutterRef}>
+      <g ref={shutterRef} data-part="shutter" data-pose="up">
         <Solid paths={s.body} tone="mid" lit={lit} />
         <Line d={s.seam} tone="faint" />
         <Solid paths={s.tag} tone="lo" crease="none" />

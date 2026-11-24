@@ -8,12 +8,29 @@ import './lesson.css'
 import { HEIGHT, LIFT, SHUTTER_LIFT, SLOTS, SWITCH_TRAVEL, TAB_TIP, TRAVEL_END, WIDTH, CARD, shift } from './geometry'
 import { MAX_VERSION, canEdit, caption, initialState, readout, step as stepModel, type LessonEvent, type LessonState } from './model'
 import { layerOf, litOf, reachOf, stopOf, targetsOf } from './scene'
+import { REACH_GATE, REACH_LEDGER, REACH_LOCK } from './geometry'
 
 const STILL = '(prefers-reduced-motion: reduce)'
 const LAYERS = [0, 1, 2, 3] as const
 
 const hasMedia = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
 const stillNow = () => hasMedia() && window.matchMedia(STILL).matches
+
+/** Writes an attribute only when it changes, so a frame that moves nothing touches nothing. */
+function put(node: Element | null | undefined, name: string, value: string) {
+  if (node && node.getAttribute(name) !== value) node.setAttribute(name, value)
+}
+
+function stopName(card: number, alpha: number): string {
+  if (alpha < 0.05) return 'moving'
+  const near = (to: number) => Math.abs(card - to) < 0.75
+  if (near(0)) return 'home'
+  if (near(REACH_LOCK)) return 'lockout'
+  if (near(REACH_GATE)) return 'gate'
+  if (near(REACH_LEDGER)) return 'ledger'
+  if (near(TRAVEL_END)) return 'outbox'
+  return 'moving'
+}
 
 function useVisible(ref: RefObject<Element | null>): boolean {
   const [visible, setVisible] = useState(true)
@@ -129,6 +146,7 @@ export default function ApprovalGateLesson() {
   const keyRef = useRef<SVGGElement | null>(null)
   const knobRef = useRef<SVGGElement | null>(null)
   const lampRef = useRef<SVGGElement | null>(null)
+  const root = useRef<HTMLDivElement>(null)
   const announceTimer = useRef(0)
 
   const setVis = useCallback((next: Visual) => {
@@ -145,6 +163,7 @@ export default function ApprovalGateLesson() {
       const card = cardRefs.current[l]
       if (card) {
         card.setAttribute('transform', shift(m.card.at))
+        put(card, 'data-stop', stopName(m.card.at, m.alpha.at))
         card.setAttribute('opacity', String(Math.max(0, Math.min(1, m.alpha.at))))
         if (l === cardLayer && m.alpha.at > 0.005) card.removeAttribute('display')
         else card.setAttribute('display', 'none')
@@ -157,12 +176,18 @@ export default function ApprovalGateLesson() {
       }
     }
     for (let i = 0; i < SLOTS; i++) {
-      fingerRefs.current[i]?.setAttribute('transform', shift(0, 0, LIFT * (m.fingers[i]?.at ?? 0)))
-      pinRefs.current[i]?.setAttribute('transform', shift(0, 0, LIFT * (1 - (m.pins[i]?.at ?? 0))))
+      const finger = fingerRefs.current[i]
+      finger?.setAttribute('transform', shift(0, 0, LIFT * (m.fingers[i]?.at ?? 0)))
+      put(finger, 'data-pose', (m.fingers[i]?.at ?? 0) > 0.5 ? 'up' : 'down')
+      const pin = pinRefs.current[i]
+      pin?.setAttribute('transform', shift(0, 0, LIFT * (1 - (m.pins[i]?.at ?? 0))))
+      put(pin, 'data-pose', (m.pins[i]?.at ?? 0) > 0.5 ? 'down' : 'up')
     }
     shutterRef.current?.setAttribute('transform', shift(0, 0, SHUTTER_LIFT * (1 - m.lock.at)))
+    put(shutterRef.current, 'data-pose', m.lock.at > 0.5 ? 'down' : 'up')
     keyRef.current?.setAttribute('transform', shift(0, 0, 18 * m.keyLift.at))
     keyRef.current?.setAttribute('opacity', String(Math.max(0, Math.min(1, m.keyAlpha.at))))
+    put(keyRef.current, 'data-pose', m.keyAlpha.at > 0.5 ? 'shown' : 'hidden')
     knobRef.current?.setAttribute('transform', shift(-SWITCH_TRAVEL * (1 - m.power.at)))
     lampRef.current?.setAttribute('opacity', String(Math.max(0, Math.min(1, m.power.at))))
   }, [])
@@ -211,6 +236,7 @@ export default function ApprovalGateLesson() {
         if (sp) go(sp, target, 110)
       })
       write()
+      put(root.current, 'data-settled', moving ? 'false' : 'true')
       return moving
     },
     [advance, write],
@@ -357,6 +383,7 @@ export default function ApprovalGateLesson() {
       window.clearTimeout(announceTimer.current)
       setAnnouncement('')
       announceTimer.current = window.setTimeout(() => setAnnouncement(text), 60)
+      put(root.current, 'data-settled', 'false')
       kick()
     },
     [flush, plan, kick],
@@ -388,14 +415,14 @@ export default function ApprovalGateLesson() {
       <g ref={setLayer(pushRefs, layer)}>
         <PusherArt />
       </g>
-      <g ref={setLayer(cardRefs, layer)}>
+      <g ref={setLayer(cardRefs, layer)} data-part="card" data-stop="home" data-version={visual.cardVersion}>
         <CardArt version={visual.cardVersion} lit={lit.kind === 'tab'} />
       </g>
     </g>
   )
 
   return (
-    <div className="iso ag" data-theme={dark ? 'dark' : 'light'} tabIndex={0} role="group" aria-label="Approval gate lesson" aria-keyshortcuts="A R E S P 0" onKeyDown={onKeyDown}>
+    <div ref={root} className="iso ag" data-settled="true" data-theme={dark ? 'dark' : 'light'} tabIndex={0} role="group" aria-label="Approval gate lesson" aria-keyshortcuts="A R E S P 0" onKeyDown={onKeyDown}>
       <Plate
         fig="Fig 1"
         title="Approval gate"
