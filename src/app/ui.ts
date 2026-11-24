@@ -139,7 +139,7 @@ export function createUi(): UiApi {
     setSendOpen: (sendOpen) => store.setState({ sendOpen }),
     setHowToOpen: (howToOpen) => store.setState({ howToOpen }),
     openLesson: (id, opener) => store.setState({ lesson: { id, opener } }),
-    closeLesson: () => store.setState({ lesson: undefined }),
+    closeLesson: () => store.setState((s) => (s.lesson === undefined ? s : { lesson: undefined })),
     setLineKeyOpen: (lineKeyOpen) => store.setState({ lineKeyOpen }),
     setSheet: (sheet) => store.setState({ sheet }),
     askLinkPicker: () => store.setState((s) => ({ linkPicker: s.linkPicker + 1 })),
