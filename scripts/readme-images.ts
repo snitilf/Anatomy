@@ -5,37 +5,16 @@
 //
 // It builds the app, serves the build on the loopback interface, opens the example in Chrome, plays the walkthrough to the
 // chosen step, and writes `docs/images/map-light.png` and `docs/images/map-dark.png`.
-// To try another example or step, pass `--example`, `--walkthrough`, `--step`, or `--out`:
+// To try another example or step, pass `--example` (an id such as `claude-code`, or a part of its title), `--walkthrough`, `--step`,
+// `--out`, `--hide-sidebar`, `--width`, or `--height`:
 //
 //   npm run readme-images -- --example claude-code --walkthrough "Fix a failing test" --step 4 --out scratch/shots
 import { mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { parseArgs } from 'node:util'
 import { chromium, type Page } from '@playwright/test'
 import { build, preview } from 'vite'
-
-export interface Shot {
-  /** The name on the start screen: a part of the example's title. */
-  example: RegExp
-  /** The walkthrough's title as the command menu lists it. */
-  walkthrough: string
-  /** The step to stop on, counted from 1. */
-  step: number
-  /** Close the sidebar first, so the map gets the whole window. */
-  hideSidebar?: boolean
-  width?: number
-  height?: number
-}
-
-/**
- * The picture the README shows.
- * The Claude Code harness is the example a reader of a coding-agent tool knows best, and at 1440x900 its whole map fits in view,
- * with its three groups and every line label readable. Step 2 of "Fix a failing test" lights the agent loop, the model, and the
- * lines between them, so the picture shows both a lit path and the dimmed rest of the map. The sidebar stays open: it lists the
- * four walkthroughs.
- */
-export const README_SHOT: Shot = { example: /Claude Code harness/, walkthrough: 'Fix a failing test', step: 2 }
+import { readShot, type Shot } from './lib/readmeShot.ts'
 
 export const WIDTH = 1440
 export const HEIGHT = 900
@@ -69,12 +48,14 @@ async function lightUp(page: Page, shot: Shot) {
 }
 
 export async function takeShots(options: { shot: Shot; outDir: string; schemes?: readonly ('light' | 'dark')[] }) {
-  const dist = mkdtempSync(join(tmpdir(), 'anatomy-readme-'))
-  mkdirSync(options.outDir, { recursive: true })
   const written: { file: string; bytes: number }[] = []
+  let dist: string | undefined
   let server: Awaited<ReturnType<typeof preview>> | undefined
-  const browser = await chromium.launch({ channel: 'chrome' })
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
   try {
+    dist = mkdtempSync(join(tmpdir(), 'anatomy-readme-'))
+    mkdirSync(options.outDir, { recursive: true })
+    browser = await chromium.launch({ channel: 'chrome' })
     await build({ root, logLevel: 'warn', build: { outDir: dist, emptyOutDir: true } })
     server = await preview({ root, logLevel: 'warn', build: { outDir: dist }, preview: { host: '127.0.0.1', port: 0, strictPort: false } })
     const address = server.httpServer.address()
@@ -96,33 +77,19 @@ export async function takeShots(options: { shot: Shot; outDir: string; schemes?:
       await context.close()
     }
   } finally {
-    await browser.close()
-    await server?.close()
-    rmSync(dist, { recursive: true, force: true })
+    // Every step runs even when another fails, so nothing is left open or on disk.
+    await Promise.allSettled([browser?.close(), server?.close()])
+    if (dist) rmSync(dist, { recursive: true, force: true })
   }
   return written
 }
 
 if (import.meta.main) {
-  const { values } = parseArgs({
-    options: {
-      example: { type: 'string' },
-      walkthrough: { type: 'string' },
-      step: { type: 'string' },
-      out: { type: 'string' },
-      'hide-sidebar': { type: 'boolean' },
-      width: { type: 'string' },
-      height: { type: 'string' },
-    },
-  })
-  const shot: Shot = {
-    example: values.example ? new RegExp(values.example, 'i') : README_SHOT.example,
-    walkthrough: values.walkthrough ?? README_SHOT.walkthrough,
-    step: values.step ? Number(values.step) : README_SHOT.step,
-    ...(values['hide-sidebar'] ? { hideSidebar: true } : {}),
-    ...(values.width ? { width: Number(values.width) } : {}),
-    ...(values.height ? { height: Number(values.height) } : {}),
+  try {
+    const { shot, out } = readShot(process.argv.slice(2))
+    for (const { file, bytes } of await takeShots({ shot, outDir: resolve(root, out ?? 'docs/images') })) console.log(`${file}  ${(bytes / 1024).toFixed(0)} KB`)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error)
+    process.exitCode = 1
   }
-  const outDir = resolve(root, values.out ?? 'docs/images')
-  for (const { file, bytes } of await takeShots({ shot, outDir })) console.log(`${file}  ${(bytes / 1024).toFixed(0)} KB`)
 }
