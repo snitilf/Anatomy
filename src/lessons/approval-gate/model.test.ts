@@ -129,6 +129,15 @@ describe('readout and caption', () => {
     expect(readout(run(['reject']))).toBe('v1 rejected · sent none')
   })
 
+  it('does not say a rejected version can never be sent once it has been sent', () => {
+    const text = caption(run(['approve', 'trySend', 'reject']))
+    expect(text).not.toMatch(/can never be sent/)
+    expect(text).toMatch(/after it went out/)
+    expect(text).toMatch(/version 1/)
+    // A version that was not sent keeps the plain sentence.
+    expect(caption(run(['reject']))).toMatch(/can never be sent/)
+  })
+
   it('has a caption for every outcome that names the true version', () => {
     const cases: Array<[LessonEvent[], RegExp]> = [
       [[], /fresh lesson/],
