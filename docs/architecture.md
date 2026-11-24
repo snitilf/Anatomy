@@ -59,6 +59,11 @@ A resized card stays between 224 by 112 and 480 by 320.
 The app stores only the cards that the user moved or resized.
 The other cards follow the layout each time a board opens.
 
+A card shows its summary in as many lines as fit (`summaryLinesFor`).
+The count of the user's notes takes no row from the summary: at the full level it sits in the top right corner, beside the first line of the title.
+A card with a lesson keeps one footer row for the lesson mark, and the count joins the mark there.
+At the title level the count sits under the title.
+
 ### Where a walkthrough starts
 
 A part where a walkthrough starts carries a small play mark inside its card.
@@ -152,6 +157,8 @@ The labels keep off every card, every line, and every other label, and stay insi
 A label that has no place on one line tries two lines.
 A connection keeps its route and label when its cards did not move or change size and the route is still clear.
 
+A link that the user drags from the dot of a card is drawn in the dash and dot of the user's own links while it is dragged (`MANUAL_LINE` in `src/canvas/kinds.ts`), so it already looks like the link it becomes.
+
 ### The camera
 
 The camera in `src/canvas/camera.ts` keeps the map inside limits.
@@ -174,6 +181,11 @@ The view stays fitted while the reader leaves it alone: a new size of the map fr
 Until the reader first presses, types, or scrolls, any change frames it again, for example the hint coming in, or the fonts loading and the map being built again with its labels measured in them.
 Once the reader has moved the view, a new size of the map keeps the middle of the view and the zoom.
 The zoom limits keep the room that the hint took, so dismissing the hint never zooms the view in.
+
+The room at the bottom also holds one toast, in the slot above the tool bars where the hint sits (`TOAST_ROOM` and `coveredBottom` in `src/canvas/camera.ts`).
+The fit leaves the same room with the hint and without it, so a toast never lands on a card of a fitted view.
+The map sets `--toast-base` (the toast's distance from the bottom of the window) and `--toast-x` (the middle of the map), and the toaster reads them.
+A walkthrough bar sets `--toast-floor` instead, which puts the toast above the bar.
 
 The map has three detail levels, chosen from the zoom:
 - `full`, at 75% and up: cards show their title, summary, and badges, with every line and label.
