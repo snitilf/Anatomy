@@ -97,3 +97,33 @@ test('after two sends the outbox holds the second card, and both pins are down',
   await expect(part(lesson, 'pin', 2)).toHaveAttribute('data-pose', 'down')
   await expect(part(lesson, 'pin', 3)).toHaveAttribute('data-pose', 'up')
 })
+
+test.describe('with reduced motion the picture shows the frame that explains', () => {
+  test.use({ reducedMotion: 'reduce' })
+
+  test('a blocked send leaves the card at the gate', async ({ page }) => {
+    const lesson = await openLesson(page)
+    await lesson.getByRole('button', { name: /^Send/ }).click()
+    await expect(atStop(lesson, 'gate')).toHaveCount(1)
+    await expect(lesson.locator('.ag[data-settled="true"]')).toBeVisible({ timeout: 600 })
+    await expect(atStop(lesson, 'gate')).toHaveCount(1)
+  })
+
+  test('approving lifts the first finger and the card stays home', async ({ page }) => {
+    const lesson = await openLesson(page)
+    await lesson.getByRole('button', { name: /^Approve/ }).click()
+    await expect(lesson.locator('.ag[data-settled="true"]')).toBeVisible({ timeout: 600 })
+    await expect(atStop(lesson, 'home')).toHaveCount(1)
+    await expect(part(lesson, 'finger', 1)).toHaveAttribute('data-pose', 'up')
+  })
+
+  test('a send puts the card in the outbox and drops its pin', async ({ page }) => {
+    const lesson = await openLesson(page)
+    await lesson.getByRole('button', { name: /^Approve/ }).click()
+    await lesson.getByRole('button', { name: /^Send/ }).click()
+    await expect(lesson.locator('.ag[data-settled="true"]')).toBeVisible({ timeout: 600 })
+    await expect(lesson.locator('[data-part="outbox"]')).toHaveAttribute('data-version', '1')
+    await expect(part(lesson, 'pin', 1)).toHaveAttribute('data-pose', 'down')
+    await expect(lesson.getByText('v1 approved · sent v1', { exact: true })).toBeVisible()
+  })
+})
