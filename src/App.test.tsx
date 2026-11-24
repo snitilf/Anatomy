@@ -31,6 +31,10 @@ describe('App', () => {
   it('shows the open actions and the examples when no board is open', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Anatomy' })).toBeInTheDocument()
+    // A small mark sits beside the word. It is a picture, so it has no name of its own and the heading stays "Anatomy".
+    const mark = screen.getByTestId('brand-mark')
+    expect(mark).toHaveAttribute('aria-hidden', 'true')
+    expect(mark.nextElementSibling).toBe(screen.getByRole('heading', { name: 'Anatomy' }))
     const main = within(screen.getByRole('main'))
     expect(main.getByRole('heading', { name: 'Open a repository to see its anatomy.' })).toBeInTheDocument()
     // jsdom has no folder picker, so the start screen says so and leads with a file.

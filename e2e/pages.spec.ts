@@ -62,6 +62,17 @@ test('the built page points at its own files under the subpath', async ({ page }
   expect(await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')).toContain("connect-src 'none'")
 })
 
+test('the icon of the page loads from under the subpath', async ({ page, request }) => {
+  await page.goto(`${origin}${SUBPATH}`)
+  const href = await page.locator('link[rel="icon"]').evaluate((el: HTMLLinkElement) => el.href)
+  expect(href.startsWith(`${origin}${SUBPATH}`)).toBe(true)
+  const response = await request.get(href)
+  expect(response.status()).toBe(200)
+  expect(response.headers()['content-type']).toContain('image/svg+xml')
+  // A path from the site root is a miss on the hosted copy, so the page must not ask for one.
+  expect((await request.get(`${origin}/favicon.svg`)).status()).toBe(404)
+})
+
 for (const example of EXAMPLES) {
   test(`opens ${example.title} under the subpath with no error, no violation, and no request outside it`, async ({ page }) => {
     const seen = watch(page)

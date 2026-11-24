@@ -52,6 +52,18 @@ test('an inline script is blocked', async ({ page, violations }) => {
   expect(violations.take().map((v) => v.directive)).toContain('script-src-elem')
 })
 
+test('the icon of the page loads under the policy, as an image of the origin of the page', async ({ page }) => {
+  await page.goto('/')
+  const loaded = await page.evaluate(async () => {
+    const img = new Image()
+    img.src = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!.href
+    await img.decode()
+    return img.naturalWidth > 0
+  })
+  expect(loaded).toBe(true)
+  // The recorder of the suite fails this test at its end if loading the icon was a violation.
+})
+
 test('the violation recorder sees a violation', async ({ page, violations }) => {
   await page.goto('/')
   await page.evaluate(() => fetch('http://127.0.0.1:9/', { mode: 'no-cors' }).catch(() => undefined))
