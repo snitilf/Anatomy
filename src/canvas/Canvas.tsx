@@ -22,7 +22,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import { editsText } from '../commands/keys'
-import { CARD_MAX, CARD_MIN, CARD_SIZE, CARD_WIDTH, groupAreas, placeCards, snap, type CardPlacement } from '../layout/cards'
+import { CARD_MAX, CARD_MIN, CARD_SIZE, groupAreas, placeCards, snap, type CardPlacement } from '../layout/cards'
 import type { Point, Rect, Size } from '../layout/geometry'
 import { settleMoves } from '../layout/groups'
 import { newId } from '../layer/edits'
@@ -42,9 +42,10 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, OPEN_FIT_PARTS, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
-import { Camera, FarMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
+import { Camera, DetailMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
+import { hiddenDetailText, type DetailLevel } from './far'
 import { bundleSelection } from '../app/state'
 import { usePhone } from '../app/usePhone'
 import { frameConnection } from './bundleFrame'
@@ -205,15 +206,6 @@ function pushAside(view: View, ids: readonly string[]): Record<string, Point> {
   return settleMoves(view.board, view.rects, ids)
 }
 
-/** The cards in the first column on the left, where the flow starts. */
-function flowStart(rects: readonly Rect[]): Rect | undefined {
-  if (rects.length === 0) return undefined
-  const left = Math.min(...rects.map((r) => r.x))
-  const first = rects.filter((r) => r.x < left + CARD_WIDTH)
-  const top = Math.min(...first.map((r) => r.y))
-  return { x: left, y: top, width: CARD_WIDTH, height: Math.max(...first.map((r) => r.y + r.height)) - top }
-}
-
 const clampTo = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value))
 
 /** More connections than this, or more than this many per card, and labels give way below the full-label zoom. */
@@ -316,8 +308,9 @@ export function Canvas() {
   }, [])
   /** Labels give way on a crowded map below the full-label zoom. Only the selection's and the hovered card's show. */
   const [quiet, setQuiet] = useState(false)
-  /** Zoomed out past the point where a card title is readable: groups as named blocks, one bundled line per pair. */
-  const [far, setFar] = useState(false)
+  /** Three detail levels from fit zoom and zoom changes: full cards, titles with lines and labels, and the far view. */
+  const [detail, setDetail] = useState<DetailLevel>('full')
+  const far = detail === 'far'
   const farRef = useRef(far)
   useLayoutEffect(() => {
     farRef.current = far
@@ -354,21 +347,24 @@ export function Canvas() {
     return id
   }, [])
 
-  // The size of the map, for the zoom limits. Read before the first paint and on every change.
-  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
+  // The size of the map and its bottom overlay room, for the zoom limits. Read before the first paint and on every change.
+  const [mapSize, setMapSize] = useState<{ width: number; height: number; bottom?: number }>({ width: 0, height: 0 })
+  const measureMap = useCallback(() => {
+    const el = mapBox.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const bottom = coveredBottom(el)
+    setMapSize((s) => (s.width === r.width && s.height === r.height && s.bottom === bottom ? s : { width: r.width, height: r.height, bottom }))
+  }, [])
   useLayoutEffect(() => {
     const el = mapBox.current
     if (!el) return
-    const measure = () => {
-      const r = el.getBoundingClientRect()
-      setMapSize((s) => (s.width === r.width && s.height === r.height ? s : { width: r.width, height: r.height }))
-    }
-    measure()
+    measureMap()
     if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(measure)
+    const observer = new ResizeObserver(measureMap)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [board])
+  }, [board, measureMap])
 
   // The limits follow what is on the map once it is solved, never a card in hand.
   const solved = shown?.geometry.solved
@@ -411,14 +407,11 @@ export function Canvas() {
   const baseBoundsRef = useRef(baseBounds)
   const basePartsBoundsRef = useRef(basePartsBounds)
   const resolveNowRef = useRef(resolveNow)
-  const partCount = board?.components.length ?? 0
-  const partCountRef = useRef(partCount)
   useLayoutEffect(() => {
     boundsRef.current = bounds
     baseBoundsRef.current = baseBounds
     basePartsBoundsRef.current = basePartsBounds
     resolveNowRef.current = resolveNow
-    partCountRef.current = partCount
   })
   // What arrow ends attach to, as drawn now. Filled in below, once the map is built.
   const sceneRef = useRef<Scene>({ rects: {}, lines: new Map() })
@@ -426,7 +419,7 @@ export function Canvas() {
     const size = () => {
       const el = mapBox.current
       const r = el?.getBoundingClientRect()
-      return { width: r?.width ?? 0, height: r?.height ?? 0, top: el ? coveredTop(el) : 0 }
+      return { width: r?.width ?? 0, height: r?.height ?? 0, top: el ? coveredTop(el) : 0, ...(el ? { bottom: coveredBottom(el) } : {}) }
     }
     const current = (): Limits => zoomLimits(boundsRef.current, size())
     // The limits with the far-view lines solved now, if the last layout's are still waiting for the browser to be idle.
@@ -437,12 +430,10 @@ export function Canvas() {
       return flow ? moveCamera(flow, viewport, limits, size(), duration) : viewport
     }
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
-      const rects = viewRef.current ? Object.values(viewRef.current.rects) : []
       const limits = options.box && !options.readable ? current() : fresh()
       if (!options.readable) return move(frameViewport(limits, size(), options), duration, limits)
-      const start = flowStart(rects)
       const box = fitBounds(basePartsBoundsRef.current, resolveNowRef.current, size())
-      const framed: Frame = { ...options, fitAll: partCountRef.current > OPEN_FIT_PARTS, ...(start ? { start } : {}), ...(box ? { box } : {}) }
+      const framed: Frame = { ...options, ...(box ? { box } : {}) }
       return move(frameViewport(limits, size(), framed), duration, limits)
     }
     // Where a glide is going. A second step during the glide goes on from there, not from halfway.
@@ -607,6 +598,15 @@ export function Canvas() {
   )
   const lineCount = (board?.relationships.length ?? 0) + (links?.length ?? 0)
   const crowded = lineCount > CROWDED_LINES || (board !== undefined && lineCount > board.components.length * CROWDED_RATIO)
+  const heldBackLabels = useMemo(() => {
+    if (!geometryNow) return 0
+    let count = 0
+    for (const shape of geometryNow.edges.values()) {
+      if (shape.labelHidden) count++
+    }
+    return count
+  }, [geometryNow])
+  const hiddenText = hiddenDetailText(detail, quiet, heldBackLabels)
 
   // The full build comes after the drop, or after the last arrow key, and so does the save of keyboard moves.
   const waiting = interaction && !isHolding(interaction) && interaction.work.mode === 'settling' ? interaction.work.wait : undefined
@@ -1045,6 +1045,7 @@ export function Canvas() {
       className={styles.canvas}
       data-connecting={connecting || undefined}
       data-labels={quiet || far ? 'quiet' : undefined}
+      data-detail={detail}
       data-far={far || undefined}
       data-spot={spotlit || undefined}
       onFocusCapture={(e) => {
@@ -1105,7 +1106,7 @@ export function Canvas() {
           <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={held !== undefined} rectOf={rectOf} />
           <KeepInLimits limits={limits} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
-          <FarMode onChange={setFar} />
+          <DetailMode onChange={setDetail} />
           {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={activeTool === 'select'} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
@@ -1118,9 +1119,14 @@ export function Canvas() {
           {!step && !phone && <Toolbar />}
           <SpaceHand />
           <ZoomBar />
+          {hiddenText && (
+            <div className={styles.hiddenDetail} data-testid="hidden-detail" role="status" aria-live="polite">
+              {hiddenText}
+            </div>
+          )}
           <WheelZoom />
           <LabelScale far={far} />
-          <MapHint />
+          <MapHint mapWidth={mapSize.width} onChange={measureMap} />
         </ReactFlow>
       </CameraContext.Provider>
     </div>

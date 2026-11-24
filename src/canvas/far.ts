@@ -1,29 +1,87 @@
 import { charWidth } from './textMeasure'
 
 /**
- * The far view: below the zoom where a card title (13px) would draw under 9px on screen, the map shows its groups as
- * named blocks and its lines as one bundle per pair of groups.
+ * The three detail levels on the map (D143):
+ * - `full`: cards show title, summary, and badges; all lines and labels show.
+ * - `title`: cards show their title alone and keep every line and label.
+ * - `far`: groups show as named blocks and lines bundle per pair of groups.
  */
+export type DetailLevel = 'full' | 'title' | 'far'
 
-/** A title of 13px is under 9px on screen below 9 / 13 = 0.692, so the far view starts just under 0.7. */
-export const FAR_ENTER = 0.69
-/**
- * The far view ends at the zoom where a card shows its summary again (`SUMMARY_ZOOM`). The band between the two keeps a
- * zoom that rests near the threshold from flipping the map back and forth.
- */
-export const FAR_EXIT = 0.75
+/** Below this zoom a 12px summary draws under 9px on screen, so cards switch to titles alone. */
+export const TITLE_ENTER = 0.75
+/** Hysteresis band above `TITLE_ENTER` so a small resize at the threshold does not flip the level. */
+export const TITLE_EXIT = 0.79
+
+/** Below this zoom a 240px card is too narrow for an 11px title in two lines, so the map switches to the far view. */
+export const FAR_ENTER = 0.45
+/** Hysteresis band above `FAR_ENTER` so a small resize at the threshold does not flip the level. */
+export const FAR_EXIT = 0.49
+
+/** The detail level for a zoom on its own, used when a board opens (never from an earlier board's state). */
+export function detailFor(zoom: number): DetailLevel {
+  if (zoom < FAR_ENTER) return 'far'
+  if (zoom < TITLE_ENTER) return 'title'
+  return 'full'
+}
+
+/** The next detail level for a zoom, with hysteresis at both thresholds so small resizes do not flicker. */
+export function nextDetail(was: DetailLevel, zoom: number): DetailLevel {
+  if (was === 'far') {
+    if (zoom < FAR_EXIT) return 'far'
+    return zoom < TITLE_ENTER ? 'title' : 'full'
+  }
+  if (was === 'title') {
+    if (zoom < FAR_ENTER) return 'far'
+    if (zoom >= TITLE_EXIT) return 'full'
+    return 'title'
+  }
+  if (zoom < FAR_ENTER) return 'far'
+  if (zoom < TITLE_ENTER) return 'title'
+  return 'full'
+}
 
 /** Whether the map is in the far view at this zoom, given whether it was before. */
 export function nextFar(was: boolean, zoom: number): boolean {
   return was ? zoom < FAR_EXIT : zoom < FAR_ENTER
 }
 
-/** Quarter steps of growth, so the labels hold a size of 11 to 13px on screen and a zoom writes a few times. */
-const FAR_STEP = 4
+/** Smallest readable text on screen, in CSS pixels (D143). */
+const MIN_TEXT_PX = 11
+const TITLE_BASE_PX = 13
+const LABEL_BASE_PX = 11
 
-/** How much line and group labels are drawn larger on the board, so their text stays at its base size on screen. */
+/** Quarter steps of growth in the far view, so group and bundle labels hold 11 to 13px on screen. */
+const FAR_STEP = 4
+/** Tenth steps in full and title views, so text stays >= 11px on screen with small discrete jumps. */
+const NEAR_STEP = 10
+
+/** How much line and group labels are drawn larger on the board in the far view, so their text stays at its base size on screen. */
 export function farLabelScale(zoom: number): number {
   return Math.ceil((1 / Math.max(zoom, 0.01)) * FAR_STEP - 1e-6) / FAR_STEP
+}
+
+/** How much line and group labels grow on the board so they never draw under 11px on screen. */
+export function labelScale(zoom: number, far: boolean): number {
+  if (far) return farLabelScale(zoom)
+  const needed = MIN_TEXT_PX / (LABEL_BASE_PX * Math.max(zoom, 0.01))
+  if (needed <= 1) return 1
+  return Math.ceil(needed * NEAR_STEP - 1e-6) / NEAR_STEP
+}
+
+/** How much card titles grow on the board so they never draw under 11px on screen. */
+export function titleScale(zoom: number): number {
+  const needed = MIN_TEXT_PX / (TITLE_BASE_PX * Math.max(zoom, 0.01))
+  if (needed <= 1) return 1
+  return Math.ceil(needed * NEAR_STEP - 1e-6) / NEAR_STEP
+}
+
+/** What the current view hides, in plain words, or undefined when all lines and labels are shown. */
+export function hiddenDetailText(detail: DetailLevel, quiet: boolean, heldBackLabels: number): string | undefined {
+  if (detail === 'far') return 'Lines and labels hidden'
+  if (quiet) return 'Labels hidden'
+  if (heldBackLabels > 0) return heldBackLabels === 1 ? '1 label hidden' : `${heldBackLabels} labels hidden`
+  return undefined
 }
 
 /** The zoom a group is framed at, at least, when it is picked in the far view: cards show their text there. */

@@ -1,7 +1,6 @@
 import { useReactFlow, useStore, useStoreApi, type Viewport } from '@xyflow/react'
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { LABEL_GROWTH } from './buildGraph'
 import { useAppStore } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
 import { hasRememberedView, writeHash } from '../app/view'
@@ -10,7 +9,7 @@ import type { Rect } from '../layout/geometry'
 import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 import { blockRect } from './bundleFrame'
-import { FAR_ENTER, farLabelScale, nextFar } from './far'
+import { detailFor, FAR_ENTER, labelScale, nextDetail, titleScale, type DetailLevel } from './far'
 
 const STEP_MS = 220
 const RESIZE_MS = 150
@@ -277,39 +276,32 @@ export function WheelZoom() {
   return null
 }
 
-/** Zoom at and above which every connection label shows. */
+/** Zoom at and above which every connection label shows on a crowded map. */
 export const LABELS_ZOOM = 0.9
-/** Below this zoom label text is too small to read on any board. */
-const TINY_ZOOM = 0.6
 
 /**
- * Reports how labels show on the map: all of them when zoomed in, or on a quiet map only those of the selection
- * and of the card under the pointer. A crowded board is quiet below `LABELS_ZOOM`, and every board is quiet when the
- * text would be too small to read. Only a change across a threshold renders.
- */
-/** Below this zoom, line and group labels are drawn larger on the board, so they stay about this size on screen. */
-const LABEL_FLOOR_PX = 9
-const LABEL_BASE_PX = 11
-const LABEL_MAX_SCALE = LABEL_GROWTH
-
-/**
- * Sets `--label-scale` on the map: how much line and group labels grow so they never render under 9px on screen.
- * It is 1 from about 0.82 zoom up, so zooming in the normal range writes nothing, and it never passes 1.3.
+ * Sets `--label-scale` and `--title-scale` on the map so card titles and line labels never draw under 11 px on screen
+ * at any detail level (D143). Writes to `style` only when the quantized step changes, so zooming never triggers
+ * redundant style recalculations.
  */
 export function LabelScale({ far }: { far: boolean }) {
   const map = useStore((s) => s.domNode)
   const store = useStoreApi()
   useLayoutEffect(() => {
     if (!map) return
+    let lastLabel = ''
+    let lastTitle = ''
     const apply = (zoom: number) => {
-      // Steps of a tenth, rounded up so the floor holds. Placement of labels is worked out at 1x, so the growth stays small.
-      // The far view draws labels as large as it takes to hold their base size on screen.
-      if (far) {
-        map.style.setProperty('--label-scale', farLabelScale(zoom).toFixed(2))
-        return
+      const nextLabel = labelScale(zoom, far).toFixed(far ? 2 : 1)
+      if (nextLabel !== lastLabel) {
+        lastLabel = nextLabel
+        map.style.setProperty('--label-scale', nextLabel)
       }
-      const scale = Math.min(LABEL_MAX_SCALE, Math.max(1, Math.ceil((LABEL_FLOOR_PX / (LABEL_BASE_PX * zoom)) * 10 - 1e-6) / 10))
-      map.style.setProperty('--label-scale', scale.toFixed(1))
+      const nextTitle = titleScale(zoom).toFixed(1)
+      if (nextTitle !== lastTitle) {
+        lastTitle = nextTitle
+        map.style.setProperty('--title-scale', nextTitle)
+      }
     }
     apply(store.getState().transform[2])
     return store.subscribe((state, prev) => {
@@ -320,33 +312,33 @@ export function LabelScale({ far }: { far: boolean }) {
 }
 
 /**
- * Reports whether the map is in the far view. The two crossings differ (see `FAR_ENTER` and `FAR_EXIT`), so a zoom at
- * rest near the threshold does not flip it. Only a crossing renders.
+ * Reports the map's detail level (`full`, `title`, or `far`). Opening a board picks the level from its fit zoom alone
+ * (never from an earlier board's state); later zoom changes apply hysteresis at both boundaries so a small resize does
+ * not flip the level back and forth. Only a crossing renders.
  */
-export function FarMode({ onChange }: { onChange: (far: boolean) => void }) {
+export function DetailMode({ onChange }: { onChange: (detail: DetailLevel) => void }) {
   const store = useStoreApi()
   useLayoutEffect(() => {
-    let far = false
-    const apply = (zoom: number) => {
-      const next = nextFar(far, zoom)
-      if (next === far) return
-      far = next
-      onChange(far)
-    }
-    // A new start is never far: what the map showed before this effect ran is not known here.
-    onChange(false)
-    apply(store.getState().transform[2])
+    let detail: DetailLevel = detailFor(store.getState().transform[2])
+    onChange(detail)
     return store.subscribe((state, prev) => {
-      if (state.transform[2] !== prev.transform[2]) apply(state.transform[2])
+      if (state.transform[2] === prev.transform[2]) return
+      const next = nextDetail(detail, state.transform[2])
+      if (next === detail) return
+      detail = next
+      onChange(detail)
     })
   }, [store, onChange])
   return null
 }
 
+/**
+ * Reports whether connection labels step back on a crowded map below `LABELS_ZOOM`.
+ * Uncrowded boards keep every line label shown across both `full` and `title` levels.
+ */
 export function LabelMode({ crowded, onChange }: { crowded: boolean; onChange: (quiet: boolean) => void }) {
   const near = useStore((s) => s.transform[2] >= LABELS_ZOOM)
-  const tiny = useStore((s) => s.transform[2] < TINY_ZOOM)
-  const quiet = !near && (crowded || tiny)
+  const quiet = !near && crowded
   useLayoutEffect(() => onChange(quiet), [quiet, onChange])
   return null
 }

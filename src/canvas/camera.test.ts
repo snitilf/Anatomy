@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, READABLE_ZOOM, START_ZOOM, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
+import { clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
 
 const map = { width: 1000, height: 700 }
 const board = { x: 0, y: 0, width: 2000, height: 1000 }
@@ -108,15 +108,15 @@ describe('framing', () => {
 
 describe('opening a board with many parts', () => {
   it('fits the whole of it, however small that makes the text', () => {
-    const view = frameViewport(zoomLimits(board, map), { ...map, top: 0 }, { readable: true, fitAll: true })
-    expect(view.zoom).toBeLessThan(READABLE_ZOOM)
+    const view = frameViewport(zoomLimits(board, map), { ...map, top: 0 }, { readable: true })
+    expect(view.zoom).toBeLessThan(0.5)
     expect(view.zoom).toBeCloseTo(zoomLimits(board, map).fitZoom, 6)
   })
 
   it('frames the box it is given, not a far mark in the limits', () => {
     const parts = { x: 0, y: 0, width: 2000, height: 1000 }
     const far = contentBounds([parts], [], [{ kind: 'sticky', x: -9000, y: 0, width: 100, height: 100 } as never])
-    const view = frameViewport(zoomLimits(far, map), { ...map, top: 0 }, { readable: true, fitAll: true, box: parts })
+    const view = frameViewport(zoomLimits(far, map), { ...map, top: 0 }, { readable: true, box: parts })
     // The parts, not the empty space toward the far mark, are in the middle of the view.
     const middle = (map.width / 2 - view.x) / view.zoom
     expect(middle).toBeGreaterThan(900)

@@ -107,7 +107,7 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  max-width: 220px;
+  max-width: calc(220px * var(--label-scale, 1));
   overflow: hidden;
   overflow-wrap: anywhere;
 }

@@ -7,18 +7,13 @@ import { FAR_ENTER, FAR_EXIT } from './far'
 export const MAX_ZOOM = 2
 /** Fitting never enlarges a small board past its real size. */
 export const FIT_MAX_ZOOM = 1
-/** Opening a board fits it when that leaves text readable. Below this, it shows the start of the flow at `START_ZOOM`. */
-export const READABLE_ZOOM = 0.75
-export const START_ZOOM = 0.8
-/** A board with more parts than this opens fitted whole, however small that makes the text. */
-export const OPEN_FIT_PARTS = 15
 /** Room around the content when it is fitted, in screen pixels. */
 const FIT_ROOM = 32
 /** How far past the content the map can be panned, in board pixels. */
 export const PAN_MARGIN = 320
-/** Keeps the zoom bar off the bottom row of cards. */
+/** Keeps the zoom bar off the bottom row of cards when no taller overlay is measured. */
 const CORNER_ROOM = 48
-/** Room between the top of the map and the first card, in pixels, when the map shows the start of the flow. */
+/** Room between the top of the map and a framed box when a floor zoom is hit. */
 const EDGE_ROOM = 24
 /** The zoom steps of the zoom buttons and keys. */
 export const ZOOM_STEPS = [0.1, 0.15, 0.25, 0.33, 0.5, 0.67, 0.8, 1, 1.25, 1.5, 2] as const
@@ -26,6 +21,12 @@ export const ZOOM_STEPS = [0.1, 0.15, 0.25, 0.33, 0.5, 0.67, 0.8, 1, 1.25, 1.5, 
 export interface Size {
   width: number
   height: number
+}
+
+/** A map size with the room reserved at its top and bottom for overlays (notices, toolbars, hint). */
+export interface MapArea extends Size {
+  top?: number
+  bottom?: number
 }
 
 /** How far the map can zoom and pan, worked out from what is on it and the size of the map. */
@@ -92,7 +93,7 @@ export function contentBounds(
  * route around the outside of the cards. They join the box only when that puts the fit in the far view, where they are
  * drawn. `routes` is asked only then, so a map that fits well in the near view never solves them.
  */
-export function fitBounds(base: Rect | undefined, routes: () => Rect | undefined, map: Size): Rect | undefined {
+export function fitBounds(base: Rect | undefined, routes: () => Rect | undefined, map: MapArea): Rect | undefined {
   if (!base || !mayReachFar(base, map)) return base
   const area = fitArea(map)
   const lines = routes()
@@ -100,12 +101,14 @@ export function fitBounds(base: Rect | undefined, routes: () => Rect | undefined
   return all && fitZoomFor(all, area) < FAR_ENTER ? all : base
 }
 
-function fitArea(map: Size): Size {
-  return { width: map.width, height: Math.max(120, map.height - CORNER_ROOM) }
+function fitArea(map: MapArea): Size {
+  const top = map.top ?? 0
+  const bottom = map.bottom ?? CORNER_ROOM
+  return { width: map.width, height: Math.max(120, map.height - top - bottom) }
 }
 
 /** Whether a fit of the cards alone lands near enough to the far view that its lines could matter. */
-export function mayReachFar(base: Rect | undefined, map: Size): boolean {
+export function mayReachFar(base: Rect | undefined, map: MapArea): boolean {
   return base !== undefined && map.width > 0 && map.height > 0 && fitZoomFor(base, fitArea(map)) < FAR_EXIT
 }
 
@@ -121,10 +124,10 @@ export function fitZoomFor(bounds: Rect, area: Size): number {
  * would be needed for a small board, so the map never shows more than its content needs. Panning stops a margin past
  * the content.
  */
-export function zoomLimits(bounds: Rect | undefined, map: Size): Limits {
+export function zoomLimits(bounds: Rect | undefined, map: MapArea): Limits {
   const box = bounds ?? { x: 0, y: 0, width: 1, height: 1 }
-  // The zoom bar takes the bottom corner, so the fit leaves room for it.
-  const fitZoom = map.width > 0 && map.height > 0 ? fitZoomFor(box, { width: map.width, height: Math.max(120, map.height - CORNER_ROOM) }) : 1
+  // The zoom bar and any bottom overlays take the bottom strip, so the fit leaves room for them.
+  const fitZoom = map.width > 0 && map.height > 0 ? fitZoomFor(box, fitArea(map)) : 1
   const minZoom = Math.max(0.02, Math.min(fitZoom, 1))
   return {
     minZoom,
@@ -143,17 +146,19 @@ export function zoomLimits(bounds: Rect | undefined, map: Size): Limits {
  * When the extent is smaller than the map on an axis, the content is centered on that axis. React Flow applies the
  * same rule to the user's own panning, but not to `setViewport`, so every move the app makes goes through here.
  */
-export function clampViewport(viewport: Viewport, limits: Pick<Limits, 'minZoom' | 'maxZoom' | 'extent'>, map: Size): Viewport {
+export function clampViewport(viewport: Viewport, limits: Pick<Limits, 'minZoom' | 'maxZoom' | 'extent'>, map: MapArea): Viewport {
   const zoom = Math.min(limits.maxZoom, Math.max(limits.minZoom, viewport.zoom))
   const [[x0, y0], [x1, y1]] = limits.extent
-  const axis = (offset: number, low: number, high: number, length: number) => {
-    // How far the two edges of the map reach past the two ends of the extent, in board units.
-    const before = -offset / zoom - low
-    const after = (length - offset) / zoom - high
+  const axis = (offset: number, low: number, high: number, start: number, end: number) => {
+    // How far the two edges of the free area reach past the two ends of the extent, in board units.
+    const before = (start - offset) / zoom - low
+    const after = (end - offset) / zoom - high
     const shift = after > before ? (before + after) / 2 : Math.min(0, before) || Math.max(0, after)
     return offset + shift * zoom
   }
-  return { x: axis(viewport.x, x0, x1, map.width), y: axis(viewport.y, y0, y1, map.height), zoom }
+  const top = map.top ?? 0
+  const bottom = map.bottom ?? 0
+  return { x: axis(viewport.x, x0, x1, 0, map.width), y: axis(viewport.y, y0, y1, top, Math.max(top + 1, map.height - bottom)), zoom }
 }
 
 export interface Frame {
@@ -161,14 +166,10 @@ export interface Frame {
   box?: Rect
   padding?: number
   maxZoom?: number
-  /** Whole-board framing only: when the board would need less than a readable zoom, show the start of the flow instead. */
+  /** Whole-board opening frame: fits the parts box centered in the free area (D141). */
   readable?: boolean
-  /** With `readable`: fit the whole box even when the text gets small, as a board with many parts does on opening. */
-  fitAll?: boolean
   /** Never frame below this zoom: a box too big for it shows its top left corner, so text stays readable. */
   floorZoom?: number
-  /** The cards where the flow starts: the first column on the left. Shown when the whole board is not readable. */
-  start?: Rect
 }
 
 /** The room at the top of the map that notices cover. */
@@ -182,13 +183,28 @@ export function coveredTop(map: HTMLElement): number {
   return top
 }
 
+/** The room at the bottom of the map that floating controls (toolbars, hint, detail notice) cover. */
+export function coveredBottom(map: HTMLElement): number {
+  const box = map.getBoundingClientRect()
+  let bottom = CORNER_ROOM
+  for (const el of map.querySelectorAll('[role="toolbar"], [role="note"], [data-testid="hidden-detail"]')) {
+    if (el.closest('.react-flow__viewport')) continue
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0 && r.top < box.bottom) {
+      bottom = Math.max(bottom, box.bottom - r.top + 8)
+    }
+  }
+  return bottom
+}
+
 /**
- * The viewport that frames a box in the part of the map that notices and the zoom bar leave free.
+ * The viewport that frames a box in the part of the map that notices and bottom controls leave free.
  * Content smaller than the map is centered and never shown larger than `maxZoom`.
  */
-export function frameViewport(limits: Limits, map: Size & { top: number }, options: Frame = {}): Viewport {
-  const { box = limits.bounds, padding = 0, maxZoom = FIT_MAX_ZOOM, readable = false, fitAll = false, start, floorZoom } = options
-  const room = Math.max(120, map.height - map.top - CORNER_ROOM)
+export function frameViewport(limits: Limits, map: Size & { top: number; bottom?: number }, options: Frame = {}): Viewport {
+  const { box = limits.bounds, padding = 0, maxZoom = FIT_MAX_ZOOM, floorZoom } = options
+  const bottom = map.bottom ?? CORNER_ROOM
+  const room = Math.max(120, map.height - map.top - bottom)
   const area = { width: map.width, height: room }
   const inflated = { x: box.x - box.width * padding, y: box.y - box.height * padding, width: box.width * (1 + padding * 2), height: box.height * (1 + padding * 2) }
   let zoom = Math.min(maxZoom, fitZoomFor(inflated, area))
@@ -196,14 +212,6 @@ export function frameViewport(limits: Limits, map: Size & { top: number }, optio
   if (floorZoom !== undefined && zoom < floorZoom) {
     zoom = Math.min(limits.maxZoom, Math.max(limits.minZoom, floorZoom))
     return clampViewport({ x: EDGE_ROOM - inflated.x * zoom, y: map.top + EDGE_ROOM - inflated.y * zoom, zoom }, limits, map)
-  }
-  if (readable && !fitAll && zoom < READABLE_ZOOM) {
-    zoom = Math.max(limits.minZoom, START_ZOOM)
-    // The left edge of the board, with the first column of cards in the middle of the height, or its top when taller.
-    const first = start ?? box
-    const middle = map.top + (room - first.height * zoom) / 2 - first.y * zoom
-    const y = first.height * zoom > room - EDGE_ROOM * 2 ? map.top + EDGE_ROOM - first.y * zoom : middle
-    return clampViewport({ x: EDGE_ROOM - box.x * zoom, y, zoom }, limits, map)
   }
   const x = (area.width - inflated.width * zoom) / 2 - inflated.x * zoom
   const y = map.top + (area.height - inflated.height * zoom) / 2 - inflated.y * zoom

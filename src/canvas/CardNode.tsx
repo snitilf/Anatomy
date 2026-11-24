@@ -9,14 +9,10 @@ import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
-/** Below this zoom a summary would draw under 9px on screen, so the card shows its title alone. */
-export const SUMMARY_ZOOM = 0.75
-
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
 
 export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Node<CardData>>) {
   const mine = data.noteCount
-  const small = useStore((s) => s.transform[2] < SUMMARY_ZOOM)
   // A tile wide enough on screen carries the part's name in the far view. It renders on the crossing, not on every zoom.
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   const tip = useTipClamp(data.far, selected === true || data.highlighted)
@@ -44,7 +40,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
         <div className={styles.label}>{data.label}</div>
-        <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }} data-small={small || undefined}>
+        <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }}>
           {data.summary}
         </p>
         {(data.hasLesson || mine > 0) && (

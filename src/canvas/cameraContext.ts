@@ -7,8 +7,8 @@ import type { Frame, Limits, Size } from './camera'
 /** Moves the map's camera, always inside the zoom and pan limits of what is on the map. */
 export interface Camera {
   limits(): Limits
-  /** The size of the map, and how much of its top the notices cover. */
-  size(): Size & { top: number }
+  /** The size of the map, and how much of its top and bottom overlays cover. */
+  size(): Size & { top: number; bottom?: number }
   /** Returns where the camera goes, after the limits. */
   move(viewport: Viewport, duration?: number): Viewport
   /** Frames the whole content, or a box of it. */
