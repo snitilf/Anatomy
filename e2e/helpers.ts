@@ -132,3 +132,45 @@ export async function pickConnection(page: Page, label: string) {
   await menu.getByRole('option', { name: new RegExp(`^${label}`) }).first().click()
   await expect(menu).toBeHidden()
 }
+
+export interface Pair {
+  from: { id: string; x: number; y: number }
+  to: { id: string; x: number; y: number }
+}
+
+/** A card with a reachable handle, and a different card whose middle is not covered by anything else. */
+export async function linkPair(page: Page): Promise<Pair> {
+  const pair = await page.evaluate(() => {
+    const map = document.querySelector('.react-flow')?.getBoundingClientRect()
+    if (!map) return undefined
+    const inside = (x: number, y: number) => x > map.left + 20 && x < map.right - 120 && y > map.top + 20 && y < map.bottom - 120
+    const cards = [...document.querySelectorAll<HTMLElement>('.react-flow__node-card')]
+    const middles = cards.flatMap((node) => {
+      const r = node.getBoundingClientRect()
+      const x = r.left + r.width / 2
+      const y = r.top + r.height / 2
+      const hit = document.elementFromPoint(x, y)
+      return inside(x, y) && hit && node.contains(hit) ? [{ node, id: node.dataset.id ?? '', x, y }] : []
+    })
+    for (const from of middles) {
+      // A dot sits half outside its card, so only part of it takes the press. Find a point that does.
+      for (const handle of from.node.querySelectorAll<HTMLElement>('.react-flow__handle.source')) {
+        const h = handle.getBoundingClientRect()
+        for (const fx of [0.15, 0.5, 0.85]) {
+          for (const fy of [0.15, 0.5, 0.85]) {
+            const hx = h.left + h.width * fx
+            const hy = h.top + h.height * fy
+            const top = document.elementFromPoint(hx, hy)
+            const to = middles.find((m) => m.id !== from.id)
+            if (to && inside(hx, hy) && top && handle.contains(top)) {
+              return { from: { id: from.id, x: hx, y: hy }, to: { id: to.id, x: to.x, y: to.y } }
+            }
+          }
+        }
+      }
+    }
+    return undefined
+  })
+  if (!pair) throw new Error('no pair of cards can be linked on this board')
+  return pair
+}

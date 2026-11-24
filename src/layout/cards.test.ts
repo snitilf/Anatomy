@@ -59,9 +59,24 @@ describe('card sizes', () => {
     expect(summaryLinesFor(card, { width: 240, height: 320 })).toBeGreaterThan(summaryLinesFor(card, { width: 240, height: 112 }))
   })
 
-  it('keeps a line for the footer row when the part has notes, so the summary never runs into the note count', () => {
+  it('keeps every summary line on a card with notes: the count sits beside the title, not in a row of its own', () => {
     const size = { width: 240, height: 112 }
-    expect(summaryLinesFor({ label: 'Policy check' }, size, 2)).toBeLessThan(summaryLinesFor({ label: 'Policy check' }, size))
+    expect(summaryLinesFor({ label: 'Policy check' }, size, 2)).toBe(summaryLinesFor({ label: 'Policy check' }, size))
+  })
+
+  it('leaves room beside the title for the count, so a title that now wraps takes its line from the summary', () => {
+    const size = { width: 240, height: 112 }
+    // 28 letters fit one line of the 212 px inside the card, but not the line beside a count.
+    const label = 'Order and payment reconciler'
+    expect(lineCount(label, 212, 7.1)).toBe(1)
+    expect(summaryLinesFor({ label }, size, 1)).toBeLessThan(summaryLinesFor({ label }, size))
+  })
+
+  it('keeps the footer row for a lesson, where the count joins the lesson mark', () => {
+    const size = { width: 240, height: 112 }
+    const card = { label: 'Policy check', lesson: 'approval-gate' }
+    expect(summaryLinesFor(card, size)).toBeLessThan(summaryLinesFor({ label: 'Policy check' }, size))
+    expect(summaryLinesFor(card, size, 3)).toBe(summaryLinesFor(card, size))
   })
 
   it('clamps a size to the limits and snaps it to the grid', () => {
