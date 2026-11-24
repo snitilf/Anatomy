@@ -12,6 +12,7 @@ import {
   nextFar,
   TITLE_ENTER,
   TITLE_EXIT,
+  TITLE_FOOT,
   TITLE_LEVEL_PX,
   TITLE_LINE_HEIGHT,
   TITLE_PADDING,
@@ -111,6 +112,18 @@ describe('readable text at every level', () => {
     // A usual card holds two lines just above the far view and three near the full cards.
     expect(titleLines(FAR_ENTER, 112)).toBe(2)
     expect(titleLines(0.7, 112)).toBe(3)
+  })
+
+  it('keeps room under the title for the badges of a card that has them', () => {
+    for (const zoom of [FAR_ENTER, 0.5, 0.6, 0.7, TITLE_EXIT]) {
+      for (const height of [96, 112, 140, 200]) {
+        const scale = titleScale(zoom, TITLE_LEVEL_PX)
+        const lines = titleLines(zoom, height, true)
+        expect(lines).toBeGreaterThanOrEqual(1)
+        expect(lines).toBeLessThanOrEqual(titleLines(zoom, height))
+        if (lines > 1) expect(lines * 13 * TITLE_LINE_HEIGHT * scale + TITLE_FOOT * scale).toBeLessThanOrEqual(height - 2 * TITLE_PADDING)
+      }
+    }
   })
 
   it('keeps line labels at least 11 px on screen at every zoom', () => {
