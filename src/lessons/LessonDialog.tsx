@@ -1,11 +1,23 @@
-/* oxlint-disable react/static-components -- the lazy components are created once per lesson id, in loader.ts */
-import { Suspense, useEffect, useRef } from 'react'
+/* oxlint-disable react/static-components -- the lazy components are created once per lesson id, at module scope */
+import { Suspense, lazy, useEffect, useRef, type ComponentType, type LazyExoticComponent } from 'react'
 import clsx from 'clsx'
 import { X } from 'lucide-react'
 import buttons from '../app/buttons.module.css'
-import { findLesson } from './catalog'
-import { lessonComponent } from './loader'
+import { findLesson, type LessonEntry } from './catalog'
 import styles from './LessonDialog.module.css'
+
+// A lazy component created again on every open would suspend again, even with its chunk cached, and the dialog would flash a loading
+// line and jump in height. One per lesson, made once, renders at once after its first load.
+const lazies = new Map<string, LazyExoticComponent<ComponentType>>()
+
+function lessonComponent(entry: LessonEntry) {
+  let component = lazies.get(entry.id)
+  if (!component) {
+    component = lazy(entry.load)
+    lazies.set(entry.id, component)
+  }
+  return component
+}
 
 interface Props {
   lessonId: string
