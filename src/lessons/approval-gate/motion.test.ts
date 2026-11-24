@@ -503,6 +503,28 @@ describe('review fixes', () => {
     expect(poseAt(again.run, 40).finger1).toBeGreaterThan(from.finger1)
   })
 
+  it('does not stall a finger whose key is already down when an event cuts into an approval', () => {
+    const first = play('approve', initialState, rest0())
+    if (!first) throw new Error('no run')
+    // By 120 ms the key is fully drawn, and it is still dropping. The finger was due to start at 200 ms.
+    for (let cut = 120; cut <= 199; cut += 10) {
+      const from = poseAt(first.run, cut)
+      expect(from.finger1).toBe(0)
+      for (const event of ['trySend', 'approve', 'restart'] as const) {
+        const played = play(event, approved, from)
+        if (!played) throw new Error('no run')
+        const lift = played.run.tracks.find((t) => t.channel === 'finger1' && t.to === 1)
+        expect(lift, `${event} at ${cut} ms`).toBeDefined()
+        expect(lift?.start ?? 999, `${event} at ${cut} ms`).toBeLessThanOrEqual(200 - cut + 1)
+        if (event === 'trySend') {
+          const travel = played.run.tracks.find((t) => t.channel === 'card' && t.to === TRAVEL_END)
+          expect(travel?.start, `send at ${cut} ms`).toBe(0)
+          expect(snaps(played.run, from)).toEqual([])
+        }
+      }
+    }
+  })
+
   it('draws the card fully before it travels when a send cuts into the feed-in of a fresh card', () => {
     // Approve and send version 1, then find the moment the fresh card has just started to appear.
     const a = play('approve', initialState, rest0())
