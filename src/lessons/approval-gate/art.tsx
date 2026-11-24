@@ -36,7 +36,7 @@ function useSlotRefs(ref: (version: number, node: SVGGElement | null) => void) {
 
 const VERSIONS = Array.from({ length: SLOTS }, (_, i) => i + 1)
 
-export function Base() {
+export const Base = memo(function Base() {
   const b = BASE_ART
   return (
     <g>
@@ -68,9 +68,9 @@ export function Base() {
       <Line d={b.ventSlots} tone="faint" />
     </g>
   )
-}
+})
 
-export function Deck() {
+export const Deck = memo(function Deck() {
   const d = DECK_ART
   return (
     <g>
@@ -86,9 +86,9 @@ export function Deck() {
       <Dots points={d.wallScrews} size={0.5} tone="mid" />
     </g>
   )
-}
+})
 
-export function DeckFront() {
+export const DeckFront = memo(function DeckFront() {
   const d = DECK_ART
   return (
     <g>
@@ -96,14 +96,14 @@ export function DeckFront() {
       <Dots points={d.stopScrews} size={0.5} tone="mid" />
     </g>
   )
-}
+})
 
 /** A veil over the press and under the switch. A restart dims the press through it, because the press is what lost power. */
-export function Veil({ veilRef }: { veilRef: Ref<SVGRectElement> }) {
+export const Veil = memo(function Veil({ veilRef }: { veilRef: Ref<SVGRectElement> }) {
   return <rect ref={veilRef} data-part="veil" x={0} y={0} width={WIDTH} height={HEIGHT} fill="var(--anatomy-card)" opacity={0} pointerEvents="none" />
-}
+})
 
-export function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; lampRef: Ref<SVGGElement>; lamp: boolean }) {
+export const Switch = memo(function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; lampRef: Ref<SVGGElement>; lamp: boolean }) {
   const s = SWITCH_ART
   return (
     <g>
@@ -123,9 +123,9 @@ export function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; 
       </g>
     </g>
   )
-}
+})
 
-export function PusherArt() {
+export const PusherArt = memo(function PusherArt() {
   const p = PUSHER_ART
   return (
     <g>
@@ -137,7 +137,7 @@ export function PusherArt() {
       <Dots points={p.screws} size={0.45} tone="mid" />
     </g>
   )
-}
+})
 
 /**
  * The slab of the card with its rules and its stamps. It stays under every overhead part, so it is drawn once.
@@ -239,7 +239,7 @@ export interface GateProps {
   litVersion: number | null
 }
 
-export function GateArch({ fingerRef, keyRef, litVersion }: GateProps) {
+export const GateArch = memo(function GateArch({ fingerRef, keyRef, litVersion }: GateProps) {
   const fingerRefs = useSlotRefs(fingerRef)
   const keyRefs = useSlotRefs(keyRef)
   return (
@@ -273,7 +273,7 @@ export function GateArch({ fingerRef, keyRef, litVersion }: GateProps) {
       <Post parts={GATE_ARCH.near} />
     </g>
   )
-}
+})
 
 export interface LedgerProps {
   pinRef: (version: number, node: SVGGElement | null) => void
@@ -281,7 +281,7 @@ export interface LedgerProps {
   litVersion: number | null
 }
 
-export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
+export const LedgerArch = memo(function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
   const pinRefs = useSlotRefs(pinRef)
   return (
     <g data-part="arch" data-arch="ledger">
@@ -304,9 +304,9 @@ export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
       <Post parts={LEDGER_ARCH.near} />
     </g>
   )
-}
+})
 
-export function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; lit: boolean }) {
+export const LockArch = memo(function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; lit: boolean }) {
   const s = SHUTTER_ART
   return (
     <g data-part="arch" data-arch="lock">
@@ -323,4 +323,4 @@ export function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; li
       <Post parts={LOCK_ARCH.near} />
     </g>
   )
-}
+})

@@ -94,6 +94,21 @@ function Announcer({ text, count }: { text: string; count: number }) {
 const LABEL =
   'A dispatch press seen from above and to one side. A message card stamped with a version number sits in a carrier. A pusher behind it slides the card past three arches: a lockout bar, a gate of eight fingers lifted by a key, and a ledger of eight pins. The last delivered card waits in the outbox.'
 
+const HINT = ['A approve', 'R reject', 'E edit', 'S send', 'P restart', '0 reset']
+
+/** The keys, listed on the plate. Each item stays whole when the line wraps. */
+const hint = (
+  <>
+    Keys:{' '}
+    {HINT.map((item, index) => (
+      <span key={item}>
+        {index > 0 ? ' · ' : null}
+        <span className="ag-hint-item">{item}</span>
+      </span>
+    ))}
+  </>
+)
+
 const KEYS: Record<string, LessonEvent> = { a: 'approve', r: 'reject', e: 'edit', s: 'trySend', p: 'restart', '0': 'reset' }
 
 export default function ApprovalGateLesson() {
@@ -295,7 +310,7 @@ export default function ApprovalGateLesson() {
       <Plate
         fig="Fig 1"
         title="Approval gate"
-        hint="Keys: A approve · R reject · E edit · S send"
+        hint={hint}
         readout={readout(shown)}
         keys={[{ mark: 'lit', label: 'The lit part shows why' }]}
         caption={caption(shown)}

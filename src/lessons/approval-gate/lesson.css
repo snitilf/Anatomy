@@ -205,6 +205,17 @@
   white-space: nowrap;
 }
 
+.ag-hint-item {
+  white-space: nowrap;
+}
+
+/* A touch screen has no keys to press, so the plate does not list them. */
+@media (hover: none) {
+  .ag .iso-plate-corner[data-corner='hint'] {
+    display: none;
+  }
+}
+
 @media (max-width: 560px) {
   .ag-map > div {
     grid-template-columns: 1fr;
