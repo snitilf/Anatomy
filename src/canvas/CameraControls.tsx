@@ -102,9 +102,9 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
 }
 
 /**
- * Frames the map in the room that notices leave free. The first frame shows the whole board when it is readable that
- * way, else the start of the flow at a readable zoom. A walkthrough step frames the parts it is about, and the whole
- * board when it names none. A resize of the map keeps the middle of the view, once nothing is held.
+ * Frames the map in the room that notices and the controls at the bottom leave free. The first frame shows the whole
+ * board (D141). A walkthrough step frames the parts it is about, and the whole board when it names none. A resize of
+ * the map fits a view the reader has not moved again, and otherwise keeps the middle of the view, once nothing is held.
  */
 export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean; rectOf: (id: string) => Rect | undefined }) {
   const camera = useCamera()
