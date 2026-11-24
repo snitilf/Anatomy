@@ -145,7 +145,7 @@ For this reason, every camera move that the app makes goes through `clampViewpor
 
 When a board opens, the camera fits the whole board in the free part of the map: below the notices, and above the hint, the tool bars, and the line that says what is hidden.
 The view stays fitted while the reader leaves it alone: a new size of the map frames the whole board again.
-Until the reader first presses, types, or scrolls, any change frames it again, for example the hint coming in, or the fonts loading and the cards being measured again.
+Until the reader first presses, types, or scrolls, any change frames it again, for example the hint coming in, or the fonts loading and the map being built again with its labels measured in them.
 Once the reader has moved the view, a new size of the map keeps the middle of the view and the zoom.
 The zoom limits keep the room that the hint took, so dismissing the hint never zooms the view in.
 

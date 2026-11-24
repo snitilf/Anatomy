@@ -452,7 +452,7 @@ export function Canvas() {
     }
     // The last frame of the whole board: how it was framed, where it went, and the room it was framed in. Any other
     // move of the camera ends it. While it holds, the view is fitted, and a new size of the map frames the whole board
-    // again. While the board is still opening, so does any change: the hint coming in, or the cards measured again.
+    // again. While the board is still opening, so does any change: the hint coming in, or the map built again.
     const last: { fitted?: { options: Frame; at: Viewport; room: ReturnType<typeof size>; board: string | undefined } | undefined } = {}
     const near = (a: Viewport, b: Viewport) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1 && Math.abs(a.zoom - b.zoom) <= 1e-3
     const sameSize = (a: ReturnType<typeof size>, b: ReturnType<typeof size>) => Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height)
@@ -517,9 +517,9 @@ export function Canvas() {
       scene: () => sceneRef.current,
     }
   }, [measureMap])
-  // A fitted view stays fitted while the reader leaves it alone: a new size of the map or of what covers it frames the
-  // whole board again. Until the reader first presses, types, or scrolls, so does the layout settling, as when the
-  // fonts come in and the cards are measured again. A new revision of the board is not part of the opening.
+  // A fitted view stays fitted while the reader leaves it alone: a new size of the map frames the whole board again.
+  // Until the reader first presses, types, or scrolls, so does any other change, such as the hint coming in, or the
+  // fonts loading and the map being built again with its labels measured in them. A new revision is not part of it.
   const opening = useRef<{ board: typeof board; open: boolean }>({ board: undefined, open: false })
   const boardId = board?.id
   useLayoutEffect(() => {
