@@ -27,7 +27,7 @@ export function SavedBoardList({ onChosen }: { onChosen?: () => void }) {
           <span className={styles.actions}>
             <button
               type="button"
-              className={clsx(buttons.button, styles.small)}
+              className={clsx(buttons.button, buttons.small)}
               aria-label={`Open ${board.title}`}
               onClick={() => {
                 onChosen?.()
@@ -38,7 +38,7 @@ export function SavedBoardList({ onChosen }: { onChosen?: () => void }) {
             </button>
             <button
               type="button"
-              className={clsx(buttons.button, buttons.quiet, styles.small)}
+              className={clsx(buttons.button, buttons.quiet, buttons.small)}
               aria-label={`Delete ${board.title}`}
               onClick={() => {
                 onChosen?.()

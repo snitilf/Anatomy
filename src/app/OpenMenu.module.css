@@ -32,46 +32,9 @@
   box-shadow: var(--shadow-float);
 }
 
-.file {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 32px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.file svg {
-  color: var(--fg-2);
-}
-
 .keys {
-  margin-left: auto;
   font: inherit;
   font-size: var(--text-sm);
-  color: var(--fg-3);
-}
-
-.file:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .file:hover {
-    background: var(--hover);
-  }
-}
-
-.file:active {
-  background: var(--hover);
 }
 
 .section {

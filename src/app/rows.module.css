@@ -1,0 +1,108 @@
+/*
+ * The list row: one look for a row that is a button or a link, in a menu, a panel, or a page.
+ * Hover and press fill the row with no transition on the way in. Text sits 8px in from the row's edge, so a row's
+ * text lines up with a heading above it when the row is given a matching negative margin by its list.
+ *
+ * `sm` is the compact height, for a panel. The default is the height of a menu or a page.
+ * A row that leaves for the map shows an arrow at its trailing edge on hover and focus (`go`).
+ * A row that unfolds has a chevron at its leading edge (`chevron`) that turns a quarter when the row is expanded.
+ * The user's own rows keep an amber bar (`yours`).
+ */
+
+.row {
+  --size: var(--row-md);
+  position: relative;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--size);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sm {
+  --size: var(--row-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--hover);
+  }
+}
+
+.row:active {
+  background: var(--active);
+}
+
+.row:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* The icon slot: 14px wide, in the quiet color. */
+.icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--fg-2);
+}
+
+/* A figure or a shortcut at the end of the row. */
+.meta {
+  margin-left: auto;
+  padding-left: var(--space-2);
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.go {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: auto;
+  color: var(--fg-3);
+  opacity: 0;
+}
+
+.row:focus-visible .go {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover .go {
+    opacity: 1;
+  }
+}
+
+.chevron {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--fg-3);
+}
+
+.row[aria-expanded='true'] .chevron {
+  rotate: 90deg;
+}
+
+.yours::before {
+  content: '';
+  position: absolute;
+  inset-block: 4px;
+  left: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--yours);
+}
