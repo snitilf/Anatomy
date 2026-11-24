@@ -13,8 +13,13 @@ export interface Camera {
   move(viewport: Viewport, duration?: number): Viewport
   /** Frames the whole content, or a box of it. */
   frame(options?: Frame, duration?: number): Viewport
-  /** Frames the whole board again when the view is still the last whole-board frame. Returns whether it did. */
-  refit(): boolean
+  /**
+   * Keeps a fitted view fitted: while the view is still the last whole-board frame and nothing else has moved the camera
+   * since, frames the whole board again when the map has a new size, or always while the board is still `opening`.
+   * Returns `framed` when it framed the board again, `kept` when the view was fitted already, and nothing when the view
+   * is not fitted.
+   */
+  refit(opening?: boolean): 'framed' | 'kept' | undefined
   /** Steps the zoom in or out, resets it to 100%, or fits the whole board. It glides when `animate` and motion is allowed. */
   zoom(command: ZoomCommand, animate?: boolean): void
   /** Where a card is on the map now. */

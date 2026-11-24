@@ -42,7 +42,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { clampViewport, contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, DetailMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { hiddenDetailText, type DetailLevel } from './far'
@@ -349,11 +349,15 @@ export function Canvas() {
 
   // The size of the map and its bottom overlay room, for the zoom limits. Read before the first paint and on every change.
   const [mapSize, setMapSize] = useState<{ width: number; height: number; bottom?: number }>({ width: 0, height: 0 })
+  // The zoom limits keep the most room the controls at the bottom have taken since the board opened. The opening fit
+  // leaves room for the hint, and when the hint goes, the view the reader is in must not be zoomed in under them.
+  const bottomFloor = useRef(0)
   const measureMap = useCallback(() => {
     const el = mapBox.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    const bottom = coveredBottom(el)
+    const bottom = Math.max(coveredBottom(el), bottomFloor.current)
+    bottomFloor.current = bottom
     setMapSize((s) => (s.width === r.width && s.height === r.height && s.bottom === bottom ? s : { width: r.width, height: r.height, bottom }))
   }, [])
   useLayoutEffect(() => {
@@ -421,18 +425,29 @@ export function Canvas() {
       const r = el?.getBoundingClientRect()
       return { width: r?.width ?? 0, height: r?.height ?? 0, top: el ? coveredTop(el) : 0, ...(el ? { bottom: coveredBottom(el) } : {}) }
     }
-    const current = (): Limits => zoomLimits(boundsRef.current, size())
+    // The room the zoom limits are worked out in: the map, with the most room the bottom controls have taken.
+    const limitRoom = () => {
+      const room = size()
+      return { ...room, bottom: Math.max(room.bottom ?? 0, bottomFloor.current) }
+    }
+    const current = (): Limits => zoomLimits(boundsRef.current, limitRoom())
     // The limits with the far-view lines solved now, if the last layout's are still waiting for the browser to be idle.
     // Fit, zooming out, and the wheel ask for these. A card dropped off screen does not, so a drop never solves lines.
-    const fresh = (): Limits => zoomLimits(fitBounds(baseBoundsRef.current, resolveNowRef.current, size()), size())
-    const move = (viewport: Viewport, duration = 0, limits: Limits = current()) => {
+    const fresh = (): Limits => zoomLimits(fitBounds(baseBoundsRef.current, resolveNowRef.current, limitRoom()), limitRoom())
+    const place = (viewport: Viewport, duration = 0, limits: Limits = current()) => {
       const flow = flowRef.current
       return flow ? moveCamera(flow, viewport, limits, size(), duration) : viewport
     }
-    // The last view that framed the whole board, and how. While the view is still there, it is the fitted view: a new
-    // size of the map, or the first layout settling, frames the whole board again instead of keeping a stale fit.
-    const last: { fitted?: { options: Frame; at: Viewport } | undefined } = {}
+    // The last frame of the whole board: how it was framed, where it went, and the room it was framed in. Any other
+    // move of the camera ends it. While it holds, the view is fitted, and a new size of the map frames the whole board
+    // again. While the board is still opening, so does any change: the hint coming in, or the cards measured again.
+    const last: { fitted?: { options: Frame; at: Viewport; room: ReturnType<typeof size> } | undefined } = {}
     const near = (a: Viewport, b: Viewport) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1 && Math.abs(a.zoom - b.zoom) <= 1e-3
+    const sameSize = (a: ReturnType<typeof size>, b: ReturnType<typeof size>) => Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height)
+    const move: CameraApi['move'] = (viewport, duration = 0) => {
+      last.fitted = undefined
+      return place(viewport, duration)
+    }
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
       const limits = options.box && !options.readable ? current() : fresh()
       let framed: Frame = options
@@ -440,19 +455,23 @@ export function Canvas() {
         const box = fitBounds(basePartsBoundsRef.current, resolveNowRef.current, size())
         framed = { ...options, ...(box ? { box } : {}) }
       }
-      const at = move(frameViewport(limits, size(), framed), duration, limits)
-      last.fitted = options.box ? undefined : { options, at }
+      const room = size()
+      const at = place(frameViewport(limits, room, framed), duration, limits)
+      last.fitted = options.box ? undefined : { options, at, room }
       return at
     }
-    const refit: CameraApi['refit'] = () => {
+    const refit: CameraApi['refit'] = (opening = false) => {
       const flow = flowRef.current
       const fitted = last.fitted
-      if (!fitted || !flow) return false
-      const now = flow.getViewport()
-      // The limits may already have pulled the fitted view inside them, which still counts as untouched.
-      if (!near(now, fitted.at) && !near(now, clampViewport(fitted.at, current(), size()))) return false
+      if (!fitted || !flow) return undefined
+      // A view set without the camera, such as the phone's framing above the sheet, is not the fitted view any more.
+      if (!near(flow.getViewport(), fitted.at)) {
+        last.fitted = undefined
+        return undefined
+      }
+      if (!opening && sameSize(size(), fitted.room)) return 'kept'
       frame(fitted.options)
-      return true
+      return 'framed'
     }
     // Where a glide is going. A second step during the glide goes on from there, not from halfway.
     const glide: { heading?: { viewport: Viewport; until: number } | undefined } = {}
@@ -491,6 +510,7 @@ export function Canvas() {
   const boardId = board?.id
   useLayoutEffect(() => {
     opening.current = { board, open: true }
+    bottomFloor.current = 0
     const end = () => {
       opening.current.open = false
     }
@@ -502,12 +522,14 @@ export function Canvas() {
     // Only a new board starts an opening, not a new revision of the one that is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId])
+  /** Whether the board is still opening: the reader has not pressed, typed, or scrolled, and no new revision came. */
+  const stillOpening = useCallback(() => opening.current.open && opening.current.board === board, [board])
   useEffect(() => {
-    camera.refit()
-  }, [mapSize, camera])
+    camera.refit(stillOpening())
+  }, [mapSize, stillOpening, camera])
   useEffect(() => {
-    if (opening.current.open && opening.current.board === board) camera.refit()
-  }, [basePartsBounds, board, camera])
+    camera.refit(stillOpening())
+  }, [basePartsBounds, stillOpening, camera])
   const slot = useContext(CameraSlotContext)
   useEffect(() => {
     slot.set(camera)
@@ -1147,7 +1169,7 @@ export function Canvas() {
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} className={styles.dots ?? ''} />
           <KeepSelectionInView takePicked={takePicked} rectOf={rectOf} />
           <Camera stepKey={stepKey} focus={step?.focusParts ?? []} dragging={held !== undefined} rectOf={rectOf} />
-          <KeepInLimits limits={limits} />
+          <KeepInLimits limits={limits} opening={stillOpening} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <DetailMode onChange={setDetail} />
           {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}

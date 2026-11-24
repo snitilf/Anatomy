@@ -191,7 +191,7 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
     const before = framed.current
     framed.current = now
     if (!before || sameSize(before, now)) return
-    // A view the reader has not moved since it was fitted is fitted again.
+    // A view the reader has not moved since it was fitted is fitted again, or already was.
     if (camera.refit()) return
     const view = flow.getViewport()
     camera.move({ x: view.x + (now.width - before.width) / 2, y: view.y + (now.height - before.height) / 2, zoom: view.zoom })
@@ -221,17 +221,20 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
  * When the limits change, after a drop or when the map changes size, a view that is now out of bounds glides back in.
  * React Flow keeps the user's own panning inside the limits, but it does not move a view that the limits moved past.
  */
-export function KeepInLimits({ limits }: { limits: Limits }) {
+export function KeepInLimits({ limits, opening }: { limits: Limits; opening: () => boolean }) {
   const flow = useReactFlow()
   const camera = useCamera()
   useEffect(() => {
+    // A fitted view in a new room, or while the board is still opening, is fitted again. A view fitted before a card
+    // moved is not: it is pulled back inside the limits like any other.
+    if (camera.refit(opening()) === 'framed') return
     const now = flow.getViewport()
     const size = camera.size()
     if (size.width === 0 || size.height === 0) return
     const next = clampViewport(now, limits, size)
     const far = Math.abs(next.x - now.x) > 0.5 || Math.abs(next.y - now.y) > 0.5 || Math.abs(next.zoom - now.zoom) > 1e-4
     if (far) camera.move(next, prefersStillness() ? 0 : GLIDE_MS)
-  }, [limits, flow, camera])
+  }, [limits, flow, camera, opening])
   return null
 }
 
