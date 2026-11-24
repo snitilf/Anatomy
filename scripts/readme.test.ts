@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -56,5 +56,40 @@ describe('README.md', () => {
 
   it('has no em dash', () => {
     expect(readme).not.toContain('\u2014')
+  })
+  describe('the picture under the tagline', () => {
+    const picture = /<picture>([\s\S]*?)<\/picture>/.exec(readme)?.[1] ?? ''
+    const attr = (tag: string, name: string) => new RegExp(`${name}="([^"]*)"`).exec(tag)?.[1] ?? ''
+    const source = /<source\b[^>]*>/.exec(picture)?.[0] ?? ''
+    const img = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
+
+    it('comes right after the header block opens, before the description', () => {
+      const at = readme.indexOf('<picture>')
+      expect(at).toBeGreaterThan(readme.indexOf('Your coding agent knows your code'))
+      expect(at).toBeLessThan(readme.indexOf('Anatomy is a local web app'))
+    })
+
+    it('has a dark source and a light image, and both files exist and are a sharp, small PNG', () => {
+      expect(attr(source, 'media')).toBe('(prefers-color-scheme: dark)')
+      for (const path of [attr(source, 'srcset'), attr(img, 'src')]) {
+        expect(path, 'the picture names a file').toMatch(/^docs\/images\/[a-z-]+\.png$/)
+        expect(existsSync(join(root, path)), `${path} does not exist`).toBe(true)
+        const file = readFileSync(join(root, path))
+        expect(file.subarray(1, 4).toString('latin1')).toBe('PNG')
+        // Taken at 1440 wide with a device scale factor of 2.
+        expect(file.readUInt32BE(16)).toBe(2880)
+        expect(statSync(join(root, path)).size, `${path} is over 600 KB`).toBeLessThan(600 * 1024)
+      }
+      expect(attr(source, 'srcset')).not.toBe(attr(img, 'src'))
+    })
+
+    it('has a width, and alt text of one plain sentence', () => {
+      expect(Number(attr(img, 'width'))).toBeGreaterThan(0)
+      const alt = attr(img, 'alt')
+      expect(alt.length).toBeGreaterThan(20)
+      expect(alt.endsWith('.')).toBe(true)
+      expect(alt.slice(0, -1)).not.toMatch(/[.!?]/)
+      expect(alt).not.toMatch(/\b(image|picture|screenshot)\b/i)
+    })
   })
 })
