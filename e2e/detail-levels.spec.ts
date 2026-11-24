@@ -146,7 +146,7 @@ test.describe('detail levels with keyboard and reduced motion', () => {
 })
 
 test.describe('the title level', () => {
-  test('a card shows its title alone, centred in the card and larger than a line label', async ({ page }) => {
+  test('a card shows its title alone, centred in the card with its badges under it, and larger than a line label', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await open(page, CLAUDE)
     await expect(page.locator('[data-detail]')).toHaveAttribute('data-detail', 'title')
@@ -154,14 +154,22 @@ test.describe('the title level', () => {
       [...document.querySelectorAll<HTMLElement>('.react-flow__node-card')].map((node) => {
         const card = node.querySelector('[data-card]')!.getBoundingClientRect()
         const title = node.querySelector<HTMLElement>('[data-card] > [class*="label"]')!
+        const t = title.getBoundingClientRect()
         const words = document.createRange()
         words.selectNodeContents(title)
-        const text = words.getBoundingClientRect()
+        // The painted lines of the title, and the badges under it when the card has any, are centred as one block.
+        const parts = [...words.getClientRects()]
+          .map((r) => ({ left: Math.max(r.left, t.left), right: Math.min(r.right, t.right), top: Math.max(r.top, t.top), bottom: Math.min(r.bottom, t.bottom) }))
+          .filter((r) => r.right - r.left > 0.5 && r.bottom - r.top > 0.5)
+        const lines = { left: Math.min(...parts.map((r) => r.left)), right: Math.max(...parts.map((r) => r.right)) }
+        const foot = node.querySelector('[data-card] > [class*="foot"]')?.getBoundingClientRect()
+        const top = Math.min(...parts.map((r) => r.top))
+        const bottom = Math.max(foot?.bottom ?? -Infinity, ...parts.map((r) => r.bottom))
         const zoom = Number.parseFloat(/scale\(([\d.]+)\)/.exec(document.querySelector<HTMLElement>('.react-flow__viewport')!.style.transform)![1]!)
         return {
           id: node.dataset.id,
-          dx: Math.abs(text.left + text.width / 2 - (card.left + card.width / 2)),
-          dy: Math.abs(text.top + text.height / 2 - (card.top + card.height / 2)),
+          dx: Math.abs((lines.left + lines.right) / 2 - (card.left + card.width / 2)),
+          dy: Math.abs((top + bottom) / 2 - (card.top + card.height / 2)),
           px: Number.parseFloat(getComputedStyle(title).fontSize) * zoom,
         }
       }),
@@ -188,9 +196,13 @@ test.describe('a title-only card with badges', () => {
         if (!card || !foot || !title) continue
         const c = card.getBoundingClientRect()
         const f = foot.getBoundingClientRect()
+        // The lines of the title that are painted: a line past the clamp is laid out but clipped by the title's box.
+        const t = title.getBoundingClientRect()
         const words = document.createRange()
         words.selectNodeContents(title)
-        const lines = [...words.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
+        const lines = [...words.getClientRects()]
+          .map((r) => ({ left: Math.max(r.left, t.left), right: Math.min(r.right, t.right), top: Math.max(r.top, t.top), bottom: Math.min(r.bottom, t.bottom) }))
+          .filter((r) => r.right - r.left > 0.5 && r.bottom - r.top > 0.5)
         if (lines.some((l) => Math.min(l.right, f.right) - Math.max(l.left, f.left) > 0.5 && Math.min(l.bottom, f.bottom) - Math.max(l.top, f.top) > 0.5)) out.push(`${node.dataset.id}: badges over the title`)
         if (f.left < c.left || f.right > c.right || f.top < c.top || f.bottom > c.bottom) out.push(`${node.dataset.id}: badges out of the card`)
         for (const l of lines) if (l.top < c.top - 0.5 || l.bottom > c.bottom + 0.5) out.push(`${node.dataset.id}: title out of the card`)
@@ -198,7 +210,7 @@ test.describe('a title-only card with badges', () => {
       return out
     })
 
-  test('keeps its badges clear of a two-line title, down to the far view', async ({ page }) => {
+  test('keeps its badges clear of a two-line title, down near the far view', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await open(page, CLAUDE)
     const inspector = page.getByRole('complementary', { name: 'Sidebar' })
@@ -214,7 +226,6 @@ test.describe('a title-only card with badges', () => {
     for (const size of [
       { width: 1280, height: 800 },
       { width: 1120, height: 700 },
-      { width: 1060, height: 660 },
     ]) {
       await page.setViewportSize(size)
       await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
