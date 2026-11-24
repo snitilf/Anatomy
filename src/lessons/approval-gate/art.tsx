@@ -9,6 +9,7 @@ import {
   GATE_ARCH,
   GATE_COMB,
   GATE_NUMBERS,
+  HEIGHT,
   KEY_SIZE,
   LABEL_SIZE,
   LEDGER_ARCH,
@@ -22,6 +23,7 @@ import {
   SHUTTER_ART,
   STAMP_SIZE,
   SWITCH_ART,
+  WIDTH,
 } from './geometry'
 
 type Arch = typeof GATE_ARCH
@@ -94,6 +96,11 @@ export function DeckFront() {
       <Dots points={d.stopScrews} size={0.5} tone="mid" />
     </g>
   )
+}
+
+/** A veil over the press and under the switch. A restart dims the press through it, because the press is what lost power. */
+export function Veil({ veilRef }: { veilRef: Ref<SVGRectElement> }) {
+  return <rect ref={veilRef} data-part="veil" x={0} y={0} width={WIDTH} height={HEIGHT} fill="var(--anatomy-card)" opacity={0} pointerEvents="none" />
 }
 
 export function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; lampRef: Ref<SVGGElement>; lamp: boolean }) {

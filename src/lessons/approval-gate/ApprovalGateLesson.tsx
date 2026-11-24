@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { Plate } from '../kit/react/draw'
 import { useStillness } from '../kit/react/live'
-import { Base, CardBody, CardTab, Deck, DeckFront, GateArch, LedgerArch, LockArch, Outbox, PusherArt, Switch } from './art'
+import { Base, CardBody, CardTab, Deck, DeckFront, GateArch, LedgerArch, LockArch, Outbox, PusherArt, Switch, Veil } from './art'
 import { useTheme } from '../../theme/theme'
 import './lesson.css'
 import { HEIGHT, LIFT, PITCH, REACH_GATE, REACH_LEDGER, REACH_LOCK, SHUTTER_LIFT, SLOTS, SWITCH_TRAVEL, TAB_TIP, TRAVEL_END, WIDTH, shift } from './geometry'
@@ -125,6 +125,7 @@ export default function ApprovalGateLesson() {
   const shutterRef = useRef<SVGGElement | null>(null)
   const knobRef = useRef<SVGGElement | null>(null)
   const lampRef = useRef<SVGGElement | null>(null)
+  const veilRef = useRef<SVGRectElement | null>(null)
 
   useEffect(() => {
     stillRef.current = still
@@ -189,6 +190,7 @@ export default function ApprovalGateLesson() {
     put(shutter, 'data-pose', p.shutter > 0.5 ? 'down' : 'up')
     put(knobRef.current, 'transform', shift(-SWITCH_TRAVEL * (1 - p.power)))
     put(lampRef.current, 'opacity', clamp01(p.power))
+    put(veilRef.current, 'opacity', clamp01(p.dim))
   }, [])
 
   /** Fires the beats of the running run that are due by `upTo` ms, or every one that is left. */
@@ -317,6 +319,7 @@ export default function ApprovalGateLesson() {
             <LockArch shutterRef={shutterRef} lit={lit.kind === 'shutter'} />
             {tabLayer(0)}
             <DeckFront />
+            <Veil veilRef={veilRef} />
             <Switch knobRef={knobRef} lampRef={lampRef} lamp={lit.kind === 'lamp'} />
           </svg>
         </div>

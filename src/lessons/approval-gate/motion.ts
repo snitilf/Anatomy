@@ -385,9 +385,25 @@ function planSent(plan: Plan, next: LessonState, t0: number) {
   plan.go('cardAlpha', 1, feed, 200, OUT)
 }
 
+/**
+ * A restart switches the press off and on. The knob and the lamp go off, the whole press dims, and then everything returns.
+ * The key, the shutter, the fingers and the pins do not move, and that stillness is the lesson: decisions and the record survive.
+ */
+const DIM = 0.45
+function planRestart(plan: Plan) {
+  plan.go('power', 0, 0, 140, OUT)
+  plan.go('dim', DIM, 0, 180, OUT)
+  plan.go('dim', 0, 600, 220, OUT)
+  plan.go('power', 1, 600, 140, OUT)
+}
+
 /** Reduced motion: no position moves. Only fades stay, and the end pose is the pose that explains the outcome. */
-function compress(run: Run): Run {
+function compress(run: Run, restart: boolean): Run {
   const tracks: Track[] = []
+  // The restart ends where it began, so it has no end pose to jump to. It keeps the dim, as a fade that holds for a moment.
+  if (restart) {
+    tracks.push({ channel: 'dim', from: 0, to: DIM, start: 0, duration: 120, ease: OUT }, { channel: 'dim', from: DIM, to: 0, start: 520, duration: 120, ease: OUT })
+  }
   for (const channel of Object.keys(run.end) as Channel[]) {
     const from = run.from[channel]
     const to = run.end[channel]
@@ -396,7 +412,7 @@ function compress(run: Run): Run {
     tracks.push({ channel, from, to, start: 0, duration, ease: OUT })
   }
   const beats = run.beats.map((beat) => ({ ...beat, at: 0 }))
-  const duration = tracks.reduce((end, track) => Math.max(end, track.start + track.duration), 0)
+  const duration = Math.max(0, ...tracks.map((track) => track.start + track.duration))
   return { ...run, tracks, beats, duration }
 }
 
@@ -419,10 +435,7 @@ export function planRun(event: LessonEvent, _before: LessonState, next: LessonSt
     changeVersion(plan, next.version, formation.hidden)
     settleParts(plan, target, null)
     settleOutbox(plan, target)
-    if (event === 'restart') {
-      plan.go('power', 0, 0, 140, OUT)
-      plan.go('power', 1, 600, 140, OUT)
-    }
+    if (event === 'restart') planRestart(plan)
   }
   if (plan.beats.every((beat) => beat.kind !== 'commit')) plan.beat(0, 'commit')
 
@@ -434,7 +447,7 @@ export function planRun(event: LessonEvent, _before: LessonState, next: LessonSt
   plan.beats.sort((a, b) => a.at - b.at)
   const duration = Math.max(0, ...plan.tracks.map((track) => track.start + track.duration), ...plan.beats.map((beat) => beat.at))
   const run: Run = { from, end: plan.cur, tracks: plan.tracks, beats: plan.beats, state: next, duration }
-  return reduced ? compress(run) : run
+  return reduced ? compress(run, event === 'restart') : run
 }
 
 /** The pose at a time. Tracks on one channel run in order, so a later track starts from where the earlier one ended. */
