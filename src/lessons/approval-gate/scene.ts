@@ -1,8 +1,8 @@
 /**
  * Maps the behavior model onto the press. Pure, so it can be tested without a browser.
- * Positions are targets. The live component eases the parts toward them.
+ * The timeline of the parts is in motion.ts.
  */
-import { REACH_GATE, REACH_LEDGER, REACH_LOCK, SLOTS, TRAVEL_END, ARCH_PLANES, TAB_TIP } from './geometry'
+import { BLOCKER_FACES, REACH_GATE, REACH_LEDGER, REACH_LOCK, TRAVEL_END } from './geometry'
 import type { LessonState, Outcome } from './model'
 
 /** How far the card travels from home when a send is tried, and what stops it. */
@@ -37,33 +37,14 @@ export function reachOf(stop: Stop): number {
   }
 }
 
-/** Which of four stacking layers the card belongs in, from how many arches its tab has passed. */
-export function layerOf(travel: number): 0 | 1 | 2 | 3 {
-  const tip = TAB_TIP + travel
-  let layer = 0
-  for (const plane of ARCH_PLANES) if (tip >= plane) layer++
-  return layer as 0 | 1 | 2 | 3
-}
-
-export interface Targets {
-  /** 1 when the lockout shutter is down. */
-  lockout: number
-  /** 1 for the finger a key holds up, 0 for the rest. Index 0 is version 1. */
-  fingers: number[]
-  /** 1 for each ledger pin that has dropped. */
-  pins: number[]
-}
-
 /**
- * The press shows the shutter and the fingers at once. The pins follow what has been delivered,
- * which can trail the model while a card is still on its way.
+ * Which of four stacking layers the tab belongs in: how many blocker faces its tip is strictly beyond.
+ * A tab that touches a blocker is not beyond it, so it is drawn in front of what it touches.
  */
-export function targetsOf(state: LessonState, delivered: readonly number[]): Targets {
-  return {
-    lockout: state.decision === 'rejected' ? 1 : 0,
-    fingers: Array.from({ length: SLOTS }, (_, i) => (state.approvedVersion === i + 1 ? 1 : 0)),
-    pins: Array.from({ length: SLOTS }, (_, i) => (delivered.includes(i + 1) ? 1 : 0)),
-  }
+export function tabLayerOf(tip: number): 0 | 1 | 2 | 3 {
+  let layer = 0
+  for (const face of BLOCKER_FACES) if (tip > face + 0.05) layer++
+  return layer as 0 | 1 | 2 | 3
 }
 
 export type LitPart =

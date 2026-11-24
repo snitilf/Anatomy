@@ -1,6 +1,23 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import ApprovalGateLesson from './ApprovalGateLesson'
+
+const realMatchMedia = window.matchMedia
+
+/** Reduced motion moves every part at once and keeps only fades of 150 ms or less, so a test reads the end pose after the fades. */
+function stillMotion() {
+  window.matchMedia = (query: string) =>
+    ({ matches: query.includes('prefers-reduced-motion'), media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }) as MediaQueryList
+}
+
+const frame = () => act(async () => void (await new Promise<void>((resolve) => setTimeout(resolve, 220))))
+
+const poseOf = (part: string, slot: number) => document.querySelector(`[data-part="${part}"][data-slot="${slot}"]`)?.getAttribute('data-pose')
+const poses = (part: string) => Array.from({ length: 8 }, (_, i) => poseOf(part, i + 1))
+const press = async (name: RegExp) => {
+  fireEvent.click(screen.getByRole('button', { name }))
+  await frame()
+}
 
 describe('ApprovalGateLesson', () => {
   it('shows the limits and the analogy map', () => {
@@ -9,23 +26,68 @@ describe('ApprovalGateLesson', () => {
     expect(screen.getAllByRole('term')).toHaveLength(3)
   })
 
-  it('follows the model through the buttons and keys', () => {
+  it('follows the model through the buttons and keys', async () => {
     render(<ApprovalGateLesson />)
     expect(screen.getByText('v1 undecided · sent none')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Approve/ }))
-    expect(screen.getByText('v1 approved · sent none')).toBeInTheDocument()
+    expect(await screen.findByText('v1 approved · sent none')).toBeInTheDocument()
     fireEvent.keyDown(screen.getByRole('group', { name: 'Approval gate lesson' }), { key: 'e' })
-    expect(screen.getByText('v2 undecided · old key v1 · sent none')).toBeInTheDocument()
+    expect(await screen.findByText('v2 undecided · old key v1 · sent none')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Reset lesson/ }))
-    expect(screen.getByText('v1 undecided · sent none')).toBeInTheDocument()
+    expect(await screen.findByText('v1 undecided · sent none')).toBeInTheDocument()
   })
 
-  it('announces the outcome in a polite live region', async () => {
+  it('announces the outcome in a polite live region once the picture shows it', async () => {
     render(<ApprovalGateLesson />)
     fireEvent.click(screen.getByRole('button', { name: /Send/ }))
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 120))
+    expect(await screen.findByText(/Nobody approved version 1/, { selector: '[role="status"]' })).toBeInTheDocument()
+  })
+
+  it('keeps the caption and the readout on the old state until the card has reached the blocker', async () => {
+    render(<ApprovalGateLesson />)
+    fireEvent.click(screen.getByRole('button', { name: /Send/ }))
+    expect(screen.getByText(/A fresh lesson/)).toBeInTheDocument()
+    expect(await screen.findByText(/Blocked\. Nobody approved version 1/, { selector: '.iso-caption' })).toBeInTheDocument()
+    expect(screen.queryByText(/A fresh lesson/)).not.toBeInTheDocument()
+  })
+
+  describe('the moving parts follow the model', () => {
+    beforeEach(stillMotion)
+    afterEach(() => {
+      window.matchMedia = realMatchMedia
     })
-    expect(screen.getByRole('status')).toHaveTextContent('Nobody approved version 1')
+
+    it('starts with every finger down and every pin up, pin 8 included', async () => {
+      render(<ApprovalGateLesson />)
+      await frame()
+      expect(poses('finger')).toEqual(Array(8).fill('down'))
+      expect(poses('pin')).toEqual(Array(8).fill('up'))
+    })
+
+    it('lifts the finger of the approved version and no other', async () => {
+      render(<ApprovalGateLesson />)
+      await press(/Approve/)
+      expect(poses('finger')).toEqual(['up', ...Array(7).fill('down')])
+    })
+
+    it('moves the key and the lifted finger to version 2 after an edit and a new approval', async () => {
+      render(<ApprovalGateLesson />)
+      await press(/Approve/)
+      await press(/Edit message/)
+      await press(/Approve/)
+      expect(poses('finger')).toEqual(['down', 'up', ...Array(6).fill('down')])
+      const shown = document.querySelectorAll('[data-part="key"][data-pose="shown"]')
+      expect(shown).toHaveLength(1)
+      expect(shown[0]?.getAttribute('data-slot')).toBe('2')
+    })
+
+    it('drops the pin of the version that went out and keeps the others up', async () => {
+      render(<ApprovalGateLesson />)
+      await press(/Approve/)
+      await press(/Edit message/)
+      await press(/Approve/)
+      await press(/Send/)
+      expect(poses('pin')).toEqual(['up', 'down', ...Array(6).fill('up')])
+    })
   })
 })

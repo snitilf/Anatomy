@@ -205,6 +205,13 @@
   white-space: nowrap;
 }
 
+/* A touch screen has no keys to press, so the plate does not list them. A narrow window has no room for them, below. */
+@media (hover: none) {
+  .ag .iso-plate-corner[data-corner='hint'] {
+    display: none;
+  }
+}
+
 @media (max-width: 560px) {
   .ag-map > div {
     grid-template-columns: 1fr;
@@ -214,10 +221,9 @@
     display: none;
   }
 
+  /* The keys do not fit on one line here, and every button already shows its key. */
   .ag .iso-plate-corner[data-corner='hint'] {
-    white-space: normal;
-    max-width: 62%;
-    line-height: 1.5;
+    display: none;
   }
 
   .ag .iso-svg {

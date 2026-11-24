@@ -12,11 +12,21 @@ beforeAll(() => {
 })
 
 describe('LessonDialog', () => {
-  it('opens modally and shows the loading text, then the lesson', async () => {
+  // This is the first test of the file to open a lesson, so the lesson is not loaded yet and the loading text shows once.
+  it('opens modally and shows the loading text on a cold cache, then the lesson', async () => {
     render(<LessonDialog lessonId="approval-gate" onClose={() => {}} />)
     expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled()
     expect(screen.getByText('Loading lesson')).toBeInTheDocument()
     expect(await screen.findByText('Where the analogy stops', {}, { timeout: 5000 })).toBeInTheDocument()
+  })
+
+  it('opens a lesson that has already loaded without the loading text', async () => {
+    const { unmount } = render(<LessonDialog lessonId="approval-gate" onClose={() => {}} />)
+    expect(await screen.findByText('Where the analogy stops', {}, { timeout: 5000 })).toBeInTheDocument()
+    unmount()
+    render(<LessonDialog lessonId="approval-gate" onClose={() => {}} />)
+    expect(screen.queryByText('Loading lesson')).not.toBeInTheDocument()
+    expect(screen.getByText('Where the analogy stops')).toBeInTheDocument()
   })
 
   it('says so for an unknown lesson', () => {

@@ -29,7 +29,8 @@ import {
 
 export const WIDTH = 760
 export const HEIGHT = 440
-export const AZIMUTH = 122
+/** 108 turns the press far enough that the tab touching a blocker is never behind the lockout arch. At 122 it was. */
+export const AZIMUTH = 108
 export const ELEVATION = 40
 
 export const SLOTS = 8
@@ -84,19 +85,24 @@ export const PIN_LEN = 30
 const SHUTTER: Plan = { x: LOCK_X - 2, y: -POST_Y, w: 4, d: POST_Y * 2, r: 0.6 }
 export const SHUTTER_Z = BLOCK_Z
 export const SHUTTER_H = 22
+/** The face of the hazard tag, which sits proud of the shutter on the side the card comes from. */
+export const TAG_X = SHUTTER.x - 1.2
 
 /** Where the card's tab stops against each blocker, as a distance from home. */
 export const FINGER_FACE = GATE_X - POST_W / 2 - SPINE - TEETH + 0.2
 export const PIN_FACE = LEDGER_X - POST_W / 2 - SPINE - TEETH + 0.2
-export const SHUTTER_FACE = SHUTTER.x
 export const END_FRONT = 108
 export const TRAVEL_END = END_FRONT - CARD_FRONT
-export const REACH_LOCK = SHUTTER_FACE - TAB_TIP
+export const REACH_LOCK = TAG_X - TAB_TIP
 export const REACH_GATE = FINGER_FACE - TAB_TIP
 export const REACH_LEDGER = PIN_FACE - TAB_TIP
 
-/** Arch planes. The card is drawn behind an arch once its tab has passed this x. */
-export const ARCH_PLANES = [LOCK_X, GATE_X, LEDGER_X] as const
+/**
+ * The faces the tab tip meets, in the order the card meets them: the lockout tag, the gate fingers, the ledger pins.
+ * The tab is drawn behind a blocker once its tip is beyond that blocker's face. The card body never needs this:
+ * it and the pusher stay under every overhead part, so they are drawn once, under every arch.
+ */
+export const BLOCKER_FACES = [TAG_X, FINGER_FACE, PIN_FACE] as const
 
 const RADIANS = Math.PI / 180
 
@@ -398,7 +404,6 @@ export const PIN_ART = { pins }
 // The lockout shutter, its tag plate and hazard stripes
 
 const shutterBody = slab(SHUTTER, SHUTTER_Z, SHUTTER_H, 3, 0.4)
-const TAG_X = SHUTTER.x - 1.2
 const TAG_Y0 = -15
 const TAG_Y1 = 15
 const TAG_Z0 = SHUTTER_Z + 5

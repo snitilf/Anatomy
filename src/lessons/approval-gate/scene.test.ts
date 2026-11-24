@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { REACH_GATE, REACH_LEDGER, REACH_LOCK, TRAVEL_END } from './geometry'
+import { BLOCKER_FACES, FINGER_FACE, PIN_FACE, TAB_TIP, TAG_X, TRAVEL_END, REACH_GATE, REACH_LEDGER, REACH_LOCK } from './geometry'
 import { initialState, step, type LessonEvent } from './model'
-import { layerOf, litOf, reachOf, stopOf, targetsOf } from './scene'
+import { litOf, reachOf, stopOf, tabLayerOf } from './scene'
 
 const run = (events: LessonEvent[]) => events.reduce(step, initialState)
 
@@ -20,18 +20,6 @@ describe('scene', () => {
     expect(reachOf('end')).toBe(TRAVEL_END)
   })
 
-  it('lifts the finger of the approved version only, even after an edit', () => {
-    const approved = targetsOf(run(['approve']), [])
-    expect(approved.fingers).toEqual([1, 0, 0, 0, 0, 0, 0, 0])
-    const stale = targetsOf(run(['approve', 'edit']), [])
-    expect(stale.fingers).toEqual([1, 0, 0, 0, 0, 0, 0, 0])
-  })
-
-  it('drops the lockout for a rejected version and the pin for a delivered one', () => {
-    expect(targetsOf(run(['reject']), []).lockout).toBe(1)
-    expect(targetsOf(run(['approve', 'trySend']), [1]).pins).toEqual([1, 0, 0, 0, 0, 0, 0, 0])
-  })
-
   it('picks one lit part for every outcome', () => {
     expect(litOf(run(['approve', 'trySend', 'trySend']))).toEqual({ kind: 'pin', version: 1 })
     expect(litOf(run(['reject']))).toEqual({ kind: 'shutter' })
@@ -39,9 +27,26 @@ describe('scene', () => {
     expect(litOf(initialState)).toEqual({ kind: 'tab' })
   })
 
-  it('layers the card behind each arch it has passed', () => {
-    expect(layerOf(0)).toBe(0)
-    expect(layerOf(TRAVEL_END)).toBe(3)
-    expect(layerOf(REACH_GATE)).toBe(1)
+  it('names the face of each blocker, from the lockout tag to the ledger pin', () => {
+    expect(BLOCKER_FACES).toEqual([TAG_X, FINGER_FACE, PIN_FACE])
+  })
+
+  it('counts the blocker faces the tab tip is strictly beyond, with a small tolerance', () => {
+    expect(tabLayerOf(TAB_TIP)).toBe(0)
+    expect(tabLayerOf(TAG_X + 0.04)).toBe(0)
+    expect(tabLayerOf(TAG_X + 0.06)).toBe(1)
+    expect(tabLayerOf(FINGER_FACE + 0.06)).toBe(2)
+    expect(tabLayerOf(PIN_FACE + 0.06)).toBe(3)
+    expect(tabLayerOf(TAB_TIP + TRAVEL_END)).toBe(3)
+  })
+
+  it('keeps the tab in front of the blocker it touches at each stop', () => {
+    expect(tabLayerOf(TAB_TIP + reachOf('lockout'))).toBe(0)
+    expect(tabLayerOf(TAB_TIP + reachOf('gate'))).toBe(1)
+    expect(tabLayerOf(TAB_TIP + reachOf('ledger'))).toBe(2)
+  })
+
+  it('stops the tab at the face of the hazard tag, not inside it', () => {
+    expect(TAB_TIP + REACH_LOCK).toBeCloseTo(TAG_X, 6)
   })
 })

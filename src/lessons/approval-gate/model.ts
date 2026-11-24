@@ -129,7 +129,9 @@ export function caption(state: LessonState): string {
     case 'approved':
       return `Approved version ${v}. The key is cut for version ${v}, so only a card stamped ${v} can pass the gate.`
     case 'rejected':
-      return `Rejected version ${v}. The lockout bar is down, and this version can never be sent.`
+      return isSent(state)
+        ? `Rejected version ${v} after it went out. The lockout bar is down, and the saved record already stops a second send.`
+        : `Rejected version ${v}. The lockout bar is down, and this version can never be sent.`
     case 'edited':
       return hasStaleApproval(state)
         ? `Edited to version ${v}. The old key still fits version ${state.approvedVersion}, not version ${v}, so it no longer counts.`
@@ -139,7 +141,9 @@ export function caption(state: LessonState): string {
     case 'blocked-no-approval':
       return `Blocked. Nobody approved version ${v}, so the gate stayed shut.`
     case 'blocked-rejected':
-      return `Blocked. Version ${v} was rejected, and a rejected version never goes out.`
+      return isSent(state)
+        ? `Blocked. Version ${v} was rejected, and it already went out.`
+        : `Blocked. Version ${v} was rejected, and a rejected version never goes out.`
     case 'blocked-stale-approval':
       return `Blocked. The approval was for version ${state.approvedVersion}. Version ${v} needs its own approval.`
     case 'blocked-duplicate':

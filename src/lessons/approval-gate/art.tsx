@@ -1,15 +1,15 @@
 /** Static art for the dispatch press, built from the geometry module. Parts that move are wrapped by the lesson. */
-import type { Ref } from 'react'
+import { memo, useMemo, type Ref } from 'react'
 import { Dots, FaceText, Line, Solid } from '../kit/react/draw'
 import {
   BASE_ART,
   CARD_ART,
-  CARD_H,
   DECK_ART,
   FINGER_ART,
   GATE_ARCH,
   GATE_COMB,
   GATE_NUMBERS,
+  HEIGHT,
   KEY_SIZE,
   LABEL_SIZE,
   LEDGER_ARCH,
@@ -19,17 +19,24 @@ import {
   NUMBER_SIZE,
   PIN_ART,
   PUSHER_ART,
+  SLOTS,
   SHUTTER_ART,
-  STACK_SHIFT,
   STAMP_SIZE,
   SWITCH_ART,
-  shift,
+  WIDTH,
 } from './geometry'
 
 type Arch = typeof GATE_ARCH
 type Comb = typeof GATE_COMB
 
-export function Base() {
+/** One ref callback per slot, so React keeps the same callback between renders and never detaches a part. */
+function useSlotRefs(ref: (version: number, node: SVGGElement | null) => void) {
+  return useMemo(() => Array.from({ length: SLOTS }, (_, i) => (node: SVGGElement | null) => ref(i + 1, node)), [ref])
+}
+
+const VERSIONS = Array.from({ length: SLOTS }, (_, i) => i + 1)
+
+export const Base = memo(function Base() {
   const b = BASE_ART
   return (
     <g>
@@ -61,9 +68,9 @@ export function Base() {
       <Line d={b.ventSlots} tone="faint" />
     </g>
   )
-}
+})
 
-export function Deck() {
+export const Deck = memo(function Deck() {
   const d = DECK_ART
   return (
     <g>
@@ -79,9 +86,9 @@ export function Deck() {
       <Dots points={d.wallScrews} size={0.5} tone="mid" />
     </g>
   )
-}
+})
 
-export function DeckFront() {
+export const DeckFront = memo(function DeckFront() {
   const d = DECK_ART
   return (
     <g>
@@ -89,9 +96,14 @@ export function DeckFront() {
       <Dots points={d.stopScrews} size={0.5} tone="mid" />
     </g>
   )
-}
+})
 
-export function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; lampRef: Ref<SVGGElement>; lamp: boolean }) {
+/** A veil over the press and under the switch. A restart dims the press through it, because the press is what lost power. */
+export const Veil = memo(function Veil({ veilRef }: { veilRef: Ref<SVGRectElement> }) {
+  return <rect ref={veilRef} data-part="veil" x={0} y={0} width={WIDTH} height={HEIGHT} fill="var(--anatomy-card)" opacity={0} pointerEvents="none" />
+})
+
+export const Switch = memo(function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; lampRef: Ref<SVGGElement>; lamp: boolean }) {
   const s = SWITCH_ART
   return (
     <g>
@@ -111,9 +123,9 @@ export function Switch({ knobRef, lampRef, lamp }: { knobRef: Ref<SVGGElement>; 
       </g>
     </g>
   )
-}
+})
 
-export function PusherArt() {
+export const PusherArt = memo(function PusherArt() {
   const p = PUSHER_ART
   return (
     <g>
@@ -125,44 +137,57 @@ export function PusherArt() {
       <Dots points={p.screws} size={0.45} tone="mid" />
     </g>
   )
-}
+})
 
-export function CardArt({ version, lit }: { version: number; lit: boolean }) {
+/**
+ * The slab of the card with its rules and its stamps. It stays under every overhead part, so it is drawn once.
+ * Every version has a stamp. The lesson shows the one that matches the card and hides the rest.
+ */
+export const CardBody = memo(function CardBody({ stampRef }: { stampRef: (version: number, node: SVGGElement | null) => void }) {
   const c = CARD_ART
-  const tab = c.tabs[version - 1]
+  const stampRefs = useSlotRefs(stampRef)
   return (
     <g>
       <Solid paths={c.slab} tone="hi" />
       <Line d={c.inset} tone="faint" />
       <Line d={c.slotTicks} tone="lo" />
       <Line d={c.rules} tone="lo" free />
-      <FaceText transform={c.stampMatrix} size={STAMP_SIZE} tone="hi">
-        {`v${version}`}
-      </FaceText>
-      <Dots points={c.corners} size={0.4} tone="mid" />
-      {tab ? (
-        <>
-          <Solid paths={tab.body} tone="hi" lit={lit} />
-          <Line d={tab.hole} tone="lo" />
-          <Line d={tab.edge} tone="faint" />
-        </>
-      ) : null}
-    </g>
-  )
-}
-
-/** Cards already delivered to the outbox. Each one rests on the one below it. */
-export function Stack({ delivered }: { delivered: readonly number[] }) {
-  return (
-    <g>
-      {delivered.map((version, index) => (
-        <g key={version} transform={shift(STACK_SHIFT, 0, index * CARD_H)}>
-          <CardArt version={version} lit={false} />
+      {VERSIONS.map((v) => (
+        <g key={v} ref={stampRefs[v - 1]} data-stamp={v} display={v === 1 ? undefined : 'none'}>
+          <FaceText transform={c.stampMatrix} size={STAMP_SIZE} tone="hi">
+            {`v${v}`}
+          </FaceText>
         </g>
       ))}
+      <Dots points={c.corners} size={0.4} tone="mid" />
     </g>
   )
-}
+})
+
+/** The tab that names the version. It is the only part of the card that rises into the overhead parts. It is built for slot 1 and slid across. */
+export const CardTab = memo(function CardTab({ lit }: { lit: boolean }) {
+  const tab = CARD_ART.tabs[0]
+  if (!tab) return null
+  return (
+    <g>
+      <Solid paths={tab.body} tone="hi" lit={lit} />
+      <Line d={tab.hole} tone="lo" />
+      <Line d={tab.edge} tone="faint" />
+    </g>
+  )
+})
+
+/** The card in the outbox: the last one delivered. The lesson shows it, slides its tab to the right slot, and sinks it when the next one comes. */
+export const Outbox = memo(function Outbox({ groupRef, tabRef, stampRef }: { groupRef: Ref<SVGGElement>; tabRef: Ref<SVGGElement>; stampRef: (version: number, node: SVGGElement | null) => void }) {
+  return (
+    <g ref={groupRef} data-part="outbox" data-version="0" display="none">
+      <CardBody stampRef={stampRef} />
+      <g ref={tabRef}>
+        <CardTab lit={false} />
+      </g>
+    </g>
+  )
+})
 
 function Post({ parts }: { parts: Arch['far'] }) {
   return (
@@ -210,27 +235,28 @@ function CombFront({ comb }: { comb: Comb }) {
 
 export interface GateProps {
   fingerRef: (version: number, node: SVGGElement | null) => void
-  keyRef: (node: SVGGElement | null) => void
-  keyVersion: number | null
+  keyRef: (version: number, node: SVGGElement | null) => void
   litVersion: number | null
 }
 
-export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProps) {
+export const GateArch = memo(function GateArch({ fingerRef, keyRef, litVersion }: GateProps) {
+  const fingerRefs = useSlotRefs(fingerRef)
+  const keyRefs = useSlotRefs(keyRef)
   return (
-    <g>
+    <g data-part="arch" data-arch="gate">
       <Post parts={GATE_ARCH.far} />
       <Bar arch={GATE_ARCH} numbers={GATE_NUMBERS} />
       <CombBack comb={GATE_COMB} />
       {FINGER_ART.fingers.map((finger) => {
         const key = FINGER_ART.keys[finger.v - 1]
         return (
-          <g key={finger.v} ref={(node) => fingerRef(finger.v, node)}>
+          <g key={finger.v} ref={fingerRefs[finger.v - 1]} data-part="finger" data-slot={finger.v} data-pose="down">
             <Solid paths={finger.body} tone="mid" lit={litVersion === finger.v} />
             <Line d={finger.eye} tone="lo" />
             <Line d={finger.groove} tone="faint" />
             <Line d={finger.notch} tone="faint" />
-            {keyVersion === finger.v && key ? (
-              <g ref={keyRef}>
+            {key ? (
+              <g ref={keyRefs[finger.v - 1]} data-part="key" data-slot={finger.v} data-pose="hidden" display="none" opacity="0">
                 <Solid paths={key.stem} tone="hi" crease="none" lit={litVersion === finger.v} />
                 <Solid paths={key.tooth} tone="hi" crease="none" lit={litVersion === finger.v} />
                 <Solid paths={key.bow} tone="hi" lit={litVersion === finger.v} />
@@ -247,7 +273,7 @@ export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProp
       <Post parts={GATE_ARCH.near} />
     </g>
   )
-}
+})
 
 export interface LedgerProps {
   pinRef: (version: number, node: SVGGElement | null) => void
@@ -255,9 +281,10 @@ export interface LedgerProps {
   litVersion: number | null
 }
 
-export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
+export const LedgerArch = memo(function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
+  const pinRefs = useSlotRefs(pinRef)
   return (
-    <g>
+    <g data-part="arch" data-arch="ledger">
       <Post parts={LEDGER_ARCH.far} />
       <Bar arch={LEDGER_ARCH} numbers={LEDGER_NUMBERS} />
       <CombBack comb={LEDGER_COMB} />
@@ -265,7 +292,7 @@ export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
         const down = dropped.includes(pin.v)
         const lit = litVersion === pin.v
         return (
-          <g key={pin.v} ref={(node) => pinRef(pin.v, node)}>
+          <g key={pin.v} ref={pinRefs[pin.v - 1]} data-part="pin" data-slot={pin.v} data-pose="up">
             <Solid paths={pin.rod} tone={down ? 'hi' : 'mid'} lit={lit} crease="none" />
             <Line d={pin.band} tone="faint" />
             <Solid paths={pin.cap} tone={down ? 'hi' : 'mid'} lit={lit} />
@@ -277,16 +304,16 @@ export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
       <Post parts={LEDGER_ARCH.near} />
     </g>
   )
-}
+})
 
-export function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; lit: boolean }) {
+export const LockArch = memo(function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; lit: boolean }) {
   const s = SHUTTER_ART
   return (
-    <g>
+    <g data-part="arch" data-arch="lock">
       <Post parts={LOCK_ARCH.far} />
       <Bar arch={LOCK_ARCH} numbers={null} />
       <Line d={s.grooves} tone="faint" />
-      <g ref={shutterRef}>
+      <g ref={shutterRef} data-part="shutter" data-pose="up">
         <Solid paths={s.body} tone="mid" lit={lit} />
         <Line d={s.seam} tone="faint" />
         <Solid paths={s.tag} tone="lo" crease="none" />
@@ -296,4 +323,4 @@ export function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; li
       <Post parts={LOCK_ARCH.near} />
     </g>
   )
-}
+})
