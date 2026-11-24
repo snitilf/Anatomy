@@ -285,6 +285,8 @@ const CROSS_COST = 30
 const GROUP_COST = 0.6
 /** Parallel runs of different lines that lie alongside each other are at least this far apart. */
 export const TRACK = 16
+/** A search gives the way back to its caller after this many expansions, so a caller that works in slices of a frame can stop between them. */
+export const SEARCH_SLICE = 1024
 /** The search stops after this many steps. A grid of lanes seldom needs a fiftieth of it. */
 const SEARCH_LIMIT = 30000
 /** A search that must keep every track free gives up sooner: when the room is not there it never finds it. */
@@ -568,7 +570,7 @@ export class Obstacles {
  * gaps. It charges for each turn, for running along or across a line already drawn, and for passing through a group
  * area the connection does not belong to.
  */
-function findPath(
+function* findPathSteps(
   start: Point,
   end: Point,
   startDir: number,
@@ -578,7 +580,7 @@ function findPath(
   ownGroups: readonly Rect[],
   /** Refuse every step that would lie closer than `TRACK` to a line already drawn. */
   strict: boolean,
-): { points: Point[]; cost: number } | undefined {
+): Generator<void, { points: Point[]; cost: number } | undefined, void> {
   const [xs, ys] = obstacles.lanes([start.x, end.x], [start.y, end.y])
   const width = xs.length
   const height = ys.length
@@ -658,6 +660,7 @@ function findPath(
   let guard = 0
   routeStats.searches++
   for (let item = pop(); item && guard < (strict ? STRICT_LIMIT : SEARCH_LIMIT); item = pop(), guard++) {
+    if (guard > 0 && guard % SEARCH_SLICE === 0) yield
     routeStats.expansions++
     const [estimate, state] = item
     if (estimate >= goalCost) break
@@ -870,14 +873,14 @@ function direction(n: Point): number {
  * line is drawn with the closest spacing it can have and marked `crowded`. Pass the `Obstacles` of the cards when
  * drawing many connections in one go, so the cards are indexed once, and the lines drawn so far in `drawn`.
  */
-function routeOne(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Route {
+function* routeOneSteps(plan: Plan, cards: readonly Rect[], drawn: Drawn, obstacles: Obstacles | undefined, ownGroups: readonly Rect[]): Generator<void, Route, void> {
   const grid = obstacles ?? new Obstacles(cards)
   const n1 = NORMAL[plan.out]
   const n2 = NORMAL[plan.in]
   const start = stubEnd(plan.a, plan.out)
   const end = stubEnd(plan.b, plan.in)
 
-  const attempt = (strict: boolean): Point[] | undefined => {
+  const attempt = function* (strict: boolean): Generator<void, Point[] | undefined, void> {
     let best: { points: Point[]; cost: number; extra: number } | undefined
     for (const offset of OFFSETS) {
       const points = elbow(plan, offset)
@@ -902,7 +905,7 @@ function routeOne(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn()
       if (extra === 0 || points.length === 2) break
     }
     if (best && best.extra < 1) return best.points
-    const found = findPath(start, end, direction(n1), direction({ x: -n2.x, y: -n2.y }), grid, drawn, ownGroups, strict)
+    const found = yield* findPathSteps(start, end, direction(n1), direction({ x: -n2.x, y: -n2.y }), grid, drawn, ownGroups, strict)
     if (found && (!best || found.cost + STUB * 2 < best.cost)) {
       const path = [plan.a, start, ...found.points.slice(1, -1), end, plan.b]
       // The stubs at the two cards are part of the line, and must keep clear too.
@@ -911,17 +914,25 @@ function routeOne(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn()
     return best?.points
   }
 
-  const clean = attempt(true)
+  const clean = yield* attempt(true)
   if (clean) return rounded(clean)
   // The gap is full and no way round it is free: keep the other lines' cost low, but never leave the cards.
-  const crowded = attempt(false)
+  const crowded = yield* attempt(false)
   if (crowded) return { ...rounded(crowded), crowded: true }
   // Nothing gets through, such as between cards that touch. A plain elbow keeps the look of every other line.
   return { ...rounded(elbow(plan)), crowded: true }
 }
 
-export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Route {
-  const route = routeOne(plan, cards, drawn, obstacles, ownGroups)
+/**
+ * `routeOne` in steps: it gives the way back to the caller every `SEARCH_SLICE` expansions of a path search, and returns the
+ * line when it is done. One that works in slices of a frame stops between steps; `routeConnection` runs them all.
+ */
+export function* routeConnectionSteps(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Generator<void, Route, void> {
+  const route = yield* routeOneSteps(plan, cards, drawn, obstacles, ownGroups)
   return plan.crowded && !route.crowded ? { ...route, crowded: true } : route
 }
 
+export function routeConnection(plan: Plan, cards: readonly Rect[], drawn: Drawn = new Drawn(), obstacles?: Obstacles, ownGroups: readonly Rect[] = []): Route {
+  const steps = routeConnectionSteps(plan, cards, drawn, obstacles, ownGroups)
+  for (let step = steps.next(); ; step = steps.next()) if (step.done) return step.value
+}
