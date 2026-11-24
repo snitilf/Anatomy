@@ -184,13 +184,15 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
   }, [stepKey, fit])
 
   // A new size of the map, such as the sidebar opening, closing, or changing width, keeps what is in the middle of the
-  // view where it was. The zoom stays unless the new limits ask for another one.
+  // view where it was. The zoom stays unless the new limits ask for another one. A view still fitted is fitted again.
   const keepMiddle = useCallback(() => {
     if (!map) return
     const now = map.getBoundingClientRect()
     const before = framed.current
     framed.current = now
     if (!before || sameSize(before, now)) return
+    // A view the reader has not moved since it was fitted is fitted again.
+    if (camera.refit()) return
     const view = flow.getViewport()
     camera.move({ x: view.x + (now.width - before.width) / 2, y: view.y + (now.height - before.height) / 2, zoom: view.zoom })
   }, [camera, flow, map])

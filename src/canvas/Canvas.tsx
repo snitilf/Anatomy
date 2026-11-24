@@ -42,7 +42,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
-import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { clampViewport, contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, DetailMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { hiddenDetailText, type DetailLevel } from './far'
@@ -429,12 +429,30 @@ export function Canvas() {
       const flow = flowRef.current
       return flow ? moveCamera(flow, viewport, limits, size(), duration) : viewport
     }
+    // The last view that framed the whole board, and how. While the view is still there, it is the fitted view: a new
+    // size of the map, or the first layout settling, frames the whole board again instead of keeping a stale fit.
+    const last: { fitted?: { options: Frame; at: Viewport } | undefined } = {}
+    const near = (a: Viewport, b: Viewport) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1 && Math.abs(a.zoom - b.zoom) <= 1e-3
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
       const limits = options.box && !options.readable ? current() : fresh()
-      if (!options.readable) return move(frameViewport(limits, size(), options), duration, limits)
-      const box = fitBounds(basePartsBoundsRef.current, resolveNowRef.current, size())
-      const framed: Frame = { ...options, ...(box ? { box } : {}) }
-      return move(frameViewport(limits, size(), framed), duration, limits)
+      let framed: Frame = options
+      if (options.readable) {
+        const box = fitBounds(basePartsBoundsRef.current, resolveNowRef.current, size())
+        framed = { ...options, ...(box ? { box } : {}) }
+      }
+      const at = move(frameViewport(limits, size(), framed), duration, limits)
+      last.fitted = options.box ? undefined : { options, at }
+      return at
+    }
+    const refit: CameraApi['refit'] = () => {
+      const flow = flowRef.current
+      const fitted = last.fitted
+      if (!fitted || !flow) return false
+      const now = flow.getViewport()
+      // The limits may already have pulled the fitted view inside them, which still counts as untouched.
+      if (!near(now, fitted.at) && !near(now, clampViewport(fitted.at, current(), size()))) return false
+      frame(fitted.options)
+      return true
     }
     // Where a glide is going. A second step during the glide goes on from there, not from halfway.
     const glide: { heading?: { viewport: Viewport; until: number } | undefined } = {}
@@ -460,11 +478,36 @@ export function Canvas() {
       size,
       move,
       frame,
+      refit,
       zoom,
       rectOf: (id: string) => viewRef.current?.rects[id],
       scene: () => sceneRef.current,
     }
   }, [])
+  // A fitted view stays fitted while the reader leaves it alone: a new size of the map or of what covers it frames the
+  // whole board again. Until the reader first presses, types, or scrolls, so does the layout settling, as when the
+  // fonts come in and the cards are measured again. A new revision of the board is not part of the opening.
+  const opening = useRef<{ board: typeof board; open: boolean }>({ board: undefined, open: false })
+  const boardId = board?.id
+  useLayoutEffect(() => {
+    opening.current = { board, open: true }
+    const end = () => {
+      opening.current.open = false
+    }
+    const events = ['pointerdown', 'keydown', 'wheel'] as const
+    for (const type of events) window.addEventListener(type, end, { capture: true, passive: true })
+    return () => {
+      for (const type of events) window.removeEventListener(type, end, { capture: true })
+    }
+    // Only a new board starts an opening, not a new revision of the one that is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId])
+  useEffect(() => {
+    camera.refit()
+  }, [mapSize, camera])
+  useEffect(() => {
+    if (opening.current.open && opening.current.board === board) camera.refit()
+  }, [basePartsBounds, board, camera])
   const slot = useContext(CameraSlotContext)
   useEffect(() => {
     slot.set(camera)
