@@ -49,7 +49,7 @@ async function expectWholeAndCentred(page: Page) {
   const r = await room(page)
   for (const side of ['left', 'right', 'top', 'bottom'] as const) expect(r[side], `room on the ${side}: ${JSON.stringify(r)}`).toBeGreaterThanOrEqual(24)
   expect(Math.abs(r.left - r.right), `centred across: ${JSON.stringify(r)}`).toBeLessThanOrEqual(2)
-  expect(Math.abs(r.top - r.bottom), `centred down: ${JSON.stringify(r)}`).toBeLessThanOrEqual(2)
+  expect(Math.abs(r.top - r.bottom), `centred down: ${JSON.stringify(r)}`).toBeLessThanOrEqual(1)
 }
 
 test.describe('detail levels with keyboard and reduced motion', () => {

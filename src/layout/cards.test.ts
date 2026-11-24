@@ -72,6 +72,14 @@ describe('card sizes', () => {
     expect(summaryLinesFor({ label }, size, 1)).toBeLessThan(summaryLinesFor({ label }, size))
   })
 
+  it('keeps every line for a title that still fits one line beside the count', () => {
+    const size = { width: 240, height: 112 }
+    // 25 letters fill one line beside the count (178 px of the 240), so the title does not wrap and the summary keeps its lines.
+    const label = 'Order payment reconcilers'
+    expect(label).toHaveLength(25)
+    expect(summaryLinesFor({ label }, size, 1)).toBe(summaryLinesFor({ label }, size))
+  })
+
   it('keeps the footer row for a lesson, where the count joins the lesson mark', () => {
     const size = { width: 240, height: 112 }
     const card = { label: 'Policy check', lesson: 'approval-gate' }

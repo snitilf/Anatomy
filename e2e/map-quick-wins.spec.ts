@@ -5,10 +5,11 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import type { Page, TestInfo } from '@playwright/test'
 import { expect, test } from './test.ts'
-import { linkPair, nextFrame, open, pickPart } from './helpers.ts'
+import { linkPair, nextFrame, open, pickPart, viewport } from './helpers.ts'
 
 const REFUND = 'e2e/fixtures/refund-approval.board.json'
 const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
+const SIXTEEN = 'e2e/fixtures/sixteen-parts.board.json'
 
 interface Box {
   left: number
@@ -49,13 +50,14 @@ for (const size of WINDOWS) {
             await menu.getByRole('combobox').fill('Play Approve and pay')
             await page.keyboard.press('Enter')
             await expect(page.getByRole('region', { name: 'Walkthrough: Approve and pay' })).toBeVisible()
-            await page.waitForTimeout(500)
+            // The bar tells the toaster how much of the bottom it holds.
+            await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--toast-floor') !== '')
           }
           await revise(page, testInfo, REFUND)
           const toast = page.locator('[data-sonner-toast]')
           await expect(toast).toBeVisible()
-          // With reduced motion the toast is at rest at once. A short wait lets a toast with motion settle too.
-          await page.waitForTimeout(400)
+          // With reduced motion the toast is at rest once it is mounted.
+          await expect(toast).toHaveAttribute('data-mounted', 'true')
 
           const read = await page.evaluate(() => {
             const box = (r: DOMRect): Box => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom })
@@ -103,6 +105,63 @@ for (const size of WINDOWS) {
     }
   }
 }
+
+test.describe('a toast away from the map', () => {
+  test.use({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+
+  test('on the Overview tab it is centered on the window, not on the map under it', async ({ page }) => {
+    await open(page, SHORTENER)
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await expect(page.getByTestId('overview')).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    const menu = page.getByRole('dialog', { name: 'Command menu' })
+    await menu.getByRole('combobox').fill('Download a copy')
+    const download = page.waitForEvent('download')
+    await page.keyboard.press('Enter')
+    await download
+    const toast = page.locator('[data-sonner-toast]')
+    await expect(toast).toBeVisible()
+    await expect(toast).toHaveAttribute('data-mounted', 'true')
+    const box = await toast.boundingBox()
+    expect(box!.x + box!.width / 2, 'centered on the window').toBeCloseTo(720, 0)
+    // The map keeps its own place for its toasts after the tab changes back.
+    await page.getByRole('tab', { name: 'Map' }).click()
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--toast-x'))).not.toBe('')
+  })
+
+  test('in the how-to dialog it is centered on the window', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('menuitem', { name: 'How to make a board' }).click()
+    const dialog = page.getByRole('dialog', { name: 'How to make a board' })
+    await dialog.getByRole('button', { name: 'Copy prompt' }).click()
+    const toast = page.locator('[data-sonner-toast]', { hasText: 'Copied' })
+    await expect(toast).toBeVisible()
+    await expect(toast).toHaveAttribute('data-mounted', 'true')
+    const box = await toast.boundingBox()
+    expect(box!.x + box!.width / 2, 'centered on the window').toBeCloseTo(720, 0)
+  })
+})
+
+test.describe('the room the fit keeps', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('is the same with the first-run hint and without it', async ({ browser }) => {
+    const views: string[] = []
+    for (const seen of [false, true]) {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      const page = await context.newPage()
+      if (seen) await page.addInitScript(() => window.localStorage.setItem('anatomy:map-hint-seen', '1'))
+      // A board that fits by its height, so the room at the bottom decides its zoom.
+      await open(page, SIXTEEN)
+      await expect(page.getByRole('note')).toHaveCount(seen ? 0 : 1)
+      views.push(await viewport(page))
+      await context.close()
+    }
+    expect(views[1]).toBe(views[0])
+  })
+})
 
 test.describe('a toast with a button', () => {
   test.use({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
@@ -198,7 +257,8 @@ test.describe('a card with a note', () => {
     await inspector.getByRole('button', { name: 'Add', exact: true }).click()
     await expect(inspector.getByRole('region', { name: 'Notes' }).getByText('Where are the short codes kept?')).toBeVisible()
     await page.keyboard.press('Escape')
-    await page.waitForTimeout(300)
+    await expect(page.locator(`${WEB_FORM} [data-selected]`)).toHaveCount(0)
+    await expect(page.locator(`${WEB_FORM} [class*="foot"] [role="img"]`)).toBeVisible()
 
     const after = await read(page)
     expect(after.badge, 'the note count shows on the card').toBe(true)
