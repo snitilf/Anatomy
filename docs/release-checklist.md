@@ -47,7 +47,7 @@ cp e2e/fixtures/refund-approval.board.json /tmp/refund-board.json
   The map opens within a few seconds, with no click.
 - [ ] 4. Reload the page.
   The folder opens again, or the page shows **Reopen anatomy-check**, and one click opens it.
-- [ ] 5. Select a part, type a note under **Add a note**, wait a second, and look in `.anatomy`.
+- [ ] 5. Select a part, type a note under **Add a note**, click **Add**, wait a second, and look in `.anatomy`.
   `layer.json` is there and holds the note.
 - [ ] 6. Click **Send to agent**, then **Send**.
   `feedback.json` appears in `.anatomy`.

@@ -1,5 +1,5 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
-import { readFileSync, rmSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { type Page } from '@playwright/test'
 import { expect, test } from './test.ts'
@@ -56,7 +56,7 @@ function watch(page: Page) {
 }
 
 test('the folder holds the build, the server, and the instructions, and nothing else', () => {
-  const listing = execFileSync('ls', [FOLDER], { encoding: 'utf8' }).trim().split('\n').sort()
+  const listing = readdirSync(FOLDER).sort()
   expect(listing).toEqual(['README-run.txt', 'dist', 'serve.mjs'])
 })
 

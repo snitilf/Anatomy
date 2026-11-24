@@ -58,8 +58,8 @@ jobs:
           cd "unzipped/anatomy-$version"
           node serve.mjs 4173 &
           server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
           curl --silent --show-error --fail --retry 10 --retry-connrefused --retry-delay 1 --output page.html http://127.0.0.1:4173/
-          kill "$server"
           grep -q '<title>Anatomy</title>' page.html
       - name: Create release
         env:
