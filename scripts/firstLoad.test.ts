@@ -5,8 +5,12 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 const root = process.cwd()
 
-/** The largest the script that the page loads first may be, minified, before compression. It sits just above the size of today's build, and `chunkSizeWarningLimit` in `vite.config.ts` has the same line. */
-const FIRST_SCRIPT_BUDGET = 950_000
+/**
+ * The most that the page may load at start, minified, before compression: the first script and every script it imports
+ * statically, because a shared script the bundler splits off still loads before the first paint. It sits a little above
+ * the size of today's build (about 1,003,000 bytes). `chunkSizeWarningLimit` in `vite.config.ts` warns on the first script alone.
+ */
+const FIRST_SCRIPT_BUDGET = 1_010_000
 
 let entry: Rolldown.OutputChunk
 let chunks: Rolldown.OutputChunk[]
@@ -98,8 +102,9 @@ describe('the first script', () => {
     expect(loadedAtStart().has(map!.fileName), 'the map loads at start').toBe(false)
   })
 
-  it('stays under its byte budget', () => {
-    const bytes = Buffer.byteLength(entry.code)
-    expect(bytes, `the first script is ${bytes} bytes`).toBeLessThanOrEqual(FIRST_SCRIPT_BUDGET)
+  it('stays under its byte budget, with every script it loads at start', () => {
+    const atStart = [...loadedAtStart()].map((name) => chunks.find((c) => c.fileName === name)).filter((c) => c !== undefined)
+    const bytes = [entry, ...atStart].reduce((sum, chunk) => sum + Buffer.byteLength(chunk.code), 0)
+    expect(bytes, `the page loads ${bytes} bytes of script at start`).toBeLessThanOrEqual(FIRST_SCRIPT_BUDGET)
   })
 })
