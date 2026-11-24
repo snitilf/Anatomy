@@ -12,6 +12,7 @@ import { labelTint } from './labelTint'
 import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
+import { flowStartsOf, startsLabel } from '../scenarios/starts'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
@@ -60,6 +61,8 @@ export interface CardData extends Record<string, unknown> {
   summary: string
   sourceKind: SourceKind
   hasLesson: boolean
+  /** The walkthroughs that start at this part, by title. Empty for most parts. */
+  starts: readonly string[]
   /** How many summary lines fit on the card at its size. */
   summaryLines: number
 }
@@ -488,6 +491,8 @@ function stable<T extends Node | Edge>(cache: Map<string, T>, next: T): T {
  * scales the head with `--label-scale` (see `Canvas.module.css`) so it stays at about 8 px from 45 to 100 percent.
  */
 const MARKER_BOX = 20
+/** One empty list for every part that no walkthrough starts at, so such cards compare equal from one build to the next. */
+const NO_STARTS: readonly string[] = []
 const markers = new Map<string, EdgeMarker>()
 function markerFor(color: string): EdgeMarker {
   let marker = markers.get(color)
@@ -588,8 +593,10 @@ export function assembleGraph(
   )
 
   const groupLabel = new Map(board.groups.map((g) => [g.id, g.label]))
+  const flows = flowStartsOf(board)
   const cards = board.components.map((c) => {
     const rect = rects[c.id] ?? { x: 0, y: 0, width: 0, height: 0 }
+    const starts = flows.get(c.id) ?? NO_STARTS
     return stable(cache.nodes, {
       id: c.id,
       type: 'card',
@@ -614,6 +621,7 @@ export function assembleGraph(
         summary: c.summary,
         sourceKind: c.source.kind,
         hasLesson: c.lesson !== undefined,
+        starts,
         summaryLines: summaryLinesFor(c, rect, noteCounts.get(c.id) ?? 0),
       },
       selected: c.id === selectedPart,
@@ -624,7 +632,8 @@ export function assembleGraph(
       ariaRole: 'group',
       // The name is the part and its group. The summary is the description, so a screen reader does not read it as the name.
       ariaLabel: groupLabel.get(c.group ?? '') ? `${c.label}, in ${groupLabel.get(c.group ?? '')}` : c.label,
-      domAttributes: { 'aria-description': c.summary } as NonNullable<Node['domAttributes']>,
+      // After the summary, a part that a walkthrough starts at says so, since the marker on its corner is a picture.
+      domAttributes: { 'aria-description': starts.length > 0 ? `${c.summary} ${startsLabel(starts)}.` : c.summary } as NonNullable<Node['domAttributes']>,
     } satisfies Node<CardData>)
   })
 

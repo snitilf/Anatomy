@@ -148,9 +148,10 @@ test('is reached from the keyboard, and is in its end state at once under reduce
   // The marker has no motion to wait for: nothing runs on it, and it is fully drawn.
   const state = await page.evaluate(() => {
     const el = document.querySelector<HTMLElement>('[data-flow-start]')!
-    return { running: el.getAnimations({ subtree: true }).length, opacity: getComputedStyle(el).opacity, transition: getComputedStyle(el).transitionDuration }
+    return { running: el.getAnimations({ subtree: true }).length, opacity: getComputedStyle(el).opacity, transition: getComputedStyle(el).transitionProperty }
   })
   expect(state.running).toBe(0)
   expect(state.opacity).toBe('1')
-  expect(Number.parseFloat(state.transition)).toBe(0)
+  // The app's reduced-motion rule leaves fades of opacity only: nothing on the marker moves or scales.
+  expect(state.transition).toBe('opacity')
 })

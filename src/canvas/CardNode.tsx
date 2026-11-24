@@ -4,6 +4,7 @@ import { memo, type CSSProperties } from 'react'
 import { CARD_MAX, CARD_MIN } from '../layout/cards'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { noteBadgeLabel } from '../status/state'
+import { startsLabel } from '../scenarios/starts'
 import { nameLines, titleLines } from './far'
 import { useTipClamp } from './useTipClamp'
 import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
@@ -63,6 +64,14 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
       </div>
+      {/* Where a walkthrough starts: a play mark on the corner, a shape and not a color. The card clips its own paint, so it sits beside it. */}
+      {data.starts.length > 0 && (
+        <span className={styles.start} data-flow-start="" data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} title={startsLabel(data.starts)} aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="100%" height="100%">
+            <path d="M6.2 4.7 L11.5 8 L6.2 11.3 Z" />
+          </svg>
+        </span>
+      )}
       {/* The name of the part in the far view, where the tile has no text. The card clips its own paint, so it sits beside it. */}
       {data.far && (
         <div ref={tip} className={styles.tip} aria-hidden="true">
