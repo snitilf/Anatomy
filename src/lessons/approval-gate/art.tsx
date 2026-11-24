@@ -128,9 +128,9 @@ export function PusherArt() {
   )
 }
 
-export function CardArt({ version, lit }: { version: number; lit: boolean }) {
+/** The slab of the card with its rules and its stamp. It stays under every overhead part, so it is drawn once. */
+export function CardBody({ version }: { version: number }) {
   const c = CARD_ART
-  const tab = c.tabs[version - 1]
   return (
     <g>
       <Solid paths={c.slab} tone="hi" />
@@ -141,13 +141,19 @@ export function CardArt({ version, lit }: { version: number; lit: boolean }) {
         {`v${version}`}
       </FaceText>
       <Dots points={c.corners} size={0.4} tone="mid" />
-      {tab ? (
-        <>
-          <Solid paths={tab.body} tone="hi" lit={lit} />
-          <Line d={tab.hole} tone="lo" />
-          <Line d={tab.edge} tone="faint" />
-        </>
-      ) : null}
+    </g>
+  )
+}
+
+/** The tab that names the version. It is the only part of the card that rises into the overhead parts. */
+export function CardTab({ version, lit }: { version: number; lit: boolean }) {
+  const tab = CARD_ART.tabs[version - 1]
+  if (!tab) return null
+  return (
+    <g>
+      <Solid paths={tab.body} tone="hi" lit={lit} />
+      <Line d={tab.hole} tone="lo" />
+      <Line d={tab.edge} tone="faint" />
     </g>
   )
 }
@@ -158,7 +164,8 @@ export function Stack({ delivered }: { delivered: readonly number[] }) {
     <g>
       {delivered.map((version, index) => (
         <g key={version} transform={shift(STACK_SHIFT, 0, index * CARD_H)}>
-          <CardArt version={version} lit={false} />
+          <CardBody version={version} />
+          <CardTab version={version} lit={false} />
         </g>
       ))}
     </g>
@@ -224,7 +231,7 @@ function useSlotRefs(ref: (version: number, node: SVGGElement | null) => void) {
 export function GateArch({ fingerRef, keyRef, keyVersion, litVersion }: GateProps) {
   const fingerRefs = useSlotRefs(fingerRef)
   return (
-    <g>
+    <g data-part="arch" data-arch="gate">
       <Post parts={GATE_ARCH.far} />
       <Bar arch={GATE_ARCH} numbers={GATE_NUMBERS} />
       <CombBack comb={GATE_COMB} />
@@ -265,7 +272,7 @@ export interface LedgerProps {
 export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
   const pinRefs = useSlotRefs(pinRef)
   return (
-    <g>
+    <g data-part="arch" data-arch="ledger">
       <Post parts={LEDGER_ARCH.far} />
       <Bar arch={LEDGER_ARCH} numbers={LEDGER_NUMBERS} />
       <CombBack comb={LEDGER_COMB} />
@@ -290,7 +297,7 @@ export function LedgerArch({ pinRef, dropped, litVersion }: LedgerProps) {
 export function LockArch({ shutterRef, lit }: { shutterRef: Ref<SVGGElement>; lit: boolean }) {
   const s = SHUTTER_ART
   return (
-    <g>
+    <g data-part="arch" data-arch="lock">
       <Post parts={LOCK_ARCH.far} />
       <Bar arch={LOCK_ARCH} numbers={null} />
       <Line d={s.grooves} tone="faint" />

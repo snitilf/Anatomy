@@ -2,7 +2,7 @@
  * Maps the behavior model onto the press. Pure, so it can be tested without a browser.
  * Positions are targets. The live component eases the parts toward them.
  */
-import { REACH_GATE, REACH_LEDGER, REACH_LOCK, SLOTS, TRAVEL_END, ARCH_PLANES, TAB_TIP } from './geometry'
+import { BLOCKER_FACES, REACH_GATE, REACH_LEDGER, REACH_LOCK, SLOTS, TRAVEL_END } from './geometry'
 import type { LessonState, Outcome } from './model'
 
 /** How far the card travels from home when a send is tried, and what stops it. */
@@ -37,11 +37,13 @@ export function reachOf(stop: Stop): number {
   }
 }
 
-/** Which of four stacking layers the card belongs in, from how many arches its tab has passed. */
-export function layerOf(travel: number): 0 | 1 | 2 | 3 {
-  const tip = TAB_TIP + travel
+/**
+ * Which of four stacking layers the tab belongs in: how many blocker faces its tip is strictly beyond.
+ * A tab that touches a blocker is not beyond it, so it is drawn in front of what it touches.
+ */
+export function tabLayerOf(tip: number): 0 | 1 | 2 | 3 {
   let layer = 0
-  for (const plane of ARCH_PLANES) if (tip >= plane) layer++
+  for (const face of BLOCKER_FACES) if (tip > face + 0.05) layer++
   return layer as 0 | 1 | 2 | 3
 }
 

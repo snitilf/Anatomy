@@ -2,16 +2,16 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { Plate } from '../kit/react/draw'
 import { spring, type Spring } from '../kit/react/live'
-import { Base, CardArt, Deck, DeckFront, GateArch, LedgerArch, LockArch, PusherArt, Stack, Switch } from './art'
+import { Base, CardBody, CardTab, Deck, DeckFront, GateArch, LedgerArch, LockArch, PusherArt, Stack, Switch } from './art'
 import { useTheme } from '../../theme/theme'
 import './lesson.css'
-import { HEIGHT, LIFT, SHUTTER_LIFT, SLOTS, SWITCH_TRAVEL, TAB_TIP, TRAVEL_END, WIDTH, CARD, shift } from './geometry'
+import { HEIGHT, LIFT, SHUTTER_LIFT, SLOTS, SWITCH_TRAVEL, TAB_TIP, TRAVEL_END, WIDTH, shift } from './geometry'
 import { MAX_VERSION, canEdit, caption, initialState, readout, step as stepModel, type LessonEvent, type LessonState } from './model'
-import { layerOf, litOf, reachOf, stopOf, targetsOf } from './scene'
+import { litOf, reachOf, stopOf, tabLayerOf, targetsOf } from './scene'
 import { REACH_GATE, REACH_LEDGER, REACH_LOCK } from './geometry'
 
 const STILL = '(prefers-reduced-motion: reduce)'
-const LAYERS = [0, 1, 2, 3] as const
+const TAB_LAYERS = [0, 1, 2, 3] as const
 
 const hasMedia = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
 const stillNow = () => hasMedia() && window.matchMedia(STILL).matches
@@ -138,8 +138,9 @@ export default function ApprovalGateLesson() {
   const stage = useRef<HTMLDivElement>(null)
   const visible = useVisible(stage)
 
-  const cardRefs = useRef<Array<SVGGElement | null>>([null, null, null, null])
-  const pushRefs = useRef<Array<SVGGElement | null>>([null, null, null, null])
+  const cardRef = useRef<SVGGElement | null>(null)
+  const pushRef = useRef<SVGGElement | null>(null)
+  const tabRefs = useRef<Array<SVGGElement | null>>([null, null, null, null])
   const fingerRefs = useRef<Array<SVGGElement | null>>([])
   const pinRefs = useRef<Array<SVGGElement | null>>([])
   const shutterRef = useRef<SVGGElement | null>(null)
@@ -157,23 +158,25 @@ export default function ApprovalGateLesson() {
   /** Writes every moving part from the motion state. No React render per frame. */
   const write = useCallback(() => {
     const m = motion.current
-    const cardLayer = layerOf(m.card.at)
-    const pushLayer = layerOf(m.push.at - (TAB_TIP - CARD.x))
-    for (const l of LAYERS) {
-      const card = cardRefs.current[l]
-      if (card) {
-        card.setAttribute('transform', shift(m.card.at))
-        put(card, 'data-stop', stopName(m.card.at, m.alpha.at))
-        card.setAttribute('opacity', String(Math.max(0, Math.min(1, m.alpha.at))))
-        if (l === cardLayer && m.alpha.at > 0.005) card.removeAttribute('display')
-        else card.setAttribute('display', 'none')
-      }
-      const pusher = pushRefs.current[l]
-      if (pusher) {
-        pusher.setAttribute('transform', shift(m.push.at))
-        if (l === pushLayer) pusher.removeAttribute('display')
-        else pusher.setAttribute('display', 'none')
-      }
+    const alpha = String(Math.max(0, Math.min(1, m.alpha.at)))
+    const shown = m.alpha.at > 0.005
+    const card = cardRef.current
+    if (card) {
+      card.setAttribute('transform', shift(m.card.at))
+      card.setAttribute('opacity', alpha)
+      put(card, 'data-stop', stopName(m.card.at, m.alpha.at))
+      if (shown) card.removeAttribute('display')
+      else card.setAttribute('display', 'none')
+    }
+    pushRef.current?.setAttribute('transform', shift(m.push.at))
+    const tabLayer = tabLayerOf(TAB_TIP + m.card.at)
+    for (const l of TAB_LAYERS) {
+      const tab = tabRefs.current[l]
+      if (!tab) continue
+      tab.setAttribute('transform', shift(m.card.at))
+      tab.setAttribute('opacity', alpha)
+      if (l === tabLayer && shown) tab.removeAttribute('display')
+      else tab.setAttribute('display', 'none')
     }
     for (let i = 0; i < SLOTS; i++) {
       const finger = fingerRefs.current[i]
@@ -405,17 +408,12 @@ export default function ApprovalGateLesson() {
   const setFinger = useCallback((version: number, node: SVGGElement | null) => void (fingerRefs.current[version - 1] = node), [])
   const setPin = useCallback((version: number, node: SVGGElement | null) => void (pinRefs.current[version - 1] = node), [])
   const setKey = useCallback((node: SVGGElement | null) => void (keyRef.current = node), [])
-  const setLayer = (list: RefObject<Array<SVGGElement | null>>, layer: number) => (node: SVGGElement | null) => {
-    list.current[layer] = node
+  const setTab = (layer: number) => (node: SVGGElement | null) => {
+    tabRefs.current[layer] = node
   }
-  const slide = (layer: number) => (
-    <g key={`slide-${layer}`}>
-      <g ref={setLayer(pushRefs, layer)}>
-        <PusherArt />
-      </g>
-      <g ref={setLayer(cardRefs, layer)} data-part="card" data-stop="home" data-version={visual.cardVersion}>
-        <CardArt version={visual.cardVersion} lit={lit.kind === 'tab'} />
-      </g>
+  const tabLayer = (layer: number) => (
+    <g key={`tab-${layer}`} ref={setTab(layer)} data-part="tab" data-layer={layer}>
+      <CardTab version={visual.cardVersion} lit={lit.kind === 'tab'} />
     </g>
   )
 
@@ -433,14 +431,20 @@ export default function ApprovalGateLesson() {
           <svg className="iso-svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${LABEL} ${readout(state)}.`} focusable="false">
             <Base />
             <Deck />
+            <g ref={cardRef} data-part="card" data-stop="home" data-version={visual.cardVersion}>
+              <CardBody version={visual.cardVersion} />
+            </g>
+            <g ref={pushRef} data-part="pusher">
+              <PusherArt />
+            </g>
             <Stack delivered={visual.delivered} />
-            {slide(3)}
+            {tabLayer(3)}
             <LedgerArch pinRef={setPin} dropped={visual.delivered} litVersion={litPin} />
-            {slide(2)}
+            {tabLayer(2)}
             <GateArch fingerRef={setFinger} keyRef={setKey} keyVersion={visual.keyVersion} litVersion={litFinger} />
-            {slide(1)}
+            {tabLayer(1)}
             <LockArch shutterRef={shutterRef} lit={lit.kind === 'shutter'} />
-            {slide(0)}
+            {tabLayer(0)}
             <DeckFront />
             <Switch knobRef={knobRef} lampRef={lampRef} lamp={lit.kind === 'lamp'} />
           </svg>
