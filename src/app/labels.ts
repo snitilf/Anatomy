@@ -1,6 +1,6 @@
 import type { RelationshipKind, SourceKind } from '../board/schema'
 
-/** Where something comes from, in a few words. The default, the agent's own explanation, is never shown. */
+/** Where something comes from, in a few words. */
 export const SOURCE_LABEL: Record<SourceKind, string> = {
   'agent-explanation': 'Agent explanation',
   'agent-proposal': 'Proposal, not decided',
