@@ -63,10 +63,13 @@ describe('README.md', () => {
     const source = /<source\b[^>]*>/.exec(picture)?.[0] ?? ''
     const img = /<img\b[^>]*>/.exec(picture)?.[0] ?? ''
 
-    it('comes right after the header block opens, before the description', () => {
+    it('sits in the centered header block, after the link row and before the description', () => {
       const at = readme.indexOf('<picture>')
       expect(at).toBeGreaterThan(readme.indexOf('Your coding agent knows your code'))
+      expect(at).toBeGreaterThan(readme.indexOf('[Try it]('))
+      expect(at).toBeLessThan(readme.indexOf('</div>'))
       expect(at).toBeLessThan(readme.indexOf('Anatomy is a local web app'))
+      expect(readme.indexOf('</picture>')).toBeLessThan(readme.indexOf('</div>'))
     })
 
     it('has a dark source and a light image, and both files exist and are a sharp, small PNG', () => {
@@ -81,6 +84,8 @@ describe('README.md', () => {
         expect(statSync(join(root, path)).size, `${path} is over 600 KB`).toBeLessThan(600 * 1024)
       }
       expect(attr(source, 'srcset')).not.toBe(attr(img, 'src'))
+      // A dark copy that is the light picture again would pass every check above.
+      expect(readFileSync(join(root, attr(source, 'srcset'))).equals(readFileSync(join(root, attr(img, 'src')))), 'the dark and light pictures are the same file').toBe(false)
     })
 
     it('has a width, and alt text of one plain sentence', () => {
