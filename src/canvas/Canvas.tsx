@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { buildSteps } from './slices'
 import { sameRects, solve } from './solve'
 import { currentStep } from '../scenarios/step'
 import { flowStartsOf } from '../scenarios/starts'
@@ -42,7 +43,7 @@ import { Toolbar } from '../whiteboard/Toolbar'
 import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
-import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
+import { assembleGraph, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { MANUAL_LINE } from './kinds'
 import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, toastPlace, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
@@ -152,10 +153,11 @@ const SLICE_MS = 8
 
 /**
  * Solves the lines in slices, one per frame, so no frame holds the whole build. Returns what cancels it.
- * The result is the same as `computeGeometry` gives.
+ * The result is the same as `computeGeometry` gives. With `bundles`, the lines of the far view are solved in the same
+ * slices, so the commit that ends the build finds them kept.
  */
-function solveInSlices(view: View, reuse: boolean, done: (geometry: Geometry) => void): () => void {
-  const steps = geometrySteps(view.board, view.rects, view.links ?? [], reuse ? view.geometry : undefined, view.reconnects ?? [])
+function solveInSlices(view: View, reuse: boolean, bundles: boolean, done: (geometry: Geometry) => void): () => void {
+  const steps = buildSteps({ board: view.board, rects: view.rects, previous: reuse ? view.geometry : undefined, links: view.links, reconnects: view.reconnects, proposals: view.proposals, bundles })
   let frame = 0
   const run = () => {
     const start = performance.now()
@@ -757,7 +759,7 @@ export function Canvas() {
   useEffect(() => {
     const current = viewRef.current
     if (!solving || !current) return
-    return solveInSlices(current, reusesLines(current.interaction), (geometry) =>
+    return solveInSlices(current, reusesLines(current.interaction), farRef.current, (geometry) =>
       setView((v) => {
         if (!v || v.rects !== current.rects || v.geometry !== current.geometry) return v
         const interaction = next(v.interaction, { type: 'solved' })
