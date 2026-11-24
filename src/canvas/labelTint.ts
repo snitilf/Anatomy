@@ -1,4 +1,4 @@
-import { FAR_ENTER, farLabelScale } from './far'
+import { FAR_ENTER, farLabelScale, labelScale } from './far'
 import { pillHeight } from './labelPlacement'
 
 interface Box {
@@ -10,8 +10,11 @@ interface Box {
 
 /** A held-back label takes its own width on hover, up to this much. The same as `max-width` of `.pill[data-hidden]` in RelationshipEdge.module.css. */
 const HELD_BACK_WIDTH = 260
-/** Away from the far view a label is drawn at most this much larger than its size on the map: its words keep their size on screen. */
-const SCALE_MAX = farLabelScale(FAR_ENTER)
+/**
+ * Away from the far view a label is drawn at most this much larger than its size on the map: its words keep their size
+ * on screen. The largest is just above the far view, in the title level or in the far view's first step.
+ */
+const SCALE_MAX = Math.max(labelScale(FAR_ENTER, false), farLabelScale(FAR_ENTER))
 /** The label grows a little when selected: a margin so a group at its edge is still counted. */
 const MARGIN = 8
 
