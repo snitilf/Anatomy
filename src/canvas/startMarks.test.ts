@@ -54,7 +54,7 @@ describe('farMark', () => {
 
   it('takes a smaller mark when a group name covers the top of the tile, and none when even the smallest does not fit', () => {
     const name = (height: number): Rect[] => [{ x: 0, y: 0, width: 200, height }]
-    const small = farMark(tile, 3, name(60))
+    const small = farMark(tile, 3, name(70))
     expect(small).toBeDefined()
     expect(small!.box.width).toBeLessThan(MARK_PX * 3)
     expect(inside(small!.box, tile)).toBe(true)

@@ -36,9 +36,18 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-dimmed={data.dimmed ? 'true' : undefined}
         data-faded={data.faded ? 'true' : undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
+        data-start={data.starts.length > 0 && !data.far ? data.startCorner : undefined}
         style={{ '--title-lines': heading } as CSSProperties}
       >
         {data.far && mine > 0 && <span className={styles.dot} aria-hidden="true" />}
+        {/* Where a walkthrough starts: a small outlined play mark inside the card, in the ink of the other icons. A shape, not a color. */}
+        {data.starts.length > 0 && !data.far && (
+          <span className={styles.start} data-flow-start="" data-corner={data.startCorner} title={startsLabel(data.starts)} aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="100%" height="100%">
+              <path d="M6.3 4.9 L11.2 8 L6.3 11.1 Z" />
+            </svg>
+          </span>
+        )}
         {lines > 0 && (
           <div className={styles.tileName} data-lines={lines} aria-hidden="true">
             {data.label}
@@ -64,14 +73,6 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
       </div>
-      {/* Where a walkthrough starts: a play mark on the top right corner, a shape and not a color. The card clips its own paint, so it sits beside it. */}
-      {data.starts.length > 0 && (
-        <span className={styles.start} data-flow-start="" data-dimmed={data.dimmed || undefined} data-faded={data.faded || undefined} title={startsLabel(data.starts)} aria-hidden="true">
-          <svg viewBox="0 0 16 16" width="100%" height="100%">
-            <path d="M6.2 4.7 L11.5 8 L6.2 11.3 Z" />
-          </svg>
-        </span>
-      )}
       {/* The name of the part in the far view, where the tile has no text. The card clips its own paint, so it sits beside it. */}
       {data.far && (
         <div ref={tip} className={styles.tip} aria-hidden="true">

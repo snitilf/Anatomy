@@ -17,6 +17,7 @@ import '@xyflow/react/dist/base.css'
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { sameRects, solve } from './solve'
 import { currentStep } from '../scenarios/step'
+import { flowStartsOf } from '../scenarios/starts'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
@@ -54,7 +55,7 @@ import { bundleGroups, connectionsOf } from './bundles'
 import { useRouteBox } from './useRouteBox'
 import { sharedBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
-import { FarLayer, type FarGroup } from './FarLayer'
+import { FarLayer, type FarGroup, type FarStart } from './FarLayer'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -631,6 +632,19 @@ export function Canvas() {
     [far, board, geometryNow],
   )
   const farTiles = useMemo<Rect[]>(() => (far && rectsNow ? Object.values(rectsNow) : []), [far, rectsNow])
+  // The tiles where a walkthrough starts. A tile filled with the accent (the selected part, or one of a walkthrough step) draws its mark in the color on the accent.
+  const selectedPart = selection?.type === 'component' ? selection.id : undefined
+  const stepParts = step?.highlight
+  const farStarts = useMemo<FarStart[]>(
+    () =>
+      far && board && rectsNow
+        ? [...flowStartsOf(board)].flatMap(([id, titles]) => {
+            const rect = rectsNow[id]
+            return rect ? [{ id, rect, titles, lit: id === selectedPart || stepParts?.has(id) === true }] : []
+          })
+        : [],
+    [far, board, rectsNow, selectedPart, stepParts],
+  )
   const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link' || selection?.type === 'bundle')
   /** Frames a group, at a zoom where its cards show their text. */
   const pickGroup = useCallback(
@@ -1188,7 +1202,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} opening={stillOpening} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <DetailMode onChange={setDetail} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} starts={farStarts} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={activeTool === 'select'} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}

@@ -312,3 +312,32 @@
 .unit[data-on] .bundle {
   stroke-width: calc((var(--w, 1.25) * 1px + 1px) * var(--label-scale, 1));
 }
+
+/*
+ * The mark of a tile where a walkthrough starts: a small outlined circle with a play shape, in the ink of the other icons, inside the tile.
+ * Its size and border are set on the board by the layer, from the label scale, so it holds its size on screen. A tile filled with the accent
+ * takes the color that is on the accent. Under forced colors it takes the text color of the system.
+ */
+.start {
+  position: absolute;
+  box-sizing: border-box;
+  border-style: solid;
+  border-radius: 50%;
+  color: var(--fg-3);
+}
+
+.start[data-lit] {
+  color: var(--on-accent);
+}
+
+.start svg {
+  display: block;
+  fill: currentColor;
+}
+
+@media (forced-colors: active) {
+  .start,
+  .start[data-lit] {
+    color: CanvasText;
+  }
+}

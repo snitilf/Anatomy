@@ -9,6 +9,7 @@ import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
 import { LABEL_GROWTH, LABEL_ROOM, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { labelTint } from './labelTint'
+import { CARD_CORNERS, freeCorner, type Corner } from './startMarks'
 import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
@@ -63,6 +64,8 @@ export interface CardData extends Record<string, unknown> {
   hasLesson: boolean
   /** The walkthroughs that start at this part, by title. Empty for most parts. */
   starts: readonly string[]
+  /** The corner of the card that its start mark sits in: the first one that no line label covers at any zoom. */
+  startCorner: Corner
   /** How many summary lines fit on the card at its size. */
   summaryLines: number
 }
@@ -493,6 +496,8 @@ function stable<T extends Node | Edge>(cache: Map<string, T>, next: T): T {
 const MARKER_BOX = 20
 /** One empty list for every part that no walkthrough starts at, so such cards compare equal from one build to the next. */
 const NO_STARTS: readonly string[] = []
+/** The label scales a start mark is checked at: from 100 percent down to the far end of the title level. */
+const START_SCALES = [1, 1.2, 1.4, 1.7, 2, LABEL_ROOM]
 const markers = new Map<string, EdgeMarker>()
 function markerFor(color: string): EdgeMarker {
   let marker = markers.get(color)
@@ -594,6 +599,16 @@ export function assembleGraph(
 
   const groupLabel = new Map(board.groups.map((g) => [g.id, g.label]))
   const flows = flowStartsOf(board)
+  // The line labels as drawn at each label scale, for the cards that carry a start mark. Worked out on the first such card.
+  const pills = new Map<number, Rect[]>()
+  const labelsAt = (scale: number): Rect[] => {
+    let boxes = pills.get(scale)
+    if (!boxes) {
+      boxes = [...geometry.edges.values()].filter((e) => !e.labelHidden && !e.cheap).map((e) => pillBox(e, scale))
+      pills.set(scale, boxes)
+    }
+    return boxes
+  }
   const cards = board.components.map((c) => {
     const rect = rects[c.id] ?? { x: 0, y: 0, width: 0, height: 0 }
     const starts = flows.get(c.id) ?? NO_STARTS
@@ -622,6 +637,7 @@ export function assembleGraph(
         sourceKind: c.source.kind,
         hasLesson: c.lesson !== undefined,
         starts,
+        startCorner: starts.length > 0 ? (freeCorner(rect, CARD_CORNERS, START_SCALES, labelsAt) ?? 'tr') : 'tr',
         summaryLines: summaryLinesFor(c, rect, noteCounts.get(c.id) ?? 0),
       },
       selected: c.id === selectedPart,
