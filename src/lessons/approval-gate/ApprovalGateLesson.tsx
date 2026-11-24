@@ -1,5 +1,5 @@
 /* oxlint-disable react/refs -- callback refs hand ref lists to the static art, they are not read while rendering */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { Plate } from '../kit/react/draw'
 import { useStillness } from '../kit/react/live'
 import { Base, CardBody, CardTab, Deck, DeckFront, GateArch, LedgerArch, LockArch, Outbox, PusherArt, Switch } from './art'
@@ -252,13 +252,24 @@ export default function ApprovalGateLesson() {
     [kick, fire],
   )
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
-    const action = KEYS[event.key.toLowerCase()]
-    if (!action) return
-    event.preventDefault()
-    dispatch(action)
-  }
+  // The keys are heard on the dialog, because the dialog puts focus on its Close button when it opens, and key events from there
+  // never reach the lesson. Outside a dialog, such as the preview page, the lesson itself listens.
+  useEffect(() => {
+    const node = root.current
+    const scope: HTMLElement | null = node?.closest('dialog') ?? node
+    if (!scope) return
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
+      const target = event.target
+      if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return
+      const action = KEYS[event.key.toLowerCase()]
+      if (!action) return
+      event.preventDefault()
+      dispatch(action)
+    }
+    scope.addEventListener('keydown', onKeyDown)
+    return () => scope.removeEventListener('keydown', onKeyDown)
+  }, [dispatch])
 
   const lit = litOf(shown)
   const litFinger = lit.kind === 'finger' ? lit.version : null
@@ -278,7 +289,7 @@ export default function ApprovalGateLesson() {
   )
 
   return (
-    <div ref={root} className="iso ag" data-settled="true" data-theme={dark ? 'dark' : 'light'} tabIndex={0} role="group" aria-label="Approval gate lesson" aria-keyshortcuts="A R E S P 0" onKeyDown={onKeyDown}>
+    <div ref={root} className="iso ag" data-settled="true" data-theme={dark ? 'dark' : 'light'} tabIndex={0} role="group" aria-label="Approval gate lesson" aria-keyshortcuts="A R E S P 0">
       <Plate
         fig="Fig 1"
         title="Approval gate"
