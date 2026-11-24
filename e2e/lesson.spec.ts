@@ -135,3 +135,20 @@ test('the keys on the plate work as soon as the lesson opens, without a click in
   await page.keyboard.press('e')
   await expect(lesson.getByText('v2 undecided · old key v1 · sent none', { exact: true })).toBeVisible()
 })
+
+test('opening the lesson a second time never shows the loading text', async ({ page }) => {
+  const lesson = await openLesson(page)
+  await lesson.getByRole('button', { name: 'Close', exact: true }).click()
+  await expect(lesson).toBeHidden()
+  // Record every moment the words appear anywhere on the page, from before the second click.
+  await page.evaluate(() => {
+    const seen: string[] = []
+    ;(window as unknown as { __loading: string[] }).__loading = seen
+    new MutationObserver(() => {
+      if (document.body.textContent?.includes('Loading lesson')) seen.push('Loading lesson')
+    }).observe(document.body, { childList: true, subtree: true, characterData: true })
+  })
+  await page.getByRole('complementary', { name: 'Sidebar' }).getByRole('button', { name: /^Approval gate/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Approval gate' }).getByRole('group', { name: 'Controls' })).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { __loading: string[] }).__loading)).toEqual([])
+})
