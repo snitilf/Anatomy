@@ -39,6 +39,16 @@ test.describe('the empty screen', () => {
     }
   })
 
+  test('the prompt step points at the place where the prompt is', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/')
+
+    await expect(page.getByTestId('start-steps').getByRole('listitem').first()).toContainText('How to make a board')
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('menuitem', { name: 'How to make a board' }).click()
+    await expect(page.getByRole('dialog', { name: 'How to make a board' }).getByRole('button', { name: 'Copy prompt' })).toBeVisible()
+  })
+
   test('opens an example using only the keyboard', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/')

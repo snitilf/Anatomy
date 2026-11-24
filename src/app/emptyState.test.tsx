@@ -2,8 +2,9 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import { commandById } from '../commands/list'
 import { EXAMPLES } from './examples'
 
 interface OutlineRect {
@@ -89,6 +90,57 @@ describe('the empty screen', () => {
     expect(items).toHaveLength(3)
     for (const item of items) {
       expect(item.textContent?.trim().length ?? 0).toBeGreaterThan(10)
+    }
+  })
+})
+
+describe('the start steps and folder support', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const stepTexts = () => {
+    render(<App />)
+    const steps = within(screen.getByRole('main')).getByTestId('start-steps')
+    return within(steps)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent?.replace(/^\d+/, '').trim() ?? '')
+  }
+
+  it('without folder access, never tells the user to pick a folder', () => {
+    vi.stubGlobal('showDirectoryPicker', undefined)
+    const steps = stepTexts()
+    expect(steps).toHaveLength(3)
+    for (const step of steps) expect(step).not.toMatch(/folder/i)
+    expect(steps[2]).toMatch(/open that file/i)
+  })
+
+  it('with folder access, the last step opens the project folder', () => {
+    vi.stubGlobal('showDirectoryPicker', async () => ({}))
+    const steps = stepTexts()
+    expect(steps).toHaveLength(3)
+    expect(steps[2]).toMatch(/open the project folder/i)
+  })
+
+  it.each([
+    ['without', undefined],
+    ['with', async () => ({})],
+  ])('%s folder access, says where the prompt comes from', (_name, picker) => {
+    vi.stubGlobal('showDirectoryPicker', picker)
+    const steps = stepTexts()
+    expect(steps[0]).toMatch(/copy the prompt/i)
+    expect(steps[0]).toContain(commandById('howto').label)
+    expect(steps[0]).toContain('Settings')
+  })
+
+  it('names each example card by its title and describes it separately', () => {
+    render(<App />)
+    const main = within(screen.getByRole('main'))
+    for (const example of EXAMPLES) {
+      const card = main.getByRole('button', { name: example.title })
+      expect(card).toHaveAccessibleName(example.title)
+      expect(card).toHaveAccessibleDescription(new RegExp(example.description.slice(0, 20)))
+      expect(card.querySelector('div')).toBeNull()
     }
   })
 })
