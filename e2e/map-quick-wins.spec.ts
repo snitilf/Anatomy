@@ -272,6 +272,31 @@ test.describe('a card with a note', () => {
   })
 })
 
+test.describe('a card that starts a walkthrough and carries a note', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('shows the start mark and the note count apart, in different corners', async ({ page }) => {
+    await open(page, REFUND)
+    await pickPart(page, 'refund-request')
+    const inspector = page.getByRole('complementary', { name: 'Sidebar' })
+    await inspector.getByRole('textbox', { name: 'Add a note' }).fill('Who can start a refund?')
+    await inspector.getByRole('button', { name: 'Add', exact: true }).click()
+    await expect(inspector.getByRole('region', { name: 'Notes' }).getByText('Who can start a refund?')).toBeVisible()
+    await page.keyboard.press('Escape')
+    const card = page.locator('.react-flow__node-card[data-id="refund-request"]')
+    await expect(card.locator('[data-selected]')).toHaveCount(0)
+    const mark = card.locator('[data-flow-start]')
+    const count = card.locator('[class*="foot"] [role="img"]')
+    await expect(mark).toBeVisible()
+    await expect(count).toBeVisible()
+    const [m, c, k] = await Promise.all([mark.boundingBox(), count.boundingBox(), card.boundingBox()])
+    const apart = m!.x + m!.width <= c!.x || c!.x + c!.width <= m!.x || m!.y + m!.height <= c!.y || c!.y + c!.height <= m!.y
+    expect(apart, 'the mark and the count do not touch').toBe(true)
+    // The count has the top right of the card, so the mark is not there.
+    expect(m!.x + m!.width, 'the mark is not at the right edge').toBeLessThan(k!.x + k!.width - 20)
+  })
+})
+
 test('the tests pick a part that exists', async () => {
   const board = JSON.parse(await readFile(SHORTENER, 'utf8')) as { components: { id: string }[] }
   expect(board.components.map((c) => c.id)).toContain('web-form')

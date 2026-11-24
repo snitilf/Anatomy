@@ -14,6 +14,11 @@ export const CARD_CORNERS: readonly Corner[] = ['tr', 'tl', 'br']
 /** The corners to try on a tile: the top ones belong to the names of the groups and to the note dot. */
 export const TILE_CORNERS: readonly Corner[] = ['br', 'bl']
 
+/** The corners to try on a card whose count of notes sits in the top right corner, or on one without a count there. */
+export function cardCorners(_countAtTopRight: boolean): readonly Corner[] {
+  return CARD_CORNERS
+}
+
 const touches = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
 /** The box of a mark inside a card, on one of its corners, `inset` from both edges. */
