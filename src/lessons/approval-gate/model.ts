@@ -141,7 +141,9 @@ export function caption(state: LessonState): string {
     case 'blocked-no-approval':
       return `Blocked. Nobody approved version ${v}, so the gate stayed shut.`
     case 'blocked-rejected':
-      return `Blocked. Version ${v} was rejected, and a rejected version never goes out.`
+      return isSent(state)
+        ? `Blocked. Version ${v} was rejected, and it already went out.`
+        : `Blocked. Version ${v} was rejected, and a rejected version never goes out.`
     case 'blocked-stale-approval':
       return `Blocked. The approval was for version ${state.approvedVersion}. Version ${v} needs its own approval.`
     case 'blocked-duplicate':
