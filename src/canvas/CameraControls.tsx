@@ -235,11 +235,12 @@ export function KeepInLimits({ limits, opening }: { limits: Limits; opening: () 
     const zoomed = Math.abs(next.zoom - now.zoom) > 1e-4
     const far = zoomed || Math.abs(next.x - now.x) > 0.5 || Math.abs(next.y - now.y) > 0.5
     if (!far) return
-    // A view that still shows everything on the map stays where it is, so a card dropped near the edge of a fitted map
-    // lands under the pointer. Only an empty margin is past the new limits, and the reader's next pan takes it in.
+    // A view that still shows everything on the map stays where it is: a card dropped near the edge of a fitted map lands
+    // under the pointer, and when the hint goes from under a fitted view, the view is not zoomed in. Only an empty margin
+    // is past the new limits, or the zoom is a little under the lowest, and the reader's next move takes it in.
     const b = limits.bounds
     const shows = b.x * now.zoom + now.x >= 0 && b.y * now.zoom + now.y >= 0 && (b.x + b.width) * now.zoom + now.x <= size.width && (b.y + b.height) * now.zoom + now.y <= size.height
-    if (!zoomed && shows) return
+    if (shows && now.zoom <= next.zoom) return
     camera.move(next, prefersStillness() ? 0 : GLIDE_MS)
   }, [limits, flow, camera, opening])
   return null
@@ -271,6 +272,8 @@ export function WheelZoom() {
       const limit = Math.log2(WHEEL_STEP)
       const limits = camera.limits()
       const view: Viewport = flow.getViewport()
+      // At or under the lowest zoom, as when the hint has gone from under a fitted view, there is nothing further out.
+      if (octaves < 0 && view.zoom <= limits.minZoom + 1e-6) return
       const next = Math.min(limits.maxZoom, Math.max(limits.minZoom, view.zoom * 2 ** Math.max(-limit, Math.min(limit, octaves))))
       if (next === view.zoom) return
       // Zoomed all the way out, the whole board is in view.

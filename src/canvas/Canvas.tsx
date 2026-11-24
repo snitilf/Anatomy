@@ -349,13 +349,17 @@ export function Canvas() {
 
   // The size of the map and its bottom overlay room, for the zoom limits. Read before the first paint and on every change.
   const [mapSize, setMapSize] = useState<{ width: number; height: number; bottom?: number }>({ width: 0, height: 0 })
-  // The zoom limits keep the most room the controls at the bottom have taken since the board opened. The opening fit
-  // leaves room for the hint, and when the hint goes, the view the reader is in must not be zoomed in under them.
+  // When the hint goes from under a fitted view, the zoom limits keep the room it took, so the reader's view stays a
+  // view they can zoom out to. The floor holds until Fit frames the board again, the zoom goes up to where Fit would
+  // put it now, or the map changes size. From then on the lowest zoom is Fit's.
   const bottomFloor = useRef(0)
+  const measuredSize = useRef({ width: 0, height: 0 })
   const measureMap = useCallback(() => {
     const el = mapBox.current
     if (!el) return
     const r = el.getBoundingClientRect()
+    if (r.width !== measuredSize.current.width || r.height !== measuredSize.current.height) bottomFloor.current = 0
+    measuredSize.current = { width: r.width, height: r.height }
     const bottom = Math.max(coveredBottom(el), bottomFloor.current)
     bottomFloor.current = bottom
     setMapSize((s) => (s.width === r.width && s.height === r.height && s.bottom === bottom ? s : { width: r.width, height: r.height, bottom }))
@@ -434,6 +438,14 @@ export function Canvas() {
     // The limits with the far-view lines solved now, if the last layout's are still waiting for the browser to be idle.
     // Fit, zooming out, and the wheel ask for these. A card dropped off screen does not, so a drop never solves lines.
     const fresh = (): Limits => zoomLimits(fitBounds(baseBoundsRef.current, resolveNowRef.current, limitRoom()), limitRoom())
+    // Fit's lowest zoom now, without the room the hint took.
+    const liveFit = () => zoomLimits(fitBounds(baseBoundsRef.current, resolveNowRef.current, size()), size()).minZoom
+    /** Drops the hint's room from the zoom limits, so they agree with Fit again. */
+    const release = () => {
+      if (bottomFloor.current === 0) return
+      bottomFloor.current = 0
+      measureMap()
+    }
     const place = (viewport: Viewport, duration = 0, limits: Limits = current()) => {
       const flow = flowRef.current
       return flow ? moveCamera(flow, viewport, limits, size(), duration) : viewport
@@ -446,9 +458,11 @@ export function Canvas() {
     const sameSize = (a: ReturnType<typeof size>, b: ReturnType<typeof size>) => Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height)
     const move: CameraApi['move'] = (viewport, duration = 0) => {
       last.fitted = undefined
+      if (bottomFloor.current > 0 && viewport.zoom >= liveFit() - 1e-6) release()
       return place(viewport, duration)
     }
     const frame: CameraApi['frame'] = (options = {}, duration = 0) => {
+      release()
       const limits = options.box && !options.readable ? current() : fresh()
       let framed: Frame = options
       if (options.readable) {
@@ -464,11 +478,8 @@ export function Canvas() {
       const flow = flowRef.current
       const fitted = last.fitted
       if (!fitted || !flow) return undefined
-      // A view set without the camera, such as the phone's framing above the sheet, is not the fitted view any more.
-      if (!near(flow.getViewport(), fitted.at)) {
-        last.fitted = undefined
-        return undefined
-      }
+      // A view somewhere else, set without the camera or still gliding to the fit, is not fitted now.
+      if (!near(flow.getViewport(), fitted.at)) return undefined
       if (!opening && sameSize(size(), fitted.room)) return 'kept'
       frame(fitted.options)
       return 'framed'
@@ -485,6 +496,8 @@ export function Canvas() {
       const box = size()
       const middle = { x: box.width / 2, y: box.top + (box.height - box.top) / 2 }
       const limits = command === 'fit' || command === 'out' ? fresh() : current()
+      // At the lowest zoom there is nothing further out, and Fit would zoom in where the hint's room is still kept.
+      if (command === 'out' && now().zoom <= limits.minZoom + 1e-6) return
       const step = stepZoom(now().zoom, command === 'in' ? 1 : -1, limits)
       let viewport: Viewport
       // Zoomed all the way out, the whole board is in view, wherever the view was before.
@@ -502,7 +515,7 @@ export function Canvas() {
       rectOf: (id: string) => viewRef.current?.rects[id],
       scene: () => sceneRef.current,
     }
-  }, [])
+  }, [measureMap])
   // A fitted view stays fitted while the reader leaves it alone: a new size of the map or of what covers it frames the
   // whole board again. Until the reader first presses, types, or scrolls, so does the layout settling, as when the
   // fonts come in and the cards are measured again. A new revision of the board is not part of the opening.
