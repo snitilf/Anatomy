@@ -532,13 +532,51 @@ Sending feedback to a folder still writes `feedback.json` when the text of the `
 
 `scripts/firstLoad.test.ts` builds the app and checks that the first script holds no example board, no part of the command line tool, and no map view, that it does not load any of them at start, and that it stays under a byte budget.
 
+## The hosted copy
+
+The hosted copy is the built app on GitHub Pages, at https://snitilf.github.io/Anatomy/.
+It is the same app, and it has no server of its own.
+
+`npm run build:pages` builds it into `dist-pages/` with the Vite base path `/Anatomy/`.
+Every other build, the dev server, and the browser tests keep the base path `/`.
+`.github/workflows/pages.yml` builds and deploys it on each push to `main` and when someone runs it by hand.
+Its jobs run only while the repository is public.
+Once, after the repository is public, set Source to GitHub Actions under Settings, Pages.
+
+Nothing in the app assumes that it sits at the root of the site.
+Vite writes the base path into `index.html`, the font addresses in the stylesheet, and the entry script's preload helper.
+The map and the example boards load as scripts, by a path relative to the script that asks for them.
+The app keeps the path of its own page when it changes the address.
+The Content Security Policy is the same, so the page requests only its own files, and every one of them is under `/Anatomy/`.
+
+`e2e/pages.spec.ts` builds the app with `npm run build:pages` and serves it under `/Anatomy/` on the loopback interface (`scripts/lib/subpathServer.ts`).
+That server answers 404 for anything outside the subpath, as GitHub Pages does.
+For each example, the test fails on a console error, on a policy violation, on a response with an error status, and on a request outside the subpath.
+
+What works on the hosted copy, checked in Chrome:
+
+- **Examples and files.** Every example opens.
+  So does a board file you pick.
+  Notes, links, drawings, undo and redo, and your layer are kept in this browser, as with a local copy.
+- **Open folder.** Chrome and Edge open the project folder from the https page.
+  Anatomy reads the folder and writes only inside `.anatomy`.
+  It watches `board.json`, and "Reopen" works after a reload.
+- **Copy prompt and Send.** Both copy the prompt to the clipboard.
+  With a folder open, Send writes `.anatomy/feedback.json` and the agent files.
+  With an example or a file, Send downloads `feedback.json`.
+- **Other browsers.** They open examples and files, and Send downloads `feedback.json`, as with a local copy.
+
+The browser keeps work for each site, so work on the hosted copy is not in a copy that runs on `127.0.0.1`.
+Your agent still runs on your machine.
+It reads `.anatomy/` in your folder, or the file that Send downloaded, because the hosted page has no other way to reach it.
+
 ## Safety
 
 The app has these safety rules:
 
 - The app renders board text as React text nodes. A small local parser reads the Markdown subset and never uses `innerHTML`.
 - The app shows paths in references as text and never opens them.
-- The app makes no network requests after the page loads, except for its own files on the same local server: the map view, the example boards, the how-to dialog, the text of the `.anatomy/` files, a lesson, and the `anatomy` tool load on their own scripts. Inter is bundled with the app.
+- The app makes no network requests after the page loads, except for its own files from the same origin: the map view, the example boards, the how-to dialog, the text of the `.anatomy/` files, a lesson, and the `anatomy` tool load on their own scripts. Inter is bundled with the app.
 - The built app carries a Content Security Policy in a meta tag: `default-src 'self'; script-src 'self'; connect-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'`.
   The build adds it (`scripts/lib/csp.ts`, applied only to `vite build`, including the `e2e` mode), and the dev server does not have it.
   No script can run unless it is a file from the same origin, no code can send a request, and the page cannot be given a plugin, a new base URL, or a form target.

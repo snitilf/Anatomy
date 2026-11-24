@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --base /Anatomy/ --outDir dist-pages --emptyOutDir",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "oxlint --deny-warnings",

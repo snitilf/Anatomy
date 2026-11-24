@@ -4,7 +4,7 @@
 
 ### Your coding agent knows your code. Now you can see what it knows.
 
-[How it works](#how-it-works) · [Quick start](#quick-start) · [Docs](#documentation)
+[Try it](https://snitilf.github.io/Anatomy/) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Docs](#documentation)
 
 </div>
 
@@ -105,6 +105,11 @@ You need Node.js 24 or later, which includes npm.
 If you use Chrome or Edge, you can open a project folder.
 In other browsers, open a board file or a built-in example.
 
+To try it without installing anything, open the [hosted copy](https://snitilf.github.io/Anatomy/).
+It is the same app.
+Nothing leaves your machine: the page loads only its own files, and your work stays in your browser or in your folder.
+See [the hosted copy](docs/architecture.md#the-hosted-copy) for what it does.
+
 ## Documentation
 
 - [Board format](docs/board-format.md): every field of a board file, and every check Anatomy runs on it.
@@ -119,6 +124,7 @@ In other browsers, open a board file or a built-in example.
 | `npm ci` | Installs the exact versions in `package-lock.json`, as CI does. |
 | `npm run dev` | Starts the dev server on `http://127.0.0.1:5173`. |
 | `npm run build` | Type-checks and builds the static app into `dist/`. |
+| `npm run build:pages` | Builds the hosted copy, with base path `/Anatomy/`, into `dist-pages/`. |
 | `npm run preview` | Serves the built app on `127.0.0.1`. |
 | `npm run typecheck` | Runs the TypeScript compiler in strict mode. |
 | `npm run lint` | Runs oxlint. |
