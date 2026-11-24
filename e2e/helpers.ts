@@ -20,7 +20,8 @@ export async function open(page: Page, file: string) {
   if (await overview.isVisible()) await page.getByRole('tab', { name: 'Map' }).click()
   await expect(card).toBeVisible()
   // Let the first fit and the first save settle. Until the reader first touches it, the opening view follows the layout
-  // as the fonts load and the cards are measured again, so wait for the fonts and then for the view to stand still.
+  // as the fonts load and the map is built again with its labels measured in them, so wait for the fonts and then for the
+  // view to stand still.
   await page.waitForTimeout(400)
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
   let last = ''
