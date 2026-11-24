@@ -15,10 +15,11 @@ export interface Route {
 }
 
 /** Counts of the work the router does, for tests to assert on. Each is one integer increment, and nothing reads them in the app. */
-export const routeStats = { searches: 0, expansions: 0 }
+export const routeStats = { searches: 0, expansions: 0, laneSorts: 0 }
 export function resetRouteStats(): void {
   routeStats.searches = 0
   routeStats.expansions = 0
+  routeStats.laneSorts = 0
 }
 
 export interface Plan {
@@ -295,6 +296,7 @@ const bucketKey = (bx: number, by: number) => (bx + 4096) * 8192 + (by + 4096)
 
 /** Sorted, with values within 3 of an earlier one dropped. */
 function uniqueSorted(values: number[]): number[] {
+  routeStats.laneSorts++
   const sorted = [...values].sort((a, b) => a - b)
   const out: number[] = []
   for (const v of sorted) {
