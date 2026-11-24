@@ -1,4 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process'
+import { request } from 'node:http'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -179,6 +180,28 @@ describe('scripts/release/serve.mjs', () => {
       expect(await page.text()).toContain('<title>Anatomy</title>')
       expect((await fetch(`${server.url}/assets/app.js`)).headers.get('content-type')).toContain('text/javascript')
       expect((await fetch(`${server.url}/assets/font.woff2`)).headers.get('content-type')).toBe('font/woff2')
+    } finally {
+      server.stop()
+    }
+  })
+
+  it('answers 404 for a path that a URL parser would read as another host', async () => {
+    const server = await start()
+    // `fetch` would rewrite these paths, so they go out raw, as a browser or a script could send them.
+    const status = (path: string) =>
+      new Promise<number>((resolve, reject) => {
+        const { hostname, port } = new URL(server.url)
+        request({ host: hostname, port, path }, (res) => {
+          res.resume()
+          resolve(res.statusCode ?? 0)
+        })
+          .once('error', reject)
+          .end()
+      })
+    try {
+      for (const path of ['//evil/index.html', '/\\evil', '/%2e%2e/index.html', '/%2e%2e%2findex.html']) {
+        expect(await status(path), path).toBe(404)
+      }
     } finally {
       server.stop()
     }
