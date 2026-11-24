@@ -37,7 +37,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-highlighted={data.highlighted ? 'true' : undefined}
         data-dimmed={data.dimmed ? 'true' : undefined}
         data-faded={data.faded ? 'true' : undefined}
-        data-corner={corner || undefined}
+        data-count-corner={corner || undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
         data-start={data.starts.length > 0 && !data.far ? data.startCorner : undefined}
         style={{ '--title-lines': heading } as CSSProperties}

@@ -9,7 +9,7 @@ import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
 import { LABEL_GROWTH, LABEL_ROOM, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { labelTint } from './labelTint'
-import { CARD_CORNERS, freeCorner, type Corner } from './startMarks'
+import { cardCorners, freeCorner, type Corner } from './startMarks'
 import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
@@ -612,6 +612,9 @@ export function assembleGraph(
   const cards = board.components.map((c) => {
     const rect = rects[c.id] ?? { x: 0, y: 0, width: 0, height: 0 }
     const starts = flows.get(c.id) ?? NO_STARTS
+    // The count of notes sits in the top right corner of a card with no lesson, so the start mark keeps out of it.
+    const countAtTopRight = (noteCounts.get(c.id) ?? 0) > 0 && c.lesson === undefined
+    const corners = cardCorners(countAtTopRight)
     return stable(cache.nodes, {
       id: c.id,
       type: 'card',
@@ -637,7 +640,7 @@ export function assembleGraph(
         sourceKind: c.source.kind,
         hasLesson: c.lesson !== undefined,
         starts,
-        startCorner: starts.length > 0 ? (freeCorner(rect, CARD_CORNERS, START_SCALES, labelsAt) ?? 'tr') : 'tr',
+        startCorner: starts.length > 0 ? (freeCorner(rect, corners, START_SCALES, labelsAt) ?? corners[0]!) : 'tr',
         summaryLines: summaryLinesFor(c, rect, noteCounts.get(c.id) ?? 0),
       },
       selected: c.id === selectedPart,

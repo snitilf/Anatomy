@@ -48,7 +48,7 @@ export const ProposalNode = memo(function ProposalNode({ data, selected }: NodeP
     <>
       <Handle id={EDGE_IN_HANDLE} type="target" position={Position.Top} isConnectable={false} className={cards.handle} />
       <Handle id={EDGE_OUT_HANDLE} type="source" position={Position.Top} isConnectable={false} className={cards.handle} />
-      <div className={cards.card} data-yours="" data-corner={data.noteCount > 0 || undefined} data-selected={selected || undefined} style={{ '--title-lines': heading } as CSSProperties}>
+      <div className={cards.card} data-yours="" data-count-corner={data.noteCount > 0 || undefined} data-selected={selected || undefined} style={{ '--title-lines': heading } as CSSProperties}>
         {data.far && data.noteCount > 0 && <span className={cards.dot} aria-hidden="true" />}
         {lines > 0 && (
           <div className={cards.tileName} data-lines={lines} aria-hidden="true">
