@@ -176,6 +176,47 @@ test.describe('the title level', () => {
   })
 })
 
+test.describe('labels at the opening view', () => {
+  const boards = [
+    ['anatomy', 'src/examples/anatomy.board.json'],
+    ['claude code harness', CLAUDE],
+    ['large language model', 'src/examples/how-an-llm-works.board.json'],
+    ['refund approval', REFUND],
+    ['url shortener', 'e2e/fixtures/url-shortener.board.json'],
+  ] as const
+  for (const [name, file] of boards) {
+    for (const [width, height] of [
+      [1440, 900],
+      [1280, 800],
+    ] as const) {
+      test(`no label covers another, grown to 11 px on screen: ${name} at ${width}x${height}`, async ({ page }) => {
+        await page.setViewportSize({ width, height })
+        await open(page, file)
+        await settled(page)
+        const clashes = await page.evaluate(() => {
+          const shown = (el: Element) => {
+            const s = getComputedStyle(el)
+            return s.display !== 'none' && s.visibility !== 'hidden' && Number.parseFloat(s.opacity) > 0.05
+          }
+          const labels = [...document.querySelectorAll<HTMLElement>('[data-label][data-edge]')]
+            .filter((el) => !el.hasAttribute('data-hidden') && shown(el))
+            .map((el) => ({ id: el.dataset.edge, r: el.getBoundingClientRect() }))
+          const out: string[] = []
+          for (let i = 0; i < labels.length; i++) {
+            for (let j = i + 1; j < labels.length; j++) {
+              const a = labels[i]!.r
+              const b = labels[j]!.r
+              if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 2 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2) out.push(`${labels[i]!.id} and ${labels[j]!.id}`)
+            }
+          }
+          return out
+        })
+        expect(clashes).toEqual([])
+      })
+    }
+  }
+})
+
 test.describe('the opening view', () => {
   test('stays whole and centred once the fonts and the hint are in', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
