@@ -43,6 +43,7 @@ import { isDrawing, mapProps, ONE_USE_TOOLS } from '../whiteboard/tools'
 import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLines, type Event, type Interaction } from './interaction'
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, geometrySteps, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
+import { MANUAL_LINE } from './kinds'
 import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, toastPlace, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, DetailMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
@@ -1200,6 +1201,7 @@ export function Canvas() {
           translateExtent={limits.extent}
           nodesConnectable={props.nodesConnectable}
           connectionMode={ConnectionMode.Loose}
+          connectionLineStyle={MANUAL_LINE}
           onConnect={onConnect}
           onConnectStart={() => setConnecting(true)}
           onConnectEnd={onConnectEnd}
