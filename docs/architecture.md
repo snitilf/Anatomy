@@ -389,6 +389,9 @@ It shows a Review tab while a new revision, a note, or an answer needs a look.
 The app keeps the width of the sidebar (300 to 520) and whether it is open, for each browser.
 On a screen 760 px wide or less, the sidebar is a bottom sheet with three stops.
 The user drags the sheet by its header only.
+A lesson dialog is not part of the sidebar, so resizing across that width keeps it open, with its run.
+The open lesson is held in the screen state and drawn once, by the shell (`src/app/LessonHost.tsx`).
+Closing it returns focus to the lesson row that stands on the screen then, or to the sidebar if none does.
 A part and a connection always show a Source row, also when the source is the agent's own explanation.
 Once the user has made something, the Yours list on the overview has a Status key button.
 It opens the seven status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
