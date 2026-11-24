@@ -453,7 +453,7 @@ export function Canvas() {
     // The last frame of the whole board: how it was framed, where it went, and the room it was framed in. Any other
     // move of the camera ends it. While it holds, the view is fitted, and a new size of the map frames the whole board
     // again. While the board is still opening, so does any change: the hint coming in, or the cards measured again.
-    const last: { fitted?: { options: Frame; at: Viewport; room: ReturnType<typeof size> } | undefined } = {}
+    const last: { fitted?: { options: Frame; at: Viewport; room: ReturnType<typeof size>; board: string | undefined } | undefined } = {}
     const near = (a: Viewport, b: Viewport) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1 && Math.abs(a.zoom - b.zoom) <= 1e-3
     const sameSize = (a: ReturnType<typeof size>, b: ReturnType<typeof size>) => Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height)
     const move: CameraApi['move'] = (viewport, duration = 0) => {
@@ -471,13 +471,14 @@ export function Canvas() {
       }
       const room = size()
       const at = place(frameViewport(limits, room, framed), duration, limits)
-      last.fitted = options.box ? undefined : { options, at, room }
+      last.fitted = options.box ? undefined : { options, at, room, board: viewRef.current?.board.id }
       return at
     }
     const refit: CameraApi['refit'] = (opening = false) => {
       const flow = flowRef.current
       const fitted = last.fitted
-      if (!fitted || !flow) return undefined
+      // A fit of another board is not this one's: the new board makes its own first frame.
+      if (!fitted || !flow || fitted.board !== viewRef.current?.board.id) return undefined
       // A view somewhere else, set without the camera or still gliding to the fit, is not fitted now.
       if (!near(flow.getViewport(), fitted.at)) return undefined
       if (!opening && sameSize(size(), fitted.room)) return 'kept'
@@ -538,6 +539,8 @@ export function Canvas() {
   /** Whether the board is still opening: the reader has not pressed, typed, or scrolled, and no new revision came. */
   const stillOpening = useCallback(() => opening.current.open && opening.current.board === board, [board])
   useEffect(() => {
+    // Moving the view under a held card would move it away from the pointer. The resize waits for the drop (`Camera`).
+    if (hold.current) return
     camera.refit(stillOpening())
   }, [mapSize, stillOpening, camera])
   useEffect(() => {
