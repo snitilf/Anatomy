@@ -12,6 +12,10 @@ import {
   nextFar,
   TITLE_ENTER,
   TITLE_EXIT,
+  TITLE_LEVEL_PX,
+  TITLE_LINE_HEIGHT,
+  TITLE_PADDING,
+  titleLines,
   titleScale,
   type DetailLevel,
 } from './far'
@@ -84,6 +88,29 @@ describe('readable text at every level', () => {
       expect(onScreen).toBeGreaterThanOrEqual(11)
       if (zoom >= 0.85) expect(titleScale(zoom)).toBe(1)
     }
+  })
+
+  it('draws a title-only card a step above the 11 px line labels, at about 12 px on screen', () => {
+    for (const zoom of [FAR_ENTER, 0.5, 0.55, 0.6, 0.65, 0.7, TITLE_ENTER, TITLE_EXIT - 0.001]) {
+      const onScreen = 13 * titleScale(zoom, TITLE_LEVEL_PX) * zoom
+      expect(onScreen).toBeGreaterThanOrEqual(TITLE_LEVEL_PX)
+      expect(onScreen).toBeLessThan(TITLE_LEVEL_PX + 1)
+    }
+  })
+
+  it('gives a title-only card only the title lines that fit inside it, from one to three', () => {
+    for (const zoom of [FAR_ENTER, 0.5, 0.6, 0.7, TITLE_EXIT]) {
+      for (const height of [72, 96, 112, 140, 200, 400]) {
+        const lines = titleLines(zoom, height)
+        expect(lines).toBeGreaterThanOrEqual(1)
+        expect(lines).toBeLessThanOrEqual(3)
+        const lineHeight = 13 * TITLE_LINE_HEIGHT * titleScale(zoom, TITLE_LEVEL_PX)
+        if (lines > 1) expect(lines * lineHeight).toBeLessThanOrEqual(height - 2 * TITLE_PADDING)
+      }
+    }
+    // A usual card holds two lines just above the far view and three near the full cards.
+    expect(titleLines(FAR_ENTER, 112)).toBe(2)
+    expect(titleLines(0.7, 112)).toBe(3)
   })
 
   it('keeps line labels at least 11 px on screen at every zoom', () => {
