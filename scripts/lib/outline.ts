@@ -1,7 +1,7 @@
 import type { PackedOutline } from '../../src/app/outline.ts'
 import type { Board } from '../../src/board/schema.ts'
-import { Drawn, Obstacles, planEdges, routeConnection, type EdgeEnds, type Route } from '../../src/canvas/routing.ts'
-import { groupAreas, placeCards } from '../../src/layout/cards.ts'
+import { computeGeometry } from '../../src/canvas/buildGraph.ts'
+import { placeCards } from '../../src/layout/cards.ts'
 import type { Point, Rect } from '../../src/layout/geometry.ts'
 
 const PAD = 32
@@ -42,48 +42,16 @@ function shiftedPath(points: readonly Point[], dx: number, dy: number): string {
 }
 
 /**
- * Computes a compact, deterministic packed map outline from a parsed board using the
- * real card layout, group areas, and orthogonal edge router.
+ * Computes a compact, deterministic packed map outline from a parsed board, using the same
+ * card layout, group areas, and line routing that the map itself draws.
  */
 export function buildOutline(board: Board): PackedOutline {
   const rects = placeCards(board, { positions: {}, sizes: {} })
   const boxes = Object.values(rects)
-  const groupMap = groupAreas(board, rects)
-  const rawGroups = board.groups.map((g) => groupMap[g.id]).filter((r): r is Rect => r !== undefined)
-  const groupRect = new Map<string, Rect>(Object.entries(groupMap))
-  const groupOfCard = new Map<string, string | undefined>(board.components.map((c) => [c.id, c.group]))
-
-  const ownGroups = (end: EdgeEnds): Rect[] => {
-    const out: Rect[] = []
-    for (const card of [end.from, end.to]) {
-      const g = groupOfCard.get(card)
-      const r = g === undefined ? undefined : groupRect.get(g)
-      if (r) out.push(r)
-    }
-    return out
-  }
-
-  const obstacles = new Obstacles(boxes, rawGroups)
-  const ends: EdgeEnds[] = board.relationships.map((r) => ({ id: r.id, from: r.from, to: r.to }))
-  const plans = planEdges(rects, ends)
-
-  const order = ends.map((_, i) => i)
-  const reach = (i: number) => {
-    const plan = plans.get(ends[i]!.id)
-    return plan ? Math.abs(plan.a.x - plan.b.x) + Math.abs(plan.a.y - plan.b.y) : Infinity
-  }
-  order.sort((i, j) => reach(i) - reach(j) || (ends[i]!.id < ends[j]!.id ? -1 : 1))
-
-  const drawn = new Drawn()
-  const routes = new Map<string, Route>()
-  for (const i of order) {
-    const end = ends[i]!
-    const plan = plans.get(end.id)
-    if (!plan || !rects[end.from] || !rects[end.to]) continue
-    const route = routeConnection(plan, boxes, drawn, obstacles, ownGroups(end))
-    if (route.runs) drawn.add(route.runs)
-    routes.set(end.id, route)
-  }
+  // The same solve the map runs, so the previews cannot drift from it.
+  const geometry = computeGeometry(board, rects)
+  const rawGroups: Rect[] = geometry.groups.map(({ x, y, width, height }) => ({ x, y, width, height }))
+  const routes = geometry.edges
 
   let minX = Infinity
   let minY = Infinity
@@ -135,7 +103,7 @@ export function buildOutline(board: Board): PackedOutline {
   const cards = uniform ? cardRects.flatMap((r) => [r.x, r.y]) : cardRects.flatMap((r) => [r.x, r.y, r.w, r.h])
   const lines = board.relationships
     .map((r) => routes.get(r.id))
-    .filter((route): route is Route => route !== undefined)
+    .filter((route): route is NonNullable<typeof route> => route !== undefined)
     .map((route) => shiftedPath(route.points, ox, oy))
     .filter((d) => d.length > 0)
     .join(';')
