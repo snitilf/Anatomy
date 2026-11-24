@@ -26,8 +26,8 @@ test('open, inspect, walk through, learn, take a note, reload, export, and open 
   const more = inspector.getByRole('button', { name: 'Show more' })
   if (await more.count()) await more.click()
   await expect(inspector.getByText('The policy check only proposes. It does not pay anything, and it never changes the request or the policy.')).toBeVisible()
-  // The default source, the agent's own explanation, shows no source line.
-  await expect(inspector.locator('[data-source]')).toHaveCount(0)
+  // The default source, the agent's own explanation, is named like any other.
+  await expect(inspector.locator('[data-source="agent-explanation"]')).toContainText('Agent explanation')
 
   // Inspect a connection: its kind in plain English.
   await pickConnection(page, 'proposes a payout')
