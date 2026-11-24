@@ -78,11 +78,9 @@ export function ConnectionView({ board, relationship: r }: { board: Board; relat
         {end('from')}
         <Prop label="Kind">{unknown ? KIND_WORDS.unknown : capital(KIND_WORDS[r.kind])}</Prop>
         {end('to')}
-        {r.source.kind !== 'agent-explanation' && (
-          <Prop label="Source">
-            <SourceLine source={r.source} />
-          </Prop>
-        )}
+        <Prop label="Source">
+          <SourceLine source={r.source} />
+        </Prop>
       </Props>
       {ends.edit && (
         <div className={styles.actions}>

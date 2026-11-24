@@ -74,8 +74,9 @@
 /* Property rows: a 112px label in the quiet color, the value beside it. */
 .props {
   display: grid;
-  margin: 0 0 var(--space-6);
-  padding: 0;
+  margin: var(--space-6) 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--border);
 }
 
 .prop {

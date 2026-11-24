@@ -103,9 +103,8 @@ export function PickerValue({ children }: { children: ReactNode }) {
   )
 }
 
-/** Where a part or connection comes from, when it is not the agent's own explanation. */
+/** Where a part or connection comes from, whatever the source is, so the row is there on every one. */
 export function SourceLine({ source }: { source: Source }) {
-  if (source.kind === 'agent-explanation') return null
   return <SourceNote kind={source.kind} className={styles.source} />
 }
 

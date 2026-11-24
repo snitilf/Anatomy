@@ -66,23 +66,18 @@ export function PartView({ board, component }: { board: Board; component: BoardC
   const group = board.groups.find((g) => g.id === component.group)
   const plain = usePlainFlow(component.id)
   const hasPlain = plain.in.length + plain.out.length > 0
-  const hasSource = component.source.kind !== 'agent-explanation'
   return (
     <div className={styles.view}>
       <div className={styles.head}>
         <Heading>{component.label}</Heading>
         <p className={styles.lead}>{component.summary}</p>
       </div>
-      {(group || hasSource) && (
-        <Props>
-          {group && <Prop label="Group">{group.label}</Prop>}
-          {hasSource && (
-            <Prop label="Source">
-              <SourceLine source={component.source} />
-            </Prop>
-          )}
-        </Props>
-      )}
+      <Props>
+        {group && <Prop label="Group">{group.label}</Prop>}
+        <Prop label="Source">
+          <SourceLine source={component.source} />
+        </Prop>
+      </Props>
       <FlowBlock partId={component.id} />
       {(component.explanation || hasPlain) && <Explanation source={component.explanation ?? ''} extra={<Takes plain={plain} />} />}
       {component.lesson !== undefined && <Lesson id={component.lesson} />}
