@@ -1,66 +1,343 @@
 .empty {
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
-  place-items: center;
-  padding: var(--space-8) var(--space-4);
+  justify-items: center;
+  align-items: start;
+  padding: var(--space-8) var(--space-6);
   background: var(--bg);
 }
 
-/* One left-aligned column, centered on the page. */
-.column {
+/* Centered workspace-width column so the three example maps sit side by side on desktop. */
+.empty > div {
   display: grid;
-  gap: var(--space-4);
-  width: min(360px, 100%);
+  gap: var(--space-6);
+  width: min(960px, 100%);
+  min-width: 0;
+  margin-block: auto;
 }
 
-.line {
+.empty header {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.empty h2 {
   margin: 0;
-  font-size: var(--text-xl);
-  line-height: var(--leading-xl);
+  font-size: 24px;
+  line-height: 30px;
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
   color: var(--fg);
 }
 
-.hint {
-  margin: calc(var(--space-2) * -1) 0 0;
+.empty header > p {
+  margin: calc(var(--space-1) * -1) 0 0;
   color: var(--fg-2);
   text-wrap: pretty;
 }
 
-.path {
+.empty code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
-.actions {
+.empty header > div {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.problem {
+.empty > div > p[role='status'] {
   margin: 0;
   color: var(--danger);
   text-wrap: pretty;
 }
 
-.list {
-  display: grid;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-
-.listTitle {
+.empty h3 {
   margin: 0;
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
 }
 
-/* The lists sit flush with the column, their hover reaching into the gutter. */
-.list > ul {
-  margin: 0 calc(var(--space-2) * -1);
+.empty section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.empty section[aria-labelledby='recent-title'] {
+  gap: var(--space-2);
+  width: min(520px, 100%);
+}
+
+.empty section[aria-labelledby='examples-title'] > ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.empty section[aria-labelledby='examples-title'] > ul > li {
+  display: flex;
+  min-width: 0;
+}
+
+.empty section[aria-labelledby='examples-title'] button {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  color: var(--fg);
+  text-align: left;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+
+.empty section[aria-labelledby='examples-title'] button:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-float);
+  transform: translateY(-1px);
+}
+
+.empty section[aria-labelledby='examples-title'] button:active {
+  transform: translateY(0);
+}
+
+.empty section[aria-labelledby='examples-title'] button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.empty section[aria-labelledby='examples-title'] button > div {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: var(--space-3);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.empty section[aria-labelledby='examples-title'] svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.empty [data-outline-group],
+.empty [data-outline-line],
+.empty [data-outline-card] > rect:first-child {
+  vector-effect: non-scaling-stroke;
+}
+
+.empty [data-outline-group] {
+  fill: color-mix(in srgb, var(--fg) var(--wash-share), transparent);
+  stroke: var(--group-edge);
+  stroke-width: 1px;
+}
+
+.empty [data-outline-line] {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.15px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 140ms var(--ease-out);
+}
+
+.empty [data-outline-card] > rect:first-child {
+  fill: var(--raised);
+  stroke: var(--card-edge);
+  stroke-width: 1px;
+  transition: stroke 140ms var(--ease-out);
+}
+
+.empty [data-outline-card] > rect:nth-child(2) {
+  fill: var(--fg);
+  opacity: 0.34;
+}
+
+.empty [data-outline-card] > rect:nth-child(3) {
+  fill: var(--fg);
+  opacity: 0.14;
+}
+
+.empty section[aria-labelledby='examples-title'] button:hover [data-outline-line],
+.empty section[aria-labelledby='examples-title'] button:focus-visible [data-outline-line] {
+  stroke: var(--accent-line);
+}
+
+.empty section[aria-labelledby='examples-title'] button:hover [data-outline-card] > rect:first-child,
+.empty section[aria-labelledby='examples-title'] button:focus-visible [data-outline-card] > rect:first-child {
+  stroke: var(--fg-2);
+}
+
+.empty section[aria-labelledby='examples-title'] button > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.empty section[aria-labelledby='examples-title'] strong {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.empty section[aria-labelledby='examples-title'] button > span > span {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.empty section[aria-labelledby='examples-title'] small {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-xs);
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty section[aria-labelledby='steps-title'] {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.empty ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.empty ol > li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.empty ol > li > span {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--fg-2);
+  font-size: var(--text-xs);
+  line-height: 1;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty ol > li > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.empty ol p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.empty ol p:first-child {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+.empty ol p:last-child {
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--fg-2);
+}
+
+@media (max-width: 760px) {
+  .empty {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .empty > div {
+    gap: var(--space-5);
+    margin-block: 0;
+  }
+
+  .empty h2 {
+    font-size: var(--text-xl);
+    line-height: var(--leading-xl);
+  }
+
+  .empty section[aria-labelledby='examples-title'] > ul,
+  .empty ol {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (hover: none) {
+  .empty section[aria-labelledby='examples-title'] button:hover {
+    border-color: var(--border);
+    box-shadow: var(--card-shadow);
+    transform: none;
+  }
+
+  .empty section[aria-labelledby='examples-title'] button:hover [data-outline-line] {
+    stroke: var(--line);
+  }
+
+  .empty section[aria-labelledby='examples-title'] button:hover [data-outline-card] > rect:first-child {
+    stroke: var(--card-edge);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .empty section[aria-labelledby='examples-title'] button,
+  .empty [data-outline-line],
+  .empty [data-outline-card] > rect:first-child {
+    transition: none;
+  }
+
+  .empty section[aria-labelledby='examples-title'] button:hover,
+  .empty section[aria-labelledby='examples-title'] button:active {
+    transform: none;
+  }
 }

@@ -77,12 +77,14 @@ test.describe('the empty screen', () => {
         const s = getComputedStyle(el)
         return {
           opacity: s.opacity,
-          transitionDuration: s.transitionDuration,
+          transitionProperty: s.transitionProperty,
+          animationName: s.animationName,
           transform: s.transform,
         }
       })
       expect(settled.opacity).toBe('1')
-      expect(settled.transitionDuration).toBe('0s')
+      expect(settled.transitionProperty).toBe('opacity')
+      expect(settled.animationName).toBe('none')
       expect(settled.transform).toBe('none')
 
       await card.hover()
