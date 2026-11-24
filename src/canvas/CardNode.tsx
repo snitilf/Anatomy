@@ -16,7 +16,8 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
   // A tile wide enough on screen carries the part's name in the far view. It renders on the crossing, not on every zoom.
   const lines = useStore((s) => (data.far ? nameLines(s.transform[2], data.width, data.height) : 0))
   // How many title lines a title-only card holds. It changes only on a few zooms just above the far view.
-  const heading = useStore((s) => (data.far ? 3 : titleLines(s.transform[2], data.height)))
+  const foot = data.hasLesson || mine > 0
+  const heading = useStore((s) => (data.far ? 3 : titleLines(s.transform[2], data.height, foot)))
   const tip = useTipClamp(data.far, selected === true || data.highlighted)
   // The dots sit beside the card, not inside it: the card clips its own paint.
   return (
@@ -46,7 +47,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         <p className={styles.summary} style={{ WebkitLineClamp: data.summaryLines }}>
           {data.summary}
         </p>
-        {(data.hasLesson || mine > 0) && (
+        {foot && (
           <div className={styles.foot}>
             {data.hasLesson && (
               <span className={styles.lesson} role="img" aria-label="Has a lesson" title="Has a lesson">

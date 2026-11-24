@@ -86,10 +86,18 @@ export const TITLE_LINE_HEIGHT = 17 / 13
 /** The padding above and below a title-only card's title, in board pixels: `--space-3`. */
 export const TITLE_PADDING = 12
 
-/** How many lines of title a title-only card of this height holds at this zoom, from one to three. */
-export function titleLines(zoom: number, height: number): number {
-  const line = TITLE_BASE_PX * TITLE_LINE_HEIGHT * titleScale(zoom, TITLE_LEVEL_PX)
-  return Math.max(1, Math.min(3, Math.floor((height - 2 * TITLE_PADDING) / line)))
+/**
+ * The room a title-only card keeps under its title for its badges (the lesson mark and the reader's notes), in board
+ * pixels before they grow with the title: a 16px row and 4px above it. Matches `CardNode.module.css`.
+ */
+export const TITLE_FOOT = 20
+
+/** How many lines of title a title-only card of this height holds at this zoom, from one to three, above its badges if it has any. */
+export function titleLines(zoom: number, height: number, foot = false): number {
+  const scale = titleScale(zoom, TITLE_LEVEL_PX)
+  const line = TITLE_BASE_PX * TITLE_LINE_HEIGHT * scale
+  const room = height - 2 * TITLE_PADDING - (foot ? TITLE_FOOT * scale : 0)
+  return Math.max(1, Math.min(3, Math.floor(room / line)))
 }
 
 /** What the current view hides, in plain words, or undefined when all lines and labels are shown. */

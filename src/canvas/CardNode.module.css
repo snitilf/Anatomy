@@ -227,6 +227,7 @@
 
 :global([data-detail='title']) .card {
   justify-content: center;
+  gap: 0;
   text-align: center;
 }
 
@@ -236,14 +237,15 @@
   text-wrap: balance;
 }
 
-/* The lesson and note badges keep their corner, out of the way of the centred title. */
+/*
+ * The lesson and note badges sit centred under the title and grow with it, so they read at the size the title does.
+ * `zoom` grows the room they take too, which `titleLines` in `far.ts` keeps free: a 16px row and 4px above it.
+ */
 :global([data-detail='title']) .foot {
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  margin: 0;
-  transform: scale(var(--title-scale, 1));
-  transform-origin: bottom right;
+  justify-content: center;
+  height: 16px;
+  margin-top: 4px;
+  zoom: var(--title-scale, 1);
 }
 
 .summary {
