@@ -19,6 +19,17 @@ export const STATE_WORD: Record<ItemState, string> = {
   relinking: 'Needs relinking',
 }
 
+/** What each state means, in words a visitor can act on. The status key lists them next to the glyphs. */
+export const STATE_MEANING: Record<ItemState, string> = {
+  unsent: 'Not with your agent yet.',
+  sent: 'Your agent has it, with no answer yet.',
+  answered: 'Your agent replied. Read it in Review.',
+  adopted: 'Your agent used it in the board.',
+  declined: 'Your agent chose not to use it.',
+  outdated: 'The part changed after you wrote this.',
+  relinking: 'Its part is gone. Link it to another.',
+}
+
 /**
  * Which state wins when an item, or the notes on one part, have more than one. An item that cannot be acted on comes first.
  * Then the agent's answer, which is new and which resolves the item. Then a part that changed, then what still has to be

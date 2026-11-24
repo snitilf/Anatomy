@@ -1,0 +1,111 @@
+/* A quiet text button, the same size as the "Show all" button beside it. */
+.trigger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  margin: 0 calc(var(--space-2) * -1) 0 auto;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.trigger[data-popup-open] {
+  background: var(--hover);
+  color: var(--fg-2);
+}
+
+.positioner {
+  z-index: 40;
+}
+
+.list {
+  box-sizing: border-box;
+  width: 300px;
+  max-width: calc(100vw - 16px);
+  padding: var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  color: var(--fg);
+  transform-origin: var(--transform-origin);
+}
+
+.list:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-float);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The glyph sits in the first column, and its word and meaning stack beside it. */
+.row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: start;
+}
+
+.row > svg {
+  margin-top: 2px;
+}
+
+.word {
+  grid-column: 2;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+}
+
+.meaning {
+  grid-column: 2;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  text-wrap: pretty;
+}
+
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--hover);
+    color: var(--fg-2);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .trigger {
+    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+  }
+
+  .list {
+    transition:
+      opacity 140ms var(--ease-out),
+      transform 140ms var(--ease-out);
+  }
+
+  .list[data-starting-style],
+  .list[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}

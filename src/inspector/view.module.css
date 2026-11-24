@@ -325,6 +325,13 @@
   cursor: pointer;
 }
 
+/* The button that shows the rest of a list on the left, and a key to it on the right. */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .plainList {
   display: grid;
   gap: var(--space-1);
