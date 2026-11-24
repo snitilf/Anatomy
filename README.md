@@ -6,6 +6,11 @@
 
 [Try it](https://snitilf.github.io/Anatomy/) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Docs](#documentation)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/map-dark.png">
+  <img src="docs/images/map-light.png" alt="A map of how Claude Code works, with the agent loop and the model lit by a walkthrough step and the rest of the parts dimmed." width="860">
+</picture>
+
 </div>
 
 Anatomy is a local web app that shows an AI coding agent's explanation of a codebase as an interactive architecture diagram.
