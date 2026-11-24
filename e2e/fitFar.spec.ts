@@ -7,7 +7,9 @@ const RP_LOOP = 'src/canvas/fixtures/rp-loop.board.json'
 
 test.use({ reducedMotion: 'reduce' })
 
+// At 390 px the loop board fits in the title level, and at 340 px in the far view, whose lines route around the cards.
 for (const size of [
+  { width: 390, height: 844, far: false },
   { width: 340, height: 844, far: true },
   { width: 1440, height: 900, far: false },
 ]) {

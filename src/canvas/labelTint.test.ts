@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FAR_ENTER, farLabelScale } from './far'
+import { FAR_ENTER, farLabelScale, labelScale } from './far'
 import { labelTint, readTint } from './labelTint'
 
 const group = { x: 0, y: 0, width: 200, height: 100 }
@@ -25,7 +25,7 @@ describe('labelTint', () => {
   })
 
   it('leaves out an area only just out of reach', () => {
-    const reach = (100 / 2) * farLabelScale(FAR_ENTER) + 8
+    const reach = (100 / 2) * Math.max(labelScale(FAR_ENTER, false), farLabelScale(FAR_ENTER)) + 8
     expect(labelTint([group], 200 + Math.ceil(reach) + 2, 50, 100, 1, false)).toBe('')
   })
 
@@ -35,6 +35,12 @@ describe('labelTint', () => {
 
   it('is the same text when nothing moved', () => {
     expect(labelTint([group], 200, 50, 100, 1, false)).toBe(labelTint([{ ...group }], 200, 50, 100, 1, false))
+  })
+
+  it('reaches as far as the largest label the title level draws, just above the far view', () => {
+    // At the title level a label grows so its words hold 11 px on screen, a little more than the far view's quarter steps.
+    const widest = (100 / 2) * Math.max(labelScale(FAR_ENTER, false), farLabelScale(FAR_ENTER)) + 8
+    expect(labelTint([group], 200 + Math.floor(widest) - 1, 50, 100, 1, false)).not.toBe('')
   })
 
   it('reaches further as the label is drawn larger, up to the zoom where the far view starts', () => {
