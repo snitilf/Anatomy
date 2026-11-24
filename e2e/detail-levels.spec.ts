@@ -229,6 +229,18 @@ test.describe('the opening view', () => {
     await expectWholeAndCentred(page)
   })
 
+  test('stays where it is when the hint is dismissed', async ({ page }) => {
+    // A board that fits by its height, so the room the hint took decides its zoom.
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, SIXTEEN)
+    await settled(page)
+    const before = await viewport(page)
+    await page.getByRole('note').getByRole('button', { name: 'Dismiss' }).click()
+    await expect(page.getByRole('note')).toHaveCount(0)
+    await settled(page)
+    expect(await viewport(page)).toBe(before)
+  })
+
   test('follows a resize while the reader has not moved it, and keeps their zoom once they have', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await open(page, CLAUDE)
