@@ -128,14 +128,14 @@ See [the hosted copy](docs/architecture.md#the-hosted-copy) for what it does.
 | `npm install` | Installs the packages. |
 | `npm ci` | Installs the exact versions in `package-lock.json`, as CI does. |
 | `npm run dev` | Starts the dev server on `http://127.0.0.1:5173`. |
-| `npm run build` | Type-checks and builds the static app into `dist/`. |
-| `npm run build:pages` | Builds the hosted copy, with base path `/Anatomy/`, into `dist-pages/`. |
+| `npm run build` | Type-checks and builds the static app into `dist/`. Every file is addressed relative to the page, so the same build runs from a folder, from the root of a server, and from a subpath. |
 | `npm run preview` | Serves the built app on `127.0.0.1`. |
 | `npm run typecheck` | Runs the TypeScript compiler in strict mode. |
 | `npm run lint` | Runs oxlint. |
 | `npm test` | Runs the unit tests once with Vitest. |
 | `npm run check` | Runs type-check, lint, and tests in sequence. |
 | `npm run test:e2e` | Builds the app in the `e2e` mode and runs the browser tests with the installed Google Chrome. |
+| `npm run test:browsers` | Runs the journey test in WebKit and Firefox. Run `npx playwright install webkit firefox` once first. CI does not run it. |
 | `npm run schema` | Writes `schema/board.v1.schema.json` and the field list `schema/board.v1.fields.txt` from the Zod schema. Run it after a schema change. |
 | `npm run outlines` | Writes `src/app/exampleOutlines.generated.ts` from `src/examples/*.board.json` so the start screen previews match the real boards. |
 | `npm run anatomy -- <command>` | Runs the `anatomy` tool from the source, for example `npm run anatomy -- validate path/to/board.json`. See [Board format](docs/board-format.md#check-a-board-outside-the-app). |
@@ -150,9 +150,10 @@ Each pull request and each push to `main` runs type checks, lint, unit tests, a 
 Run the frame-time gate locally before you merge: `npx playwright test e2e/performance.spec.ts --workers=1`.
 Hosted CI reports that gate without enforcing it, because runner resources can distort frame timing.
 
-To cut a release, run `npm version <patch|minor>`, then `git push --follow-tags`.
-A tag that starts with `v` starts the release workflow.
-That workflow attaches a zip with the app and its local run instructions to the GitHub Release.
+To cut a release, follow [the release checklist](docs/release-checklist.md).
+A tag that starts with `v` and matches `version` in `package.json` starts the release workflow.
+That workflow runs every gate, then attaches a zip to the GitHub Release, with the notes from `docs/release-notes/<version>.md`.
+The zip holds the built app, `serve.mjs` to run it with Node, and `README-run.txt`.
 
 <details>
 <summary>Stack</summary>

@@ -1,7 +1,7 @@
 {
   "name": "anatomy",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A local browser app that turns a plan, feature, or project into a map you can explore, question, and mark up.",
   "author": "Filip Snitil",
   "license": "MIT",
@@ -17,13 +17,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:pages": "tsc -b && vite build --base /Anatomy/ --outDir dist-pages --emptyOutDir",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "oxlint --deny-warnings",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:browsers": "playwright test -c playwright.browsers.config.ts",
     "check": "npm run typecheck && npm run lint && npm run test",
     "schema": "node scripts/generate-schema.ts",
     "outlines": "node scripts/generate-outlines.ts",
