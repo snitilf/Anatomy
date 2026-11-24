@@ -1,8 +1,9 @@
 import clsx from 'clsx'
 import { CircleHelp, Pencil, StickyNote, Trash2 } from 'lucide-react'
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
+import { Segmented, type SegmentedOption } from '../app/Segmented'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { Tip } from '../app/Tip'
 import { useUi, useUiApi } from '../app/ui'
@@ -280,6 +281,11 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
   )
 }
 
+const KINDS: readonly SegmentedOption<Note['kind']>[] = [
+  { value: 'note', label: 'Note' },
+  { value: 'question', label: 'Question' },
+]
+
 /**
  * The pinned field to write a note or a question about what the panel shows. One row at rest. When it has focus or words,
  * it grows, with the kind and the Add button under it. C focuses it from anywhere. Cmd or Ctrl with Enter adds.
@@ -287,7 +293,6 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
 export function Composer({ target }: { target: Target }) {
   const dispatch = useAppDispatch()
   const ui = useUiApi()
-  const name = useId()
   const form = useRef<HTMLFormElement>(null)
   const field = useRef<HTMLTextAreaElement>(null)
   const [kind, setKind] = useState<Note['kind']>('note')
@@ -361,14 +366,14 @@ export function Composer({ target }: { target: Target }) {
         </div>
         {active && (
           <div className={styles.composerFoot}>
-            <div className={styles.switch} role="radiogroup" aria-label="Kind">
-              {(['note', 'question'] as const).map((k) => (
-                <label key={k} className={styles.option}>
-                  <input type="radio" name={name} className={styles.radio} checked={kind === k} onChange={() => setKind(k)} />
-                  <span className={styles.face}>{k === 'note' ? 'Note' : 'Question'}</span>
-                </label>
-              ))}
-            </div>
+            <Segmented
+              kind="choice"
+              size="sm"
+              label="Kind"
+              value={kind}
+              options={KINDS}
+              onChange={setKind}
+            />
             {text.length >= LAYER_LIMITS.noteText - 200 && (
               <span className={styles.counter} role="status">
                 {text.length} of {LAYER_LIMITS.noteText}

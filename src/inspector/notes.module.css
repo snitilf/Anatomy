@@ -393,46 +393,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Note or question: a two-way switch. */
-.switch {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--radius-sm);
-  background: var(--hover);
-}
-
-.option {
-  position: relative;
-  display: inline-flex;
-}
-
-.radio {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.face {
-  padding: 1px var(--space-2);
-  border-radius: var(--radius-xs);
-  color: var(--fg-2);
-  font-size: var(--text-sm);
-  line-height: 20px;
-  font-weight: var(--weight-medium);
-}
-
-.radio:checked + .face {
-  background: var(--raised);
-  color: var(--fg);
-  box-shadow: 0 0 0 1px var(--border);
-}
-
-.radio:focus-visible + .face {
-  box-shadow: var(--ring);
-}
-
 @media (hover: hover) and (pointer: fine) {
   .note:hover .tools {
     opacity: 1;
