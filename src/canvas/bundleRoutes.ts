@@ -41,8 +41,8 @@ export function blocksOf(board: Board, rects: Readonly<Record<string, Rect>>): M
 export const ROUTE_SHRINK = 3
 
 /** How high above a group, in board pixels, and how far along its top edge, its name takes room. */
-export const NAME_ROOM = 120
-const NAME_SHARE = 0.45
+export const NAME_ROOM = 150
+const NAME_SHARE = 0.9
 
 /** The corner radius of a bundled line, in board pixels. */
 const CORNER = 28

@@ -245,11 +245,11 @@
   height: 0;
 }
 
-/* The name sits just above the top edge of its group, at a size that reads on screen. */
+/* The name of a group, at the place `farNames` found clear of parts, lines, and other names, at a size that reads on screen. */
 .name {
   position: absolute;
+  top: 0;
   left: 0;
-  bottom: calc(5px * var(--label-scale, 1));
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -270,14 +270,21 @@
   cursor: zoom-in;
   pointer-events: auto;
   transform: scale(var(--label-scale, 1));
-  transform-origin: 0 100%;
+  transform-origin: 0 0;
 }
 
-/* Another block sits too close above: the name sits just inside the top of its own block. */
+/*
+ * A name that reaches onto its block sits on the map's ground above the block's top edge (`--edge`, at natural size) and
+ * on the block's own wash below it, which shows through, also while the block is lifted.
+ */
 .name[data-inside] {
-  top: calc(5px * var(--label-scale, 1));
-  bottom: auto;
-  transform-origin: 0 0;
+  background: linear-gradient(var(--bg) var(--edge), transparent var(--edge));
+}
+
+/* No free place on the map: the name is left off and shows only while it has focus. A press on the block zooms in all the same. */
+.name[data-hidden]:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .name:hover .text {

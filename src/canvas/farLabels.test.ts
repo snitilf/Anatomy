@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bundle } from './bundleRoutes'
-import { countHeight, countWidth, farNames, groupNameRect, isMixed, nameRoom, placeCounts, YOURS_TICK } from './farLabels'
+import { countHeight, countWidth, farNames, isMixed, nameRoom, placeCounts, tagRect, YOURS_TICK } from './farLabels'
 
 const bundle = (id: string, count: number, points: { x: number; y: number }[]): Bundle => ({ id, a: 'a', b: 'b', count, ab: count, ba: 0, connectionIds: [], mine: false, yours: 0, d: '', points, width: 2 })
 const hit = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
@@ -32,16 +32,6 @@ describe('counts on bundled lines', () => {
   it('keeps two counts apart', () => {
     const at = placeCounts([bundle('x', 5, line), bundle('y', 5, line)], [], 4)
     expect(at.get('x')).not.toEqual(at.get('y'))
-  })
-})
-
-describe('the room of a group name', () => {
-  it('sits above the top edge and grows with the scale', () => {
-    const area = { x: 100, y: 300, width: 500, height: 400 }
-    const small = groupNameRect(area, 'Backend', 15, 2)
-    const large = groupNameRect(area, 'Backend', 15, 6)
-    expect(small.y + small.height).toBeLessThan(300)
-    expect(large.width).toBeGreaterThan(small.width * 2.5)
   })
 })
 
@@ -84,13 +74,23 @@ describe('where a group name goes in the far view', () => {
     expect(rect.x + rect.width).toBeLessThanOrEqual(frame.x + frame.width)
   })
 
-  it('puts a name inside its own block when another block sits too close above it', () => {
+  it('sits just above its block and grows with the scale', () => {
+    const groups = [group('g', 100, 300, 'Backend', 500)]
+    const small = farNames(groups, [], frameOf(groups), 2).get('g')!
+    const large = farNames(groups, [], frameOf(groups), 6).get('g')!
+    expect(small.rect.y + small.rect.height).toBeLessThan(300)
+    expect(small.inside).toBe(false)
+    expect(large.rect.width).toBeGreaterThan(small.rect.width * 2.5)
+  })
+
+  it('moves down onto the top edge of its block when another block sits too close above it', () => {
     const groups = [group('top', 0, 0), group('below', 0, 340)]
-    const placed = farNames(groups, [], frameOf(groups), 2.5)
-    const name = placed.get('below')!
+    const name = farNames(groups, [], frameOf(groups), 2.5).get('below')!
     expect(name.inside).toBe(true)
-    // Inside, it covers nothing of the block above.
-    expect(name.rect.y).toBeGreaterThanOrEqual(340)
+    // It covers nothing of the block above, and the block's edge runs across it.
+    expect(name.rect.y).toBeGreaterThanOrEqual(300)
+    expect(name.edge).toBeGreaterThan(0)
+    expect(name.edge).toBeLessThan(20)
   })
 
   it('keeps a name above its block when the room above is clear', () => {
@@ -107,12 +107,85 @@ describe('where a group name goes in the far view', () => {
     expect(hit(name.rect, tile)).toBe(false)
   })
 
+  it('moves along the top edge past a line that comes down into the block', () => {
+    const groups = [group('g', 0, 200, 'Backend', 600)]
+    const line = bundle('a|g', 3, [
+      { x: 60, y: 0 },
+      { x: 60, y: 200 },
+    ])
+    const name = farNames(groups, [], { x: 0, y: 0, width: 600, height: 500 }, 2, [line]).get('g')!
+    expect(name.inside).toBe(false)
+    expect(name.rect.x).toBeGreaterThan(60)
+    expect(name.rect.y + name.rect.height).toBeLessThanOrEqual(200)
+  })
+
   it('goes below its block when the room above and the top of the block are taken', () => {
     // A block close above, and tiles right at the top of the group.
     const groups = [group('top', 0, 0), group('g', 0, 340)]
     const tiles = [{ x: 0, y: 348, width: 280, height: 200 }]
     const name = farNames(groups, tiles, { x: 0, y: 0, width: 280, height: 800 }, 2.5).get('g')!
-    expect(hit(name.rect, tiles[0]!)).toBe(false)
+    expect(name.hidden).toBe(false)
     expect(name.rect.y).toBeGreaterThanOrEqual(640)
+  })
+
+  it('is cut short, but keeps its count and a few letters', () => {
+    // A block right below, tiles that fill the group, and a line that comes down 90 board pixels in, at a scale of 1:
+    // above the group there is room for about 80 pixels of name, less than the whole.
+    const groups = [group('g', 0, 200, 'A long name for a group of parts', 280), group('under', 0, 510)]
+    const line = bundle('a|g', 3, [
+      { x: 90, y: 0 },
+      { x: 90, y: 200 },
+    ])
+    const name = farNames(groups, [{ x: 0, y: 204, width: 280, height: 296 }], frameOf(groups), 1, [line]).get('g')!
+    expect(name.hidden).toBe(false)
+    expect(name.room).toBeGreaterThanOrEqual(64)
+    expect(name.room).toBeLessThan(150)
+    expect(name.rect.x + name.rect.width).toBeLessThanOrEqual(90)
+  })
+
+  it('is left off the map when there is no free place for it', () => {
+    // The group is boxed in: blocks right above and below, and its own tiles fill it to the edges.
+    const groups = [group('top', 0, 0), group('g', 0, 320), group('under', 0, 640)]
+    const tiles = [{ x: 0, y: 322, width: 280, height: 296 }]
+    const name = farNames(groups, tiles, frameOf(groups), 3).get('g')!
+    expect(name.hidden).toBe(true)
+  })
+
+  it('keeps clear of the name tag of a lit tile', () => {
+    const groups = [group('g', 0, 200, 'Your machine', 600)]
+    const tile = { x: 20, y: 240, width: 240, height: 112 }
+    const tag = tagRect(tile, 'You and your prompt', 2)
+    expect(tag.y + tag.height).toBeLessThan(tile.y)
+    const name = farNames(groups, [tile, tag], { x: 0, y: 0, width: 600, height: 600 }, 2).get('g')!
+    expect(hit(name.rect, tag)).toBe(false)
+    expect(name.hidden).toBe(false)
+  })
+
+  it('never covers a tile, a line, or another name', () => {
+    const groups = [group('a', 0, 0, 'Frontend services'), group('b', 320, 0, 'Backend'), group('c', 0, 340, 'Data and storage'), group('d', 320, 340, 'Jobs')]
+    const tiles = groups.flatMap((g) => [
+      { x: g.area.x + 16, y: g.area.y + 46, width: 240, height: 112 },
+      { x: g.area.x + 16, y: g.area.y + 182, width: 240, height: 112 },
+    ])
+    const lines = [
+      bundle('a|c', 2, [
+        { x: 140, y: 300 },
+        { x: 140, y: 340 },
+      ]),
+      bundle('b|d', 2, [
+        { x: 380, y: 300 },
+        { x: 380, y: 320 },
+        { x: 560, y: 320 },
+        { x: 560, y: 340 },
+      ]),
+    ]
+    for (const scale of [1, 2, 3, 4, 6]) {
+      const placed = [...farNames(groups, tiles, frameOf(groups), scale, lines).values()].filter((n) => !n.hidden)
+      for (const [i, n] of placed.entries()) {
+        for (const t of tiles) expect(hit(n.rect, t)).toBe(false)
+        for (const o of placed.slice(i + 1)) expect(hit(n.rect, o.rect)).toBe(false)
+        for (const l of lines) for (const [p, q] of l.points.slice(1).map((q, k) => [l.points[k]!, q] as const)) expect(hit(n.rect, { x: Math.min(p.x, q.x) - 1, y: Math.min(p.y, q.y) - 1, width: Math.abs(q.x - p.x) + 2, height: Math.abs(q.y - p.y) + 2 })).toBe(false)
+      }
+    }
   })
 })
