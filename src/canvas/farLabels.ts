@@ -46,7 +46,7 @@ export interface FarName {
   inside: boolean
   /** How far down the name the block's top edge runs, at natural size: the name is on the map's ground above it. */
   edge: number
-  /** No free place was found: the name is left off the map and shows only when its block is hovered or it has focus. */
+  /** No free place was found: the name is left off the map and shows only while it has focus. */
   hidden: boolean
 }
 
