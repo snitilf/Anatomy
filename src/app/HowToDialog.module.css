@@ -35,7 +35,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin: 0 -8px var(--space-3) 0;
+  margin: 0 calc(var(--space-2) * -1) var(--space-3) 0;
 }
 
 .title {
@@ -47,7 +47,7 @@
 
 .steps {
   margin: 0 0 var(--space-4);
-  padding-left: 20px;
+  padding-left: var(--space-5);
   display: grid;
   gap: var(--space-1);
   color: var(--fg);
@@ -89,7 +89,7 @@
   background: var(--panel);
   color: var(--fg);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
   line-height: 18px;
 }
 

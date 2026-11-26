@@ -1,0 +1,96 @@
+/*
+ * The segmented control: a track and, under the selected segment, a raised thumb. It replaces the three hand-made switches.
+ * Two sizes: 28 outside with a 24 thumb, and 24 outside with a 20 thumb. Both follow the control tokens.
+ * The thumb does not slide. The selected segment is the thumb.
+ */
+
+.track {
+  --size: var(--control-md);
+  --thumb: calc(var(--size) - 4px);
+  display: inline-flex;
+  box-sizing: border-box;
+  height: var(--size);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+}
+
+.small {
+  --size: var(--control-sm);
+}
+
+.segment {
+  position: relative;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  box-sizing: border-box;
+  height: var(--thumb);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--fg-2);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.small .segment {
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+/* The hit area grows to --hit, as it does for a button. The 1px is the border. */
+.segment::after {
+  content: '';
+  position: absolute;
+  inset-block: min(-1px, calc((var(--thumb) - var(--hit)) / 2 - 1px));
+  inset-inline: 0;
+}
+
+.segment[aria-selected='true'],
+.segment[aria-checked='true'] {
+  background: var(--raised);
+  border-color: var(--border);
+  box-shadow: var(--card-shadow);
+  color: var(--fg);
+}
+
+.count {
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .segment:not([aria-selected='true'], [aria-checked='true'], :disabled):hover {
+    color: var(--fg);
+  }
+}
+
+.segment:not([aria-selected='true'], [aria-checked='true'], :disabled):active {
+  background: var(--active);
+  color: var(--fg);
+}
+
+.segment:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.segment:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A short segment on a touch screen is at least as wide as the hit area, as a button is. */
+@media (pointer: coarse) {
+  .segment {
+    min-width: var(--hit);
+  }
+}

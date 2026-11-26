@@ -18,7 +18,8 @@ function Lead() {
   const openFile = useCommand('open.file')
   const copyPrompt = useCommand('copy.prompt')
   const howTo = useCommand('howto')
-  const primary = clsx(buttons.button, buttons.primary)
+  const primary = clsx(buttons.button, buttons.primary, buttons.large)
+  const secondary = clsx(buttons.button, buttons.large)
 
   if (folder?.state === 'missing') {
     return (
@@ -31,7 +32,7 @@ function Lead() {
           <button type="button" className={primary} onClick={copyPrompt.run}>
             Copy prompt
           </button>
-          <button type="button" className={buttons.button} onClick={howTo.run}>
+          <button type="button" className={secondary} onClick={howTo.run}>
             How to make a board
           </button>
         </div>
@@ -39,7 +40,7 @@ function Lead() {
     )
   }
   const fileButton = (main: boolean) => (
-    <button type="button" className={main ? primary : buttons.button} onClick={openFile.run}>
+    <button type="button" className={main ? primary : secondary} onClick={openFile.run}>
       Open file
     </button>
   )
@@ -53,7 +54,7 @@ function Lead() {
             <button type="button" className={primary} onClick={reopenFolder}>
               Reopen {folder.name}
             </button>
-            <button type="button" className={buttons.button} onClick={openFolder}>
+            <button type="button" className={secondary} onClick={openFolder}>
               Open another folder
             </button>
           </>

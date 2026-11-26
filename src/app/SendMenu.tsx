@@ -39,7 +39,7 @@ function PromptBox({ prompt }: { prompt: string }) {
       <Tip label={copied === false ? 'Could not copy' : copied ? 'Copied' : 'Copy prompt'}>
         <button
           type="button"
-          className={clsx(buttons.button, buttons.quiet, buttons.icon, styles.copy)}
+          className={clsx(buttons.button, buttons.quiet, buttons.small, buttons.icon, styles.copy)}
           aria-label="Copy prompt"
           onClick={() => void copyText(prompt).then(setCopied)}
         >
@@ -167,7 +167,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
       {firstSkipped && (
         <button
           type="button"
-          className={clsx(buttons.button, buttons.small)}
+          className={clsx(buttons.button, buttons.link, buttons.small)}
           onClick={() => {
             setOpen(false)
             dispatch({ type: 'select', selection: { type: 'mark', id: firstSkipped } })
@@ -250,7 +250,7 @@ export function SendMenu({ className }: { className?: string | undefined }) {
         {skippedLine}
         <div className={styles.foot}>
           <p className={styles.line}>{inFolder ? 'Writes .anatomy/feedback.json and copies a prompt.' : 'Downloads feedback.json.'}</p>
-          <button ref={sendRef} type="button" className={clsx(buttons.button, buttons.primary)} disabled={busy} onClick={() => send()}>
+          <button ref={sendRef} type="button" className={clsx(buttons.button, buttons.primary, buttons.large)} disabled={busy} onClick={() => send()}>
             {inFolder ? 'Send' : 'Download and copy'}
           </button>
         </div>

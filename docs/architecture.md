@@ -41,10 +41,36 @@ React components read from the app state and dispatch actions.
 | `src/canvas/` | React Flow map: cards, group areas, connections, user links. | `@xyflow/react`, `src/app/` |
 | `src/whiteboard/` | The tool bar, the draw surface, the ink layer, text and sticky notes, proposed parts, the in-place editor, and the end handles that move line ends. Arrow geometry and end drops are pure functions. | `@xyflow/react`, `perfect-freehand`, `src/app/`, `src/layer/` |
 | `src/inspector/` | The sidebar: the overview, a view for every kind of selection, the flow block, notes and the agent's answers, the Review tab, and the bottom sheet on a phone. | `src/app/`, `src/commands/`, `src/text/` |
-| `src/scenarios/` | The walkthrough bar: step state, highlights, captions, and its one line that says nothing runs. | `src/app/`, `src/commands/` |
+| `src/scenarios/` | The walkthrough bar: step state, highlights, captions, its Previous, Next (Done on the last step), and Close controls, and its one line that says nothing runs. | `src/app/`, `src/commands/` |
 | `src/notes/` | Note targets in words, the review counts after an update, and the undo toast. | `src/layer/`, `src/app/` |
 | `src/theme/` | Theme choice (system, light, dark), stored in `localStorage` and applied as `data-theme` on `<html>`. An inline script in `index.html` applies it before the first paint. | `react` |
-| `src/styles/` | Design tokens: colors for both themes (checked for contrast in `tokens.test.ts`), type scale, spacing, radii, and the one shadow for floating surfaces. | none |
+| `src/styles/` | Design tokens: colors for both themes (checked for contrast in `tokens.test.ts`), type scale, spacing, radii, the control and row sizes (each larger under a coarse pointer), and the one shadow for floating surfaces. | none |
+
+## Controls
+
+One file owns each kind of control, and every other style sheet reaches it through a shared class.
+`src/app/buttons.module.css` owns the buttons.
+`src/app/rows.module.css` owns the list rows.
+`src/app/Segmented.tsx` and `Segmented.module.css` own the segmented control.
+
+A button has a variant and a size.
+The variants are the default (secondary), `primary` for the one main action of a surface, `quiet` for toolbars and icon buttons, and `link` for a word that acts, which is underlined at rest.
+The sizes are `small`, the default, and `large`, and `icon` makes a button square.
+Each size reads its height from `--control-sm`, `--control-md`, or `--control-lg` in `src/styles/tokens.css`: 24, 28, and 32 px with a fine pointer, and 32, 36, and 44 px with a coarse one.
+The area that answers a press grows to `--hit` around the button without changing how it looks.
+A row reads its height from `--row-sm` or `--row-md` in the same way.
+
+A control answers a press at once: the fill changes on pointer-down with no transition, and a button also scales to 0.97, except with reduced motion.
+Hover applies only to a fine pointer.
+A disabled control is dimmed to half and has no hover or press.
+A control that is off but must keep focus, such as Previous on the first step, uses `aria-disabled`.
+
+`Segmented` is a tablist for views or a radiogroup for a choice.
+It has one stop in the tab order.
+The arrow keys move focus and the selection together, skip a disabled segment, and wrap.
+
+`src/styles/controls.test.ts` counts the hand-written `appearance: none` rules and the hand-written 28 px heights outside the three owner files.
+`src/styles/controls.baseline.json` holds the most that it allows, and each change that moves a control onto the shared classes lowers it.
 
 ## Cards and the map
 

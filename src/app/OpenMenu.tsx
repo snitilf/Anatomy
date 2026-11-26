@@ -1,9 +1,11 @@
 import { Popover } from '@base-ui/react/popover'
+import clsx from 'clsx'
 import { FileUp, FolderOpen } from 'lucide-react'
 import { useState, type ReactElement } from 'react'
 import { useCommand } from '../commands/context'
 import { ExampleList } from './ExamplesMenu'
 import styles from './OpenMenu.module.css'
+import rows from './rows.module.css'
 import { SavedBoardList } from './SavedBoards'
 import { useWorkspace } from './workspaceContext'
 
@@ -30,26 +32,26 @@ export function OpenMenu({ trigger }: { trigger: ReactElement }) {
             {folder.visible && (
               <button
                 type="button"
-                className={styles.file}
+                className={rows.row}
                 onClick={() => {
                   close()
                   folder.run()
                 }}
               >
-                <FolderOpen size={16} strokeWidth={1.5} aria-hidden="true" />
+                <FolderOpen className={rows.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
                 {folder.label}
-                <kbd className={styles.keys}>{folder.shortcut}</kbd>
+                <kbd className={clsx(rows.meta, styles.keys)}>{folder.shortcut}</kbd>
               </button>
             )}
             <button
               type="button"
-              className={styles.file}
+              className={rows.row}
               onClick={() => {
                 close()
                 file.run()
               }}
             >
-              <FileUp size={16} strokeWidth={1.5} aria-hidden="true" />
+              <FileUp className={rows.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
               {file.label}
             </button>
             {saved.length > 0 && (

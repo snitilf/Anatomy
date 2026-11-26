@@ -7,10 +7,11 @@ const root = process.cwd()
 
 /**
  * The most that the page may load at start, minified, before compression: the first script and every script it imports
- * statically, because a shared script the bundler splits off still loads before the first paint. It sits a little above
- * the size of today's build (about 1,003,000 bytes). `chunkSizeWarningLimit` in `vite.config.ts` warns on the first script alone.
+ * statically, because a shared script the bundler splits off still loads before the first paint. Today's build loads about
+ * 1,010,500 bytes; the budget leaves about 20,000 bytes for the rest of the control work (D155).
+ * `chunkSizeWarningLimit` in `vite.config.ts` warns on the first script alone.
  */
-const FIRST_SCRIPT_BUDGET = 1_010_000
+const FIRST_SCRIPT_BUDGET = 1_030_000
 
 let entry: Rolldown.OutputChunk
 let chunks: Rolldown.OutputChunk[]

@@ -3,9 +3,17 @@
  * `data-theme` on <html> is always `light` or `dark`; public/theme.js sets it before the first paint.
  */
 
-/* The smallest hit area of a control. The control keeps its look; the area around it answers the pointer too. */
+/*
+ * The smallest hit area of a control. The control keeps its look; the area around it answers the pointer too.
+ * Controls and rows come in sizes, each larger under a coarse pointer: small, medium, and large controls, and the two row heights.
+ */
 :root {
   --hit: 32px;
+  --control-sm: 24px;
+  --control-md: 28px;
+  --control-lg: 32px;
+  --row-sm: 28px;
+  --row-md: 32px;
 }
 
 /* Every neutral shares the cool slate-violet family at low chroma: frame, shell, canvas, cards, in that order in both themes. */
@@ -157,6 +165,16 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* The longest line of prose: the goal of a board, and any paragraph that is not in a narrow panel. */
+  --measure: 68ch;
+
+  /* Tracking by size: tighter on a title, none on body text, a little open on small labels. */
+  --tracking-title: -0.015em;
+  --tracking-heading: -0.01em;
+  --tracking-label: 0.01em;
 
   /* Radii: 4 small marks, 6 controls, 8 cards and popovers, 12 dialogs and groups. */
   --radius-xs: 4px;
@@ -172,5 +190,10 @@
 @media (pointer: coarse) {
   :root {
     --hit: 44px;
+    --control-sm: 32px;
+    --control-md: 36px;
+    --control-lg: 44px;
+    --row-sm: 44px;
+    --row-md: 44px;
   }
 }
