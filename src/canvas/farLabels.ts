@@ -150,9 +150,11 @@ export function farNames(
       placed.push(rect)
       out.set(g.id, { rect, room: spot.width / scale, inside: spot.top + line > y && spot.top < y + height, edge, hidden: false })
     } else {
-      // Where it shows while it has focus: just above the block, over its width.
-      const fits = Math.min(whole * scale, width)
-      out.set(g.id, { rect: { x, y: above, width: fits, height: line }, room: fits / scale, inside: false, edge: NAME_LINE, hidden: true })
+      // Where it shows while it has focus: just above the block, from its left edge, as wide as a cut name at least.
+      // It moves left, where it can, to end at the right edge of the frame.
+      const fits = Math.min(whole, NAME_MAX, Math.max(NAME_MIN, (right - x) / scale))
+      const at = Math.max(frame.x, Math.min(x, right - fits * scale))
+      out.set(g.id, { rect: { x: at, y: above, width: fits * scale, height: line }, room: fits, inside: false, edge: NAME_LINE, hidden: true })
     }
   }
   return out
