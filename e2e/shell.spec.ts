@@ -171,10 +171,13 @@ test('the Map tab left edge stays pixel-identical across selections, views, exam
   await open(page, WORST)
   expect(await mapLeft()).toBe(baseline)
 
-  // All three built-in examples.
+  // All three built-in examples, opened through the Open menu.
   for (const name of [/How the Claude Code harness works/, /Anatomy itself/, /How a large language model/]) {
-    await page.goto('/')
-    await page.getByRole('button', { name }).click()
+    await page.getByRole('banner').getByTestId('brand-mark').click()
+    const menu = page.getByRole('dialog', { name: 'Open' })
+    await expect(menu).toBeVisible()
+    await menu.getByRole('button', { name }).click()
+    await expect(menu).toBeHidden()
     await expect(page.getByRole('tab', { name: 'Map' })).toBeVisible()
     expect(await mapLeft()).toBe(baseline)
   }
@@ -197,7 +200,12 @@ for (const [width, height] of [
     }
     await checkCentered()
     // Adding a note puts a count badge on Send; the switch must still stay centered.
-    await page.keyboard.press('c')
+    if (width <= 760) {
+      await page.locator('.react-flow__node-card').first().click()
+      await expect(page.getByRole('region', { name: 'Sidebar' })).toHaveAttribute('data-stop', '1')
+    } else {
+      await page.keyboard.press('c')
+    }
     const composer = page.locator('[data-composer]')
     await composer.fill('Count check')
     await composer.press('ControlOrMeta+Enter')
@@ -281,13 +289,23 @@ test('keyboard path on the top bar: arrows switch views and Escape leaves the Op
   const overviewTab = page.getByRole('tab', { name: 'Overview' })
   await mapTab.focus()
   await page.keyboard.press('ArrowRight')
-  await expect(overviewTab).toBeFocused()
   await expect(overviewTab).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('overview')).toBeVisible()
+  await overviewTab.focus()
   await page.keyboard.press('ArrowLeft')
   await expect(mapTab).toBeFocused()
   await expect(mapTab).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('overview')).toHaveCount(0)
+
+  // Open menu via keyboard and close with Escape.
+  const crumb = page.getByRole('banner').getByRole('button', { name: 'Local file' })
+  await crumb.focus()
+  await page.keyboard.press('Enter')
+  const menu = page.getByRole('dialog', { name: 'Open' })
+  await expect(menu).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(menu).toBeHidden()
+  await expect(crumb).toBeFocused()
 })
 
 test.describe('top bar with reduced motion', () => {

@@ -30,7 +30,7 @@ const key = (k: string, mods: { meta?: boolean; shift?: boolean } = {}, target: 
 describe('App', () => {
   it('shows the open actions and the examples when no board is open', () => {
     render(<App />)
-    const banner = within(screen.getByRole('banner'))
+    const banner = within(document.querySelector('header')!)
     expect(banner.getByText('Anatomy')).toBeInTheDocument()
     expect(banner.queryByRole('heading')).not.toBeInTheDocument()
     // A small mark sits beside the word. It is a picture, so it has no name of its own.

@@ -1,21 +1,39 @@
+/* Three zones: left (mark and breadcrumb), center (view switch, fixed in the middle), right (Search, Send, sidebar, Settings). */
 .bar {
   position: relative;
   z-index: 30;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 0;
+  column-gap: var(--space-3);
   height: 40px;
   flex: none;
   padding: 0 var(--space-3);
   background: var(--frame);
 }
 
+.start {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 /* The mark and the word, on one line. The mark sits 6px from the word and is as high as its capitals and a little more. */
 .brand {
+  grid-column: 1;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 var(--space-2);
+  min-width: 0;
+}
+
+.center {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  align-items: center;
 }
 
 .mark {
@@ -31,27 +49,24 @@
   color: var(--fg);
 }
 
-.crumb {
-  appearance: none;
-  display: inline-flex;
+/* The crumb, the board, the group, and the part. Under pressure the middle ones give up room first, then the folder, then the part. */
+.trail {
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
   flex: 0 1 auto;
   min-width: 0;
-  max-width: 220px;
-  height: 28px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg-2);
-  font: inherit;
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
 }
 
-.crumb svg {
+.crumb {
+  gap: var(--space-1);
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 180px;
+  padding: 0 var(--space-2);
+  justify-content: flex-start;
+}
+
+.chevron {
   flex: none;
   color: var(--fg-3);
 }
@@ -63,55 +78,15 @@
   white-space: nowrap;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .crumb:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-.crumb[data-popup-open] {
-  background: var(--active);
-  color: var(--fg);
-}
-
-.crumb:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-/* The crumb, the board, the group, and the part. Under pressure the middle ones give up room first, then the folder, then the part. */
-.trail {
-  display: flex;
-  align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.trail > .crumb {
-  flex: 0 2 auto;
-  max-width: 180px;
-  /* The folder never shows fewer than about seven letters: padding, the gap, the chevron, and seven letters of the name. The board and the group fold into the menu before the folder gives up more. */
-  min-width: 88px;
-}
-
 .segment {
-  appearance: none;
-  position: relative;
-  height: 28px;
+  display: block;
   min-width: 0;
   padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg-2);
-  font: inherit;
-  font-weight: var(--weight-medium);
+  line-height: calc(var(--size) - 2px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+  text-align: left;
 }
 
 .middle {
@@ -126,18 +101,6 @@
 .fold {
   flex: none;
   padding: 0 var(--space-2);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .segment:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-.segment:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 .slash {
@@ -162,68 +125,10 @@
   color: var(--fg);
 }
 
-/* The board segment sits in the heading. It keeps the heading's place and the crumb's look. */
 .title.step {
   display: flex;
   flex: 0 4 auto;
   padding: 0;
-}
-
-/* A rule keeps the tabs apart from the crumb, so the view you are in never reads as one more segment of where you are. */
-.viewsRoot {
-  position: relative;
-  flex: none;
-  margin-left: var(--space-3);
-  padding-left: var(--space-3);
-}
-
-.viewsRoot::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 1px;
-  background: var(--border-strong);
-}
-
-.views {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* Text tabs: 28px, no border, the active one on the active fill. */
-.view {
-  appearance: none;
-  height: 28px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg-3);
-  font: inherit;
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .view:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-.view[data-active],
-.view[aria-selected='true'] {
-  background: var(--active);
-  color: var(--fg);
-}
-
-.view:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 .save {
@@ -239,10 +144,11 @@
 
 /* Three groups, 16px apart: find, send, view. Inside a group the controls sit 4px apart. */
 .end {
+  grid-column: 3;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  margin-left: auto;
   flex: none;
 }
 
@@ -250,24 +156,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-}
-
-/* Controls are 28px high, and the icon-only ones 28px wide. */
-.bar .control {
-  min-height: 28px;
-}
-
-.bar .square {
-  width: 28px;
-}
-
-/* The pointer answers a little outside the look of the control. */
-.bar .control::after {
-  inset-block: min(-2px, calc((28px - var(--hit)) / 2));
-}
-
-.bar .square::after {
-  inset-inline: min(-2px, calc((28px - var(--hit)) / 2));
 }
 
 .search {
@@ -296,20 +184,35 @@
   color: var(--fg);
 }
 
-/* Phone: the tabs, search, send, and settings. The crumb, Saved, and the sidebar toggle step aside. */
+/* Keeps the sidebar toggle's 28px slot on the Overview so Search and Send never jump. */
+.toggleSlot {
+  width: var(--control-md);
+  height: var(--control-md);
+  flex: none;
+}
+
+/* Phone: mark + chevron at the left, centered view switch, Search + Send + Settings at the right. */
 @media (max-width: 760px) {
   .bar {
-    padding: 0 var(--space-2);
+    padding: 0 var(--space-1);
+    column-gap: var(--space-1);
   }
 
-  .end {
-    gap: var(--space-2);
+  .crumb {
+    padding: 0 var(--space-1);
+    justify-content: center;
   }
 
-  .trail,
-  .crumb,
-  .slash,
+  .crumb::after {
+    inset-inline: min(-1px, calc((100% - var(--hit)) / 2 - 1px));
+  }
+
+  .crumbText,
+  .trail > .slash,
+  .segment,
+  .title,
   .toggle,
+  .toggleSlot,
   .keys {
     display: none;
   }
@@ -318,59 +221,23 @@
     display: none;
   }
 
-  /* The tabs take the center of the bar. The title is the first line of the Overview and the sheet. */
-  .title {
-    display: none;
+  .center button {
+    padding: 0 6px;
   }
 
-  .viewsRoot {
-    margin-inline: auto;
-    padding-left: 0;
+  .end {
+    gap: var(--space-1);
   }
 
-  .viewsRoot::before {
-    display: none;
-  }
-
-  .bar:has(.viewsRoot) .end {
-    margin-left: 0;
-  }
-
-  .bar .search {
-    width: 36px;
+  .bar .search,
+  .bar .settings {
+    width: 28px;
+    min-width: 0;
     padding: 0;
   }
-}
 
-@media (pointer: coarse), (max-width: 760px) {
-  .bar .control {
-    min-height: 36px;
+  .bar .search::after,
+  .bar .settings::after {
+    inset-inline: min(-1px, calc((28px - var(--hit)) / 2 - 1px));
   }
-
-  .bar .square {
-    width: 36px;
-  }
-
-  .view {
-    position: relative;
-    height: 36px;
-  }
-
-  /* A finger gets 44px: the tab keeps its look and owns the room around it. */
-  .view::after {
-    content: '';
-    position: absolute;
-    inset: -4px 0;
-  }
-}
-
-.crumb {
-  position: relative;
-}
-
-.crumb::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((28px - var(--hit)) / 2));
-  inset-inline: 0;
 }

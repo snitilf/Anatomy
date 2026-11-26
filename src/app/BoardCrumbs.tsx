@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { useCommand, useCommands } from '../commands/context'
 import { frameGroup } from '../canvas/groupFrame'
+import buttons from './buttons.module.css'
 import { MIDDLE_MIN, UNFOLD_MARGIN } from './crumbRoom'
 import menu from './menu.module.css'
 import { trailOf, type Trail as TrailWords } from './crumbs'
@@ -29,9 +30,9 @@ export function BoardCrumbs({ title, room }: { title: string; room?: number | un
   const onMap = useUi((u) => u.view === 'map')
   if (words === 'null' || !onMap) {
     return (
-      <h1 className={styles.title} title={title}>
+      <span className={styles.title} title={title}>
         {title}
-      </h1>
+      </span>
     )
   }
   // A new selection has new names, so it starts with a fresh fold.
@@ -82,7 +83,7 @@ function Trail({ trail, title, room }: { trail: TrailWords; title: string; room?
     return (
       <>
         <Menu.Root>
-          <Menu.Trigger className={clsx(styles.segment, styles.fold)} aria-label="Board and group">
+          <Menu.Trigger className={clsx(buttons.button, buttons.quiet, styles.segment, styles.fold)} aria-label="Board and group">
             …
           </Menu.Trigger>
           <Menu.Portal>
@@ -101,7 +102,7 @@ function Trail({ trail, title, room }: { trail: TrailWords; title: string; room?
           </Menu.Portal>
         </Menu.Root>
         <Slash />
-        <button type="button" className={clsx(styles.segment, styles.last)} title={last.label} aria-current="location" onClick={zoom.run}>
+        <button type="button" className={clsx(buttons.button, buttons.quiet, styles.segment, styles.last)} title={last.label} aria-current="location" onClick={zoom.run}>
           {last.label}
         </button>
       </>
@@ -109,23 +110,23 @@ function Trail({ trail, title, room }: { trail: TrailWords; title: string; room?
   }
   return (
     <>
-      <h1 className={clsx(styles.title, styles.step)}>
+      <span className={clsx(styles.title, styles.step)}>
         <Tip label="Back to board" keys={back.shortcut}>
-          <button ref={boardEl} type="button" className={clsx(styles.segment, styles.middle)} onClick={leave}>
+          <button ref={boardEl} type="button" className={clsx(buttons.button, buttons.quiet, styles.segment, styles.middle)} onClick={leave}>
             {title}
           </button>
         </Tip>
-      </h1>
+      </span>
       {group && (
         <>
           <Slash />
-          <button ref={groupEl} type="button" className={clsx(styles.segment, styles.middle)} title={group.label} onClick={frame}>
+          <button ref={groupEl} type="button" className={clsx(buttons.button, buttons.quiet, styles.segment, styles.middle)} title={group.label} onClick={frame}>
             {group.label}
           </button>
         </>
       )}
       <Slash />
-      <button type="button" className={clsx(styles.segment, styles.last)} title={last.label} aria-current="location" onClick={zoom.run}>
+      <button type="button" className={clsx(buttons.button, buttons.quiet, styles.segment, styles.last)} title={last.label} aria-current="location" onClick={zoom.run}>
         {last.label}
       </button>
     </>

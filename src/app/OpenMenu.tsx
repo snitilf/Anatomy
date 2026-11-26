@@ -21,6 +21,8 @@ export function OpenMenu({ trigger }: { trigger: ReactElement }) {
   const { saved } = useWorkspace()
   const folder = useCommand('open.folder')
   const file = useCommand('open.file')
+  const start = useCommand('start')
+  const StartIcon = start.command.icon
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   return (
@@ -68,6 +70,21 @@ export function OpenMenu({ trigger }: { trigger: ReactElement }) {
               </h2>
               <ExampleList onChosen={close} />
             </section>
+            {start.visible && (
+              <div className={styles.section}>
+                <button
+                  type="button"
+                  className={rows.row}
+                  onClick={() => {
+                    close()
+                    start.run()
+                  }}
+                >
+                  <StartIcon className={rows.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
+                  {start.label}
+                </button>
+              </div>
+            )}
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>

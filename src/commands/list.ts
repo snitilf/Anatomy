@@ -12,6 +12,7 @@ import {
   FileUp,
   FolderOpen,
   Hand,
+  Home,
   Inbox,
   LayoutList,
   ListFilter,
@@ -242,6 +243,23 @@ export const COMMANDS: readonly Command[] = [
     run: (c) => c.workspace.exportNow(),
   },
   {
+    id: 'start',
+    group: 'Board',
+    label: 'Start screen',
+    icon: Home,
+    keywords: ['close', 'home', 'boards'],
+    visible: hasBoard,
+    run: (c) => {
+      c.dispatch({ type: 'closed' })
+      // Wait for EmptyState to mount and any menu or popover to finish closing before moving focus.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.querySelector<HTMLButtonElement>('main[data-empty] header button')?.focus()
+        })
+      })
+    },
+  },
+  {
     // Escape leaves a whiteboard tool before it leaves the selection.
     id: 'tool.cancel',
     group: 'Tools',
@@ -434,7 +452,7 @@ export const COMMANDS: readonly Command[] = [
     icon: PanelRight,
     keys: [']'],
     keywords: ['panel', 'details'],
-    visible: (c) => hasBoard(c) && onMap(c),
+    visible: (c) => hasBoard(c) && onMap(c) && !onPhone(),
     run: (c) => c.uiApi.toggleSidebar(),
   },
   {
@@ -477,7 +495,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom to 100%',
     icon: Search,
     keys: ['Shift+Digit0', 'Mod+0'],
-    visible: (c) => hasBoard(c) && onMap(c),
+    visible: (c) => hasBoard(c) && onMap(c) && !onPhone(),
     run: (c) => c.camera?.zoom('reset'),
   },
   {
@@ -486,7 +504,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom in',
     icon: Plus,
     keys: ['+', 'Mod+='],
-    visible: (c) => hasBoard(c) && onMap(c),
+    visible: (c) => hasBoard(c) && onMap(c) && !onPhone(),
     run: (c) => c.camera?.zoom('in'),
   },
   {
@@ -495,7 +513,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Zoom out',
     icon: Minus,
     keys: ['-', 'Mod+-'],
-    visible: (c) => hasBoard(c) && onMap(c),
+    visible: (c) => hasBoard(c) && onMap(c) && !onPhone(),
     run: (c) => c.camera?.zoom('out'),
   },
   {
@@ -504,7 +522,7 @@ export const COMMANDS: readonly Command[] = [
     label: 'Line key',
     icon: Spline,
     keywords: ['legend'],
-    visible: (c) => hasBoard(c) && onMap(c),
+    visible: (c) => hasBoard(c) && onMap(c) && !onPhone(),
     run: (c) => c.uiApi.setLineKeyOpen(true),
   },
   ...TOOLS,

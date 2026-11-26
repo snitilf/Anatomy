@@ -1,6 +1,8 @@
-/* With nothing new to send the button is quiet: a hairline and no fill. New items fill it with the accent (buttons.primary). */
+/* With nothing new to send the button is quiet: a hairline and no fill. New items fill it with the accent (buttons.primary).
+ * Reserves room for a two-digit count chip so the right cluster never reflows when items are added. */
 .trigger {
   gap: 6px;
+  min-width: 136px;
   padding: 0 var(--space-2);
 }
 
@@ -15,7 +17,7 @@
   color: var(--fg);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .trigger:not([data-new]):hover {
     background: var(--hover);
     color: var(--fg);
@@ -223,6 +225,12 @@
 }
 
 @media (max-width: 760px) {
+  .trigger {
+    gap: 4px;
+    min-width: 66px;
+    padding: 0 6px;
+  }
+
   .long {
     display: none;
   }

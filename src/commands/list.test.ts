@@ -39,7 +39,7 @@ function makeContext(overrides: { hasBoard?: boolean; view?: 'map' | 'overview';
     ? {
         ...initialState,
         board,
-        selection: overrides.selectedPart ? ({ type: 'component', id: overrides.selectedPart } as const) : undefined,
+        ...(overrides.selectedPart ? { selection: { type: 'component' as const, id: overrides.selectedPart } } : {}),
       }
     : initialState
   const ctx: CommandContext = {

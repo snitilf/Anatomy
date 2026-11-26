@@ -1,25 +1,23 @@
-import { Tabs } from '@base-ui/react/tabs'
-import styles from './TopBar.module.css'
+import { Segmented } from './Segmented'
 import { useAppStore } from './store'
+import styles from './TopBar.module.css'
 import { useUi, useUiApi } from './ui'
 import { showView } from './viewActions'
 import type { View } from './view'
 
-/** Map and Overview: two views of the same board. Linear's project tabs, as plain text. */
+const OPTIONS: readonly { value: View; label: string }[] = [
+  { value: 'map', label: 'Map' },
+  { value: 'overview', label: 'Overview' },
+]
+
+/** Map and Overview: two views of the same board, centered in the top bar. */
 export function ViewTabs() {
   const ui = useUiApi()
   const view = useUi((u) => u.view)
   const boardId = useAppStore((s) => s.board?.id)
   return (
-    <Tabs.Root className={styles.viewsRoot} value={view} onValueChange={(value) => showView(ui, boardId, value as View)}>
-      <Tabs.List className={styles.views} aria-label="View">
-        <Tabs.Tab className={styles.view} value="map">
-          Map
-        </Tabs.Tab>
-        <Tabs.Tab className={styles.view} value="overview">
-          Overview
-        </Tabs.Tab>
-      </Tabs.List>
-    </Tabs.Root>
+    <div className={styles.center}>
+      <Segmented kind="tabs" label="View" value={view} options={OPTIONS} onChange={(value) => showView(ui, boardId, value)} />
+    </div>
   )
 }
