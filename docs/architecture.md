@@ -106,8 +106,8 @@ It sits inside the card, so it dims and lifts with the card, and nothing that ke
 A line label can still land on a card in a crowded gap, so the mark takes the first of the top right, the top left, and the bottom right corner that no line label covers at any zoom from 100 percent down to the far end of the title level (`startCorner`, from `freeCorner` in `src/canvas/startMarks.ts`).
 A card whose count of notes sits in its top right corner (a card with notes and no lesson, at the full level) offers the mark only the top left and the bottom right (`cardCorners`), so the two never overlap.
 A title that would run into a mark at the top leaves it 4 px of room at every zoom.
-In the far view a tile has no text but its name, so the mark is drawn by the far layer inside the tile, at the bottom right or left, as large as fits from 14 px down to 11 px, clear of the names of the groups that sit over tiles.
-A tile that the name of a group covers too much of has no mark.
+In the far view a tile has no text but its name, so the mark is drawn by the far layer inside the tile, at the bottom right or left, as large as fits from 14 px down to 11 px, clear of the names of the groups.
+A tile too low for a mark has none.
 `e2e/flow-start.spec.ts` checks that no mark leaves its card or touches a label, a group name, a count, a note dot, or a word of the card.
 
 ### The layout
@@ -191,8 +191,15 @@ A link that the user drags from the dot of a card is drawn in the dash and dot o
 The camera in `src/canvas/camera.ts` keeps the map inside limits.
 The app works out the limits from the content: cards, group areas, marks, and proposed parts.
 When a fit would land in the far view, the content also includes the routes of the far-view lines, which run around the outside of the cards.
-In the far view a group's name sits just above its block, cut short of the next name and of the right edge of the content.
-When another block sits too close above, the name sits just inside the top of its own block instead.
+In the far view a group's name never covers a tile, a bundled line, a count, another block, another name, or the name tag of a selected tile or of a tile in a walkthrough step (`farNames` in `src/canvas/farLabels.ts`).
+It sits just above its block when that is free, cut short of the next name and of the right edge of the content.
+When it is not, the name moves along the top edge, then down onto the edge and into the top of the block, and last just below the block.
+At least half of it lies over its block, so it reads as the block's.
+Where the block's edge runs across the name, the name is on the map's ground above the edge and on the block's wash below it.
+A place for the whole name wins over a place where it is cut short, and a cut name keeps its count and a few letters.
+A name with no free place is left off the map, like a count with no free place: it shows while it has focus, and a press on its block zooms in all the same.
+The counts are placed after the names, so a count never sits under a name.
+The far-view lines keep out of the room above each group where its name goes (`NAME_ROOM` and `NAME_SHARE` in `src/canvas/bundleRoutes.ts`), unless there is no other way through.
 The fit asks for those routes only then.
 The app solves them off the frame that commits a new layout, except in the far view and when a board opens.
 Fit, every zoom out, the wheel, and framing a connection or a bundle solve them at once when they are not ready yet, so they never frame the last layout's lines.
