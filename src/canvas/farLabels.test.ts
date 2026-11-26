@@ -103,6 +103,16 @@ describe('where a group name goes in the far view', () => {
   it('counts a loose part above a group as a block too', () => {
     const groups = [group('g', 0, 200)]
     const tile = { x: 20, y: 60, width: 240, height: 112 }
-    expect(farNames(groups, [tile], { x: 0, y: 60, width: 280, height: 440 }, 2.5).get('g')!.inside).toBe(true)
+    const name = farNames(groups, [tile], { x: 0, y: 60, width: 280, height: 440 }, 2.5).get('g')!
+    expect(hit(name.rect, tile)).toBe(false)
+  })
+
+  it('goes below its block when the room above and the top of the block are taken', () => {
+    // A block close above, and tiles right at the top of the group.
+    const groups = [group('top', 0, 0), group('g', 0, 340)]
+    const tiles = [{ x: 0, y: 348, width: 280, height: 200 }]
+    const name = farNames(groups, tiles, { x: 0, y: 0, width: 280, height: 800 }, 2.5).get('g')!
+    expect(hit(name.rect, tiles[0]!)).toBe(false)
+    expect(name.rect.y).toBeGreaterThanOrEqual(640)
   })
 })
