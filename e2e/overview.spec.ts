@@ -218,7 +218,7 @@ test('Connections lists the pairs and the inside of each group, and the rows add
   await open(page, SHORTENER)
   await tab(page, 'Overview').click()
   const overview = page.getByTestId('overview')
-  const total = Number.parseInt((await overview.getByRole('button', { name: /^\d+ connections?$/ }).textContent()) ?? '0', 10)
+  const total = Number.parseInt((await overview.locator('header').getByRole('button', { name: /^\d+ connections?$/ }).textContent()) ?? '0', 10)
   const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
   expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
   await expect(overview.getByRole('button', { name: /^Inside Backend/ })).toBeVisible()
@@ -392,7 +392,7 @@ test('Connections shows the busiest 8 rows, folds the rest behind Show more, and
   await page.keyboard.press('Enter')
   expect(await pairs.count()).toBeGreaterThan(8)
   await expect(overview.getByRole('button', { name: 'Show fewer' })).toBeFocused()
-  const total = Number.parseInt((await overview.getByRole('button', { name: /^\d+ connections?$/ }).textContent()) ?? '0', 10)
+  const total = Number.parseInt((await overview.locator('header').getByRole('button', { name: /^\d+ connections?$/ }).textContent()) ?? '0', 10)
   const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
   expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
 })
@@ -490,7 +490,7 @@ test.describe('the Overview page order', () => {
     [1024, 768],
     [390, 844],
   ] as const) {
-    test(`at ${width}x${height} the first walkthrough row fits in the first screen on all examples and every-state`, async ({ page }) => {
+    test(`at ${width}x${height} the first walkthrough row fits in the first screen on all examples`, async ({ page }) => {
       await page.setViewportSize({ width, height })
       for (const ex of EXAMPLES) {
         await open(page, ex.file)
@@ -501,6 +501,10 @@ test.describe('the Overview page order', () => {
         const box = (await firstPlay.boundingBox())!
         expect(box.y + box.height, `${ex.name} first walkthrough fits in ${height}px`).toBeLessThanOrEqual(height)
       }
+    })
+
+    test(`at ${width}x${height} the first walkthrough row fits in the first screen on every-state with Needs you above it`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
       await openStates(page)
       if ((await page.getByTestId('overview').count()) === 0) await tab(page, 'Overview').click()
       const overview = page.getByTestId('overview')
@@ -594,14 +598,15 @@ test.describe('the Overview page order', () => {
     expect(visibleChars).toBeGreaterThanOrEqual(60)
   })
 
-  test('Yours column aligns with its header on every-state, and Needs you is the one raised block with primary Send to agent', async ({ page }) => {
+  test('a clean board has zero raised blocks', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    // Clean board has zero raised blocks.
     await open(page, SHORTENER)
     await tab(page, 'Overview').click()
     await expect(page.getByTestId('overview').locator('[data-raised]')).toHaveCount(0)
+  })
 
-    // every-state has exactly one raised block ("Needs you").
+  test('Yours column aligns with its header on every-state, and Needs you is the one raised block with primary Send to agent', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
     await openStates(page)
     await tab(page, 'Overview').click()
     const overview = page.getByTestId('overview')
@@ -635,7 +640,7 @@ test.describe('the Overview page order', () => {
     await open(page, SHORTENER)
     await tab(page, 'Overview').click()
     const overview = page.getByTestId('overview')
-    await overview.getByRole('button', { name: /^\d+ connections?$/ }).click()
+    await overview.locator('header').getByRole('button', { name: /^\d+ connections?$/ }).click()
     const scrollTop = await overview.evaluate((el) => el.scrollTop)
     expect(scrollTop).toBeGreaterThan(0)
   })

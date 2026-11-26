@@ -1,15 +1,17 @@
 import clsx from 'clsx'
 import { ArrowLeft, ArrowLeftRight, ArrowRight, ChevronRight, Link2, Map as MapIcon, MoveRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import buttons from '../app/buttons.module.css'
+import rowStyles from '../app/rows.module.css'
 import { bundleSelection, type Selection } from '../app/state'
 import { Tip } from '../app/Tip'
 import type { Board } from '../board/schema'
+import { bundleWords, endName as nameOf, endRank } from '../canvas/bundleWords'
+import { bundleGroups } from '../canvas/bundles'
 import { endsOf } from '../inspector/flowRows'
 import { partName } from '../inspector/names'
 import type { Layer } from '../layer/model'
 import type { OverviewActions } from './actions'
-import { bundleWords, endName as nameOf, endRank } from '../canvas/bundleWords'
-import { bundleGroups } from '../canvas/bundles'
 import { innerConnections, type Bundle } from './innerConnections'
 import { overviewMemory } from './memory'
 import styles from './Overview.module.css'
@@ -52,12 +54,19 @@ function Connections({ board, layer, bundle, actions }: { board: Board; layer: L
     <ul className={styles.list}>
       {rows.map((c) => (
         <li key={c.id}>
-          <button type="button" className={styles.connection} data-row={c.key} data-yours={c.mine || undefined} onClick={() => actions.openOnMap(c.selection, c.key)}>
-            {c.mine ? <Link2 className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" /> : <MoveRight className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />}
+          <button
+            type="button"
+            className={clsx(rowStyles.row, styles.bleedRow, styles.connection, c.mine && rowStyles.yours)}
+            data-row={c.key}
+            data-yours={c.mine || undefined}
+            onClick={() => actions.openOnMap(c.selection, c.key)}
+          >
+            {c.mine ? <Link2 className={clsx(rowStyles.icon, styles.yoursIcon)} size={14} strokeWidth={1.5} aria-hidden="true" /> : <MoveRight className={rowStyles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />}
             <span className={styles.grow}>{c.label}</span>
-            <span className={styles.meta}>
+            <span className={styles.connMeta}>
               {name(c.from)} to {name(c.to)}
             </span>
+            <ArrowRight className={rowStyles.go} size={12} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </li>
       ))}
@@ -91,9 +100,9 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
   }
   return (
     <section className={styles.section} aria-labelledby="ov-between" data-section="between">
-      <h3 id="ov-between" className={styles.heading}>
+      <h2 id="ov-between" className={styles.heading}>
         Connections <span className={styles.count}>{total}</span>
-      </h3>
+      </h2>
       <ul className={styles.list}>
         {shownPairs.map((b) => {
           const key = `${b.a}|${b.b}`
@@ -109,25 +118,30 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
             <li key={key} className={styles.pairItem}>
               <button
                 type="button"
-                className={clsx(styles.pair, styles.withMap)}
+                className={clsx(rowStyles.row, styles.bleedRow, styles.pair, styles.withMap)}
                 data-row={`between:${key}`}
                 data-yours={b.mine || undefined}
                 aria-expanded={open}
                 aria-label={words.spoken}
                 onClick={() => toggle(key, open)}
               >
-                <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
+                <ChevronRight className={rowStyles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
                 <span className={styles.pairEnds}>
                   <span>{a}</span>
                   <Way className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
                   <span>{z}</span>
                 </span>
-                <span className={styles.end}>
+                <span className={rowStyles.meta}>
                   <span className={styles.count}>{b.count}</span>
                 </span>
               </button>
               <Tip label="Show on map" side="left">
-                <button type="button" className={styles.mapButton} aria-label={`Show ${a} and ${z} on the map`} onClick={() => actions.openOnMap(pairSelection(board, b), `between:${key}`)}>
+                <button
+                  type="button"
+                  className={clsx(buttons.button, buttons.quiet, buttons.small, buttons.icon, styles.mapButton)}
+                  aria-label={`Show ${a} and ${z} on the map`}
+                  onClick={() => actions.openOnMap(pairSelection(board, b), `between:${key}`)}
+                >
                   <MapIcon size={14} strokeWidth={1.5} aria-hidden="true" />
                 </button>
               </Tip>
@@ -136,8 +150,14 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
           )
         })}
         {hidden > 0 && (
-          <li>
-            <button type="button" className={styles.showMore} data-row="between:more" aria-expanded={all} onClick={() => toggle('more', all)}>
+          <li className={styles.showMoreRow}>
+            <button
+              type="button"
+              className={clsx(buttons.button, buttons.link, buttons.small)}
+              data-row="between:more"
+              aria-expanded={all}
+              onClick={() => toggle('more', all)}
+            >
               {all ? 'Show fewer' : `Show ${hidden} more`}
             </button>
           </li>
@@ -150,18 +170,18 @@ export function BetweenSection({ board, layer, actions }: { board: Board; layer:
             <li key={key}>
               <button
                 type="button"
-                className={styles.pair}
+                className={clsx(rowStyles.row, styles.bleedRow, styles.pair)}
                 data-row={`between:${key}`}
                 data-yours={b.mine || undefined}
                 aria-expanded={open}
                 aria-label={`Inside ${name}, ${b.count} ${b.count === 1 ? 'connection' : 'connections'}`}
                 onClick={() => toggle(key, open)}
               >
-                <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
+                <ChevronRight className={rowStyles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" data-open={open || undefined} />
                 <span className={styles.pairEnds}>
                   <span>Inside {name}</span>
                 </span>
-                <span className={styles.end}>
+                <span className={rowStyles.meta}>
                   <span className={styles.count}>{b.count}</span>
                 </span>
               </button>

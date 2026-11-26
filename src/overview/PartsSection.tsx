@@ -1,9 +1,12 @@
-import { ChevronRight, CircleHelp, GraduationCap, Search } from 'lucide-react'
+import clsx from 'clsx'
+import { ArrowRight, ChevronRight, CircleHelp, GraduationCap, Search } from 'lucide-react'
 import { useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
+import buttons from '../app/buttons.module.css'
+import rowStyles from '../app/rows.module.css'
 import { SourceNote } from '../app/SourceNote'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { overviewMemory } from './memory'
-import { filterGroups, type PartFilter, type PartGroup, type PartRow } from './model'
+import { filterGroups, partRowFlowText, rowSlots, type PartFilter, type PartGroup, type PartRow } from './model'
 import styles from './Overview.module.css'
 
 interface Props {
@@ -18,8 +21,8 @@ interface Props {
 const MODE_WORD = { undecided: 'Undecided', questions: 'With open items' } as const
 
 /**
- * Every part, grouped like Linear's issue list: a sticky header per group that collapses, a filter, and rows that answer
- * J, K, and the arrow keys. Enter opens the row on the map. C adds a note to it (a command).
+ * Every part, grouped like Linear's issue list: a sticky header per group that collapses, a filter, a quiet column
+ * header row, and rows that answer J, K, and the arrow keys. Enter opens the row on the map. C adds a note to it.
  */
 export function PartsSection({ groups, filter, setFilter, total, boardId, open }: Props) {
   const memory = overviewMemory(boardId)
@@ -61,11 +64,11 @@ export function PartsSection({ groups, filter, setFilter, total, boardId, open }
   return (
     <section ref={root} className={styles.section} aria-labelledby="ov-parts" data-section="parts" onKeyDown={onKeyDown} onFocus={onFocus}>
       <div className={styles.headRow}>
-        <h3 id="ov-parts" className={styles.heading}>
+        <h2 id="ov-parts" className={styles.heading}>
           Parts <span className={styles.count}>{filtering ? `${count} of ${total}` : total}</span>
-        </h3>
+        </h2>
         {filter.mode !== 'all' && (
-          <button type="button" className={styles.chip} onClick={() => setFilter({ ...filter, mode: 'all' })}>
+          <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => setFilter({ ...filter, mode: 'all' })}>
             {MODE_WORD[filter.mode]}
             <span aria-hidden="true"> ×</span>
             <span className="sr-only">, clear</span>
@@ -92,38 +95,58 @@ export function PartsSection({ groups, filter, setFilter, total, boardId, open }
           {filter.query === '' && <kbd className={styles.kbd}>/</kbd>}
         </label>
       </div>
+      {count > 0 && (
+        <div className={styles.partsHeader} data-parts-header="" aria-hidden="true">
+          <span>Part</span>
+          <span>What it does</span>
+          <span className={styles.colRight}>Lesson</span>
+          <span className={styles.colRight}>Open</span>
+          <span className={styles.colRight}>Yours</span>
+          <span />
+        </div>
+      )}
       {count === 0 && <p className={styles.empty}>No parts match{filter.query.trim() !== '' ? ` "${filter.query.trim()}"` : ''}.</p>}
       {shown.map((g) => {
         const closed = memory.closed.has(g.key)
         return (
           <div key={g.key} className={styles.group} data-yours={g.yours || undefined}>
-            <h4 className={styles.groupHead}>
-              <button type="button" className={styles.groupToggle} data-head={g.key} aria-expanded={!closed} onClick={() => toggle(g.key)}>
-                <ChevronRight className={styles.chevron} size={14} strokeWidth={1.5} aria-hidden="true" />
+            <h3 className={styles.groupHead}>
+              <button type="button" className={clsx(rowStyles.row, styles.bleedRow, styles.groupToggle)} data-head={g.key} aria-expanded={!closed} onClick={() => toggle(g.key)}>
+                <ChevronRight className={rowStyles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" />
                 <span className={styles.groupLabel}>{g.label}</span>
                 <span className={styles.count}>{g.rows.length}</span>
               </button>
-            </h4>
+            </h3>
             {!closed && (
               <ul className={styles.list}>
                 {g.rows.map((r) => {
                   const key = `part:${r.id}`
+                  const slots = rowSlots(r)
+                  const flow = partRowFlowText(r)
                   return (
                     <li key={r.id}>
                       <button
                         type="button"
-                        className={styles.part}
+                        className={clsx(rowStyles.row, styles.bleedRow, styles.part, r.type === 'proposal' && rowStyles.yours)}
                         data-row={key}
                         data-type={r.type}
                         data-id={r.id}
                         data-yours={r.type === 'proposal' || undefined}
+                        title={flow ? `${r.label} (${flow})` : undefined}
                         tabIndex={key === stop ? 0 : -1}
                         onClick={() => open(r, key)}
                       >
-                        <span className={styles.partTitle}>{r.label}</span>
-                        <span className={styles.partSummary}>{r.summary}</span>
+                        <span className={styles.partName}>
+                          <span className={styles.partTitle} data-part-title="">
+                            {r.label}
+                          </span>
+                          {slots.source && <SourceNote kind={r.source} iconOnly className={styles.sourceMark} />}
+                        </span>
+                        <span className={styles.partSummary} data-part-summary="">
+                          {r.summary}
+                        </span>
                         <span className={styles.slot} data-slot="lesson">
-                          {r.lesson && (
+                          {slots.lesson && (
                             <>
                               <GraduationCap size={14} strokeWidth={1.5} aria-hidden="true" />
                               <span className="sr-only">Has a lesson</span>
@@ -131,33 +154,25 @@ export function PartsSection({ groups, filter, setFilter, total, boardId, open }
                           )}
                         </span>
                         <span className={styles.slot} data-slot="open">
-                          {r.open > 0 && (
+                          {slots.open !== undefined && (
                             <>
                               <CircleHelp size={14} strokeWidth={1.5} aria-hidden="true" />
-                              <span className={styles.figure}>{r.open}</span>
-                              <span className="sr-only">{r.open === 1 ? 'open item' : 'open items'}</span>
+                              <span className={styles.figure}>{slots.open}</span>
+                              <span className="sr-only">{slots.open === 1 ? 'open item' : 'open items'}</span>
                             </>
                           )}
                         </span>
                         <span className={styles.slot} data-slot="notes" data-yours="">
-                          {r.notes > 0 && r.state && (
+                          {slots.yours && (
                             <>
-                              <StatusGlyph state={r.state} />
-                              <span className={styles.figure}>{r.notes}</span>
-                              <span className="sr-only">{r.notes === 1 ? 'note of yours' : 'notes of yours'}</span>
+                              <StatusGlyph state={slots.yours.state} />
+                              <span className={styles.figure}>{slots.yours.count}</span>
+                              <span className="sr-only">{slots.yours.count === 1 ? 'note of yours' : 'notes of yours'}</span>
                             </>
                           )}
                         </span>
-                        <span className={styles.slot} data-slot="flow">
-                          {r.in + r.out > 0 && (
-                            <>
-                              {r.in} in, {r.out} out
-                            </>
-                          )}
-                        </span>
-                        <span className={styles.slot} data-slot="source">
-                          {r.source !== 'agent-explanation' && r.type === 'component' && <SourceNote kind={r.source} iconOnly />}
-                        </span>
+                        <ArrowRight className={rowStyles.go} size={12} strokeWidth={1.5} aria-hidden="true" />
+                        {flow && <span className="sr-only">, {flow}</span>}
                       </button>
                     </li>
                   )
