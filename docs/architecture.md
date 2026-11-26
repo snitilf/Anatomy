@@ -170,6 +170,8 @@ When another block sits too close above, the name sits just inside the top of it
 The fit asks for those routes only then.
 The app solves them off the frame that commits a new layout, except in the far view and when a board opens.
 Fit, every zoom out, the wheel, and framing a connection or a bundle solve them at once when they are not ready yet, so they never frame the last layout's lines.
+After a drop or the release of a resize, the app solves the lines in slices of a frame, and a path search gives the frame back every 1,024 steps.
+When the far view shows, the far-view lines are solved in the same slices, so the commit that ends the build has none left to solve.
 The map zooms out only until the whole content fits, and never needs more than 100%.
 It zooms in to 200%.
 Panning stops a margin past the content.

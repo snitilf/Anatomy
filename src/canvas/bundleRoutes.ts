@@ -2,7 +2,7 @@ import type { Board } from '../board/schema'
 import { groupAreas } from '../layout/cards'
 import type { Point, Rect } from '../layout/geometry'
 import { clusterOf, type Pair } from './bundles'
-import { Drawn, Obstacles, planEdges, planThrough, routeConnection, type EdgeEnds, type Plan, type Route, type Side } from './routing'
+import { Drawn, Obstacles, planEdges, planThrough, routeConnectionSteps, type EdgeEnds, type Plan, type Route, type Side } from './routing'
 
 export interface Bundle extends Pair {
   id: string
@@ -205,9 +205,10 @@ function alternatives(plan: Plan, from: Rect, to: Rect): Plan[] {
 /**
  * The second step of bundling, after `bundleGroups`: one orthogonal line for each pair of blocks, drawn in the gaps
  * between them with the router of the map: the blocks are what the lines keep out of. Pairs go shortest first, then by
- * name, so the picture is the same from one build to the next.
+ * name, so the picture is the same from one build to the next. It gives the way back to the caller during each search, so
+ * a caller that works in slices of a frame can stop between them; `computeBundles` runs every step.
  */
-export function computeBundles(board: Board, rects: Readonly<Record<string, Rect>>, counted: readonly Pair[]): Bundle[] {
+export function* bundleSteps(board: Board, rects: Readonly<Record<string, Rect>>, counted: readonly Pair[]): Generator<void, Bundle[], void> {
   const blocks = blocksOf(board, rects)
   const pairs = counted.filter((p) => blocks.has(p.a) && blocks.has(p.b))
   const ends: EdgeEnds[] = pairs.map((p) => ({ id: `${p.a}|${p.b}`, from: p.a, to: p.b }))
@@ -234,7 +235,8 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
     // Keep out of every block the pair does not join. The planned sides come first. When they leave no way through, the
     // other sides are tried, and then the same again with the room taken by the group names left free.
     const keepOut = Object.entries(rectOf).filter(([k]) => k !== p.a && k !== p.b).map(([, r]) => r)
-    let route = routeConnection(plan, all, drawn, obstacles)
+    let route = yield* routeConnectionSteps(plan, all, drawn, obstacles)
+    yield
     if (crossesAny(route, keepOut)) {
       const from = rectOf[p.a] as Rect
       const to = rectOf[p.b] as Rect
@@ -244,7 +246,8 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
       ]
       let clear: Route | undefined
       for (const t of tries) {
-        const attempt = routeConnection(t.q, t.cards, drawn, t.grid)
+        const attempt = yield* routeConnectionSteps(t.q, t.cards, drawn, t.grid)
+        yield
         if (!crossesAny(attempt, keepOut)) {
           clear = attempt
           break
@@ -261,16 +264,54 @@ export function computeBundles(board: Board, rects: Readonly<Record<string, Rect
   return pairs.flatMap((p) => out.get(`${p.a}|${p.b}`) ?? [])
 }
 
-let last: { board: Board; rects: Readonly<Record<string, Rect>>; key: string; bundles: Bundle[] } | undefined
+/** The lines of every pair, in one go. */
+export function computeBundles(board: Board, rects: Readonly<Record<string, Rect>>, counted: readonly Pair[]): Bundle[] {
+  const steps = bundleSteps(board, rects, counted)
+  for (;;) {
+    const step = steps.next()
+    if (step.done) return step.value
+  }
+}
+
+type Kept = { board: Board; rects: Readonly<Record<string, Rect>>; key: string; bundles: Bundle[] }
 
 /**
- * `computeBundles` for the one layout on the map. The fit and the far layer ask for the same lines, so the last answer
+ * The two answers asked for most recently. Two, because the build after a resize prepares the lines of the new layout
+ * while the lines of the layout still on screen can be asked for again (a zoom in and out before the build ends).
+ */
+let kept: Kept[] = []
+
+/** The kept answer for this layout, moved to the front so that the next answer to be kept evicts the other one. */
+function find(board: Board, rects: Readonly<Record<string, Rect>>, key: string): Kept | undefined {
+  const hit = kept.find((k) => k.board === board && k.rects === rects && k.key === key)
+  if (hit && hit !== kept[0]) kept = [hit, ...kept.filter((k) => k !== hit)]
+  return hit
+}
+
+function keep(entry: Kept): void {
+  kept = [entry, ...kept].slice(0, 2)
+}
+
+/**
+ * `computeBundles` for the layouts on the map. The fit and the far layer ask for the same lines, so an answer
  * is kept for as long as the board, the cards, and the pairs are the same.
  */
 export function sharedBundles(board: Board, rects: Readonly<Record<string, Rect>>, counted: readonly Pair[]): Bundle[] {
   const key = JSON.stringify(counted)
-  if (last && last.board === board && last.rects === rects && last.key === key) return last.bundles
+  const hit = find(board, rects, key)
+  if (hit) return hit.bundles
   const bundles = computeBundles(board, rects, counted)
-  last = { board, rects, key, bundles }
+  keep({ board, rects, key, bundles })
   return bundles
+}
+
+/**
+ * Solves the lines `sharedBundles` will be asked for, in steps, so a build that works in slices of a frame has them ready
+ * and the commit that follows it solves nothing. It does nothing when they are already kept.
+ */
+export function* primeBundles(board: Board, rects: Readonly<Record<string, Rect>>, counted: readonly Pair[]): Generator<void, void, void> {
+  const key = JSON.stringify(counted)
+  if (find(board, rects, key)) return
+  const bundles = yield* bundleSteps(board, rects, counted)
+  keep({ board, rects, key, bundles })
 }

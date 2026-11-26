@@ -3,7 +3,7 @@ import { allBoards } from '../layer/testBoards'
 import { CARD_SIZE, placeCards } from '../layout/cards'
 import { computeGeometry } from './buildGraph'
 import { pillHeight, placeLabel, RunIndex, wrap, type LabelContext } from './labelPlacement'
-import { Drawn, hitsAnyCard, lineHitsCards, Obstacles, pickSides, planEdges, rounded, routeConnection, TRACK, type Rect } from './routing'
+import { Drawn, hitsAnyCard, lineHitsCards, Obstacles, pickSides, planEdges, resetRouteStats, rounded, routeConnection, routeConnectionSteps, routeStats, SEARCH_SLICE, TRACK, type Rect } from './routing'
 import { groupTitle } from './bands'
 import { minParallel } from '../test/lineMetrics'
 import type { EdgeShape } from './buildGraph'
@@ -341,5 +341,71 @@ describe('right angles', () => {
     expect(route.runs![0]![0]).toEqual({ x: 0, y: 0 })
     const last = route.runs![route.runs!.length - 1]!
     expect(last[1]).toEqual({ x: 100, y: 60 })
+  })
+})
+
+describe('the lanes of a search', () => {
+  // The lanes are the sorted, thinned values the router may run along, with the two ends of the search kept exactly.
+  const cards = Array.from({ length: 24 }, (_, i) => at((i % 6) * 340 + (i % 4) * 7, Math.floor(i / 6) * 230 + (i % 3) * 11))
+  const groups = [{ x: 0, y: 0, width: 700, height: 500 }]
+
+  /** The lanes as they were worked out before they were kept: sorted and thinned again for every search. */
+  function reference(obstacles: Obstacles, exact: number[], axis: 'rawX' | 'rawY'): number[] {
+    const raw = (obstacles as unknown as Record<string, number[]>)[axis] as number[]
+    const sorted = [...raw].sort((a, b) => a - b)
+    const thinned: number[] = []
+    for (const v of sorted) {
+      const last = thinned[thinned.length - 1]
+      if (last === undefined || v - last > 3) thinned.push(v)
+    }
+    const kept = thinned.filter((v) => !exact.some((e) => Math.abs(e - v) <= 3))
+    return [...new Set([...kept, ...exact])].sort((a, b) => a - b)
+  }
+
+  it('gives the same lanes as sorting and thinning them for every search', () => {
+    const obstacles = new Obstacles(cards, groups)
+    for (const [x, y] of [[341, 17], [0, 0], [1203.5, 233], [700, 500], [701, 502]] as const) {
+      const [xs, ys] = obstacles.lanes([x, x + 40], [y, y])
+      expect(xs).toEqual(reference(obstacles, [x, x + 40], 'rawX'))
+      expect(ys).toEqual(reference(obstacles, [y, y], 'rawY'))
+    }
+  })
+
+  it('sorts the lanes of the cards once for each axis, and not again for every search', () => {
+    const obstacles = new Obstacles(cards, groups)
+    resetRouteStats()
+    for (let i = 0; i < 12; i++) obstacles.lanes([i * 37, i * 37 + 40], [i * 11, i * 11 + 60])
+    expect(routeStats.laneSorts).toBe(2)
+  })
+})
+
+describe('a search that is given in steps', () => {
+  // A part walled in on every side: no path exists, so the search goes through everything it is allowed before it gives up.
+  const grid: Rect[] = []
+  for (let i = 0; i < 12; i++) for (let j = 0; j < 8; j++) grid.push(at(i * 330, j * 200))
+  const from = grid[0] as Rect
+  const to = grid[grid.length - 1] as Rect
+  const cage = [at(to.x - 100, to.y - 30, 100, 200), at(to.x + to.width, to.y - 30, 100, 200), at(to.x - 20, to.y - 60, to.width + 40, 60), at(to.x - 20, to.y + to.height, to.width + 40, 60)]
+  const cards = [...grid, ...cage]
+  const [plan] = [...planEdges({ a: from, b: to }, [{ id: 'e', from: 'a', to: 'b' }]).values()]
+
+  it('gives the way back to the caller while it searches, and the same line as the one-go version', () => {
+    resetRouteStats()
+    const steps = routeConnectionSteps(plan!, cards, new Drawn(), new Obstacles(cards))
+    let yields = 0
+    let widest = 0
+    let seen = 0
+    let step = steps.next()
+    while (!step.done) {
+      yields++
+      widest = Math.max(widest, routeStats.expansions - seen)
+      seen = routeStats.expansions
+      step = steps.next()
+    }
+    // The search went on long enough to need many steps, and no step held more than two slices of it (the end of one search and the start of the next share a step).
+    expect(routeStats.expansions).toBeGreaterThan(10 * SEARCH_SLICE)
+    expect(yields).toBeGreaterThanOrEqual(Math.floor(routeStats.expansions / SEARCH_SLICE) - 1)
+    expect(widest).toBeLessThanOrEqual(2 * SEARCH_SLICE)
+    expect(step.value).toEqual(routeConnection(plan!, cards, new Drawn(), new Obstacles(cards)))
   })
 })

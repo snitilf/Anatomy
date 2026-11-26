@@ -10,7 +10,7 @@ import { clusterOf, connectionsOf, countPairs } from './bundles'
 import { LABEL_GROWTH, LABEL_ROOM, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { labelTint } from './labelTint'
 import { cardCorners, freeCorner, type Corner } from './startMarks'
-import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnection, type EdgeEnds, type Route, type Side } from './routing'
+import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnectionSteps, type EdgeEnds, type Route, type Side } from './routing'
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
 import { flowStartsOf, startsLabel } from '../scenarios/starts'
@@ -344,7 +344,7 @@ export function* geometrySteps(
       const end = ends[i] as EdgeEnds
       const plan = plans.get(end.id)
       if (!plan || !boxOf.has(end.from) || !boxOf.has(end.to)) continue
-      const route = routeConnection(plan, boxes, drawn, obstacles, ownGroups(end))
+      const route = yield* routeConnectionSteps(plan, boxes, drawn, obstacles, ownGroups(end))
       placed[i] = { id: end.id, from: end.from, to: end.to, text: texts.get(end.id) ?? '', route, stays: undefined }
       if (route.runs) drawn.add(route.runs)
       yield
