@@ -196,6 +196,7 @@
   .bar {
     padding: 0 var(--space-1);
     column-gap: var(--space-1);
+    overflow-x: clip;
   }
 
   .crumb {
