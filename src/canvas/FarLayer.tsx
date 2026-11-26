@@ -6,7 +6,7 @@ import { middleOf, nearestBundle, visibleArrows, type Bundle } from './bundleRou
 import { spotlight } from './emphasis'
 import { farLabelScale } from './far'
 import { YOURS_DASH, YOURS_FAR_DASH } from './kinds'
-import { farNames, isMixed, placeCounts, type FarName } from './farLabels'
+import { farNames, isMixed, placeCounts, tagRect, type FarName } from './farLabels'
 import { farMark } from './startMarks'
 import { startsLabel } from '../scenarios/starts'
 import { clampTip } from './useTipClamp'
@@ -17,6 +17,12 @@ export interface FarGroup {
   label: string
   count: number
   area: Rect
+}
+
+/** A tile whose name tag stays up: the selected part, or one of a walkthrough step. */
+export interface FarLit {
+  rect: Rect
+  label: string
 }
 
 /** A tile where a walkthrough starts, with the walkthroughs by title, and whether the tile is filled with the accent. */
@@ -50,6 +56,7 @@ export const FarLayer = memo(function FarLayer({
   bundles,
   tiles,
   starts,
+  lit,
   selected,
   selectedEnds,
   words,
@@ -62,6 +69,8 @@ export const FarLayer = memo(function FarLayer({
   tiles: readonly Rect[]
   /** The tiles where a walkthrough starts. Each draws a small mark inside it, clear of the names of the groups. */
   starts: readonly FarStart[]
+  /** The tiles whose name tag stays up. The names of the groups keep clear of the tags. */
+  lit: readonly FarLit[]
   /** The key of the selected bundle. */
   selected?: string | undefined
   /** The two ends of the selected bundle. The names of the other groups step back. */
@@ -74,26 +83,27 @@ export const FarLayer = memo(function FarLayer({
 }) {
   const scale = useStore((s) => farLabelScale(s.transform[2]))
   const flow = useStoreApi()
-  // The frame Fit shows: every group and every tile. A name never runs past its right edge.
+  // The frame Fit shows: every group and every tile. A name never runs past its right edge, and keeps clear of the parts,
+  // the lines, and the name tags that stay up.
   const names = useMemo(() => {
     const boxes = [...groups.map((g) => g.area), ...tiles]
     const x = Math.min(...boxes.map((b) => b.x))
     const y = Math.min(...boxes.map((b) => b.y))
     const frame = { x, y, width: Math.max(...boxes.map((b) => b.x + b.width)) - x, height: Math.max(...boxes.map((b) => b.y + b.height)) - y }
-    return farNames(groups, tiles, frame, scale)
-  }, [groups, tiles, scale])
-  const placed = useMemo(() => {
-    const groupNames = groups.map((g) => (names.get(g.id) as FarName).rect)
-    return placeCounts(bundles, [...tiles, ...groupNames], scale)
-  }, [groups, bundles, tiles, scale, names])
-  // The marks of the start tiles: inside the tile, clear of the names that sit over it. A tile too low for one is left without.
-  const marks = useMemo(() => {
-    const avoid = groups.map((g) => (names.get(g.id) as FarName).rect)
-    return starts.flatMap((t) => {
-      const mark = farMark(t.rect, scale, avoid)
-      return mark ? [{ ...t, box: mark.box }] : []
-    })
-  }, [starts, groups, names, scale])
+    return farNames(groups, [...tiles, ...lit.map((t) => tagRect(t.rect, t.label, scale))], frame, scale, bundles)
+  }, [groups, tiles, lit, bundles, scale])
+  // The names on the map, which the counts and the marks keep clear of. A name left off the map takes no room.
+  const shownNames = useMemo(() => [...names.values()].filter((n) => !n.hidden).map((n) => n.rect), [names])
+  const placed = useMemo(() => placeCounts(bundles, [...tiles, ...shownNames], scale), [bundles, tiles, scale, shownNames])
+  // The marks of the start tiles: inside the tile, clear of the names. A tile too low for one is left without.
+  const marks = useMemo(
+    () =>
+      starts.flatMap((t) => {
+        const mark = farMark(t.rect, scale, shownNames)
+        return mark ? [{ ...t, box: mark.box }] : []
+      }),
+    [starts, shownNames, scale],
+  )
   // Heads that would pile into a ladder at a block's edge are dropped. This follows the quantized scale, so it runs on a
   // threshold crossing and never per frame.
   const heads = useMemo(() => visibleArrows(bundles, scale), [bundles, scale])
@@ -198,14 +208,17 @@ export const FarLayer = memo(function FarLayer({
   return (
     <ViewportPortal>
       <div ref={layer} className={styles.layer} onPointerOver={onOver} onPointerOut={onOut} onPointerDown={onPress} onFocus={onFocus} onBlur={onBlur} onClick={onClick}>
-        {groups.map((g) => (
-          <div key={g.id} className={styles.anchor} style={{ left: g.area.x, top: g.area.y }}>
-            <button type="button" className={styles.name} style={{ maxWidth: names.get(g.id)?.room }} data-inside={names.get(g.id)?.inside || undefined} data-far-label="" data-quiet={selectedEnds && !selectedEnds.includes(`group:${g.id}`) ? '' : undefined} title={g.label} aria-label={`${g.label}, ${g.count} ${g.count === 1 ? 'part' : 'parts'}. Zoom to this group.`} onClick={() => onPick(g.id)}>
-              <span className={styles.text}>{g.label}</span>
-              <span className={styles.number}>{g.count}</span>
-            </button>
-          </div>
-        ))}
+        {groups.map((g) => {
+          const name = names.get(g.id) as FarName
+          return (
+            <div key={g.id} className={styles.anchor} style={{ left: name.rect.x, top: name.rect.y }}>
+              <button type="button" className={styles.name} style={{ maxWidth: name.room, '--edge': `${name.edge}px` } as CSSProperties} data-inside={name.inside || undefined} data-hidden={name.hidden || undefined} data-far-label="" data-quiet={selectedEnds && !selectedEnds.includes(`group:${g.id}`) ? '' : undefined} title={g.label} aria-label={`${g.label}, ${g.count} ${g.count === 1 ? 'part' : 'parts'}. Zoom to this group.`} onClick={() => onPick(g.id)}>
+                <span className={styles.text}>{g.label}</span>
+                <span className={styles.number}>{g.count}</span>
+              </button>
+            </div>
+          )
+        })}
         {marks.map((m) => (
           <span key={m.id} className={styles.start} data-flow-start="" data-for={m.id} data-lit={m.lit || undefined} title={startsLabel(m.titles)} aria-hidden="true" style={{ left: m.box.x, top: m.box.y, width: m.box.width, height: m.box.height, borderWidth: scale }}>
             <svg viewBox="0 0 16 16" width="100%" height="100%">

@@ -1,5 +1,5 @@
 import type { Point, Rect } from '../layout/geometry'
-import type { Bundle } from './bundleRoutes'
+import { drawnPoints, type Bundle } from './bundleRoutes'
 import { textWidth } from './textMeasure'
 
 /** Natural sizes, before the scale: a group name is 13px medium on a 20px line, a count chip 11px on 18px, a tile name 11px on 16px. */
@@ -10,11 +10,8 @@ const CHIP_HEIGHT = 18
 
 const touches = (a: Rect, b: Rect) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 
-/** The room the name and count of a group take above its top edge, at this label scale. */
-export function groupNameRect(area: Rect, label: string, count: number, scale: number, room = NAME_MAX): Rect {
-  const natural = Math.min(NAME_MAX, room, (textWidth(label, 'title') * 13) / 12 + 6 + String(count).length * 8 + 4)
-  return { x: area.x, y: area.y - (NAME_LIFT + NAME_LINE) * scale, width: natural * scale, height: NAME_LINE * scale }
-}
+/** The width of a group's name and count at natural size, before any cut. */
+const naturalWidth = (label: string, count: number) => (textWidth(label, 'title') * 13) / 12 + 6 + String(count).length * 8 + 4
 
 /** A name stops this far short of the name of the next group to its right, at natural size. */
 const NAME_GAP = 8
@@ -45,35 +42,139 @@ export function nameRoom(groups: readonly { id: string; area: Rect }[], scale: n
 export interface FarName {
   rect: Rect
   room: number
-  /** The name sits just inside the top of its own block, because another block is too close above it. */
+  /** The name reaches into the top of its own block, so the part of it below the block's edge sits on the block's wash. */
   inside: boolean
+  /** How far down the name the block's top edge runs, at natural size: the name is on the map's ground above it. */
+  edge: number
+  /** No free place was found: the name is left off the map and shows only while it has focus. */
+  hidden: boolean
 }
 
 /**
- * Where each group's name goes in the far view. A name sits just above its block, cut short of the next group's name
- * to its right and of the right edge of the frame, so it never runs off a fitted map. When another block (a group, or
- * a part outside it) sits so close above that the name would cover it, the name moves just inside the top of its own
- * block instead.
+ * A name keeps this far from a part, a line, or another name, at natural size: to its sides, and above and below, where
+ * its 20px line already leaves room around 13px letters.
+ */
+const CLEAR_X = 4
+const CLEAR_Y = 1
+/** A name cut short keeps at least this much room at natural size: its count and a few letters. */
+const NAME_MIN = 64
+/** The step, at natural size, by which a name moves down from above its block into its top. */
+const NAME_STEP = 2
+
+/** The stretches of a horizontal band, from `top` to `bottom`, that the boxes and lines cover. */
+function covered(top: number, bottom: number, boxes: readonly Rect[], lines: readonly { points: readonly Point[]; pad: number }[], padX: number, padY: number): [number, number][] {
+  const out: [number, number][] = []
+  for (const r of boxes) if (r.y < bottom + padY && r.y + r.height > top - padY) out.push([r.x - padX, r.x + r.width + padX])
+  for (const line of lines) {
+    const reach = line.pad + padY
+    for (let i = 1; i < line.points.length; i++) {
+      const p = line.points[i - 1] as Point
+      const q = line.points[i] as Point
+      const low = Math.max(top - reach, Math.min(p.y, q.y))
+      const high = Math.min(bottom + reach, Math.max(p.y, q.y))
+      if (low > high) continue
+      // Only the piece of the run inside the band, which for a slanted piece of a rounded corner is shorter than the run.
+      const at = (y: number) => (p.y === q.y ? [p.x, q.x] : [p.x + ((q.x - p.x) * (y - p.y)) / (q.y - p.y)])
+      const xs = [...at(low), ...at(high)]
+      out.push([Math.min(...xs) - line.pad - padX, Math.max(...xs) + line.pad + padX])
+    }
+  }
+  return out
+}
+
+/**
+ * The free stretch at least `need` wide that starts nearest `x`, between `lo` and `hi`, and how wide it is up to `end`.
+ * A free stretch starts at `x` or just past something covered, or ends just before something covered or at `end`.
+ * Undefined when there is none.
+ */
+function freeNear(stretches: readonly [number, number][], x: number, lo: number, hi: number, end: number, need: number): { x: number; width: number } | undefined {
+  const starts = [x, end - need, ...stretches.flatMap(([a, b]) => [b, a - need])].filter((s) => s >= lo && s <= hi).sort((a, b) => Math.abs(a - x) - Math.abs(b - x))
+  for (const at of starts) {
+    if (stretches.some(([a, b]) => a < at + need && b > at)) continue
+    const width = Math.min(end, ...stretches.filter(([a]) => a >= at + need).map(([a]) => a)) - at
+    if (width >= need) return { x: at, width }
+  }
+  return undefined
+}
+
+/**
+ * Where each group's name goes in the far view. It never covers a part, a bundled line, another block, or another name,
+ * and never runs past the right edge of the frame, so it never runs off a fitted map. A name sits just above its block
+ * when that is free. When it is not, the name moves along the block's width, then down onto the block's top edge and into
+ * its top, and last just below the block. At least half of it lies over the block, so it reads as the block's. A place where
+ * the whole name fits wins over one where it must be cut short; a cut name keeps its count and a few letters. A name
+ * with no free place at all is left off the map, the way a count with no free place is.
  */
 export function farNames(
   groups: readonly { id: string; area: Rect; label: string; count: number }[],
   tiles: readonly Rect[],
   frame: Rect,
   scale: number,
+  bundles: readonly Pick<Bundle, 'points' | 'width'>[] = [],
 ): Map<string, FarName> {
   const room = nameRoom(groups, scale)
-  const contains = (outer: Rect, inner: Rect) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height
+  const lines = bundles.map((b) => ({ points: drawnPoints(b.points), pad: (b.width / 2) * scale }))
+  const line = NAME_LINE * scale
+  const pad = CLEAR_X * scale
+  const right = frame.x + frame.width
+  const placed: Rect[] = []
   const out = new Map<string, FarName>()
   for (const g of groups) {
-    const edge = (frame.x + frame.width - g.area.x) / scale
-    const width = Math.max(0, Math.min(room.get(g.id) ?? NAME_MAX, edge))
-    const above = groupNameRect(g.area, g.label, g.count, scale, width)
-    const blocks = [...groups.filter((h) => h !== g).map((h) => h.area), ...tiles.filter((t) => !contains(g.area, t))]
-    const inside = blocks.some((b) => touches(above, b))
-    const rect = inside ? { ...above, y: g.area.y + NAME_LIFT * scale } : above
-    out.set(g.id, { rect, room: width, inside })
+    const { x, y, width, height } = g.area
+    const whole = naturalWidth(g.label, g.count)
+    const blocks = [...groups.filter((h) => h !== g).map((h) => h.area), ...tiles, ...placed]
+    // From just above the block down onto its edge and into its top, and then just below it.
+    const above = y - (NAME_LIFT + NAME_LINE) * scale
+    const tops = Array.from({ length: Math.floor((2 * NAME_LIFT + NAME_LINE) / NAME_STEP) + 1 }, (_, i) => above + i * NAME_STEP * scale)
+    tops.push(y + height + NAME_LIFT * scale)
+    const find = (need: number) => {
+      // The room the name needs: all of it, or what a cut name keeps, and never more than the longest name.
+      const want = Math.min(need, whole, NAME_MAX) * scale
+      for (const top of tops) {
+        // Above, the name stops short of the next group's name on the same line, as `nameRoom` says. When that leaves
+        // less than it needs, the name looks lower down instead of being cut shorter.
+        const cap = Math.min(top === above ? (room.get(g.id) ?? NAME_MAX) : NAME_MAX, whole) * scale
+        if (cap < want) continue
+        // The name reads as the block's: it starts at the block's left edge, or as near it as is free while half of it, or
+        // of a block narrower than it, still lies over the block.
+        const over = Math.min(want, width) / 2
+        const free = freeNear(covered(top, top + line, blocks, lines, pad, CLEAR_Y * scale), x, Math.max(frame.x, x + over - want), x + width - over, right, want)
+        if (free) return { top, x: free.x, width: Math.min(free.width, cap) }
+      }
+      return undefined
+    }
+    const spot = find(whole) ?? find(NAME_MIN)
+    if (spot) {
+      const rect = { x: spot.x, y: spot.top, width: spot.width, height: line }
+      const edge = Math.max(0, (y - spot.top) / scale)
+      placed.push(rect)
+      out.set(g.id, { rect, room: spot.width / scale, inside: spot.top + line > y && spot.top < y + height, edge, hidden: false })
+    } else {
+      // Where it shows while it has focus: just above the block, from its left edge, as wide as a cut name at least.
+      // It moves left, where it can, to end at the right edge of the frame.
+      const fits = Math.min(whole, NAME_MAX, Math.max(NAME_MIN, (right - x) / scale))
+      const at = Math.max(frame.x, Math.min(x, right - fits * scale))
+      out.set(g.id, { rect: { x: at, y: above, width: fits * scale, height: line }, room: fits, inside: false, edge: NAME_LINE, hidden: true })
+    }
   }
   return out
+}
+
+/** A far-view tile's name tag, at natural size: 12px medium on a 16px line, 8px and 3px of padding, a 1px border, 6px above the tile, and at most 240px wide. */
+const TAG_LINE = 16
+const TAG_PAD_X = 8
+const TAG_PAD_Y = 3
+const TAG_LIFT = 6
+const TAG_MAX = 240
+
+/**
+ * The room the name tag of a tile takes above it in the far view, at this label scale: where `.tip` in
+ * `CardNode.module.css` draws it while the tile is selected or lit by a walkthrough step.
+ */
+export function tagRect(tile: Rect, label: string, scale: number): Rect {
+  const width = Math.min(TAG_MAX, textWidth(label, 'title') + 2 * TAG_PAD_X + 2) * scale
+  const height = (TAG_LINE + 2 * TAG_PAD_Y + 2) * scale
+  return { x: tile.x + tile.width / 2 - width / 2, y: tile.y - TAG_LIFT * scale - height, width, height }
 }
 
 /** The room the user's mark takes under the number of a count: one dash and dot, and the gap above it. */

@@ -57,7 +57,7 @@ import { bundleGroups, connectionsOf } from './bundles'
 import { useRouteBox } from './useRouteBox'
 import { sharedBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
-import { FarLayer, type FarGroup, type FarStart } from './FarLayer'
+import { FarLayer, type FarGroup, type FarLit, type FarStart } from './FarLayer'
 import { CardNode } from './CardNode'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
@@ -682,6 +682,18 @@ export function Canvas() {
         : [],
     [far, board, rectsNow, selectedPart, stepParts],
   )
+  // The tiles whose name tag stays up in the far view: the selected part or proposed part, and the parts of a walkthrough step.
+  const selectedProposal = selection?.type === 'proposal' ? selection.id : undefined
+  const farLit = useMemo<FarLit[]>(
+    () =>
+      far && board && rectsNow
+        ? [...board.components, ...(proposals ?? [])].flatMap((c) => {
+            const rect = rectsNow[c.id]
+            return rect && (c.id === selectedPart || c.id === selectedProposal || stepParts?.has(c.id) === true) ? [{ rect, label: c.label }] : []
+          })
+        : [],
+    [far, board, rectsNow, proposals, selectedPart, selectedProposal, stepParts],
+  )
   const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link' || selection?.type === 'bundle')
   /** Frames a group, at a zoom where its cards show their text. */
   const pickGroup = useCallback(
@@ -1240,7 +1252,7 @@ export function Canvas() {
           <KeepInLimits limits={limits} opening={stillOpening} />
           <LabelMode crowded={crowded} onChange={setQuiet} />
           <DetailMode onChange={setDetail} />
-          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} starts={farStarts} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
+          {far && <FarLayer groups={farGroups} bundles={bundles} tiles={farTiles} starts={farStarts} lit={farLit} selected={selection?.type === 'bundle' ? selection.id : undefined} selectedEnds={selectedEnds} words={describeBundle} onPick={pickGroup} onOpen={openBundle} />}
           <SnapGuides ref={guides} />
           <InkLayer marks={marks ?? []} scene={scene} selected={selection?.type === 'mark' ? selection.id : undefined} interactive={activeTool === 'select'} onSelect={onInkSelect} onMoved={onInkMoved} hidden={hiddenArrows}>
             {handles.length > 0 && <EndHandles handles={handles} onDrop={onEndDrop} tip={endTip} />}
