@@ -492,8 +492,11 @@ test.describe('the Overview page order', () => {
   ] as const) {
     test(`at ${width}x${height} the first walkthrough row fits in the first screen on all examples`, async ({ page }) => {
       await page.setViewportSize({ width, height })
+      await page.goto('/')
       for (const ex of EXAMPLES) {
-        await open(page, ex.file)
+        await page.getByLabel('Board file', { exact: true }).setInputFiles(ex.file)
+        await expect(tab(page, 'Overview')).toBeVisible()
+        await page.waitForTimeout(200)
         if ((await page.getByTestId('overview').count()) === 0) await tab(page, 'Overview').click()
         const overview = page.getByTestId('overview')
         const firstPlay = overview.getByRole('button', { name: /^Play / }).first()
