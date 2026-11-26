@@ -100,7 +100,32 @@
   text-underline-offset: 3px;
 }
 
-/* A popover that is open holds its trigger down. */
+/* Hover answers only a fine pointer. A phone has no hover, so a touch does not leave a button looking pressed. */
+@media (hover: hover) and (pointer: fine) {
+  .button:not(:disabled, [aria-disabled='true'], [data-popup-open]):hover {
+    background: color-mix(in srgb, var(--raised), var(--fg) 5%);
+    border-color: var(--border-strong);
+  }
+
+  .primary:not(:disabled, [aria-disabled='true'], [data-popup-open]):hover {
+    background: color-mix(in srgb, var(--accent), black 8%);
+    border-color: transparent;
+  }
+
+  .quiet:not(:disabled, [aria-disabled='true'], [data-popup-open]):hover {
+    border-color: transparent;
+    background: var(--hover);
+    color: var(--fg);
+  }
+
+  .link:not(:disabled, [aria-disabled='true'], [data-popup-open]):hover {
+    border-color: transparent;
+    background: transparent;
+    text-decoration-color: var(--fg);
+  }
+}
+
+/* A popover that is open holds its trigger down, and the pointer over the trigger does not lift it. */
 .button[data-popup-open] {
   background: color-mix(in srgb, var(--raised), var(--fg) 8%);
 }
@@ -116,31 +141,6 @@
 
 .link[data-popup-open] {
   background: transparent;
-}
-
-/* Hover answers only a fine pointer. A phone has no hover, so a touch does not leave a button looking pressed. */
-@media (hover: hover) and (pointer: fine) {
-  .button:not(:disabled, [aria-disabled='true']):hover {
-    background: color-mix(in srgb, var(--raised), var(--fg) 5%);
-    border-color: var(--border-strong);
-  }
-
-  .primary:not(:disabled, [aria-disabled='true']):hover {
-    background: color-mix(in srgb, var(--accent), black 8%);
-    border-color: transparent;
-  }
-
-  .quiet:not(:disabled, [aria-disabled='true']):hover {
-    border-color: transparent;
-    background: var(--hover);
-    color: var(--fg);
-  }
-
-  .link:not(:disabled, [aria-disabled='true']):hover {
-    border-color: transparent;
-    background: transparent;
-    text-decoration-color: var(--fg);
-  }
 }
 
 /* Pressed: on pointer-down, with no transition on the way in. The ease back out is the one on .button. */
