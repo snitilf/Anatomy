@@ -35,13 +35,20 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .row:hover {
+  .row:not(:disabled, [aria-disabled='true']):hover {
     background: var(--hover);
   }
 }
 
-.row:active {
+.row:not(:disabled, [aria-disabled='true']):active {
   background: var(--active);
+}
+
+/* Off: dimmed, no hover, no press, as for a button. */
+.row:disabled,
+.row[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .row:focus-visible {
@@ -81,7 +88,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .row:hover .go {
+  .row:not(:disabled, [aria-disabled='true']):hover .go {
     opacity: 1;
   }
 }
