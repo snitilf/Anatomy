@@ -161,6 +161,55 @@ describe('where a group name goes in the far view', () => {
     expect(name.hidden).toBe(false)
   })
 
+  it('slides a narrow group at the right edge to the left, so its whole name fits', () => {
+    // Open map to the left of the group above it: the other group is far below, out of the band of the name.
+    const label = 'Outside the model'
+    for (const scale of [3, 5]) {
+      const groups = [group('a', 0, 600, 'Group', 600), group('b', 640, 0, label, 272)]
+      const frame = frameOf(groups)
+      const name = farNames(groups, [], frame, scale).get('b')!
+      const whole = farNames([group('w', 0, 0, label, 4000)], [], { x: 0, y: 0, width: 4000, height: 300 }, scale).get('w')!
+      expect(name.hidden, `scale ${scale}`).toBe(false)
+      expect(name.room, `scale ${scale}`).toBeCloseTo(whole.room, 6)
+      expect(name.rect.x + name.rect.width, `scale ${scale}`).toBeLessThanOrEqual(frame.x + frame.width)
+      expect(name.rect.x, `scale ${scale}`).toBeLessThan(640)
+      // It still reads as the block's: at least half of the block's width lies under it.
+      expect(name.rect.x + name.rect.width - 640, `scale ${scale}`).toBeGreaterThanOrEqual(136)
+    }
+  })
+
+  it('does not cut a name short of the next group on its line, but tries lower places first', () => {
+    // At a scale of 6, 64 board pixels between the two groups leave 48 natural pixels before the next name.
+    const groups = [group('g1', 0, 200, 'Backend services', 272), group('g2', 336, 200, 'Jobs', 272)]
+    const placed = farNames(groups, [], frameOf(groups), 6)
+    const name = placed.get('g1')!
+    expect(name.hidden).toBe(false)
+    expect(name.room).toBeGreaterThanOrEqual(64)
+    expect(hit(name.rect, groups[1]!.area)).toBe(false)
+    expect(hit(name.rect, placed.get('g2')!.rect)).toBe(false)
+  })
+
+  it('never takes a place with no room for its name', () => {
+    // The next group starts 40 board pixels to the right, its name on the same line: no room is left above.
+    const groups = [group('g1', 0, 200, 'Backend services', 600), { id: 'g2', label: 'Jobs', count: 1, area: { x: 40, y: 60, width: 272, height: 100 } }]
+    const name = farNames(groups, [], frameOf(groups), 6).get('g1')!
+    expect(name.hidden).toBe(false)
+    expect(name.room).toBeGreaterThanOrEqual(64)
+    expect(name.rect.width).toBeGreaterThanOrEqual(64 * 6)
+  })
+
+  it('keeps a hidden name at least as wide as a cut name while it has focus', () => {
+    // The boxed-in group of the test above, as narrow as a group of one column, at a phone's scale.
+    for (const scale of [5, 6]) {
+      const groups = [group('top', 0, 0, 'Group', 272), group('g', 0, 320, 'A long name for a group of parts', 272), group('under', 0, 640, 'Group', 272)]
+      const tiles = [{ x: 0, y: 322, width: 272, height: 296 }]
+      const name = farNames(groups, tiles, frameOf(groups), scale).get('g')!
+      expect(name.hidden, `scale ${scale}`).toBe(true)
+      expect(name.room, `scale ${scale}`).toBeGreaterThanOrEqual(64)
+      expect(name.rect.width, `scale ${scale}`).toBeCloseTo(name.room * scale, 6)
+    }
+  })
+
   it('never covers a tile, a line, or another name', () => {
     const groups = [group('a', 0, 0, 'Frontend services'), group('b', 320, 0, 'Backend'), group('c', 0, 340, 'Data and storage'), group('d', 320, 340, 'Jobs')]
     const tiles = groups.flatMap((g) => [
