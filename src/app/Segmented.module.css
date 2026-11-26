@@ -87,3 +87,10 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* A short segment on a touch screen is at least as wide as the hit area, as a button is. */
+@media (pointer: coarse) {
+  .segment {
+    min-width: var(--hit);
+  }
+}
