@@ -682,16 +682,17 @@ export function Canvas() {
         : [],
     [far, board, rectsNow, selectedPart, stepParts],
   )
-  // The tiles whose name tag stays up in the far view: the selected part, and the parts of a walkthrough step.
+  // The tiles whose name tag stays up in the far view: the selected part or proposed part, and the parts of a walkthrough step.
+  const selectedProposal = selection?.type === 'proposal' ? selection.id : undefined
   const farLit = useMemo<FarLit[]>(
     () =>
       far && board && rectsNow
-        ? board.components.flatMap((c) => {
+        ? [...board.components, ...(proposals ?? [])].flatMap((c) => {
             const rect = rectsNow[c.id]
-            return rect && (c.id === selectedPart || stepParts?.has(c.id) === true) ? [{ rect, label: c.label }] : []
+            return rect && (c.id === selectedPart || c.id === selectedProposal || stepParts?.has(c.id) === true) ? [{ rect, label: c.label }] : []
           })
         : [],
-    [far, board, rectsNow, selectedPart, stepParts],
+    [far, board, rectsNow, proposals, selectedPart, selectedProposal, stepParts],
   )
   const spotlit = !step && held === undefined && (selection?.type === 'component' || selection?.type === 'relationship' || selection?.type === 'link' || selection?.type === 'bundle')
   /** Frames a group, at a zoom where its cards show their text. */
