@@ -83,6 +83,11 @@
   opacity: 0;
 }
 
+/* After a figure, the arrow sits beside it at the trailing edge, so the two do not split the free space. */
+.meta ~ .go {
+  margin-left: 0;
+}
+
 .row:focus-visible .go {
   opacity: 1;
 }
