@@ -269,9 +269,14 @@ test.describe('with a fine pointer', () => {
     await expect(note).toHaveAttribute('aria-checked', 'true')
     const raised = await look(note)
     expect((await look(question)).background).not.toBe(raised.background)
-    // The thumb has a hairline, and the unchecked segment has none.
-    expect(await note.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('1px')
-    expect(await question.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('1px')
+    // The thumb has a hairline, and the unchecked segment has none. Both keep a 1px border, so the text does not move.
+    const border = (el: Element) => ({ width: getComputedStyle(el).borderTopWidth, color: getComputedStyle(el).borderTopColor })
+    const thumb = await note.evaluate(border)
+    const bare = await question.evaluate(border)
+    expect(thumb.width).toBe('1px')
+    expect(bare.width).toBe('1px')
+    expect(thumb.color).not.toBe('rgba(0, 0, 0, 0)')
+    expect(bare.color).toBe('rgba(0, 0, 0, 0)')
     // One tab stop for the group, and the arrow keys move inside it and take the choice along.
     await page.keyboard.press('Tab')
     await expect(note).toBeFocused()
@@ -282,6 +287,25 @@ test.describe('with a fine pointer', () => {
     await expect(page.getByRole('textbox', { name: 'Add a question' })).toBeVisible()
     await page.keyboard.press('ArrowLeft')
     await expect(note).toBeChecked()
+  })
+
+  test('an open menu holds its trigger on the open fill while the pointer is still over it', async ({ page }) => {
+    await open(page, REFUND)
+    const trigger = page.getByRole('banner').getByRole('button', { name: 'Settings' })
+    const box = (await trigger.boundingBox())!
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await expect(page.getByRole('menu')).toBeVisible()
+    await expect(trigger).toHaveAttribute('data-popup-open', '')
+    await page.waitForTimeout(250)
+    const over = await look(trigger)
+    // Away from the trigger, the menu stays open and the trigger shows the open fill alone.
+    await page.mouse.move(box.x - 300, box.y + 400)
+    await page.waitForTimeout(250)
+    await expect(page.getByRole('menu')).toBeVisible()
+    const away = await look(trigger)
+    expect(over.background).toBe(away.background)
+    expect(over.color).toBe(away.color)
+    await page.keyboard.press('Escape')
   })
 
   test('a press answers at once: the primary, default, quiet, and link variants each change on the way down', async ({ page }) => {
@@ -438,10 +462,15 @@ test.describe('with a coarse pointer on a wide window', () => {
     for (const name of ['Note', 'Question']) {
       const hit = await group.getByRole('radio', { name }).evaluate((el) => {
         const box = el.getBoundingClientRect()
-        const after = parseFloat(getComputedStyle(el, '::after').height)
-        return Math.max(box.height, Number.isFinite(after) ? after : 0)
+        const after = getComputedStyle(el, '::after')
+        const grown = (side: 'height' | 'width') => {
+          const value = parseFloat(after[side])
+          return Number.isFinite(value) ? value : 0
+        }
+        return { height: Math.max(box.height, grown('height')), width: Math.max(box.width, grown('width')) }
       })
-      expect(hit, `${name} hit area`).toBeGreaterThanOrEqual(44)
+      expect(hit.height, `${name} hit height`).toBeGreaterThanOrEqual(44)
+      expect(hit.width, `${name} hit width`).toBeGreaterThanOrEqual(44)
     }
   })
 })

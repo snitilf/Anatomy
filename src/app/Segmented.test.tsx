@@ -128,6 +128,16 @@ describe.each(['tabs', 'choice'] as const)('Segmented keys (%s)', (kind) => {
     expect(segment('Map')).toHaveFocus()
   })
 
+  it('does not report a click on the segment that is already selected', () => {
+    const onChange = vi.fn()
+    render(<Harness kind={kind} onChange={onChange} />)
+    fireEvent.click(segment('Map'))
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.click(segment('Overview'))
+    fireEvent.click(segment('Overview'))
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
   it('ignores keys with a modifier', () => {
     const onChange = vi.fn()
     render(<Harness kind={kind} onChange={onChange} />)
