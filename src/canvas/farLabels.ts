@@ -128,10 +128,13 @@ export function farNames(
     const tops = Array.from({ length: Math.floor((2 * NAME_LIFT + NAME_LINE) / NAME_STEP) + 1 }, (_, i) => above + i * NAME_STEP * scale)
     tops.push(y + height + NAME_LIFT * scale)
     const find = (need: number) => {
+      // The room the name needs: all of it, or what a cut name keeps, and never more than the longest name.
+      const want = Math.min(need, whole, NAME_MAX) * scale
       for (const top of tops) {
-        // Above, the name may stop short of the next group's name on the same line, as `nameRoom` says.
+        // Above, the name stops short of the next group's name on the same line, as `nameRoom` says. When that leaves
+        // less than it needs, the name looks lower down instead of being cut shorter.
         const cap = Math.min(top === above ? (room.get(g.id) ?? NAME_MAX) : NAME_MAX, whole) * scale
-        const want = Math.min(need * scale, cap)
+        if (cap < want) continue
         // The name reads as the block's: it starts at the block's left edge, or as near it as is free while half of it, or
         // of a block narrower than it, still lies over the block.
         const over = Math.min(want, width) / 2
