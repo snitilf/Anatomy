@@ -172,7 +172,7 @@ const TAG_MAX = 240
  * `CardNode.module.css` draws it while the tile is selected or lit by a walkthrough step.
  */
 export function tagRect(tile: Rect, label: string, scale: number): Rect {
-  const width = Math.min(TAG_MAX, (textWidth(label, 'label') * 12) / 11 + 2 * TAG_PAD_X + 2) * scale
+  const width = Math.min(TAG_MAX, textWidth(label, 'title') + 2 * TAG_PAD_X + 2) * scale
   const height = (TAG_LINE + 2 * TAG_PAD_Y + 2) * scale
   return { x: tile.x + tile.width / 2 - width / 2, y: tile.y - TAG_LIFT * scale - height, width, height }
 }
