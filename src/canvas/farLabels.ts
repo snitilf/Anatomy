@@ -84,11 +84,11 @@ function covered(top: number, bottom: number, boxes: readonly Rect[], lines: rea
 
 /**
  * The free stretch at least `need` wide that starts nearest `x`, between `lo` and `hi`, and how wide it is up to `end`.
- * A free stretch starts at `x` or just past something covered, or ends just before something covered. Undefined when
- * there is none.
+ * A free stretch starts at `x` or just past something covered, or ends just before something covered or at `end`.
+ * Undefined when there is none.
  */
 function freeNear(stretches: readonly [number, number][], x: number, lo: number, hi: number, end: number, need: number): { x: number; width: number } | undefined {
-  const starts = [x, ...stretches.flatMap(([a, b]) => [b, a - need])].filter((s) => s >= lo && s <= hi).sort((a, b) => Math.abs(a - x) - Math.abs(b - x))
+  const starts = [x, end - need, ...stretches.flatMap(([a, b]) => [b, a - need])].filter((s) => s >= lo && s <= hi).sort((a, b) => Math.abs(a - x) - Math.abs(b - x))
   for (const at of starts) {
     if (stretches.some(([a, b]) => a < at + need && b > at)) continue
     const width = Math.min(end, ...stretches.filter(([a]) => a >= at + need).map(([a]) => a)) - at
