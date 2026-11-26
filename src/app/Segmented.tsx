@@ -70,7 +70,9 @@ export function Segmented<T extends string>({ kind, label, value, options, onCha
             className={styles.segment}
             disabled={option.disabled}
             tabIndex={index === stop ? 0 : -1}
-            onClick={() => onChange(option.value)}
+            onClick={() => {
+              if (!on) onChange(option.value)
+            }}
             onKeyDown={(event) => move(event, index)}
           >
             {option.label}
