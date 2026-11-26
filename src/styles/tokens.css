@@ -34,8 +34,8 @@
   /* The hairline around a group area. */
   --group-edge: color-mix(in srgb, var(--fg) 18%, transparent);
   --card-shadow: 0 1px 2px rgb(20 22 30 / 0.07);
-  /* How much of the label color a faded label keeps. */
-  --faded-label: 80%;
+  /* How much of the label color a faded label keeps. A faded label still passes 4.5 to 1 on the ground and on one or two group washes, and stays well behind a lit label in --fg. */
+  --faded-label: 90%;
   /* How much of a line is left when it steps back (a part is selected, a card is hovered, a walkthrough plays). Every agent line has one ink, so one share serves them all. */
   --fade-line: 0.62;
   /* A selection is a spotlight: what is not touching it steps much further back than the fade above. */
@@ -96,7 +96,7 @@
   --card-edge: rgb(232 233 239 / 0.4);
   --group-edge: color-mix(in srgb, var(--fg) 14%, transparent);
   --card-shadow: 0 1px 2px rgb(6 6 12 / 0.3);
-  --faded-label: 70%;
+  --faded-label: 75%;
   --fade-line: 0.54;
   --spot-line: 0.22;
   --spot-label: 0.38;
