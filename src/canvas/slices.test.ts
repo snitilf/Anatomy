@@ -7,7 +7,7 @@ import { placeCards } from '../layout/cards'
 import type { Rect } from '../layout/geometry'
 import { settleMoves } from '../layout/groups'
 import { computeGeometry, moveCard } from './buildGraph'
-import { computeBundles, sharedBundles } from './bundleRoutes'
+import { computeBundles, primeBundles, sharedBundles } from './bundleRoutes'
 import { bundleGroups } from './bundles'
 import { resetRouteStats, routeStats, SEARCH_SLICE } from './routing'
 import { buildSteps } from './slices'
@@ -27,7 +27,7 @@ function resized(board: Board) {
   for (const [k, p] of Object.entries(settleMoves(board, after, [id]))) after[k] = { ...after[k]!, ...p }
   let previous = solved
   for (const k of Object.keys(after)) if (JSON.stringify(after[k]) !== JSON.stringify(before[k])) previous = moveCard(board, previous, after, k)
-  return { rects: after, previous }
+  return { before, rects: after, previous }
 }
 
 /** Runs every step, and reports the most search work any one step did. */
@@ -77,5 +77,35 @@ describe.each([
     resetRouteStats()
     sharedBundles(board, value.solved, bundleGroups(board))
     expect(routeStats.searches).toBeGreaterThan(0)
+  })
+})
+
+describe('the far-view lines kept while the build after a resize prepares the next ones', () => {
+  it('keeps the lines on screen when the build prepares the lines of the new layout', () => {
+    const board = load(fortyText)
+    const { before, rects } = resized(board)
+    const pairs = bundleGroups(board)
+    sharedBundles(board, before, pairs)
+    drain(primeBundles(board, rects, pairs))
+    resetRouteStats()
+    sharedBundles(board, before, pairs)
+    sharedBundles(board, rects, pairs)
+    expect(routeStats.expansions).toBe(0)
+    expect(routeStats.searches).toBe(0)
+  })
+
+  it('keeps the lines asked for last when another build prepares a third layout', () => {
+    const board = load(fortyText)
+    const { before, rects } = resized(board)
+    const pairs = bundleGroups(board)
+    sharedBundles(board, before, pairs)
+    drain(primeBundles(board, rects, pairs))
+    sharedBundles(board, before, pairs)
+    drain(primeBundles(board, { ...rects }, pairs))
+    resetRouteStats()
+    sharedBundles(board, before, pairs)
+    expect(routeStats.expansions).toBe(0)
+    sharedBundles(board, rects, pairs)
+    expect(routeStats.expansions).toBeGreaterThan(0)
   })
 })
