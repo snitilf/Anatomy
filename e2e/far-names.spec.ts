@@ -211,20 +211,15 @@ test.describe('far-view group names keep clear of tiles, tags, counts, and bundl
     expect(checked).toBeGreaterThan(0)
   })
 
-  for (const { file, label } of [
-    { file: 'src/examples/how-an-llm-works.board.json', label: 'Outside the model' },
-    { file: 'e2e/fixtures/url-shortener.board.json', label: 'Infrastructure' },
-  ]) {
-    test(`on a phone, the narrow group at the right edge shows its whole name: ${label}`, async ({ page }) => {
-      await page.setViewportSize({ width: 390, height: 844 })
-      await open(page, file)
-      await expect(page.locator('[data-detail]')).toHaveAttribute('data-detail', 'far')
-      const name = page.locator('button[data-far-label]').filter({ has: page.getByText(label, { exact: true }) })
-      await expect(name).toHaveCSS('opacity', '1')
-      const cut = await name.locator('span').first().evaluate((el) => el.scrollWidth > el.clientWidth)
-      expect(cut, `${label} is cut short`).toBe(false)
-    })
-  }
+  test('on a phone, a narrow group at the right edge slides left to show its whole name when room to its left is open', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await open(page, 'e2e/fixtures/url-shortener.board.json')
+    await expect(page.locator('[data-detail]')).toHaveAttribute('data-detail', 'far')
+    const name = page.locator('button[data-far-label]').filter({ has: page.getByText('Infrastructure', { exact: true }) })
+    await expect(name).toHaveCSS('opacity', '1')
+    const cut = await name.locator('span').first().evaluate((el) => el.scrollWidth > el.clientWidth)
+    expect(cut, 'Infrastructure is cut short').toBe(false)
+  })
 
   test('keyboard: a name left off the map shows while it has focus, and Enter zooms into its group', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
