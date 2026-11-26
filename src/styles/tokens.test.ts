@@ -230,6 +230,74 @@ describe('contrast matrix', () => {
     expect(contrastRatio(parseColor(token(light, '--fg')), stickyBg)).toBeGreaterThanOrEqual(4.5)
   })
 
+  describe('faded line labels', () => {
+    // A faded label keeps its cutout and steps back only by the color of its words: the label ink at `--faded-label`
+    // over the cutout. The cutout is the map color with the group areas under the label painted again on it,
+    // so it is the ground, one group wash, or two overlapping ones. `--yours-text` fades the same way while a sidebar row is pointed at.
+    const themes = [
+      ['light', light],
+      ['dark', dark],
+    ] as const
+    const inks = ['--fg-2', '--yours-text'] as const
+    const grounds = ['--bg', '--wash-share', '--wash-share-2'] as const
+
+    function ground(block: Record<string, string>, name: (typeof grounds)[number]): Rgba {
+      return name === '--bg' ? parseColor(token(block, '--bg')) : wash(block, name)
+    }
+
+    function faded(block: Record<string, string>, ink: string, under: Rgba): Rgba {
+      const share = Number.parseFloat(token(block, '--faded-label')) / 100
+      return composite({ ...parseColor(token(block, ink)), a: share }, under)
+    }
+
+    it('passes 4.5:1 on the ground and on a single and an overlapping group wash, in both themes', () => {
+      const failures: string[] = []
+      for (const [theme, block] of themes) {
+        for (const name of grounds) {
+          const under = ground(block, name)
+          for (const ink of inks) {
+            const ratio = contrastRatio(faded(block, ink, under), under)
+            if (ratio < 4.5) failures.push(`${theme}: ${ink} at --faded-label on ${name} (${ratio.toFixed(2)}:1)`)
+          }
+        }
+      }
+      expect(failures).toEqual([])
+    })
+
+    it('stays clearly behind the labels a walkthrough lights, which use --fg', () => {
+      for (const [, block] of themes) {
+        expect(Number.parseFloat(token(block, '--faded-label'))).toBeLessThan(100)
+        for (const name of grounds) {
+          const under = ground(block, name)
+          const lit = contrastRatio(parseColor(token(block, '--fg')), under)
+          const dimmed = contrastRatio(faded(block, '--fg-2', under), under)
+          expect(lit / dimmed).toBeGreaterThanOrEqual(1.75)
+        }
+      }
+    })
+
+    it('models what the map draws: the label ink at --faded-label on a cutout of the ground and --wash-share areas', () => {
+      const css = readFileSync(resolve(process.cwd(), 'src/canvas/RelationshipEdge.module.css'), 'utf8')
+      const rule = (selector: string) => {
+        const start = css.indexOf(`${selector} {`)
+        if (start === -1) throw new Error(`Missing rule ${selector}`)
+        return css.slice(start, css.indexOf('}', start))
+      }
+      expect(rule('.pill[data-dimmed]')).toContain('color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent);')
+      expect(rule('.backdrop')).toContain('background: var(--bg);')
+      expect(rule('.tint')).toContain('background: color-mix(in srgb, var(--fg) var(--wash-share), transparent);')
+      // Two tints over each other are the overlapping wash.
+      for (const [, block] of themes) {
+        const one = Number.parseFloat(token(block, '--wash-share')) / 100
+        const two = Number.parseFloat(token(block, '--wash-share-2')) / 100
+        expect(1 - (1 - one) ** 2).toBeCloseTo(two, 3)
+      }
+      const emphasis = readFileSync(resolve(process.cwd(), 'src/canvas/emphasis.ts'), 'utf8')
+      expect(emphasis).toContain('color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent);')
+      expect(emphasis).toContain('color: color-mix(in srgb, var(--yours-text) var(--faded-label), transparent);')
+    })
+  })
+
   it('keeps dark theme contrast and values intact', () => {
     // Dark theme values stay unchanged.
     expect(token(dark, '--bg')).toBe('#181920')
