@@ -30,13 +30,15 @@ const key = (k: string, mods: { meta?: boolean; shift?: boolean } = {}, target: 
 describe('App', () => {
   it('shows the open actions and the examples when no board is open', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Anatomy' })).toBeInTheDocument()
-    // A small mark sits beside the word. It is a picture, so it has no name of its own and the heading stays "Anatomy".
+    const banner = within(screen.getByRole('banner'))
+    expect(banner.getByText('Anatomy')).toBeInTheDocument()
+    expect(banner.queryByRole('heading')).not.toBeInTheDocument()
+    // A small mark sits beside the word. It is a picture, so it has no name of its own.
     const mark = screen.getByTestId('brand-mark')
     expect(mark).toHaveAttribute('aria-hidden', 'true')
-    expect(mark.nextElementSibling).toBe(screen.getByRole('heading', { name: 'Anatomy' }))
+    expect(mark.nextElementSibling).toBe(banner.getByText('Anatomy'))
     const main = within(screen.getByRole('main'))
-    expect(main.getByRole('heading', { name: 'Open a repository to see its anatomy.' })).toBeInTheDocument()
+    expect(main.getByRole('heading', { level: 1, name: 'Open a repository to see its anatomy.' })).toBeInTheDocument()
     // jsdom has no folder picker, so the start screen says so and leads with a file.
     expect(main.getByText('This browser cannot open folders. Chrome and Edge can.')).toBeInTheDocument()
     expect(main.getByRole('button', { name: 'Open file' })).toBeInTheDocument()

@@ -108,7 +108,7 @@ test.describe('the mark beside the word Anatomy', () => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await page.goto('/')
       const mark = page.getByTestId('brand-mark')
-      const word = page.getByRole('heading', { level: 1, name: 'Anatomy' })
+      const word = page.getByRole('banner').getByText('Anatomy', { exact: true })
       await expect(mark).toBeVisible()
       const m = (await mark.boundingBox())!
       const w = (await word.boundingBox())!
@@ -138,10 +138,10 @@ test.describe('the mark beside the word Anatomy', () => {
     })
   }
 
-  test('is not repeated once a board is open', async ({ page }) => {
+  test('stays visible inside the Open menu trigger once a board is open', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /Anatomy itself/ }).click()
     await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
-    await expect(page.getByTestId('brand-mark')).toHaveCount(0)
+    await expect(page.getByRole('banner').getByTestId('brand-mark')).toBeVisible()
   })
 })

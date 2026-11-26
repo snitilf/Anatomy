@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test } from './test.ts'
 import { open, pickConnection, pickPart, viewport } from './helpers.ts'
 
@@ -8,7 +9,9 @@ const crumb = (page: import('@playwright/test').Page) => page.getByRole('navigat
 
 test('the crumb follows the selection: board, group, part', async ({ page }) => {
   await open(page, REFUND)
-  await expect(crumb(page).getByRole('heading', { name: /Refund approval/ })).toBeVisible()
+  await expect(crumb(page).getByText(/Refund approval/)).toBeVisible()
+  // The 13 px crumb is not the page h1.
+  await expect(crumb(page).getByRole('heading')).toHaveCount(0)
   await expect(crumb(page).locator('[aria-current="location"]')).toHaveCount(0)
   await pickPart(page, 'policy-check')
   const here = crumb(page).locator('[aria-current="location"]')
@@ -97,4 +100,40 @@ test('a one-letter part is as wide as its letter, not a padded pill', async ({ p
   await pickPart(page, 'a')
   const width = await crumb(page).locator('[aria-current="location"]').evaluate((el) => el.getBoundingClientRect().width)
   expect(width).toBeLessThan(48)
+})
+
+test('a two-letter folder name leaves no hole before the slash', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const text = await readFile(REFUND, 'utf8')
+  const gapFor = async (name: string) => {
+    await page.addInitScript(
+      ([folderName, boardText]) => {
+        localStorage.setItem(
+          'anatomy:test-folder',
+          JSON.stringify({ name: folderName, files: { 'board.json': { text: boardText, lastModified: 1 } }, remembered: false }),
+        )
+      },
+      [name, text] as const,
+    )
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Open folder' }).click()
+    await expect(crumb(page).getByRole('button', { name })).toBeVisible()
+    // Measure from the chevron's right edge inside the crumb to the slash's left edge, and also the crumb box to the slash.
+    return crumb(page).evaluate((nav) => {
+      const btn = nav.querySelector('button')!
+      const chevron = btn.querySelector('svg:last-of-type')!
+      const slash = nav.querySelector(':scope > [aria-hidden="true"]')!
+      const btnBox = btn.getBoundingClientRect()
+      const chevBox = chevron.getBoundingClientRect()
+      const slashBox = slash.getBoundingClientRect()
+      return {
+        buttonToSlash: Math.round(slashBox.left - btnBox.right),
+        chevronToSlash: Math.round(slashBox.left - chevBox.right),
+      }
+    })
+  }
+  const shortGap = await gapFor('ab')
+  const longGap = await gapFor('repository-name')
+  expect(Math.abs(shortGap.buttonToSlash - longGap.buttonToSlash)).toBeLessThanOrEqual(1)
+  expect(Math.abs(shortGap.chevronToSlash - longGap.chevronToSlash)).toBeLessThanOrEqual(1)
 })
