@@ -1,9 +1,24 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { expect, test } from './test.ts'
 import { open, viewport } from './helpers.ts'
+import { everyState, seedFolder } from './states.ts'
 
 const REFUND = 'e2e/fixtures/refund-approval.board.json'
 const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
+const WORST = 'e2e/fixtures/worst-text.board.json'
+const EXAMPLES = [
+  { name: 'Claude Code', file: 'src/examples/claude-code-harness.board.json' },
+  { name: 'Anatomy', file: 'src/examples/anatomy.board.json' },
+  { name: 'How an LLM works', file: 'src/examples/how-an-llm-works.board.json' },
+] as const
+
+async function openStates(page: import('@playwright/test').Page) {
+  const { text, layer } = await everyState()
+  await seedFolder(page, text, layer)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open folder' }).click()
+  await expect(page.locator('[data-detail]')).toBeAttached()
+}
 
 const tab = (page: import('@playwright/test').Page, name: 'Map' | 'Overview') => page.getByRole('tab', { name })
 
@@ -203,7 +218,7 @@ test('Connections lists the pairs and the inside of each group, and the rows add
   await open(page, SHORTENER)
   await tab(page, 'Overview').click()
   const overview = page.getByTestId('overview')
-  const total = Number(await overview.getByRole('button', { name: /^\d+$/ }).first().textContent())
+  const total = Number.parseInt((await overview.getByRole('button', { name: /^\d+ connections?$/ }).textContent()) ?? '0', 10)
   const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
   expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
   await expect(overview.getByRole('button', { name: /^Inside Backend/ })).toBeVisible()
@@ -377,7 +392,7 @@ test('Connections shows the busiest 8 rows, folds the rest behind Show more, and
   await page.keyboard.press('Enter')
   expect(await pairs.count()).toBeGreaterThan(8)
   await expect(overview.getByRole('button', { name: 'Show fewer' })).toBeFocused()
-  const total = Number(await overview.getByRole('button', { name: /^\d+$/ }).nth(0).textContent())
+  const total = Number.parseInt((await overview.getByRole('button', { name: /^\d+ connections?$/ }).textContent()) ?? '0', 10)
   const counts = await overview.locator('[data-row^="between:"] [class*="count"]').allTextContents()
   expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total)
 })
@@ -422,4 +437,206 @@ test('a pair row shows the way its connections run', async ({ page }) => {
     }
   }
   expect(one).toBeGreaterThan(0)
+})
+
+test.describe('the Overview page order', () => {
+  test('at 1440x900 the page has two columns with Scope and Details in the rail to the right of main', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, SHORTENER)
+    await tab(page, 'Overview').click()
+    const overview = page.getByTestId('overview')
+    await expect(overview.getByRole('heading', { level: 1 })).toBeVisible()
+    const main = overview.locator('[data-section="parts"]')
+    const scope = overview.locator('[data-section="scope"]')
+    const details = overview.locator('[data-section="details"]')
+    const [mainBox, scopeBox, detailsBox] = await Promise.all([main.boundingBox(), scope.boundingBox(), details.boundingBox()])
+    expect(scopeBox!.x).toBeGreaterThan(mainBox!.x + mainBox!.width)
+    expect(detailsBox!.x).toBeGreaterThan(mainBox!.x + mainBox!.width)
+    expect(scopeBox!.y).toBeLessThan(detailsBox!.y)
+  })
+
+  for (const [width, height] of [
+    [1024, 768],
+    [390, 844],
+  ] as const) {
+    test(`at ${width}x${height} the page has one column in 8.5 order`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
+      await openStates(page)
+      if ((await page.getByTestId('overview').count()) === 0) await tab(page, 'Overview').click()
+      const overview = page.getByTestId('overview')
+      const top = async (sel: string) => (await overview.locator(sel).boundingBox())!.y
+      const head = await top('header')
+      const needs = await top('[data-section="needs"]')
+      const start = await top('[data-section="start"]')
+      const scope = await top('[data-section="scope"]')
+      const parts = await top('[data-section="parts"]')
+      const between = await top('[data-section="between"]')
+      const questions = await top('[data-section="questions"]')
+      const details = await top('[data-section="details"]')
+      expect(head).toBeLessThan(needs)
+      expect(needs).toBeLessThan(start)
+      expect(start).toBeLessThan(scope)
+      expect(scope).toBeLessThan(parts)
+      expect(parts).toBeLessThan(between)
+      expect(between).toBeLessThan(questions)
+      expect(questions).toBeLessThan(details)
+      const [partsBox, scopeBox] = await Promise.all([overview.locator('[data-section="parts"]').boundingBox(), overview.locator('[data-section="scope"]').boundingBox()])
+      expect(Math.abs(scopeBox!.x - partsBox!.x)).toBeLessThanOrEqual(2)
+    })
+  }
+
+  for (const [width, height] of [
+    [1440, 900],
+    [1024, 768],
+    [390, 844],
+  ] as const) {
+    test(`at ${width}x${height} the first walkthrough row fits in the first screen on all examples and every-state`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
+      for (const ex of EXAMPLES) {
+        await open(page, ex.file)
+        if ((await page.getByTestId('overview').count()) === 0) await tab(page, 'Overview').click()
+        const overview = page.getByTestId('overview')
+        const firstPlay = overview.getByRole('button', { name: /^Play / }).first()
+        await expect(firstPlay, `${ex.name} at ${width}x${height}`).toBeVisible()
+        const box = (await firstPlay.boundingBox())!
+        expect(box.y + box.height, `${ex.name} first walkthrough fits in ${height}px`).toBeLessThanOrEqual(height)
+      }
+      await openStates(page)
+      if ((await page.getByTestId('overview').count()) === 0) await tab(page, 'Overview').click()
+      const overview = page.getByTestId('overview')
+      const needs = (await overview.getByRole('heading', { name: 'Needs you' }).boundingBox())!
+      const firstPlay = overview.getByRole('button', { name: /^Play / }).first()
+      const playBox = (await firstPlay.boundingBox())!
+      expect(needs.y).toBeLessThan(playBox.y)
+      expect(playBox.y + playBox.height, `every-state first walkthrough fits in ${height}px`).toBeLessThanOrEqual(height)
+    })
+  }
+
+  test('on worst-text at 1440x900 Start here starts within the first 900 px and nothing overflows horizontally', async ({ page }) => {
+    for (const [width, height] of [
+      [1440, 900],
+      [1024, 768],
+      [390, 844],
+    ] as const) {
+      await page.setViewportSize({ width, height })
+      await open(page, WORST)
+      if ((await page.getByTestId('overview').count()) === 0) await tab(page, 'Overview').click()
+      const overview = page.getByTestId('overview')
+      if (width === 1440) {
+        const startBox = (await overview.getByRole('heading', { name: 'Start here' }).boundingBox())!
+        expect(startBox.y).toBeLessThan(900)
+      }
+      const overflow = await overview.evaluate((el) => el.scrollWidth - el.clientWidth)
+      expect(overflow, `worst-text horizontal overflow at ${width}px`).toBeLessThanOrEqual(1)
+    }
+  })
+
+  test('goal width is at most 72 characters of its font and unclamped on Claude Code', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, EXAMPLES[0].file)
+    await tab(page, 'Overview').click()
+    const overview = page.getByTestId('overview')
+    await expect(overview.locator('header').getByRole('button', { name: 'Show more' })).toHaveCount(0)
+    const chars = await overview.locator('header p').evaluate((el) => {
+      const style = getComputedStyle(el)
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')!
+      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+      const zeroWidth = ctx.measureText('0').width
+      return el.getBoundingClientRect().width / zeroWidth
+    })
+    expect(chars).toBeLessThanOrEqual(72)
+  })
+
+  test('Parts header row aligns Lesson, Open, and Yours within 1 px, Agent loop summary shows >= 60 chars, and part names align with group labels', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await open(page, EXAMPLES[0].file)
+    await tab(page, 'Overview').click()
+    const overview = page.getByTestId('overview')
+    const header = overview.locator('[data-parts-header]')
+    await expect(header.getByText('Lesson', { exact: true })).toBeVisible()
+    await expect(header.getByText('Open', { exact: true })).toBeVisible()
+    await expect(header.getByText('Yours', { exact: true })).toBeVisible()
+
+    // Check Lesson right edge alignment on Permission check (which has a lesson).
+    const lessonHeader = (await header.getByText('Lesson', { exact: true }).boundingBox())!
+    const permRow = overview.locator('[data-row="part:permission-check"]')
+    const lessonSlot = (await permRow.locator('[data-slot="lesson"]').boundingBox())!
+    expect(Math.abs(lessonHeader.x + lessonHeader.width - (lessonSlot.x + lessonSlot.width))).toBeLessThanOrEqual(1)
+
+    // Check Open right edge alignment on a row with an open item.
+    const openHeader = (await header.getByText('Open', { exact: true }).boundingBox())!
+    const openSlot = (await overview.locator('[data-row^="part:"] [data-slot="open"]:not(:empty)').first().boundingBox())!
+    expect(Math.abs(openHeader.x + openHeader.width - (openSlot.x + openSlot.width))).toBeLessThanOrEqual(1)
+
+    // Check part row name aligns with group label.
+    const groupLabel = (await overview.locator('[data-head]').first().locator('span').first().boundingBox())!
+    const partTitle = (await overview.locator('[data-row^="part:"]').first().locator('[data-part-title]').boundingBox())!
+    expect(Math.abs(partTitle.x - groupLabel.x)).toBeLessThanOrEqual(1)
+
+    // Check Agent loop summary shows at least 60 visible characters at 1440px.
+    const visibleChars = await overview.locator('[data-row="part:agent-loop"] [data-part-summary]').evaluate((el) => {
+      const text = el.textContent ?? ''
+      const style = getComputedStyle(el)
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')!
+      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+      const maxWidth = el.clientWidth
+      if (ctx.measureText(text).width <= maxWidth) return text.length
+      const ellipsis = ctx.measureText('…').width
+      let fit = 0
+      for (let i = 1; i <= text.length; i++) {
+        if (ctx.measureText(text.slice(0, i)).width + ellipsis <= maxWidth) fit = i
+        else break
+      }
+      return fit
+    })
+    expect(visibleChars).toBeGreaterThanOrEqual(60)
+  })
+
+  test('Yours column aligns with its header on every-state, and Needs you is the one raised block with primary Send to agent', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    // Clean board has zero raised blocks.
+    await open(page, SHORTENER)
+    await tab(page, 'Overview').click()
+    await expect(page.getByTestId('overview').locator('[data-raised]')).toHaveCount(0)
+
+    // every-state has exactly one raised block ("Needs you").
+    await openStates(page)
+    await tab(page, 'Overview').click()
+    const overview = page.getByTestId('overview')
+    await expect(overview.locator('[data-raised]')).toHaveCount(1)
+    await expect(overview.locator('[data-section="needs"] [data-raised]')).toHaveCount(1)
+
+    // Yours header aligns with Yours slot within 1 px.
+    const header = overview.locator('[data-parts-header]')
+    const yoursHeader = (await header.getByText('Yours', { exact: true }).boundingBox())!
+    const yoursSlot = (await overview.locator('[data-row="part:web-form"] [data-slot="notes"]').boundingBox())!
+    expect(Math.abs(yoursHeader.x + yoursHeader.width - (yoursSlot.x + yoursSlot.width))).toBeLessThanOrEqual(1)
+
+    // "Send to agent" in Needs you has primary fill (--accent) and opens Send popover.
+    const sendBtn = overview.locator('[data-section="needs"]').getByRole('button', { name: 'Send to agent' })
+    const [btnBg, accentColor] = await sendBtn.evaluate((el) => {
+      const probe = document.createElement('span')
+      probe.style.backgroundColor = 'var(--accent)'
+      document.body.appendChild(probe)
+      const expected = getComputedStyle(probe).backgroundColor
+      probe.remove()
+      return [getComputedStyle(el).backgroundColor, expected]
+    })
+    expect(btnBg).toBe(accentColor)
+    await sendBtn.click()
+    await expect(page.getByRole('dialog', { name: 'Send to agent' })).toBeVisible()
+  })
+
+  test('reduced motion skips smooth scrolling when jumping from the meta line', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.setViewportSize({ width: 1440, height: 600 })
+    await open(page, SHORTENER)
+    await tab(page, 'Overview').click()
+    const overview = page.getByTestId('overview')
+    await overview.getByRole('button', { name: /^\d+ connections?$/ }).click()
+    const scrollTop = await overview.evaluate((el) => el.scrollTop)
+    expect(scrollTop).toBeGreaterThan(0)
+  })
 })

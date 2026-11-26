@@ -3,7 +3,7 @@ import { emptyLayer } from '../layer/model'
 import { allBoards, urlShortenerBoard } from '../layer/testBoards'
 import { bundleGroups } from '../canvas/bundles'
 import { innerConnections } from './innerConnections'
-import { changeCounts, changeLine, filterGroups, partGroups, responseLine } from './model'
+import { boardMeta, changeCounts, changeLine, filterGroups, isGoalClamped, partGroups, responseLine, rowSlots, scopeSlice, showRowSource, type PartRow } from './model'
 
 const none: ReadonlySet<string> = new Set()
 
@@ -106,5 +106,93 @@ describe('innerConnections', () => {
     const inside = board.relationships.filter((r) => board.components.find((c) => c.id === r.from)?.group === group && board.components.find((c) => c.id === r.to)?.group === group)
     const found = innerConnections(board, [], []).find((b) => b.a === `group:${group}`)
     expect(found?.connectionIds.sort()).toEqual(inside.map((r) => r.id).sort())
+  })
+})
+
+describe('boardMeta', () => {
+  it('formats 0, 1, and many of each count and omits missing groups or open questions', () => {
+    expect(boardMeta({ parts: 0, groups: 0, connections: 0, questions: 0 })).toEqual([{ section: 'parts', text: '0 parts' }])
+    expect(boardMeta({ parts: 1, groups: 1, connections: 1, questions: 1 })).toEqual([
+      { section: 'parts', text: '1 part in 1 group' },
+      { section: 'between', text: '1 connection' },
+      { section: 'questions', text: '1 open question' },
+    ])
+    expect(boardMeta({ parts: 10, groups: 3, connections: 13, questions: 6 })).toEqual([
+      { section: 'parts', text: '10 parts in 3 groups' },
+      { section: 'between', text: '13 connections' },
+      { section: 'questions', text: '6 open questions' },
+    ])
+    expect(boardMeta({ parts: 5, groups: 0, connections: 2, questions: 0 })).toEqual([
+      { section: 'parts', text: '5 parts' },
+      { section: 'between', text: '2 connections' },
+    ])
+  })
+})
+
+describe('rowSlots and showRowSource', () => {
+  const base: PartRow = {
+    id: 'p1',
+    type: 'component',
+    label: 'Worker',
+    summary: 'Runs jobs',
+    lesson: false,
+    open: 0,
+    notes: 0,
+    in: 1,
+    out: 2,
+    source: 'agent-explanation',
+  }
+
+  it('reports only the slots that have something to show', () => {
+    expect(rowSlots(base)).toEqual({ lesson: false, open: undefined, yours: undefined, source: false })
+    expect(rowSlots({ ...base, lesson: true, open: 2, notes: 3, state: 'unsent', source: 'agent-proposal' })).toEqual({
+      lesson: true,
+      open: 2,
+      yours: { count: 3, state: 'unsent' },
+      source: true,
+    })
+  })
+
+  it('shows the source icon only for an undecided component', () => {
+    expect(showRowSource({ type: 'component', source: 'agent-proposal' })).toBe(true)
+    expect(showRowSource({ type: 'component', source: 'agent-explanation' })).toBe(false)
+    expect(showRowSource({ type: 'component', source: 'documented-intent' })).toBe(false)
+    expect(showRowSource({ type: 'component', source: 'user-stated' })).toBe(false)
+    expect(showRowSource({ type: 'proposal', source: 'agent-proposal' })).toBe(false)
+  })
+})
+
+describe('scopeSlice', () => {
+  const twelve = Array.from({ length: 12 }, (_, i) => `Item ${i + 1}`)
+
+  it('caps a list of 12 at 5 items with Show all 12, and expands to all 12 with Show less', () => {
+    const collapsed = scopeSlice(twelve, 5, false)
+    expect(collapsed.items).toHaveLength(5)
+    expect(collapsed.moreLabel).toBe('Show all 12')
+
+    const expanded = scopeSlice(twelve, 5, true)
+    expect(expanded.items).toHaveLength(12)
+    expect(expanded.moreLabel).toBe('Show less')
+  })
+
+  it('caps at 3 on narrow layouts and adds no toggle when the list fits', () => {
+    const narrow = scopeSlice(twelve, 3, false)
+    expect(narrow.items).toHaveLength(3)
+    expect(narrow.moreLabel).toBe('Show all 12')
+
+    const short = scopeSlice(twelve.slice(0, 5), 5, false)
+    expect(short.items).toHaveLength(5)
+    expect(short.moreLabel).toBeUndefined()
+  })
+})
+
+describe('isGoalClamped', () => {
+  it('shows no Show more unless at least a full line is hidden', () => {
+    expect(isGoalClamped(88, 88, 22)).toBe(false)
+    expect(isGoalClamped(90, 88, 22)).toBe(false)
+    expect(isGoalClamped(99, 88, 22)).toBe(false)
+    expect(isGoalClamped(110, 88, 22)).toBe(true)
+    expect(isGoalClamped(132, 88, 22)).toBe(true)
+    expect(isGoalClamped(110, 88, 0)).toBe(false)
   })
 })
