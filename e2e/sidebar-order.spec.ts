@@ -43,7 +43,7 @@ async function textLeftEdges(sidebar: Locator): Promise<number[]> {
     const scroller = panel.querySelector('[data-scroll]')
     if (!scroller) return []
     const panelLeft = panel.getBoundingClientRect().left
-    const lines: { y: number; left: number }[] = []
+    const lines: { top: number; bottom: number; left: number }[] = []
     const walker = document.createTreeWalker(scroller, NodeFilter.SHOW_TEXT)
     let node: Node | null
     while ((node = walker.nextNode())) {
@@ -57,7 +57,7 @@ async function textLeftEdges(sidebar: Locator): Promise<number[]> {
       // A boxed button (with a visible border or fill) aligns by its box, not its inner padding.
       const btn = el.closest('button')
       let boxLeft: number | undefined
-      if (btn) {
+      if (btn && !btn.hasAttribute('data-lesson-opener')) {
         const bs = getComputedStyle(btn)
         const hasBox =
           (bs.borderLeftWidth !== '0px' && bs.borderLeftColor !== 'rgba(0, 0, 0, 0)') ||
@@ -69,10 +69,14 @@ async function textLeftEdges(sidebar: Locator): Promise<number[]> {
       for (const rect of range.getClientRects()) {
         if (rect.width < 1 || rect.height < 1) continue
         const left = Math.round((boxLeft !== undefined ? Math.min(boxLeft, rect.left) : rect.left) - panelLeft)
-        const y = Math.round(rect.top)
-        const existing = lines.find((line) => Math.abs(line.y - y) <= 4)
-        if (existing) existing.left = Math.min(existing.left, left)
-        else lines.push({ y, left })
+        const existing = lines.find((line) => rect.top < line.bottom && rect.bottom > line.top)
+        if (existing) {
+          existing.left = Math.min(existing.left, left)
+          existing.top = Math.min(existing.top, rect.top)
+          existing.bottom = Math.max(existing.bottom, rect.bottom)
+        } else {
+          lines.push({ top: rect.top, bottom: rect.bottom, left })
+        }
       }
     }
     const clusters: number[] = []
@@ -305,9 +309,11 @@ test.describe('two left edges across sidebar views', () => {
     )
     const uniqueDd = ddLefts.filter((x) => x >= 0).reduce<number[]>((acc, x) => (acc.some((c) => Math.abs(c - x) <= 2) ? acc : [...acc, x]), [])
     expect(uniqueDd.length).toBe(1)
+  })
 
-    // Review view on every-state
+  test('Review on every-state uses at most two distinct text left edges', async ({ page }) => {
     await openStates(page)
+    const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
     await sidebar.getByRole('tab', { name: 'Review 6' }).click()
     await expect(sidebar.getByRole('region', { name: 'Answers' })).toBeVisible()
     expect((await textLeftEdges(sidebar)).length).toBeLessThanOrEqual(2)

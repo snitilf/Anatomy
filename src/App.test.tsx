@@ -55,7 +55,7 @@ describe('App', () => {
     await screen.findByTestId('inspector')
     const panel = within(screen.getByTestId('inspector'))
     expect(panel.getByRole('heading', { name: 'How the Claude Code harness works' })).toBeInTheDocument()
-    expect(panel.getByText('Revision').closest('div')).toHaveTextContent('Revision1')
+    expect(panel.getByText(/revision 1/)).toBeInTheDocument()
     // Scope and open items live on the Overview page, not in the sidebar.
     expect(panel.queryByText('Covers')).not.toBeInTheDocument()
     expect(panel.queryByText('Open items')).not.toBeInTheDocument()
@@ -98,7 +98,7 @@ describe('App', () => {
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
     expect(within(panel).getByText(SOURCE_LABEL[part.source.kind])).toBeInTheDocument()
     expect(within(panel).getByText('Explanation')).toBeInTheDocument()
-    expect(within(panel).getByRole('region', { name: 'Outgoing' })).toBeInTheDocument()
+    expect(within(panel).getByRole('region', { name: 'Connections' })).toBeInTheDocument()
   })
 
   it('shows the source of a part even when it is the agent explanation', async () => {
@@ -108,9 +108,9 @@ describe('App', () => {
     const panel = screen.getByTestId('inspector')
     openPart(part.label)
     expect(within(panel).getByRole('heading', { name: part.label })).toBeInTheDocument()
-    const row = within(panel).getByText('Source').closest('div')!
-    expect(row).toHaveTextContent(SOURCE_LABEL['agent-explanation'])
-    expect(row.querySelector('svg')).not.toBeNull()
+    const source = panel.querySelector('[data-source="agent-explanation"]')!
+    expect(source).toHaveTextContent(SOURCE_LABEL['agent-explanation'])
+    expect(source.querySelector('svg')).not.toBeNull()
   })
 
   it.each(['agent-explanation', 'agent-proposal'] as const)('shows the Source row of a connection whose source is %s', async (kind) => {

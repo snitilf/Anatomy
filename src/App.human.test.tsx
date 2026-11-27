@@ -84,7 +84,7 @@ function positionOf(stored: { layer?: unknown } | undefined, id: string): { x: n
   const positions = (stored as { layer: { positions: Record<string, { x: number; y: number }> } }).layer.positions
   return positions[id]!
 }
-const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Outgoing' })
+const flow = () => within(screen.getByTestId('inspector')).getByRole('region', { name: 'Connections' })
 const panel = () => within(screen.getByTestId('inspector'))
 /** The board segment of the top bar's crumb, which clears the selection. */
 const backToBoard = () => fireEvent.click(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('button', { name: /Refund approval/ }))
@@ -480,8 +480,8 @@ describe('a new version of a board you already have', () => {
     expect(panel().queryByRole('region', { name: 'Needs relinking' })).not.toBeInTheDocument()
 
     fireEvent.click(panel().getByRole('button', { name: 'Mark reviewed' }))
-    // With nothing left to review, the Review tab goes quiet and the details show.
-    await waitFor(() => expect(panel().getByRole('tab', { name: /Review/ })).toHaveAttribute('aria-disabled', 'true'))
+    // With nothing left to review, the Review switch leaves the header and the details show.
+    await waitFor(() => expect(panel().queryByRole('tab', { name: /Review/ })).not.toBeInTheDocument())
 
     selectPart('policy-check')
     expect(panel().getByText('Where does the date come from?')).toBeInTheDocument()

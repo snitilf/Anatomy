@@ -96,7 +96,7 @@ test('a patch from anatomy apply opens in the app and the notes of the user stay
     [KEY, first.written['board.json']!] as const,
   )
 
-  await expect(panel.getByText('Revision', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText(String(board.revision + 1), { timeout: 15_000 })
+  await expect(panel.getByText(new RegExp(`revision ${board.revision + 1}`))).toBeVisible({ timeout: 15_000 })
   await page.getByRole('tab', { name: /^Review/ }).click()
   const answers = panel.getByRole('region', { name: 'Answers' })
   await expect(answers.getByText('It is on disk too now.')).toBeVisible()
