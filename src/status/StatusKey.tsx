@@ -1,5 +1,7 @@
 import { Popover } from '@base-ui/react/popover'
+import clsx from 'clsx'
 import { KeyRound } from 'lucide-react'
+import buttons from '../app/buttons.module.css'
 import { StatusGlyph } from './StatusGlyph'
 import { ITEM_STATES, STATE_MEANING, STATE_WORD } from './state'
 import styles from './StatusKey.module.css'
@@ -8,7 +10,7 @@ import styles from './StatusKey.module.css'
 export function StatusKey() {
   return (
     <Popover.Root>
-      <Popover.Trigger className={styles.trigger}>
+      <Popover.Trigger className={clsx(buttons.button, buttons.quiet, buttons.small, styles.trigger)}>
         <KeyRound size={14} strokeWidth={1.5} aria-hidden="true" />
         Status key
       </Popover.Trigger>

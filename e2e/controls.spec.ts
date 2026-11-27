@@ -431,6 +431,13 @@ test.describe('with a fine pointer', () => {
     await input.fill('Go to')
     await expect(menu.getByRole('option', { name: /^Go to Board/ })).toBeVisible()
     await expect(menu.getByRole('option', { name: /^Go to Overview/ })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    // On the Overview page, Go to Map is offered instead
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await page.keyboard.press('ControlOrMeta+k')
+    await expect(menu).toBeVisible()
+    await input.fill('Go to')
     await expect(menu.getByRole('option', { name: /^Go to Map/ })).toBeVisible()
     await page.keyboard.press('Escape')
   })

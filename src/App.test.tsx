@@ -59,7 +59,7 @@ describe('App', () => {
     // Scope and open items live on the Overview page, not in the sidebar.
     expect(panel.queryByText('Covers')).not.toBeInTheDocument()
     expect(panel.queryByText('Open items')).not.toBeInTheDocument()
-    expect(panel.getByRole('region', { name: 'Walkthroughs' })).toBeInTheDocument()
+    expect(panel.getByRole('region', { name: 'Start here' })).toBeInTheDocument()
     // The crumb names where the board came from.
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' })).toBeInTheDocument()
   })
