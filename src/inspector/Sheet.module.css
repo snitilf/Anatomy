@@ -79,8 +79,8 @@
 }
 
 .sheet:not([data-stop='0']) .header {
-  min-height: 24px;
-  padding-bottom: 4px;
+  min-height: 20px;
+  padding: 6px var(--space-4) 2px;
 }
 
 /* The Overview page covers the map and takes the sheet's place. */

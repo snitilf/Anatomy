@@ -46,144 +46,40 @@
   outline: none;
 }
 
-/* The pinned header: where you are, and the switch between Details and Review. It is always there, so nothing shifts when a revision arrives. */
+/* The pinned header row: 40px, always there, so nothing shifts when a revision arrives. */
 .top {
   flex: none;
-  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 
 .where {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  height: 40px;
+  min-width: 0;
 }
 
 .back {
-  appearance: none;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: 28px;
   margin-left: calc(var(--space-2) * -1);
-  padding: 0 var(--space-2) 0 var(--space-1);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-2);
-  font: inherit;
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-
-.back::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((28px - var(--hit)) / 2));
-  inset-inline: 0;
-}
-
-.back:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
+  padding-left: var(--space-1);
 }
 
 .here {
   color: var(--fg-3);
-  font-weight: var(--weight-medium);
-}
-
-/* Two segments, 28px high. */
-.switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius-sm);
-  background: var(--hover);
-}
-
-.tab {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 24px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-xs);
-  background: none;
-  color: var(--fg-2);
-  font: inherit;
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
-  cursor: pointer;
+  letter-spacing: var(--tracking-label);
 }
 
-.tab[data-active] {
-  background: var(--raised);
-  color: var(--fg);
-  box-shadow: 0 0 0 1px var(--border);
-}
-
-.tab[data-disabled] {
-  color: var(--fg-3);
-  cursor: default;
-}
-
-.tab:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .back:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-
-  .tab:not([data-active], [data-disabled]):hover {
-    color: var(--fg);
-  }
-}
-
-.tabCount {
-  color: var(--fg-3);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--weight-regular);
-}
-
-/* Phone: the header is one row, with the switch at its right. */
-@media (max-width: 760px) {
+@media (pointer: coarse), (max-width: 760px) {
   .top {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 0 var(--space-3);
-  }
-
-  .where {
-    flex: 1;
-    min-width: 0;
-    height: 48px;
-  }
-
-  .back {
-    height: 44px;
-  }
-
-  .switch {
-    flex: none;
-    grid-template-columns: auto auto;
-  }
-
-  .tab {
-    height: 32px;
-    padding: 0 var(--space-3);
+    min-height: 44px;
   }
 }
 
@@ -201,7 +97,7 @@
 
 /* While the composer is open it covers the foot of the list. The list gets room to scroll above it. */
 .scroll:has(+ div > form[data-active]) > .content {
-  padding-bottom: calc(var(--space-6) + 72px);
+  padding-bottom: calc(var(--space-6) + 104px);
 }
 
 /* The Overview page covers the map and takes the sidebar's place. */

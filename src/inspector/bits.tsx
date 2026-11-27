@@ -1,9 +1,13 @@
+import clsx from 'clsx'
 import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import buttons from '../app/buttons.module.css'
 import { ITEM_LABEL, SOURCE_LABEL } from '../app/labels'
+import rows from '../app/rows.module.css'
 import { SourceNote } from '../app/SourceNote'
 import type { BoardItem, Source } from '../board/schema'
 import { Markdown } from '../text/markdown'
+import { explanationCut, type CutBlock } from './explanationClamp'
 import { useGroup } from './hooks'
 import { usePanel } from './panelContext'
 import styles from './view.module.css'
@@ -40,8 +44,8 @@ export function Prop({ label, children }: { label: string; children: ReactNode }
 }
 
 /**
- * A group of the panel: a 28px header with a chevron, a title and a count, and the content under it.
- * `name` keys the remembered state. `forceOpen` shows the content whatever was chosen, for a filter that found something.
+ * A collapsible section of the panel: 13/20 semibold heading starting on edge A, count in --fg-3,
+ * trailing 12px chevron shown on hover/focus (always on touch), and optional trailing action button.
  */
 export function Group({
   name,
@@ -50,6 +54,7 @@ export function Group({
   defaultOpen = true,
   forceOpen = false,
   label,
+  action,
   children,
 }: {
   name: string
@@ -58,19 +63,23 @@ export function Group({
   defaultOpen?: boolean
   forceOpen?: boolean
   label?: string
+  action?: ReactNode
   children: ReactNode
 }) {
   const [stored, toggle] = useGroup(name, defaultOpen)
   const open = stored || forceOpen
   return (
     <section className={styles.group} aria-label={label ?? title}>
-      <h3 className={styles.groupHead}>
-        <button type="button" className={styles.groupToggle} aria-expanded={open} onClick={toggle}>
-          <ChevronRight className={styles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" />
-          {title}
-          {count !== undefined && <span className={styles.count}>{count}</span>}
-        </button>
-      </h3>
+      <div className={styles.groupBar}>
+        <h3 className={styles.groupHead}>
+          <button type="button" className={clsx(rows.row, rows.sm, styles.groupToggle)} aria-expanded={open} onClick={toggle}>
+            <span className={styles.groupTitle}>{title}</span>
+            {count !== undefined && <span className={styles.count}>{count}</span>}
+            <ChevronRight className={styles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        </h3>
+        {action && <div className={styles.groupAction}>{action}</div>}
+      </div>
       {open && <div className={styles.groupBody}>{children}</div>}
     </section>
   )
@@ -81,7 +90,7 @@ export function SubHead({ children }: { children: ReactNode }) {
   return <h4 className={styles.subHead}>{children}</h4>
 }
 
-/** A part's name as a button that selects it. A part that is gone is struck through. */
+/** A part's name as an inline link button that selects it. A part that is gone is struck through. */
 export function PartLink({ id, name }: { id: string; name: string | undefined }) {
   const { choose } = usePanel()
   if (name === undefined) return <span className={styles.gone}>{id}</span>
@@ -103,33 +112,77 @@ export function PickerValue({ children }: { children: ReactNode }) {
   )
 }
 
-/** Where a part or connection comes from, whatever the source is, so the row is there on every one. */
-export function SourceLine({ source }: { source: Source }) {
-  return <SourceNote kind={source.kind} className={styles.source} />
+/** Where a part or connection comes from, whatever the source is, so it is always shown. */
+export function SourceLine({ source, className }: { source: Source; className?: string | undefined }) {
+  return <SourceNote kind={source.kind} className={clsx(styles.source, className)} />
 }
 
 export { SOURCE_LABEL }
 
-/** The explanation, open but held to a height, with a button that shows the rest. */
+/** Measure direct blocks of a Markdown container, expanding lists into individual items so a cut never splits an item. */
+function measureBlocks(container: HTMLElement): { totalHeight: number; blocks: CutBlock[]; lineHeight: number } {
+  const origin = container.getBoundingClientRect().top
+  const blocks: CutBlock[] = []
+  for (const child of Array.from(container.children)) {
+    const tag = child.tagName
+    if (tag === 'UL' || tag === 'OL') {
+      for (const item of Array.from(child.children)) {
+        const rect = item.getBoundingClientRect()
+        if (rect.height > 0) blocks.push({ top: rect.top - origin, bottom: rect.bottom - origin, splittable: false })
+      }
+    } else {
+      const rect = child.getBoundingClientRect()
+      if (rect.height > 0) blocks.push({ top: rect.top - origin, bottom: rect.bottom - origin, splittable: tag === 'P' })
+    }
+  }
+  const parsedLine = parseFloat(getComputedStyle(container).lineHeight)
+  const lineHeight = Number.isFinite(parsedLine) && parsedLine > 0 ? parsedLine : 20
+  return { totalHeight: container.scrollHeight, blocks, lineHeight }
+}
+
+/** The explanation, uncut up to 320 px, then cut cleanly between blocks when at least 40 px is hidden. */
 export function Explanation({ source, extra }: { source: string; extra?: ReactNode }) {
   const body = useRef<HTMLDivElement>(null)
-  const [long, setLong] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [cut, setCut] = useState<number | null>(null)
+  const [openedFor, setOpenedFor] = useState<string | undefined>(undefined)
+  const open = openedFor === source
+
   useLayoutEffect(() => {
     const el = body.current
-    if (el) setLong(el.scrollHeight > 176)
+    if (!el || source === '') {
+      return
+    }
+    const prose = el.firstElementChild as HTMLElement | null
+    if (!prose) return
+    const measure = () => {
+      const { totalHeight, blocks, lineHeight } = measureBlocks(prose)
+      setCut(explanationCut(totalHeight, blocks, { lineHeight }))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [source])
+
+  const effectiveCut = source === '' ? null : cut
+  const clipped = effectiveCut !== null && !open
   return (
     <Group name="explanation" title="Explanation">
       {source !== '' && (
         <>
-          <div className={styles.explain} data-clipped={long && !open ? '' : undefined}>
+          <div className={styles.explain} data-clipped={clipped ? '' : undefined} style={clipped ? { maxHeight: `${effectiveCut}px` } : undefined}>
             <div ref={body}>
               <Markdown source={source} className={styles.prose ?? ''} />
             </div>
           </div>
-          {long && (
-            <button type="button" className={styles.more} aria-expanded={open} onClick={() => setOpen(!open)}>
+          {effectiveCut !== null && (
+            <button
+              type="button"
+              className={clsx(buttons.button, buttons.link, buttons.small, styles.more)}
+              aria-expanded={open}
+              onClick={() => setOpenedFor(open ? undefined : source)}
+            >
               {open ? 'Show less' : 'Show more'}
             </button>
           )}
@@ -187,7 +240,12 @@ export function ShortList({ items, first = 2 }: { items: readonly string[]; firs
         ))}
       </ul>
       {rest > 0 && (
-        <button type="button" className={styles.more} aria-expanded={all} onClick={() => setAll(!all)}>
+        <button
+          type="button"
+          className={clsx(buttons.button, buttons.link, buttons.small, styles.more)}
+          aria-expanded={all}
+          onClick={() => setAll(!all)}
+        >
           {all ? 'Show less' : `Show ${rest} more`}
         </button>
       )}
@@ -199,7 +257,7 @@ export function ShortList({ items, first = 2 }: { items: readonly string[]; firs
 export function DangerButton({ icon: Icon, onClick, children }: { icon: LucideIcon; onClick: () => void; children: ReactNode }) {
   return (
     <div className={styles.dangerRow}>
-      <button type="button" className={styles.danger} onClick={onClick}>
+      <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small, styles.danger)} onClick={onClick}>
         <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
         {children}
       </button>

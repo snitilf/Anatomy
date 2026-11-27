@@ -23,6 +23,12 @@ export interface FlowRow {
   unlabeled?: boolean
 }
 
+/** One connection row in the unified Connections section, with its direction. */
+export interface ConnectionRow extends FlowRow {
+  part: string
+  side: Side
+}
+
 /** Where a connection's ends are now, after the user's edits. */
 export function endsOf(layer: Pick<Layer, 'reconnects'> | undefined, r: { id: string; from: string; to: string }) {
   const edit = layer?.reconnects.find((e) => e.relationshipId === r.id)
@@ -68,4 +74,12 @@ export function flowRows(board: Board, layer: Pick<Layer, 'reconnects' | 'links'
     if (link.to === partId) rows.in.push({ key: `l-${link.id}-in`, ...row, part: link.from })
   }
   return rows
+}
+
+/** Incoming and outgoing connections as one list, incoming first, each with its direction. Plain inputs and outputs stay out. */
+export function connectionRows(board: Board, layer: Pick<Layer, 'reconnects' | 'links'> | undefined, partId: string): ConnectionRow[] {
+  const rows = flowRows(board, layer, partId)
+  const tagged = (side: Side): ConnectionRow[] =>
+    rows[side].filter((row): row is FlowRow & { part: string } => row.part !== undefined).map((row) => ({ ...row, side }))
+  return [...tagged('in'), ...tagged('out')]
 }

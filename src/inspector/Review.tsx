@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { ArrowRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
+import rowsCss from '../app/rows.module.css'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import type { Selection } from '../app/state'
 import type { Board } from '../board/schema'
@@ -65,9 +66,9 @@ function ItemRow({ board, layer, entry, status, live = true }: { board: Board; l
       )}
     </>
   )
-  if (!live) return <p className={styles.row}>{content}</p>
+  if (!live) return <p className={clsx(rowsCss.row, rowsCss.sm, styles.staticRow)}>{content}</p>
   return (
-    <button type="button" className={styles.row} onClick={() => choose(selectionOf(entry))} {...spotProps(spotOf(selectionOf(entry)))}>
+    <button type="button" className={clsx(rowsCss.row, rowsCss.sm)} onClick={() => choose(selectionOf(entry))} {...spotProps(spotOf(selectionOf(entry)))}>
       {content}
     </button>
   )
@@ -94,7 +95,7 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
         <span className="sr-only"> asked for </span>
         {name(from)} to {name(to)}
       </p>
-      <p className={notes.stateLine}>
+      <p className={notes.stateLine} data-plain={!landed || undefined}>
         {landed && <StatusGlyph state="adopted" withWord />}
         <span>{landed ? `On the board in revision ${board.revision}.` : 'Not on the board.'}</span>
       </p>
@@ -113,13 +114,17 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
       {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
       <AgentAnswer board={board} answer={entry.response} bare />
       <div className={notes.feedActions}>
-        <button type="button" className={notes.textAction} onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}>
+        <button
+          type="button"
+          className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
+          onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}
+        >
           Restore
         </button>
         {deletable && (
           <button
             type="button"
-            className={notes.textAction}
+            className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
             data-tone="danger"
             onClick={() => {
               dispatch({ type: 'archiveDropped', id: entry.item.id })
@@ -189,47 +194,49 @@ function NeedsRelinking({ board, layer, previous }: { board: Board; layer: Layer
           ))}
         </ul>
       )}
-      <ul className={clsx(notes.feed, notes.plain)}>
-        {brokenLinks.map((link) => {
-          const missing = ids.has(link.from) ? 'to' : 'from'
-          return (
-            <li key={link.id} className={notes.feedItem}>
-              <button type="button" className={styles.row} onClick={() => choose({ type: 'link', id: link.id })}>
-                <span className={styles.rowMain}>
-                  <span className={styles.rowTitle}>{link.label || 'Link'}</span>
-                  <span className={styles.rowMeta}>
-                    {partName(was, link.from, layer.proposals) ?? link.from} to {partName(was, link.to, layer.proposals) ?? link.to}
+      {brokenLinks.length > 0 && (
+        <ul className={notes.feed}>
+          {brokenLinks.map((link) => {
+            const missing = ids.has(link.from) ? 'to' : 'from'
+            return (
+              <li key={link.id} className={notes.feedItem}>
+                <button type="button" className={clsx(rowsCss.row, rowsCss.sm, styles.multiRow)} onClick={() => choose({ type: 'link', id: link.id })}>
+                  <span className={styles.rowMain}>
+                    <span className={styles.rowTitle}>{link.label || 'Link'}</span>
+                    <span className={styles.rowMeta}>
+                      {partName(was, link.from, layer.proposals) ?? link.from} to {partName(was, link.to, layer.proposals) ?? link.to}
+                    </span>
                   </span>
-                </span>
-              </button>
-              <div className={notes.state}>
-                <p className={notes.stateLine} data-tone="danger">
-                  <StatusGlyph state="relinking" withWord />
-                  <span>{partName(was, link[missing]) ?? link[missing]} was removed.</span>
-                </p>
-                <div className={notes.stateActions}>
-                  <Picker
-                    label="Attach to"
-                    trigger="Attach to"
-                    items={partItems(board, layer.proposals, missing === 'from' ? link.to : link.from)}
-                    onPick={(part) => dispatch({ type: 'linkEdited', id: link.id, change: { [missing]: part } })}
-                  />
-                  <button
-                    type="button"
-                    className={clsx(buttons.button, buttons.quiet, buttons.small)}
-                    onClick={() => {
-                      dispatch({ type: 'linkDeleted', id: link.id })
-                      deletedToast('Link deleted', dispatch)
-                    }}
-                  >
-                    Delete
-                  </button>
+                </button>
+                <div className={notes.state}>
+                  <p className={notes.stateLine} data-tone="danger">
+                    <StatusGlyph state="relinking" withWord />
+                    <span>{partName(was, link[missing]) ?? link[missing]} was removed.</span>
+                  </p>
+                  <div className={notes.stateActions}>
+                    <Picker
+                      label="Attach to"
+                      trigger="Attach to"
+                      items={partItems(board, layer.proposals, missing === 'from' ? link.to : link.from)}
+                      onPick={(part) => dispatch({ type: 'linkEdited', id: link.id, change: { [missing]: part } })}
+                    />
+                    <button
+                      type="button"
+                      className={clsx(buttons.button, buttons.quiet, buttons.small)}
+                      onClick={() => {
+                        dispatch({ type: 'linkDeleted', id: link.id })
+                        deletedToast('Link deleted', dispatch)
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </Group>
   )
 }
@@ -260,9 +267,9 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
               {g.parts.map((id) => (
                 <li key={`c-${id}`}>
                   {g.removed ? (
-                    <span className={clsx(styles.row, styles.gone)}>{names(was, id)}</span>
+                    <span className={clsx(rowsCss.row, rowsCss.sm, styles.staticRow, styles.gone)}>{names(was, id)}</span>
                   ) : (
-                    <button type="button" className={styles.row} onClick={() => choose({ type: 'component', id })} {...spotProps({ parts: [id] })}>
+                    <button type="button" className={clsx(rowsCss.row, rowsCss.sm)} onClick={() => choose({ type: 'component', id })} {...spotProps({ parts: [id] })}>
                       <span className={styles.rowTitle}>{names(board, id)}</span>
                     </button>
                   )}
@@ -275,9 +282,14 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
                 return (
                   <li key={`r-${id}`}>
                     {g.removed ? (
-                      <span className={clsx(styles.row, styles.gone)}>{line(was, id)}</span>
+                      <span className={clsx(rowsCss.row, rowsCss.sm, styles.staticRow, styles.gone)}>{line(was, id)}</span>
                     ) : (
-                      <button type="button" className={styles.row} onClick={() => choose({ type: 'relationship', id })} {...spotProps({ edges: [id] })}>
+                      <button
+                        type="button"
+                        className={clsx(rowsCss.row, rowsCss.sm, styles.multiRow)}
+                        onClick={() => choose({ type: 'relationship', id })}
+                        {...spotProps({ edges: [id] })}
+                      >
                         <span className={styles.rowMain}>
                           <span className={styles.rowTitle}>{after?.label ?? id}</span>
                           {moved && before && after ? (

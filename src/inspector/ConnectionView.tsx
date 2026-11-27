@@ -42,7 +42,7 @@ export function ConnectionView({ board, relationship: r }: { board: Board; relat
         <Picker
           label={label}
           title={`${label}: ${shown}`}
-          className={styles.pickerValue}
+          className={clsx(buttons.button, buttons.quiet, buttons.small, styles.pickerValue)}
           trigger={<PickerValue>{shown}</PickerValue>}
           items={partItems(board, proposals, other)}
           onPick={(part) => move(which, part)}
@@ -79,7 +79,7 @@ export function ConnectionView({ board, relationship: r }: { board: Board; relat
         <Prop label="Kind">{unknown ? KIND_WORDS.unknown : capital(KIND_WORDS[r.kind])}</Prop>
         {end('to')}
         <Prop label="Source">
-          <SourceLine source={r.source} />
+          <SourceLine source={r.source} className={styles.propSource} />
         </Prop>
       </Props>
       {ends.edit && (

@@ -1,6 +1,8 @@
+import clsx from 'clsx'
 import { Link2, MoveRight } from 'lucide-react'
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import rowsCss from '../app/rows.module.css'
 import { useAppStore } from '../app/store'
 import { useUi } from '../app/ui'
 import { usePhone } from '../app/usePhone'
@@ -80,7 +82,7 @@ export function BundleView({ board, a, b }: { board: Board; a: string; b: string
       <ul className={styles.rows}>
         {rows.map((row) => (
           <li key={row.id} {...spotProps({ parts: [row.from, row.to], edges: [row.edge] })}>
-            <button type="button" className={`${styles.row} ${row.mine ? styles.yours : ''}`} data-row={`conn:${row.id}`} onClick={() => open(row)}>
+            <button type="button" className={clsx(rowsCss.row, rowsCss.sm, row.mine && rowsCss.yours, styles.multiRow)} data-row={`conn:${row.id}`} onClick={() => open(row)}>
               {row.mine ? <Link2 className={styles.yoursIcon} size={14} strokeWidth={1.5} aria-hidden="true" /> : <MoveRight className={styles.rowIcon} size={14} strokeWidth={1.5} aria-hidden="true" />}
               <span className={styles.rowMain}>
                 <span className={styles.rowTitle}>{row.label}</span>
