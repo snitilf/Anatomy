@@ -212,8 +212,8 @@ test.describe('new note visibility and reduced motion', () => {
       .toBe(true)
 
     // Scroll back to top so the next Add must scroll again.
-    await scroller.evaluate((el) => el.scrollTo({ top: 0 }))
-    expect(await scroller.evaluate((el) => el.scrollTop)).toBe(0)
+    await scroller.evaluate((el) => el.scrollTo({ top: 0, behavior: 'instant' }))
+    await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBe(0)
 
     // 2. Add by Mod+Enter (composer stays expanded over the foot of the list).
     const keyText = 'Keyboard note on permission check'
