@@ -18,8 +18,8 @@
   appearance: none;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: var(--control-md);
+  height: var(--control-md);
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
@@ -35,7 +35,7 @@
 .control::after {
   content: '';
   position: absolute;
-  inset: min(0px, calc((28px - var(--hit)) / 2));
+  inset: min(0px, calc((var(--control-md) - var(--hit)) / 2));
 }
 
 @media (hover: hover) and (pointer: fine) {

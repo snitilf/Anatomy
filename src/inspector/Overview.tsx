@@ -1,11 +1,12 @@
 import clsx from 'clsx'
-import { CircleHelp, Link2, Play, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
+import { CircleHelp, Link2, Shapes, SquarePlus, StickyNote, Spline, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import rowsCss from '../app/rows.module.css'
 import { useAppStore } from '../app/store'
 import { Tip } from '../app/Tip'
+import { useUiApi } from '../app/ui'
 import type { Board } from '../board/schema'
 import { useCommands } from '../commands/context'
 import type { Layer } from '../layer/model'
@@ -13,6 +14,8 @@ import { StatusGlyph } from '../status/StatusGlyph'
 import { StatusKey } from '../status/StatusKey'
 import { itemState, STATE_WORD, type ItemState } from '../status/state'
 import { targetName } from '../notes/targets'
+import { StartHere } from '../overview/StartHere'
+import { startHereCount } from '../overview/model'
 import { Group, Heading } from './bits'
 import { boardMeta } from './boardMeta'
 import { partName } from './names'
@@ -23,7 +26,6 @@ import type { Selection } from '../app/state'
 import styles from './view.module.css'
 
 const YOURS_SHOWN = 5
-const WALKTHROUGHS_SHOWN = 5
 
 const MARK_WORD = { stroke: 'Drawing', rect: 'Rectangle', ellipse: 'Ellipse', arrow: 'Arrow', text: 'Text', sticky: 'Sticky note' } as const
 
@@ -107,39 +109,20 @@ function Yours({ board, layer }: { board: Board; layer: Layer }) {
   )
 }
 
-function Walkthroughs({ board }: { board: Board }) {
+function StartHereSection({ board }: { board: Board }) {
   const { context } = useCommands()
-  const [all, setAll] = useState(false)
-  const found = board.scenarios
-  if (found.length === 0) return null
-  const shown = all ? found : found.slice(0, WALKTHROUGHS_SHOWN)
+  const ui = useUiApi()
+  const count = startHereCount(board)
+  if (count === 0) return null
   return (
-    <Group name="walkthroughs" title="Walkthroughs" count={found.length}>
-      <ul className={styles.rows}>
-        {shown.map((s) => (
-          <li key={s.id}>
-            <button type="button" className={clsx(rowsCss.row, rowsCss.sm)} aria-label={`Play ${s.title}`} onClick={() => context().shell.playWalkthrough(s.id)}>
-              <Play className={styles.play} size={14} strokeWidth={1.5} fill="currentColor" aria-hidden="true" />
-              <span className={styles.rowMain}>
-                <span className={styles.rowTitle}>{s.title}</span>
-              </span>
-              <span className={styles.rowEnd}>
-                {s.steps.length} {s.steps.length === 1 ? 'step' : 'steps'}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {found.length > WALKTHROUGHS_SHOWN && (
-        <button
-          type="button"
-          className={clsx(buttons.button, buttons.link, buttons.small, styles.more)}
-          aria-expanded={all}
-          onClick={() => setAll(!all)}
-        >
-          {all ? 'Show less' : `Show ${found.length - WALKTHROUGHS_SHOWN} more`}
-        </button>
-      )}
+    <Group name="start-here" title="Start here" count={count}>
+      <StartHere
+        board={board}
+        compact
+        limit={5}
+        onPlay={(id) => context().shell.playWalkthrough(id)}
+        onOpenLesson={(lessonId, partId) => ui.openLesson(lessonId, partId)}
+      />
     </Group>
   )
 }
@@ -155,7 +138,7 @@ export function Overview({ board }: { board: Board }) {
         <p className={styles.lead}>{board.goal}</p>
         <p className={styles.boardMeta}>{boardMeta(board.components.length, groups, board.relationships.length, board.revision)}</p>
       </div>
-      <Walkthroughs board={board} />
+      <StartHereSection board={board} />
       {layer && <Yours board={board} layer={layer} />}
       <NotesSection target={{ type: 'board' }} />
     </div>

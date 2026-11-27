@@ -1,31 +1,11 @@
 /* A quiet text button, the same size as the "Show all" button beside it. */
 .trigger {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: 24px;
   margin: 0 calc(var(--space-2) * -1) 0 auto;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-3);
-  font: inherit;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-
-.trigger:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 .trigger[data-popup-open] {
   background: var(--hover);
-  color: var(--fg-2);
+  color: var(--fg);
 }
 
 .positioner {
@@ -85,18 +65,7 @@
   text-wrap: pretty;
 }
 
-@media (hover: hover) {
-  .trigger:hover {
-    background: var(--hover);
-    color: var(--fg-2);
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  .trigger {
-    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-  }
-
   .list {
     transition:
       opacity 140ms var(--ease-out),

@@ -104,3 +104,12 @@ describe('phone View commands', () => {
     }
   })
 })
+
+describe('unified command naming', () => {
+  it('unifies navigation command naming across Board and Overview in the Go to group', () => {
+    expect(commandById('goto.overview').label).toBe('Go to Board')
+    expect(commandById('view.overview').label).toBe('Go to Overview')
+    expect(commandById('view.map').label).toBe('Go to Map')
+    expect(commandById('goto.review').label).toBe('Go to Review')
+  })
+})

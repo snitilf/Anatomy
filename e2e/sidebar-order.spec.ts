@@ -128,6 +128,16 @@ test.describe('sidebar header and Review switch', () => {
     await expect(sidebar.getByRole('heading', { level: 2, name: EXAMPLES[0] })).toBeVisible()
     await expect(back).toHaveCount(0)
   })
+
+  test('the sidebar board view has Start here section with walkthroughs and lessons on Claude Code example', async ({ page }) => {
+    await openExample(page, EXAMPLES[0])
+    const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
+    const startHere = sidebar.getByRole('region', { name: 'Start here' })
+    await expect(startHere).toBeVisible()
+    const lessonRow = startHere.locator('[data-lesson-opener="permission-check"]')
+    await expect(lessonRow).toBeVisible()
+    await expect(lessonRow).toContainText('on Permission check')
+  })
 })
 
 test.describe('part reading order and above-the-fold visibility', () => {

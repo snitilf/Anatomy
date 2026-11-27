@@ -219,7 +219,7 @@ describe('your notes', () => {
   it('keeps C working after a group was opened with the keyboard', async () => {
     render(<App />)
     await loadRefund()
-    const toggle = panel().getByRole('button', { name: /^Walkthroughs/ })
+    const toggle = panel().getByRole('button', { name: /^Start here/ })
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     toggle.focus()

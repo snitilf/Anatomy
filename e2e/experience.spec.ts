@@ -185,12 +185,12 @@ test('the composer stays in reach, C focuses it, and a closed group is remembere
   await expect(field).toBeFocused()
   await page.keyboard.press('Escape')
 
-  const walkthroughs = inspector.getByRole('button', { name: /^Walkthroughs/ })
-  await expect(walkthroughs).toHaveAttribute('aria-expanded', 'true')
-  await walkthroughs.click()
-  await expect(walkthroughs).toHaveAttribute('aria-expanded', 'false')
+  const startHere = inspector.getByRole('button', { name: /^Start here/ })
+  await expect(startHere).toHaveAttribute('aria-expanded', 'true')
+  await startHere.click()
+  await expect(startHere).toHaveAttribute('aria-expanded', 'false')
   const stored = await page.evaluate(() => (JSON.parse(localStorage.getItem('anatomy:sidebar') ?? '{}') as { groups?: Record<string, boolean> }).groups)
-  expect(stored).toEqual({ walkthroughs: false })
+  expect(stored).toEqual({ 'start-here': false })
 })
 
 test('Add from the keyboard keeps focus in the field, even after a press that ended outside the form', async ({ page }) => {

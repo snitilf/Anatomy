@@ -45,35 +45,14 @@
 }
 
 .item {
-  appearance: none;
-  display: grid;
-  width: 100%;
-  min-height: 32px;
-  padding: 6px var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg);
-  text-align: left;
-  outline: none;
-  cursor: pointer;
-}
-
-.item:hover,
-.item[data-highlighted] {
-  background: var(--hover);
-}
-
-.item:focus-visible {
-  box-shadow: var(--ring);
+  display: flex;
+  align-items: center;
 }
 
 .itemTitle {
-  font-weight: var(--weight-medium);
-}
-
-.itemText {
-  color: var(--fg-2);
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

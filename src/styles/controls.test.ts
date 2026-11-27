@@ -43,6 +43,12 @@ describe('the control ratchet', () => {
     const present = cssFiles(ROOT).map((path) => relative(process.cwd(), path))
     for (const owner of OWNERS) expect(present, `${owner} is missing`).toContain(owner)
   })
+
+  it('ensures shared row classes have no hover-in transition delay', () => {
+    const rowsCss = strip(readFileSync(resolve(ROOT, 'app/rows.module.css'), 'utf8'))
+    expect(rowsCss).not.toMatch(/\.row\s*\{[^}]*transition:/)
+    expect(rowsCss).not.toMatch(/\.row:hover\s*\{[^}]*transition:/)
+  })
 })
 
 describe('the control tokens', () => {

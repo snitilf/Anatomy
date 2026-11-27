@@ -276,7 +276,7 @@ export const COMMANDS: readonly Command[] = [
   {
     id: 'goto.overview',
     group: 'Go to',
-    label: 'Board',
+    label: 'Go to Board',
     icon: ArrowLeft,
     keys: ['Escape'],
     visible: (c) => hasBoard(c) && onMap(c),
@@ -315,7 +315,7 @@ export const COMMANDS: readonly Command[] = [
   {
     id: 'goto.review',
     group: 'Go to',
-    label: 'Review',
+    label: 'Go to Review',
     icon: Inbox,
     visible: (c) => reviewCounts(c.state.board, c.state.layer, c.state.changes).total > 0,
     run: (c) => {

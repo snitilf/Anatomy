@@ -41,7 +41,7 @@ describe('walkthroughs', () => {
     render(<App />)
     await loadRefund()
     const panel = screen.getByTestId('inspector')
-    expect(within(panel).getByRole('heading', { name: /^Walkthroughs/ })).toBeInTheDocument()
+    expect(within(panel).getByRole('heading', { name: /^Start here/ })).toBeInTheDocument()
     for (const s of refund.scenarios) expect(within(panel).getByText(s.title)).toBeInTheDocument()
     expect(within(panel).getByText(`${walk.steps.length} steps`)).toBeInTheDocument()
   })

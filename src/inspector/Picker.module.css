@@ -36,7 +36,6 @@
 }
 
 .input {
-  appearance: none;
   flex: none;
   height: 36px;
   padding: 0 var(--space-3);
@@ -64,6 +63,7 @@
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
 }
 
 .item {

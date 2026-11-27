@@ -447,8 +447,8 @@
 
 @media (hover: none) {
   :global(.react-flow__resize-control.handle.bottom.right).resize {
-    width: 28px;
-    height: 28px;
+    width: var(--control-md);
+    height: var(--control-md);
   }
 }
 
