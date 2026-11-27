@@ -2,6 +2,7 @@ import type { Board, BoardComponent } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
 import { endsOf } from '../inspector/flowRows'
 import type { Layer } from '../layer/model'
+import { findLesson, type LessonEntry } from '../lessons/catalog'
 import { partStates, type ItemState } from '../status/state'
 
 export interface PartRow {
@@ -139,6 +140,87 @@ export function responseLine(board: Board, layer: Layer): string | undefined {
   const by = (status: string) => responses.items.filter((r) => r.status === status).length
   const parts = (['adopted', 'answered', 'declined'] as const).filter((s) => by(s) > 0).map((s) => `${by(s)} ${s}`)
   return `Revision ${board.revision} answered ${plural(responses.items.length, 'item', 'items')}: ${parts.join(', ')}.`
+}
+
+export interface MetaItem {
+  section: 'parts' | 'between' | 'questions'
+  text: string
+}
+
+/** One quiet line under the goal: parts (and groups when present), connections, and open questions. */
+export function boardMeta(counts: { parts: number; groups: number; connections: number; questions: number }): MetaItem[] {
+  const items: MetaItem[] = [
+    {
+      section: 'parts',
+      text: counts.groups > 0 ? `${plural(counts.parts, 'part', 'parts')} in ${plural(counts.groups, 'group', 'groups')}` : plural(counts.parts, 'part', 'parts'),
+    },
+  ]
+  if (counts.connections > 0) items.push({ section: 'between', text: plural(counts.connections, 'connection', 'connections') })
+  if (counts.questions > 0) items.push({ section: 'questions', text: plural(counts.questions, 'open question', 'open questions') })
+  return items
+}
+
+/** The source icon shows on a part row only when the part is an undecided agent proposal. */
+export function showRowSource(row: Pick<PartRow, 'type' | 'source'>): boolean {
+  return row.type === 'component' && row.source === 'agent-proposal'
+}
+
+export interface RowSlots {
+  lesson: boolean
+  open: number | undefined
+  yours: { count: number; state: ItemState } | undefined
+  source: boolean
+}
+
+/** Which of the three right-aligned slots and the undecided marker a part row shows. */
+export function rowSlots(row: PartRow): RowSlots {
+  return {
+    lesson: row.lesson,
+    open: row.open > 0 ? row.open : undefined,
+    yours: row.notes > 0 && row.state ? { count: row.notes, state: row.state } : undefined,
+    source: showRowSource(row),
+  }
+}
+
+/** Flow counts moved off the desktop row into its accessible name and tooltip. */
+export function partRowFlowText(row: Pick<PartRow, 'in' | 'out'>): string {
+  return row.in + row.out > 0 ? `${row.in} in, ${row.out} out` : ''
+}
+
+export interface ScopeSlice {
+  items: readonly string[]
+  moreLabel: string | undefined
+}
+
+/** Caps a scope list to `limit` items unless expanded, with a "Show all N" or "Show less" label. */
+export function scopeSlice(items: readonly string[], limit: number, expanded: boolean): ScopeSlice {
+  if (expanded || items.length <= limit) {
+    return { items, moreLabel: items.length > limit ? 'Show less' : undefined }
+  }
+  return { items: items.slice(0, limit), moreLabel: `Show all ${items.length}` }
+}
+
+/** Show "Show more" on the goal only when at least one full line is hidden. */
+export function isGoalClamped(scrollHeight: number, clientHeight: number, lineHeight: number): boolean {
+  return lineHeight > 0 && scrollHeight - clientHeight >= lineHeight - 1
+}
+
+export interface StartHereLesson {
+  part: BoardComponent
+  lesson: LessonEntry
+}
+
+/** Parts on the board that carry a known built-in lesson. */
+export function startHereLessons(board: Board): StartHereLesson[] {
+  return board.components.flatMap((part) => {
+    const lesson = part.lesson ? findLesson(part.lesson) : undefined
+    return lesson ? [{ part, lesson }] : []
+  })
+}
+
+/** Total walkthroughs and lessons in Start here. */
+export function startHereCount(board: Board): number {
+  return board.scenarios.length + startHereLessons(board).length
 }
 
 export { plural }

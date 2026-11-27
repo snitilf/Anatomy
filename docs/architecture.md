@@ -446,8 +446,17 @@ A part and a connection always show a Source row, also when the source is the ag
 Once the user has made something, the Yours list on the overview has a Status key button.
 It opens the seven status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
 
-The Overview page opens on the goal, then what waits for the user (only when something does), the scope, and Start here.
-The numbers, the parts, and the connections come after them.
+## The Overview page
+
+The Overview page (`src/overview/`) uses a container query (`@container overview (min-width: 960px)`) to choose between two columns and one column.
+At 960 px or wider, the page shows a main column and a sticky 280 px rail inside a 1,040 px container.
+The main column holds the head (`<h1>` title at 24/30, the goal capped to 68 ch and four lines with a "Show more" link only when a full line is hidden, and a quiet meta line of jump links), "Needs you" when something waits, "Start here" (`src/overview/StartHere.tsx`), Parts, Connections, and Open questions.
+The rail holds Scope (Covers and Does not cover, each capped at five items with a "Show all N" link) and Details (Revision, Last sent, and Undecided).
+Below 960 px, the page collapses to one 720 px column in the order: head, Needs you, Start here, Scope (capped at three items), Parts, Connections, Open questions, and Details.
+
+"Needs you" is the only raised block on the page and appears only when answers, relinking, outdated notes, revision changes, or unsent items wait; its "Send to agent" button uses the primary fill.
+The Parts section has a quiet filter input and a column header row ("Part", "What it does", "Lesson", "Open", "Yours") aligned with the fixed-width right slots of each row.
+Part names align with their group label, connection counts ("N in, M out") live in the row's accessible name and tooltip, and the source icon appears on a row only for undecided agent proposals.
 
 ## Feedback and answers
 

@@ -1,14 +1,17 @@
 /*
- * The Overview page. Linear's project page, in Anatomy's tokens: one centered column, property rows, plain lists,
- * a hairline between sections. No cards and no tinted tiles. Color is amber for what is yours and indigo for focus.
+ * The Overview page. Main column plus a sticky 280px rail when the container reaches 960px, one column below that.
+ * Hierarchy comes from scale, weight, and spacing -- no hairlines between sections, and one raised block only for
+ * "Needs you" when something waits. Shared controls come from buttons.module.css and rows.module.css.
  */
 .page {
-  --row: 32px;
   position: absolute;
   inset: 0;
   z-index: 10;
   overflow-y: auto;
   overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding-inline: var(--space-6);
+  container: overview / inline-size;
   background: var(--bg);
   color: var(--fg);
   font-size: var(--text-md);
@@ -20,48 +23,117 @@
   outline: none;
 }
 
-.column {
+.layout {
   box-sizing: border-box;
-  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 48px var(--space-6) 96px;
+  padding: var(--space-12) 0 96px;
   /* A long word wraps instead of widening the page. */
   overflow-wrap: anywhere;
 }
 
-@media (pointer: coarse), (max-width: 760px) {
-  .page {
-    --row: 44px;
+.main,
+.rail {
+  display: contents;
+}
+
+/* Narrow and phone order: Head, Needs you, Start here, Scope, Parts, Connections, Open questions, Details. */
+.head {
+  order: 1;
+}
+
+.section[data-section='needs'] {
+  order: 2;
+}
+
+.section[data-section='start'] {
+  order: 3;
+}
+
+.section[data-section='scope'] {
+  order: 4;
+}
+
+.section[data-section='parts'] {
+  order: 5;
+}
+
+.section[data-section='between'] {
+  order: 6;
+}
+
+.section[data-section='questions'] {
+  order: 7;
+}
+
+.section[data-section='details'] {
+  order: 8;
+}
+
+@container overview (min-width: 960px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    column-gap: var(--space-12);
+    align-items: start;
+    max-width: 1040px;
+  }
+
+  .main {
+    display: block;
+    min-width: 0;
+  }
+
+  .rail {
+    display: grid;
+    gap: var(--space-8);
+    min-width: 0;
+    position: sticky;
+    top: var(--space-12);
   }
 }
 
-/* Header: the title at 20/26, the goal at 15/22 held to two lines. */
+@media (max-width: 760px) {
+  .page {
+    padding-inline: var(--space-4);
+  }
+
+  .layout {
+    padding: var(--space-6) 0 96px;
+  }
+}
+
+/* Header: 24/30 title, 15/22 goal capped at 68ch and four lines, quiet meta line of jump links. */
 .head {
   display: grid;
   justify-items: start;
   gap: var(--space-2);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-8);
 }
 
 .title {
   margin: 0;
-  font-size: var(--text-xl);
-  line-height: var(--leading-xl);
+  color: var(--fg);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-2xl);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-title);
   text-wrap: balance;
 }
 
 .goal {
   margin: 0;
+  max-width: var(--measure);
   color: var(--fg-2);
   font-size: var(--text-lg);
   line-height: var(--leading-lg);
   text-wrap: pretty;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   overflow: hidden;
 }
 
@@ -71,121 +143,62 @@
   line-clamp: unset;
 }
 
-/* Property rows: a 112px label in the quiet color, the value beside it. */
-.props {
-  display: grid;
-  margin: var(--space-6) 0;
-  padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--border);
-}
-
-.prop {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  align-items: center;
-  column-gap: var(--space-2);
-  min-height: var(--row);
-}
-
-.prop dt {
-  color: var(--fg-3);
-}
-
-.prop dd {
+.metaLine {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 var(--space-3);
-  min-width: 0;
-  margin: 0;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
   font-variant-numeric: tabular-nums;
+}
+
+.metaLink {
+  margin-inline: calc(var(--space-1) * -1);
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.sep {
+  margin-inline: var(--space-1);
+  color: var(--fg-3);
+}
+
+.more {
+  margin-top: var(--space-1);
+  margin-left: calc(var(--space-1) * -1);
 }
 
 .num {
   font-variant-numeric: tabular-nums;
 }
 
-.dot {
-  margin-inline: calc(var(--space-2) * -1 + 2px);
-  color: var(--fg-3);
-}
-
 .quiet {
   color: var(--fg-3);
 }
 
-@media (max-width: 760px) {
-  .column {
-    padding: var(--space-6) var(--space-4) 96px;
-  }
-}
-
-/* A value that opens something. It reads as text and fills on hover. */
-.link,
-.action,
-.more {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  margin: 0 calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg);
-  font: inherit;
-  font-variant-numeric: tabular-nums;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-
-.prop dd .link + .link {
-  margin-left: 0;
-}
-
-.action,
-.more {
-  color: var(--fg-2);
-  font-weight: var(--weight-medium);
-}
-
-.more {
-  margin-top: var(--space-1);
-}
-
-@media (pointer: coarse), (max-width: 760px) {
-  .link,
-  .action,
-  .more {
-    min-height: 36px;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .link:hover,
-  .action:hover,
-  .more:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-/* Sections: a hairline above each, 24px of air. */
+/* Sections: 40px apart, no hairlines, 8px between heading and content. */
 .section {
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
+  margin-top: var(--space-10);
   scroll-margin-top: var(--space-4);
+}
+
+.head + .section {
+  margin-top: 0;
+}
+
+.railSection {
+  margin-top: 0;
 }
 
 .heading {
   margin: 0 0 var(--space-2);
-  color: var(--fg-2);
+  color: var(--fg);
   font-size: var(--text-md);
   line-height: var(--leading-md);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
 }
 
 .count {
@@ -200,6 +213,7 @@
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
 }
 
 /* A track that can shrink, so a long name ends in an ellipsis. */
@@ -211,80 +225,18 @@
   list-style: none;
 }
 
-/* A row that opens something: 32px, 14px glyph, a hover fill with an indigo edge. */
-.line,
-.part,
-.groupToggle,
-.pair,
-.connection {
-  appearance: none;
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+/* Rows outside the raised card bleed 8px outward so row text aligns with the column edge. */
+.bleedRow {
   width: calc(100% + var(--space-4));
-  min-height: var(--row);
-  margin: 0 calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out);
+  margin-inline: calc(var(--space-2) * -1);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .line:hover,
-  .part:hover,
-  .groupToggle:hover,
-  .pair:hover,
-  .connection:hover {
-    background: var(--hover);
-  }
-
-  .line:hover::before,
-  .part:hover::before,
-  .pair:hover::before,
-  .connection:hover::before {
-    background: var(--accent-line);
-  }
-}
-
-.line::before,
-.part::before,
-.pair::before,
-.connection::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: 1px;
-}
-
-.line:focus-visible,
-.part:focus-visible,
-.groupToggle:focus-visible,
-.pair:focus-visible,
-.connection:focus-visible,
-.link:focus-visible,
-.action:focus-visible,
-.more:focus-visible,
-.chip:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-.line:active,
-.part:active,
-.groupToggle:active,
-.pair:active,
-.connection:active {
-  background: var(--active);
+/* The one raised block on the page: Needs you, only when something waits. */
+.needsCard {
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--raised);
 }
 
 .icon {
@@ -292,24 +244,20 @@
   color: var(--fg-3);
 }
 
+.yoursIcon {
+  color: var(--yours);
+}
+
 .grow {
   flex: 1;
   min-width: 0;
-}
-
-.end {
-  flex: none;
-  color: var(--fg-3);
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 .lineStatic {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--row);
+  min-height: var(--row-md);
 }
 
 .unsent {
@@ -317,10 +265,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-}
-
-.unsent .action {
-  margin-right: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
 }
 
 .yoursText {
@@ -330,10 +275,45 @@
 .note {
   margin: var(--space-2) 0 0;
   color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
   text-wrap: pretty;
 }
 
-/* Parts: the heading row holds the filter. */
+/* Details rows in the rail (or at the bottom on narrow windows): 28px rows with 12px labels. */
+.details {
+  display: grid;
+  margin: 0;
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: var(--row-sm);
+}
+
+.detail dt {
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  letter-spacing: var(--tracking-label);
+}
+
+.detail dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Parts: the heading row holds the quiet filter. */
 .headRow {
   display: flex;
   align-items: center;
@@ -352,15 +332,17 @@
   gap: var(--space-2);
   flex: 0 1 200px;
   min-width: 0;
-  height: 28px;
+  height: var(--control-md);
   padding: 0 var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--raised);
+  background: transparent;
   color: var(--fg-3);
+  transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out);
 }
 
 .filter:focus-within {
+  background: var(--raised);
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
@@ -399,32 +381,42 @@
 }
 
 @media (max-width: 760px) {
-  .filter {
-    height: 36px;
-  }
-
   .filter input {
     font-size: 16px;
   }
 }
 
-.chip {
-  appearance: none;
-  flex: none;
-  height: 24px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-2);
-  font: inherit;
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
 .empty {
   margin: 0;
   color: var(--fg-3);
+}
+
+/* Column header and part rows share one grid and one left edge (edge B, aligned with the group label). */
+.partsHeader,
+.part {
+  display: grid;
+  grid-template-columns: minmax(112px, 140px) minmax(0, 1fr) 46px 36px 38px 12px;
+  column-gap: 6px;
+  align-items: center;
+  padding-left: calc(var(--space-2) + 20px);
+  padding-right: var(--space-2);
+}
+
+.partsHeader {
+  width: calc(100% + var(--space-4));
+  margin-inline: calc(var(--space-2) * -1);
+  box-sizing: border-box;
+  min-height: 24px;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  white-space: nowrap;
+}
+
+.colRight {
+  text-align: right;
 }
 
 /* A group: its header sticks to the top of the page while its rows scroll under it. */
@@ -443,12 +435,7 @@
 }
 
 .groupToggle {
-  gap: 6px;
   color: var(--fg-2);
-}
-
-.groupToggle[data-yours] {
-  color: var(--yours-text);
 }
 
 .group[data-yours] .groupToggle {
@@ -466,26 +453,11 @@
   flex: none;
 }
 
-.chevron {
-  flex: none;
-  color: var(--fg-3);
-  transition: transform 120ms var(--ease-out);
-}
-
-.groupToggle[aria-expanded='true'] .chevron,
-.pair[aria-expanded='true'] .chevron {
-  transform: rotate(90deg);
-}
-
-/* A part row: name, a line of summary, then fixed slots so the figures line up down the list. */
-.part {
-  display: grid;
-  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 14px 34px 40px 76px 14px;
-  column-gap: var(--space-2);
-}
-
-.part[data-yours]::before {
-  background: var(--yours);
+.partName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .partTitle,
@@ -497,6 +469,12 @@
 }
 
 .partSummary {
+  color: var(--fg-3);
+}
+
+.sourceMark {
+  display: inline-flex;
+  flex: none;
   color: var(--fg-3);
 }
 
@@ -516,27 +494,27 @@
   color: var(--yours-text);
 }
 
-.slot[data-slot='source'] > span {
-  display: inline-flex;
-}
-
 .figure {
   font-variant-numeric: tabular-nums;
 }
 
-/* On a phone the summary drops under the name, and only the notes and the flow stay on the right. */
+/* On a phone the summary drops under the name, and the column header hides. */
 @media (max-width: 760px) {
+  .partsHeader {
+    display: none;
+  }
+
   .part {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'title notes flow'
-      'summary summary summary';
+      'title notes'
+      'summary summary';
     align-content: center;
     row-gap: 0;
     padding-block: var(--space-2);
   }
 
-  .partTitle {
+  .partName {
     grid-area: title;
   }
 
@@ -550,13 +528,9 @@
     grid-area: notes;
   }
 
-  .slot[data-slot='flow'] {
-    grid-area: flow;
-  }
-
   .slot[data-slot='lesson'],
   .slot[data-slot='open'],
-  .slot[data-slot='source'] {
+  .part > svg:last-of-type {
     display: none;
   }
 }
@@ -576,37 +550,9 @@
 }
 
 .mapButton {
-  appearance: none;
   position: absolute;
-  top: 0;
+  top: calc((var(--row-md) - var(--control-sm)) / 2);
   right: calc(var(--space-2) * -1);
-  display: grid;
-  place-items: center;
-  width: var(--row);
-  height: var(--row);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-3);
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .mapButton:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-.mapButton:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
-.mapButton:active {
-  background: var(--active);
 }
 
 .pairEnds {
@@ -625,43 +571,33 @@
 }
 
 .connection {
-  padding-left: var(--space-6);
-  width: calc(100% + var(--space-4));
+  padding-left: calc(var(--space-2) + 20px);
 }
 
-.meta {
+.connMeta {
   flex: none;
-}
-
-.connection .meta {
-  flex: none;
-  max-width: 55%;
+  max-width: 50%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-3);
-}
-
-.connection[data-yours] .icon {
-  color: var(--yours);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
 }
 
 .pair[data-yours] .count {
   color: var(--yours-text);
 }
 
+.showMoreRow {
+  padding-left: 20px;
+}
+
 /* Scope and open questions. */
 .scope {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-6);
-}
-
-@media (max-width: 760px) {
-  .scope {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-  }
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
 }
 
 .scope .sub:first-child {
@@ -679,35 +615,4 @@
 
 .bullets li::marker {
   color: var(--fg-3);
-}
-
-/* The row that unfolds the rest of a long list, in place. */
-.showMore {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  width: calc(100% + var(--space-4));
-  min-height: var(--row);
-  margin: 0 calc(var(--space-2) * -1);
-  padding: 0 var(--space-2) 0 calc(var(--space-2) + 22px);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-3);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .showMore:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-}
-
-.showMore:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }

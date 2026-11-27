@@ -64,22 +64,21 @@ describe('App', () => {
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Example' })).toBeInTheDocument()
   })
 
-  it('opens the Overview page on the goal, then the scope, then where to start, before the numbers and the parts', async () => {
+  it('opens the Overview page on the goal, then Start here, then Scope, Parts, and Details', async () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /How the Claude Code harness works/ }))
     await screen.findByTestId('inspector')
     press(screen.getByRole('tab', { name: 'Overview' }))
     const page = within(screen.getByTestId('overview'))
-    const goal = page.getByRole('heading', { level: 2 }).nextElementSibling!
-    const scope = page.getByRole('heading', { name: 'Scope' })
+    const goal = page.getByRole('heading', { level: 1 }).nextElementSibling!
     const start = page.getByRole('heading', { name: 'Start here' })
-    const numbers = page.getByText('Revision')
+    const scope = page.getByRole('heading', { name: 'Scope' })
     const parts = page.getByRole('heading', { name: /^Parts/ })
+    const details = page.getByRole('heading', { name: 'Details' })
     const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
-    expect(before(goal, scope)).toBe(true)
-    expect(before(scope, start)).toBe(true)
-    expect(before(start, numbers)).toBe(true)
+    expect(before(goal, start)).toBe(true)
     expect(before(start, parts)).toBe(true)
+    expect(before(scope, details)).toBe(true)
   })
 
   it('draws the line key button as a key, not a question mark', async () => {

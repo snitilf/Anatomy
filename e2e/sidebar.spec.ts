@@ -16,38 +16,6 @@ async function openStates(page: Page) {
   await expect(page.locator('[data-detail]')).toBeAttached()
 }
 
-test.describe('the Overview page order', () => {
-  test('goal, then scope, then Start here, then the numbers and the parts, and the first three fit the first screen', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await open(page, SHORTENER)
-    await page.getByRole('tab', { name: 'Overview' }).click()
-    const overview = page.getByTestId('overview')
-    const top = async (locator: import('@playwright/test').Locator) => (await locator.boundingBox())!.y
-    const goal = await top(overview.locator('p').first())
-    const scope = await top(overview.getByRole('heading', { name: 'Scope' }))
-    const start = await top(overview.getByRole('heading', { name: 'Start here' }))
-    const revision = await top(overview.getByText('Revision', { exact: true }))
-    const parts = await top(overview.getByRole('heading', { name: /^Parts/ }))
-    expect(goal).toBeLessThan(scope)
-    expect(scope).toBeLessThan(start)
-    expect(start).toBeLessThan(revision)
-    expect(revision).toBeLessThan(parts)
-    // Scope and the first walkthrough are on the screen the page opens on, with no scrolling.
-    await expect(overview.getByRole('heading', { name: 'Scope' })).toBeInViewport()
-    await expect(overview.getByRole('button', { name: /^Play / }).first()).toBeInViewport()
-  })
-
-  test('Needs you comes before the scope when something waits for the user', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await openStates(page)
-    await page.getByRole('tab', { name: 'Overview' }).click()
-    const overview = page.getByTestId('overview')
-    const needs = (await overview.getByText('Needs you', { exact: true }).boundingBox())!.y
-    const scope = (await overview.getByRole('heading', { name: 'Scope' }).boundingBox())!.y
-    expect(needs).toBeLessThan(scope)
-  })
-})
-
 test.describe('the Source row', () => {
   for (const [label, words] of [
     ['request and policy', 'Agent explanation'],
