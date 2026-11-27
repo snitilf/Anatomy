@@ -12,9 +12,9 @@ const ring = (page: Page, id: string) =>
     return card ? getComputedStyle(card).boxShadow : ''
   }, id)
 
-async function firstRow(page: Page, group: 'Incoming' | 'Outgoing') {
+async function firstRow(page: Page) {
   const panel = page.getByTestId('inspector')
-  const section = panel.getByRole('region', { name: group })
+  const section = panel.getByRole('region', { name: 'Connections' })
   return (await section.count()) > 0 ? section.locator('li').first() : undefined
 }
 
@@ -29,7 +29,7 @@ for (const [name, file] of [['url shortener', SHORTENER], ['sixty parts', SIXTY]
     })
     expect(id).not.toBe('')
     await pickPart(page, id)
-    const row = (await firstRow(page, 'Outgoing')) ?? (await firstRow(page, 'Incoming'))
+    const row = await firstRow(page)
     expect(row).toBeDefined()
     const target = await row!.evaluate((li) => li.querySelector('button')?.textContent ?? '')
     expect(target).not.toBe('')
@@ -54,7 +54,7 @@ test('keyboard focus on a row spotlights the other part, and blur clears it', as
   await open(page, SHORTENER)
   const first = await page.evaluate(() => document.querySelector('.react-flow__node-card')?.getAttribute('data-id') ?? '')
   await pickPart(page, first)
-  const row = (await firstRow(page, 'Outgoing')) ?? (await firstRow(page, 'Incoming'))
+  const row = await firstRow(page)
   const button = row!.locator('button').first()
   await button.focus()
   const other = await page.evaluate(() => {
@@ -72,7 +72,7 @@ test('a spotlight does not move the camera, even for a part out of view', async 
   const first = await page.evaluate(() => document.querySelector('.react-flow__node-card')?.getAttribute('data-id') ?? '')
   await pickPart(page, first)
   const before = await page.evaluate(() => document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')
-  const row = (await firstRow(page, 'Outgoing')) ?? (await firstRow(page, 'Incoming'))
+  const row = await firstRow(page)
   await row!.hover()
   await page.waitForTimeout(300)
   const after = await page.evaluate(() => document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '')

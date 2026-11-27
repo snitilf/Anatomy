@@ -1,8 +1,10 @@
-import { Tabs } from '@base-ui/react/tabs'
+import clsx from 'clsx'
 import { ChevronLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
+import buttons from '../app/buttons.module.css'
+import { Segmented, type SegmentedOption } from '../app/Segmented'
 import type { Selection } from '../app/state'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { SIDEBAR, useUi, useUiApi } from '../app/ui'
@@ -64,7 +66,7 @@ function Details() {
   return <Overview board={board} />
 }
 
-/** The Details and Review tabs, and what they hold. The tab row shows only while Review has entries. */
+/** The pinned header row (40px), the scrollable content, and the pinned composer or review footer. */
 function Body({ header }: { header?: ReactNode }) {
   const dispatch = useAppDispatch()
   const store = useAppStoreApi()
@@ -73,12 +75,12 @@ function Body({ header }: { header?: ReactNode }) {
   const { board, layer, changes, selection } = useAppStore(useShallow((s) => ({ board: s.board, layer: s.layer, changes: s.changes, selection: s.selection })))
   const counts = useMemo(() => reviewCounts(board, layer, changes), [board, layer, changes])
   const reviewing = counts.total > 0 && tab === 'review'
-  const scroll = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const focusNext = useRef(false)
   const fromReview = useRef(false)
+  const [recentNoteId, setRecentNoteId] = useState<string | undefined>(undefined)
   const key = selectionKey(selection)
-  const phone = usePhone()
   // A row that goes away takes its spotlight with it.
   useSpotlightReset(key, tab, layer, board)
 
@@ -94,18 +96,32 @@ function Body({ header }: { header?: ReactNode }) {
     [dispatch, store, ui],
   )
 
+  const flashTimer = useRef<number | undefined>(undefined)
+  const noteAdded = useCallback((id: string) => {
+    setRecentNoteId(id)
+    if (flashTimer.current !== undefined) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => {
+      setRecentNoteId((current) => (current === id ? undefined : current))
+      flashTimer.current = undefined
+    }, 600)
+  }, [])
+  useEffect(() => () => {
+    if (flashTimer.current !== undefined) window.clearTimeout(flashTimer.current)
+  }, [])
+
   // A selection made anywhere else, such as on the map, shows its details.
   const lastKey = useRef(key)
   useEffect(() => {
     if (lastKey.current === key) return
     lastKey.current = key
+    setRecentNoteId(undefined)
     if (fromReview.current) fromReview.current = false
     else ui.setTab('details')
   }, [key, ui])
 
   // A new selection or a new board starts at the top of the panel.
   useEffect(() => {
-    if (!reviewing) scroll.current?.scrollTo?.({ top: 0 })
+    if (!reviewing) scrollRef.current?.scrollTo?.({ top: 0 })
   }, [key, board?.id, reviewing])
 
   // A new revision does not switch tabs. A toast says it is open and offers the review.
@@ -146,41 +162,43 @@ function Body({ header }: { header?: ReactNode }) {
     setAnnounced(text ? `${KIND_WORD[selection?.type ?? 'board']}, ${text}` : '')
   }, [key, selection?.type])
 
-  const panel = useMemo(() => ({ choose, headingRef }), [choose])
+  const panel = useMemo(() => ({ choose, headingRef, scrollRef, recentNoteId, noteAdded }), [choose, recentNoteId, noteAdded])
   const content = reviewing ? <Review /> : <Details />
   const target = composerTarget(board, layer, selection)
   const canBack = !reviewing && selection !== undefined && selection.type !== 'board'
+  const tabOptions: readonly SegmentedOption<'details' | 'review'>[] = useMemo(
+    () => [
+      { value: 'details', label: 'Details' },
+      { value: 'review', label: 'Review', ...(counts.decisions > 0 ? { count: counts.decisions } : {}) },
+    ],
+    [counts.decisions],
+  )
   return (
     <PanelContext.Provider value={panel}>
       {header}
-      <Tabs.Root className={styles.top} value={reviewing ? 'review' : 'details'} onValueChange={(value) => ui.setTab(value as 'details' | 'review')}>
-        {phone && (
-          <div className={styles.where}>
-            {canBack ? (
-              <button type="button" className={styles.back} onClick={() => choose({ type: 'board' })}>
-                <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
-                Board
-              </button>
-            ) : (
-              <span className={styles.here}>{reviewing ? 'Review' : 'Board'}</span>
-            )}
-          </div>
+      <div className={styles.top}>
+        <div className={styles.where}>
+          {canBack ? (
+            <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small, styles.back)} onClick={() => choose({ type: 'board' })}>
+              <ChevronLeft size={14} strokeWidth={1.5} aria-hidden="true" />
+              Board
+            </button>
+          ) : (
+            <span className={styles.here}>{reviewing ? 'Review' : 'Board'}</span>
+          )}
+        </div>
+        {counts.total > 0 && (
+          <Segmented
+            kind="tabs"
+            size="sm"
+            label="Sidebar"
+            value={reviewing ? 'review' : 'details'}
+            options={tabOptions}
+            onChange={(value) => ui.setTab(value)}
+          />
         )}
-        <Tabs.List className={styles.switch} aria-label="Sidebar">
-          <Tabs.Tab className={styles.tab} value="details">
-            Details
-          </Tabs.Tab>
-          <Tabs.Tab className={styles.tab} value="review" disabled={counts.total === 0}>
-            Review
-            {counts.decisions > 0 && (
-              <span className={styles.tabCount} title={`${counts.decisions} need a decision`}>
-                {counts.decisions}
-              </span>
-            )}
-          </Tabs.Tab>
-        </Tabs.List>
-      </Tabs.Root>
-      <div ref={scroll} className={styles.scroll} data-scroll="">
+      </div>
+      <div ref={scrollRef} className={styles.scroll} data-scroll="">
         <div key={reviewing ? 'review' : key} className={styles.content}>
           {content}
         </div>

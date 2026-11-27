@@ -1,26 +1,45 @@
 .list {
   display: grid;
-  gap: 2px;
-  margin: 0;
+  gap: 4px;
+  margin: 0 calc(var(--space-2) * -1);
   padding: 0;
   list-style: none;
 }
 
+/* Inside .list and .feed (which start at 8px from the panel edge), edge A is 8px in (16px) and edge B is 30px in (38px). */
 .item {
-  --indent: 34px;
+  --indent: 30px;
   display: grid;
   gap: var(--space-1);
 }
 
-/* A note is the user's: a block in their tint, no border. */
+/* A note is the user's: a block in their tint, no border. Icon at edge A (16px), text at edge B (38px). */
 .note {
   position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  padding: var(--space-2);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--yours-tint) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .item[data-flash] .note {
+    animation: note-flash 600ms var(--ease-out);
+  }
+}
+
+@keyframes note-flash {
+  0% {
+    background: var(--yours-tint);
+  }
+  65% {
+    background: var(--yours-tint);
+  }
+  100% {
+    background: color-mix(in srgb, var(--yours-tint) 55%, transparent);
+  }
 }
 
 .icon {
@@ -51,20 +70,8 @@
 }
 
 .more {
-  appearance: none;
   justify-self: start;
-  height: 24px;
-  margin-left: calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-2);
-  font: inherit;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
+  margin-left: calc(var(--space-1) * -1);
 }
 
 .meta {
@@ -81,7 +88,6 @@
 }
 
 .on {
-  appearance: none;
   padding: 0;
   border: 0;
   background: none;
@@ -110,25 +116,6 @@
   opacity: 1;
 }
 
-.tool {
-  appearance: none;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-xs);
-  background: none;
-  color: var(--fg-2);
-  cursor: pointer;
-}
-
-.tool:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
 .editor {
   display: grid;
   gap: var(--space-2);
@@ -141,11 +128,15 @@
   gap: var(--space-1);
 }
 
-/* Where the note stands against this revision. */
+.stateActions {
+  padding-left: var(--indent, 30px);
+}
+
+/* Where the note stands against this revision: glyph on edge A (16px), text and buttons on edge B (38px). */
 .state {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-1) 0 var(--space-1) var(--indent, var(--space-3));
+  padding: var(--space-1) 0;
 }
 
 .stateLine {
@@ -153,10 +144,15 @@
   align-items: flex-start;
   gap: var(--space-2);
   margin: 0;
+  padding-left: var(--space-2);
   color: var(--fg-2);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
   text-wrap: pretty;
+}
+
+.stateLine[data-plain] {
+  padding-left: var(--indent, 30px);
 }
 
 .stateLine svg {
@@ -164,18 +160,18 @@
   margin-top: 1px;
 }
 
-/* The agent's answer: neutral and flat, indented under the item it answers. */
+/* The agent's answer: neutral and flat, text and actions aligned on edge B (38px). */
 .answer {
   display: grid;
   gap: 2px;
-  padding: 2px 0 0 var(--indent, 22px);
+  padding: 2px 0 0 var(--indent, 30px);
 }
 
 .answerHead {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0;
+  gap: var(--space-2);
+  margin: 0 0 0 calc(var(--space-2) - var(--indent, 30px));
   color: var(--fg-3);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
@@ -197,36 +193,12 @@
 
 .answerActions {
   display: flex;
-  margin-left: calc(var(--space-2) * -1);
+  gap: var(--space-1);
+  margin-left: calc(var(--space-1) * -1);
 }
 
-/* A text-only action: no box, quiet until it is hovered. */
 .textAction {
-  appearance: none;
-  position: relative;
-  min-height: 24px;
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
   color: var(--fg-3);
-  font: inherit;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-
-.textAction::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((24px - var(--hit)) / 2));
-  inset-inline: 0;
-}
-
-.textAction:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 .textAction[data-tone='danger']:hover {
@@ -235,7 +207,7 @@
 
 /* In the review feed, actions show on hover and on focus, and always where there is no hover. */
 .feed {
-  /* A row's own padding, its icon, and the gap to its words. */
+  /* Inside .feed (which starts at 8px), edge A is 8px (16px) and edge B is 30px (38px). */
   --indent: 30px;
   display: grid;
   gap: var(--space-2);
@@ -252,11 +224,12 @@
 .feedItem .answerActions,
 .feedActions {
   display: flex;
+  gap: var(--space-1);
   opacity: 0;
 }
 
 .feedActions {
-  padding-left: calc(var(--indent) - var(--space-2));
+  padding-left: calc(var(--indent) - var(--space-1));
 }
 
 .feedItem:focus-within .answerActions,
@@ -279,7 +252,6 @@
 }
 
 .textarea {
-  appearance: none;
   box-sizing: border-box;
   width: 100%;
   min-height: 56px;
@@ -326,7 +298,6 @@
 }
 
 .compose {
-  appearance: none;
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -398,11 +369,6 @@
     opacity: 1;
   }
 
-  .tool:hover {
-    background: var(--hover);
-    color: var(--fg);
-  }
-
   .on:hover {
     color: var(--fg);
     text-decoration: underline;
@@ -428,9 +394,10 @@
   }
 }
 
-/* A moved connection in Review: where it was, and where the user asked for it. Wraps, so both names stay readable. */
+/* A moved connection in Review: where it was, and where the user asked for it. Aligned on edge B (38px). */
 .route {
   margin: 0;
+  padding-left: var(--indent, 30px);
   color: var(--fg-2);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
@@ -439,27 +406,6 @@
 
 .route s {
   color: var(--fg-3);
-}
-
-.more {
-  position: relative;
-}
-
-.more::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((24px - var(--hit)) / 2));
-  inset-inline: 0;
-}
-
-.tool {
-  position: relative;
-}
-
-.tool::after {
-  content: '';
-  position: absolute;
-  inset: min(0px, calc((24px - var(--hit)) / 2));
 }
 
 /* The pinned end of the review. */
@@ -482,8 +428,4 @@
 
 .footerAction {
   margin-left: auto;
-}
-
-.plain {
-  --indent: var(--space-2);
 }

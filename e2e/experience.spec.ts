@@ -152,14 +152,14 @@ test('selecting a part softens the other lines, and a selected connection is dra
 })
 
 test('the panel starts at the top for every new selection', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 700 })
+  await page.setViewportSize({ width: 1440, height: 480 })
   await open(page, REFUND)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   const scroller = inspector.locator('[data-scroll]')
   await pickPart(page, 'policy-check')
   await scroller.evaluate((el) => el.scrollTo({ top: 400 }))
   expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
-  await page.locator('.react-flow__node-card[data-id="manager-approval"]').click()
+  await pickPart(page, 'manager-approval')
   await expect(inspector.getByRole('heading', { name: 'Manager approval', level: 2 })).toBeVisible()
   expect(await scroller.evaluate((el) => el.scrollTop)).toBe(0)
 })
@@ -168,7 +168,7 @@ test('a part opens on its summary and flow, with the citations closed', async ({
   await open(page, REFUND)
   const inspector = page.getByRole('complementary', { name: 'Sidebar' })
   await pickPart(page, 'manager-approval')
-  await expect(inspector.getByRole('region', { name: 'Outgoing' })).toBeVisible()
+  await expect(inspector.getByRole('region', { name: 'Connections' })).toBeVisible()
   await expect(inspector.getByRole('button', { name: /^Cited, not checked/ })).toHaveAttribute('aria-expanded', 'false')
 })
 

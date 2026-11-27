@@ -8,6 +8,7 @@ import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { Tip } from '../app/Tip'
 import { useUi, useUiApi } from '../app/ui'
 import type { Board } from '../board/schema'
+import { prefersStillness } from '../canvas/cameraContext'
 import { changedFields } from '../layer/diff'
 import { newId } from '../layer/edits'
 import { LAYER_LIMITS, type Note, type NoteStatus, type Response, type Target } from '../layer/model'
@@ -23,7 +24,6 @@ import { partName, shortDate } from './names'
 import styles from './notes.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
-
 
 /**
  * The agent's answer to one of the user's items. The agent wrote it, so it is neutral: never the color of the user's own work.
@@ -51,7 +51,7 @@ export function AgentAnswer({ board, answer, onDismiss, bare = false }: { board:
       )}
       {onDismiss && (
         <div className={styles.answerActions}>
-          <button type="button" className={styles.textAction} onClick={onDismiss}>
+          <button type="button" className={clsx(buttons.button, buttons.link, buttons.small, styles.textAction)} onClick={onDismiss}>
             Dismiss
           </button>
         </div>
@@ -150,7 +150,7 @@ function NoteText({ text }: { text: string }) {
         {text}
       </p>
       {long && (
-        <button type="button" className={styles.more} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <button type="button" className={clsx(buttons.button, buttons.link, buttons.small, styles.more)} aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? 'Show less' : 'Show more'}
         </button>
       )}
@@ -163,12 +163,43 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
   const dispatch = useAppDispatch()
   const store = useAppStoreApi()
   const state = useAppStore((s) => (s.layer ? noteState(board, s.layer, note) : 'unsent'))
-  const { choose } = usePanel()
+  const { choose, scrollRef, recentNoteId } = usePanel()
+  const itemRef = useRef<HTMLLIElement>(null)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.text)
   const status = noteStatus(board, note)
   const Icon = note.kind === 'note' ? StickyNote : CircleHelp
   const kind = note.kind === 'note' ? 'Note' : 'Question'
+  const isRecent = recentNoteId === note.id
+  const flashing = isRecent && !prefersStillness()
+
+  // After Add, scroll the new note fully above the composer; instant when reduced motion is on.
+  useEffect(() => {
+    if (!isRecent) return
+    const still = prefersStillness()
+    const raf = requestAnimationFrame(() => {
+      const scroller = scrollRef?.current
+      const item = itemRef.current
+      if (!scroller || !item) return
+      const sRect = scroller.getBoundingClientRect()
+      const composerForm = scroller.nextElementSibling?.querySelector('form')
+      const visibleBottom = Math.min(sRect.bottom, composerForm ? composerForm.getBoundingClientRect().top : sRect.bottom)
+      const iRect = item.getBoundingClientRect()
+      const margin = 8
+      if (iRect.bottom > visibleBottom - margin) {
+        scroller.scrollTo?.({
+          top: scroller.scrollTop + (iRect.bottom - (visibleBottom - margin)),
+          behavior: still ? 'instant' : 'smooth',
+        })
+      } else if (iRect.top < sRect.top + margin) {
+        scroller.scrollTo?.({
+          top: Math.max(0, scroller.scrollTop - (sRect.top + margin - iRect.top)),
+          behavior: still ? 'instant' : 'smooth',
+        })
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isRecent, scrollRef])
 
   function save() {
     const text = draft.trim()
@@ -178,7 +209,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
   }
 
   return (
-    <li className={styles.item} data-status={status} data-yours="">
+    <li ref={itemRef} className={styles.item} data-status={status} data-yours="" data-flash={flashing ? '' : undefined}>
       <div className={styles.note}>
         <Icon className={styles.icon} size={14} strokeWidth={1.5} aria-hidden="true" />
         <span className="sr-only">{kind}: </span>
@@ -237,7 +268,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
                 <Tip label="Edit">
                   <button
                     type="button"
-                    className={styles.tool}
+                    className={clsx(buttons.button, buttons.quiet, buttons.small, buttons.icon)}
                     aria-label={`Edit ${kind.toLowerCase()}`}
                     onClick={() => {
                       setDraft(note.text)
@@ -250,7 +281,7 @@ export function NoteBlock({ note, board, showTarget = false }: { note: Note; boa
                 <Tip label="Delete">
                   <button
                     type="button"
-                    className={styles.tool}
+                    className={clsx(buttons.button, buttons.quiet, buttons.small, buttons.icon)}
                     aria-label={`Delete ${kind.toLowerCase()}`}
                     onClick={() => {
                       dispatch({ type: 'noteDeleted', id: note.id })
@@ -293,6 +324,7 @@ const KINDS: readonly SegmentedOption<Note['kind']>[] = [
 export function Composer({ target }: { target: Target }) {
   const dispatch = useAppDispatch()
   const ui = useUiApi()
+  const { noteAdded } = usePanel()
   const form = useRef<HTMLFormElement>(null)
   const field = useRef<HTMLTextAreaElement>(null)
   const [kind, setKind] = useState<Note['kind']>('note')
@@ -311,9 +343,11 @@ export function Composer({ target }: { target: Target }) {
   /** From the keyboard the field stays in use, for the next note. After a press on Add it closes. */
   function submit(keyboard: boolean) {
     if (empty) return
-    dispatch({ type: 'noteAdded', kind, text: text.trim(), target, id: newId('note'), now: new Date() })
+    const id = newId('note')
+    dispatch({ type: 'noteAdded', kind, text: text.trim(), target, id, now: new Date() })
     // The new note shows in its group, even if the user had closed it.
     ui.setGroup('notes', true)
+    noteAdded?.(id)
     setText('')
     if (keyboard) {
       field.current?.focus()
@@ -366,20 +400,16 @@ export function Composer({ target }: { target: Target }) {
         </div>
         {active && (
           <div className={styles.composerFoot}>
-            <Segmented
-              kind="choice"
-              size="sm"
-              label="Kind"
-              value={kind}
-              options={KINDS}
-              onChange={setKind}
-            />
+            <Segmented kind="choice" size="sm" label="Kind" value={kind} options={KINDS} onChange={setKind} />
             {text.length >= LAYER_LIMITS.noteText - 200 && (
               <span className={styles.counter} role="status">
                 {text.length} of {LAYER_LIMITS.noteText}
               </span>
             )}
-            <button type="submit" className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)} disabled={empty}
+            <button
+              type="submit"
+              className={clsx(buttons.button, buttons.primary, buttons.small, styles.add)}
+              disabled={empty}
               aria-keyshortcuts="Control+Enter Meta+Enter"
               // A click with no pointer, from Enter or Space on the button, keeps the field in use.
               onClick={(event) => {

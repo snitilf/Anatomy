@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyLayer } from '../layer/model'
 import { refundBoard } from '../layer/testBoards'
 import { MANUAL_PREFIX } from '../canvas/buildGraph'
-import { flowRows } from './flowRows'
+import { connectionRows, flowRows } from './flowRows'
 
 describe('the flow block', () => {
   it('lists connections first, then the board inputs and outputs', () => {
@@ -47,5 +47,25 @@ describe('the flow block', () => {
     expect(rows.out.at(-1)).toMatchObject({ yours: 'link', unlabeled: true, part: 'payout-preview', edge: `${MANUAL_PREFIX}link-aaaaaa` })
     // The part the end left still lists the connection, marked as moved away.
     expect(flowRows(board, layer, out.to).in.find((r) => r.select?.id === out.id)).toMatchObject({ part: elsewhere, was: out.to, yours: 'moved' })
+  })
+
+  it('returns incoming and outgoing connections as one list, incoming first, each with its direction', () => {
+    const board = refundBoard()
+    const layer = {
+      ...emptyLayer(board.id),
+      links: [
+        { id: 'link-in0001', from: 'payout-preview', to: 'manager-approval', label: 'note back', createdAt: '2026-11-13T00:00:00.000Z' },
+        { id: 'link-out001', from: 'manager-approval', to: 'policy-check', label: 'escalate', createdAt: '2026-11-13T00:00:00.000Z' },
+      ],
+    }
+    const rows = connectionRows(board, layer, 'manager-approval')
+    const split = rows.findIndex((r) => r.side === 'out')
+    expect(split).toBeGreaterThan(0)
+    expect(rows.slice(0, split).every((r) => r.side === 'in')).toBe(true)
+    expect(rows.slice(split).every((r) => r.side === 'out')).toBe(true)
+    // Plain inputs and outputs with no part at the other end stay out of the connection list.
+    expect(rows.every((r) => typeof r.part === 'string')).toBe(true)
+    expect(rows.find((r) => r.select?.id === 'link-in0001')).toMatchObject({ side: 'in', yours: 'link', part: 'payout-preview' })
+    expect(rows.find((r) => r.select?.id === 'link-out001')).toMatchObject({ side: 'out', yours: 'link', part: 'policy-check' })
   })
 })

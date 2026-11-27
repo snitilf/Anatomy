@@ -1,6 +1,8 @@
+import clsx from 'clsx'
 import { ArrowRight, Circle, Link2, MoveUpRight, Pen, Square, SquarePlus, StickyNote, Trash2, Type, type LucideIcon } from 'lucide-react'
 import { Fragment, useContext, useState, type ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import buttons from '../app/buttons.module.css'
 import { useAppDispatch, useAppStore } from '../app/store'
 import type { Board } from '../board/schema'
 import { CameraSlotContext } from '../canvas/cameraContext'
@@ -139,7 +141,7 @@ export function LinkView({ board, link }: { board: Board; link: Link }) {
         <Picker
           label={label}
           title={`${label}: ${shown}`}
-          className={styles.pickerValue}
+          className={clsx(buttons.button, buttons.quiet, buttons.small, styles.pickerValue)}
           trigger={<PickerValue>{shown}</PickerValue>}
           items={partItems(board, proposals, other)}
           onPick={(part) => dispatch({ type: 'linkEdited', id: link.id, change: { [which]: part } })}

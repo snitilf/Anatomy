@@ -18,8 +18,8 @@ test('the crumb follows the selection: board, group, part', async ({ page }) => 
   await expect(here).toHaveText('Policy check')
   await expect(crumb(page).getByRole('button', { name: 'Refund logic' })).toBeVisible()
   await expect(crumb(page).getByRole('button', { name: /Refund approval/ })).toBeVisible()
-  // The sidebar has no back row of its own: the board segment is the way back.
-  await expect(page.getByTestId('inspector').getByRole('button', { name: 'Board' })).toHaveCount(0)
+  // Both the breadcrumb and the sidebar header offer a way back to the board.
+  await expect(page.getByTestId('inspector').getByRole('button', { name: 'Board' })).toBeVisible()
 })
 
 test('a connection has no group segment, and a link is named by its label', async ({ page }) => {

@@ -1,28 +1,43 @@
-/* Every view of the sidebar: the overview, a selection, and the review. */
+/* Every view of the sidebar: the board view, a selection, and the review. */
 
 .view {
-  --row: 28px;
   grid-template-columns: minmax(0, 1fr);
   display: grid;
   align-content: start;
-  gap: var(--space-1);
+  gap: var(--space-5);
   /* A word with no spaces wraps instead of widening the panel. */
   overflow-wrap: anywhere;
 }
 
-/* Rows are 44px where a finger taps: on a touch screen, and in the phone sheet. */
-@media (pointer: coarse), (max-width: 760px) {
-  .view {
-    --row: 44px;
-  }
-}
-
-/* The title block: 15/22 title, the lead under it, 20px to what follows. */
+/* The title block: 15/22 title, 4px to the lead under it. */
 .head {
   grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: var(--space-1);
-  margin-bottom: var(--space-4);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 0 2px;
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  letter-spacing: var(--tracking-label);
+}
+
+.eyebrow > span {
+  flex: none;
+}
+
+.eyebrowGroup {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--fg-2);
+  font-weight: var(--weight-regular);
 }
 
 .titleRow {
@@ -42,7 +57,7 @@
   font-size: var(--text-lg);
   line-height: var(--leading-lg);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-heading);
   text-wrap: balance;
   color: var(--fg);
 }
@@ -60,9 +75,8 @@
   text-wrap: pretty;
 }
 
-/* A quiet line under the property rows for a board with many parts. */
-.crowded {
-  margin: calc(var(--space-2) * -1) 0 var(--space-3);
+.boardMeta {
+  margin: var(--space-1) 0 0;
   color: var(--fg-3);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
@@ -72,31 +86,93 @@
 .source {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .source svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
   color: var(--fg-3);
 }
 
-/* Label and value rows. */
+.partSource {
+  margin-top: var(--space-1);
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+/* In a connection's property list, put the source icon after the words so all four values share one left edge. */
+.propSource {
+  flex-direction: row-reverse;
+  gap: 6px;
+}
+
+/* Raised lesson row: icon on edge A (16px), title and 1-line summary on edge B (38px), Open lesson pill at right. */
+.lessonSection {
+  display: grid;
+}
+
+.lessonCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: calc(100% + var(--space-4));
+  margin-inline: calc(var(--space-2) * -1);
+  padding: var(--space-3) var(--space-3) var(--space-3) 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out);
+}
+
+.lessonCard:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.lessonCard:active {
+  background: color-mix(in srgb, var(--raised), var(--fg) 6%);
+  border-color: var(--border-strong);
+  transition: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lessonCard:hover {
+    background: color-mix(in srgb, var(--raised), var(--fg) 3%);
+    border-color: var(--border-strong);
+  }
+}
+
+.lessonIcon {
+  flex: none;
+  color: var(--fg-2);
+}
+
+.lessonAction {
+  flex: none;
+  pointer-events: none;
+}
+
+/* Label and value rows (connections and user items): 72px labels on edge A. */
 .props {
   display: grid;
-  margin: 0 0 var(--space-1);
+  margin: 0;
   padding: 0;
 }
 
 .prop {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   align-items: center;
   column-gap: var(--space-2);
-  min-height: 28px;
-}
-
-/* A row with a control in it is as tall as a row you press. */
-.prop:has(button, input) {
-  min-height: var(--row);
+  min-height: var(--row-sm);
 }
 
 .prop dt {
@@ -127,24 +203,16 @@
   color: var(--fg-3);
 }
 
-/* A value that can change: a button that opens a picker. */
+/* A value that can change: a quiet small button that opens a picker, aligned to the value column. */
 .pickerValue {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
   min-width: 0;
   max-width: 100%;
-  min-height: 28px;
   margin-left: calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
   color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-regular);
+  justify-content: flex-start;
 }
 
 .pickerChevron {
@@ -152,47 +220,76 @@
   color: var(--fg-3);
 }
 
-/* Groups: a 28px header that opens and closes, and the content under it. */
+/* Collapsible sections: 13/20 semibold heading on edge A, 6px to content, trailing 12px chevron. */
 .group {
   grid-template-columns: minmax(0, 1fr);
   display: grid;
+  gap: 6px;
   min-width: 0;
 }
 
+.groupBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline: calc(var(--space-2) * -1);
+}
+
 .groupHead {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-weight: var(--weight-medium);
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+  font-weight: var(--weight-semibold);
 }
 
 .groupToggle {
-  appearance: none;
-  display: flex;
-  align-items: center;
   gap: 6px;
-  width: calc(100% + var(--space-4));
-  height: 28px;
-  margin: 0 calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-3);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  color: var(--fg);
+}
+
+.groupTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chevron {
   flex: none;
+  margin-left: auto;
+  color: var(--fg-3);
+  opacity: 0;
 }
 
 .groupToggle[aria-expanded='true'] .chevron {
-  transform: rotate(90deg);
+  rotate: 90deg;
+}
+
+.groupToggle[aria-expanded='false'] .chevron,
+.groupToggle:focus-visible .chevron {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .groupToggle:hover .chevron {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .chevron {
+    opacity: 1;
+  }
+}
+
+.groupAction {
+  flex: none;
 }
 
 .count {
+  color: var(--fg-3);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-regular);
 }
@@ -200,19 +297,19 @@
 .groupBody {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-1) 0 var(--space-2);
 }
 
 .subHead {
   margin: 0;
   padding-top: var(--space-1);
   color: var(--fg-3);
-  font-size: var(--text-xs);
-  line-height: var(--leading-xs);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
   font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
 }
 
-/* Lists of rows. Each row is one button. */
+/* Lists of rows. Negative margin puts row icons on edge A (16px) and row text on edge B (38px). */
 .rows {
   grid-template-columns: minmax(0, 1fr);
   display: grid;
@@ -222,21 +319,19 @@
   list-style: none;
 }
 
-.row {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: var(--row);
-  padding: 4px var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
+.multiRow,
+.yoursRow {
+  padding-block: var(--space-1);
+}
+
+.staticRow {
+  margin: 0;
+  cursor: default;
+}
+
+.staticRow:hover,
+.staticRow:active {
   background: none;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
 .rowIcon {
@@ -281,10 +376,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A walkthrough plays: its icon shows at rest. */
+/* A walkthrough plays: filled 14px triangle in --accent-text. */
 .play {
   flex: none;
-  color: var(--fg-3);
+  color: var(--accent-text);
 }
 
 .wraps {
@@ -298,31 +393,15 @@
   color: var(--fg-3);
 }
 
-/* Things the user made: the glyph is amber, the row stays quiet until it is hovered or focused. */
+/* Things the user made: the glyph is amber. */
 .yoursIcon {
   flex: none;
   color: var(--yours);
 }
 
-.yours:focus-visible {
-  background: var(--yours-tint);
-}
-
 .more {
-  appearance: none;
   justify-self: start;
-  height: 24px;
-  margin-left: calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-2);
-  font: inherit;
-  font-size: var(--text-sm);
-  line-height: var(--leading-sm);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
+  margin-left: calc(var(--space-1) * -1);
 }
 
 /* The button that shows the rest of a list on the left, and a key to it on the right. */
@@ -332,42 +411,16 @@
   gap: var(--space-2);
 }
 
+/* List item text aligns to edge B (16 + 22 = 38px). */
 .plainList {
   display: grid;
   gap: var(--space-1);
   margin: 0;
-  padding-left: 18px;
+  padding-left: 22px;
   color: var(--fg-2);
 }
 
 .plainList li::marker {
-  color: var(--fg-3);
-}
-
-/* The filter stays at the top of the panel while the lists scroll under it. */
-.filterBar {
-  position: sticky;
-  z-index: 1;
-  top: 0;
-  margin: 0 calc(var(--space-4) * -1);
-  padding: var(--space-1) var(--space-4) var(--space-2);
-  background: var(--panel);
-}
-
-.filter {
-  appearance: none;
-  box-sizing: border-box;
-  width: 100%;
-  height: 28px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--raised);
-  color: var(--fg);
-  font: inherit;
-}
-
-.filter::placeholder {
   color: var(--fg-3);
 }
 
@@ -376,15 +429,13 @@
   color: var(--fg-2);
 }
 
-/* Explanation: open, held to a height with a fade, and a button that shows the rest. */
+/* Explanation: uncut up to 320px, then cut cleanly between blocks via inline max-height. */
 .explain {
   position: relative;
 }
 
-.explain[data-clipped] .prose {
-  max-height: 160px;
+.explain[data-clipped] {
   overflow: hidden;
-  mask-image: linear-gradient(to bottom, #000 70%, transparent);
 }
 
 .prose {
@@ -400,7 +451,7 @@
 
 .prose ul,
 .prose ol {
-  padding-left: 18px;
+  padding-left: 22px;
 }
 
 .prose li::marker {
@@ -430,9 +481,11 @@
   color: var(--fg-3);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
 }
 
-/* Open items: the kind above the text. */
+/* Open items: the kind above the text, both on edge A. */
 .items {
   display: grid;
   gap: var(--space-3);
@@ -474,7 +527,7 @@
   line-height: var(--leading-sm);
 }
 
-/* A route sentence: part names as buttons, the kind as words. */
+/* A route sentence: part names as inline link buttons, the kind as words. */
 .route {
   margin: 0;
   color: var(--fg-2);
@@ -482,7 +535,6 @@
 }
 
 .partLink {
-  appearance: none;
   display: inline;
   padding: 0;
   border: 0;
@@ -492,19 +544,22 @@
   font-weight: var(--weight-medium);
   text-align: left;
   text-decoration: underline;
-  text-decoration-color: transparent;
+  text-decoration-color: var(--border-strong);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   cursor: pointer;
   transition: text-decoration-color 120ms var(--ease-out);
 }
 
+.partLink:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 2px;
+}
+
 .gone {
   color: var(--fg-3);
   text-decoration: line-through;
-}
-
-.lesson .rowIcon {
-  color: var(--fg-2);
 }
 
 /* Fields and actions. */
@@ -521,7 +576,6 @@
 
 .input,
 .textarea {
-  appearance: none;
   box-sizing: border-box;
   width: 100%;
   padding: 5px var(--space-2);
@@ -533,7 +587,7 @@
 }
 
 .input {
-  min-height: 28px;
+  min-height: var(--control-md);
   padding-block: 3px;
 }
 
@@ -548,8 +602,7 @@
 }
 
 .input:focus-visible,
-.textarea:focus-visible,
-.filter:focus-visible {
+.textarea:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--ring);
@@ -578,91 +631,41 @@
 
 /* The review's one line of summary. */
 .summary {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   color: var(--fg-2);
   text-wrap: pretty;
 }
 
-/* Delete: plain words in the danger color, at the end of the view. */
+/* Delete: quiet small button in the danger color, at the end of the view. */
 .dangerRow {
   display: flex;
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
 }
 
 .danger {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: var(--row);
   margin-left: calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
   color: var(--danger);
-  font: inherit;
-  cursor: pointer;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .row,
-  .more,
-  .groupToggle,
-  .pickerValue,
-  .danger {
-    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
-  }
-
-  .row:hover,
-  .more:hover,
-  .pickerValue:hover {
-    background: var(--hover);
-  }
-
-  .groupToggle:hover {
-    background: var(--hover);
-    color: var(--fg-2);
-  }
-
-  .row:hover .play {
-    color: var(--fg);
-  }
-
   .partLink:hover {
-    text-decoration-color: currentColor;
+    text-decoration-color: var(--fg);
   }
 
   .danger:hover {
     background: var(--danger-tint);
+    color: var(--danger);
   }
 
   .input:hover,
-  .textarea:hover,
-  .filter:hover {
+  .textarea:hover {
     border-color: var(--border-strong);
   }
 }
 
-.row:focus-visible,
-.more:focus-visible,
-.groupToggle:focus-visible,
-.pickerValue:focus-visible,
-.danger:focus-visible,
-.partLink:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-  border-radius: var(--radius-sm);
-}
-
-.row:active {
-  background: var(--active);
-}
-
 @media (max-width: 760px) {
   .input,
-  .textarea,
-  .filter {
+  .textarea {
     font-size: 16px;
   }
 }
@@ -673,18 +676,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.more,
-.groupToggle {
-  position: relative;
-}
-
-.more::after {
-  content: '';
-  position: absolute;
-  inset-block: min(0px, calc((24px - var(--hit)) / 2));
-  inset-inline: 0;
 }
 
 /* An answer inside a group needs no indent. */

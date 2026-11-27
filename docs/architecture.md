@@ -430,11 +430,18 @@ The connection view in the sidebar has the same moves as pickers, for the keyboa
 
 ## The sidebar
 
-Under Details, the sidebar shows the overview or the selection.
-It shows a Review tab while a new revision, a note, or an answer needs a look.
+The sidebar starts with a 40 px header row that stays pinned on desktop and on the phone sheet.
+When a part, connection, bundle, or user item is selected, the left side of the header shows a quiet `Board` button that clears the selection; otherwise it shows `Board` (or `Review`).
+The right side of the header renders the `Segmented` switch (`Details` and `Review`) only when Review has entries, so no disabled tab appears on boards with nothing to review and nothing shifts when a revision arrives.
 The app keeps the width of the sidebar (300 to 520) and whether it is open, for each browser.
 On a screen 760 px wide or less, the sidebar is a bottom sheet with three stops.
 The user drags the sheet by its header only.
+
+Every view in the sidebar aligns its content to two left edges (16 px and 38 px), uses 13 px semibold section headings with trailing chevrons and 20 px between sections, and drops hairlines between sections.
+With nothing selected, the board view shows the title, full goal, one meta line (`boardMeta` in `src/inspector/boardMeta.ts`), walkthroughs, Yours, and Notes.
+A selected part reads top to bottom: eyebrow (`Part` and its group button, which frames the group), title, summary, source line (always shown, including for the agent's own explanation), a raised Lesson row when the part has a lesson, Explanation (uncut up to 320 px, then cut cleanly between blocks when at least 40 px is hidden via `explanationCut` in `src/inspector/explanationClamp.ts`, followed by Takes in and Gives out), one Connections section (`connectionRows` in `src/inspector/flowRows.ts`, incoming first, with `Add link` in the heading), Open items, Cited (closed by default), and Notes directly above the pinned composer.
+After adding a note by pointer or keyboard, the scroll area brings the new note fully above the composer and holds a 600 ms `--yours-tint` flash; under `prefers-reduced-motion: reduce`, it scrolls immediately without flashing.
+
 A lesson dialog is not part of the sidebar, so resizing across that width keeps it open, with its run.
 The open lesson is held in the screen state and drawn once, by the shell (`src/app/LessonHost.tsx`).
 It closes when another board opens, when the board closes, or when a new revision of the same board no longer has the part that opened it with that lesson.
@@ -442,8 +449,7 @@ Closing it returns focus to the lesson row that stands on the screen then.
 Inert, hidden, and below-the-screen places are skipped.
 If no row can take it, focus goes to the panel heading, then the first control of the panel, then the Overview page, then the Show sidebar button, then Search (`src/app/lessonFocus.ts`).
 Focus never falls to the page.
-A part and a connection always show a Source row, also when the source is the agent's own explanation.
-Once the user has made something, the Yours list on the overview has a Status key button.
+Once the user has made something, the Yours list on the board view has a Status key button.
 It opens the seven status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
 
 ## The Overview page
