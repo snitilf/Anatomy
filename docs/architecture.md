@@ -72,6 +72,17 @@ The arrow keys move focus and the selection together, skip a disabled segment, a
 `src/styles/controls.test.ts` counts the hand-written `appearance: none` rules and the hand-written 28 px heights outside the three owner files.
 `src/styles/controls.baseline.json` holds the most that it allows, and each change that moves a control onto the shared classes lowers it.
 
+## The top bar
+
+The top bar (`src/app/TopBar.tsx`) is 40 px high and laid out as a three-zone grid (`minmax(0, 1fr) auto minmax(0, 1fr)`).
+The left zone holds the brand mark and source name (which open the Open menu), the breadcrumb trail (`src/app/BoardCrumbs.tsx`), and the save status when it has something to say.
+`measureCrumbRoom` in `src/app/crumbRoom.ts` measures the left zone alone so the trail folds before it crowds the center switch.
+The center zone holds the segmented `Map | Overview` switch (`src/app/ViewTabs.tsx`), which stays fixed in the middle of the bar regardless of title, selection, or count.
+The right zone holds Search, Send to agent (which reserves room for its count chip), the sidebar toggle (which keeps its 28 px slot hidden on the Overview so neighbors do not shift), and Settings.
+On a phone, the left zone shows the mark and chevron as the Open menu trigger, the center holds the view switch, and the right holds Search, Send, and Settings.
+The Open menu and the command menu both offer a Start screen action that closes the board and moves focus to the start screen's primary button.
+The start screen's lead line is the page `h1`, and while the map is open a visually hidden `h1` holds the board title instead of the 13 px breadcrumb.
+
 ## Cards and the map
 
 Every card has a rect, which is its position and its size.
@@ -356,7 +367,7 @@ Escape or V returns to Select.
 Every tool except the pen returns to Select after one use.
 In a walkthrough or on a phone screen, only Select is available.
 A tool that is on when the window narrows to a phone goes back to Select.
-On a phone the command menu lists no tool and prints no shortcuts, and the tool keys do nothing.
+On a phone the command menu lists no tool, omits desktop-only View commands (sidebar toggle, zoom steps, and line key), and prints no shortcuts, and the tool keys do nothing.
 
 Under Select, the map behaves as before.
 Under Hand, the map pans from anywhere.
@@ -647,7 +658,7 @@ Sending feedback to a folder still writes `feedback.json` when the text of the `
 
 The page has an SVG icon, `public/favicon.svg`, which `index.html` links by a path that Vite rewrites to a relative one, so the hosted copy finds it under `/Anatomy/` and the zip finds it in its folder.
 The file draws in the colors of the tokens and switches with `prefers-color-scheme` inside the SVG.
-The same drawing, a part, a connection, and the part it leads to, is `BrandMark` in `src/app/BrandMark.tsx`, which sits beside the word "Anatomy" in the top bar of the empty screen and takes its colors from the tokens.
+The same drawing, a part, a connection, and the part it leads to, is `BrandMark` in `src/app/BrandMark.tsx`, which sits beside the word "Anatomy" on the start screen and stays in the Open menu trigger once a board is open, taking its colors from the tokens.
 The page has two `theme-color` tags, one for each color scheme, in the color of the top bar (`--frame`).
 `public/theme.js` and `src/theme/theme.ts` give both tags the color of the theme in use, so the browser bar follows a stored choice and the settings menu.
 `scripts/identity.test.ts` holds the colors of the icon and of the tags to the tokens.

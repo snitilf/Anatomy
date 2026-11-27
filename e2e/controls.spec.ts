@@ -63,7 +63,6 @@ const probe = (scope: Page | Locator): Promise<Probe[]> =>
  * slice deletes its entry. Nothing here is a size the foundation allows: an entry only says "not yet".
  */
 const LATER: { slice: string; reason: string; match: (p: Probe) => boolean }[] = [
-  { slice: '7c', reason: 'the top bar sizes its own controls, with a hit area of 36 on a coarse pointer', match: (p) => p.where === 'header' && p.name === 'Search' },
   { slice: '7d', reason: 'the sidebar rows and group toggles are 28 or 44 high', match: (p) => p.where === 'inspector' && (p.height === 44 || /^(Walkthroughs|Yours|Notes|Parts|Connections|Open items)\d*$/.test(p.name)) },
   { slice: '7d', reason: 'the status key trigger of the sidebar is 24 high on a coarse pointer', match: (p) => p.where === 'inspector' && p.name === 'Status key' },
   { slice: '7f', reason: 'the example rows of the Open menu are two-line rows of their own sheet', match: (p) => p.list === 'open-examples' },

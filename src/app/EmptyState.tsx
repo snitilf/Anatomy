@@ -24,7 +24,7 @@ function Lead() {
   if (folder?.state === 'missing') {
     return (
       <header className={styles.lead}>
-        <h2 className={styles.title}>{folder.name} has no board yet.</h2>
+        <h1 className={styles.title}>{folder.name} has no board yet.</h1>
         <p className={styles.hint}>
           It opens here when your agent writes <code className={styles.path}>.anatomy/board.json</code>.
         </p>
@@ -46,7 +46,7 @@ function Lead() {
   )
   return (
     <header className={styles.lead}>
-      <h2 className={styles.title}>Open a repository to see its anatomy.</h2>
+      <h1 className={styles.title}>Open a repository to see its anatomy.</h1>
       {!canOpenFolder && <p className={styles.hint}>This browser cannot open folders. Chrome and Edge can.</p>}
       <div className={styles.actions}>
         {canOpenFolder && folder?.state === 'reopen' && (
@@ -95,9 +95,9 @@ function Steps() {
   ]
   return (
     <section className={clsx(styles.section, styles.steps)} aria-labelledby="steps-title">
-      <h3 className={styles.sectionTitle} id="steps-title">
+      <h2 className={styles.sectionTitle} id="steps-title">
         With your own agent
-      </h3>
+      </h2>
       <ol className={styles.stepList} data-testid="start-steps">
         {steps.map((step, i) => (
           <li key={step.title} className={styles.step}>
@@ -168,16 +168,16 @@ export function EmptyState() {
         )}
         {saved.length > 0 && (
           <section className={clsx(styles.section, styles.recent)} aria-labelledby="recent-title">
-            <h3 className={styles.sectionTitle} id="recent-title">
+            <h2 className={styles.sectionTitle} id="recent-title">
               Recent
-            </h3>
+            </h2>
             <SavedBoardList />
           </section>
         )}
         <section className={styles.section} aria-labelledby="examples-title">
-          <h3 className={styles.sectionTitle} id="examples-title">
+          <h2 className={styles.sectionTitle} id="examples-title">
             Examples
-          </h3>
+          </h2>
           <ul className={styles.examples}>
             {EXAMPLES.map((example) => (
               <li key={example.id} className={styles.item}>

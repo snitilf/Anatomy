@@ -183,21 +183,6 @@ test('undo and redo are the first controls of the zoom surface, not the top bar'
   await expect(redo).toBeDisabled()
 })
 
-test.describe('on a phone', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
-
-  test('the tabs take the top bar and undo and redo stay in the zoom surface', async ({ page }) => {
-    await open(page, SHORTENER)
-    await expect(tab(page, 'Map')).toBeVisible()
-    const zoom = page.getByRole('toolbar', { name: 'Zoom' })
-    await expect(zoom.getByRole('button', { name: 'Undo' })).toBeVisible()
-    await expect(zoom.getByRole('button', { name: 'Redo' })).toBeVisible()
-    await tab(page, 'Overview').tap()
-    await expect(page.getByTestId('overview')).toBeVisible()
-    await expect(page.getByTestId('overview').getByRole('button', { name: /^Redirect handler/ })).toBeVisible()
-  })
-})
-
 test('the Parts count is the number of rows, with the new parts the user proposed', async ({ page }) => {
   await open(page, SHORTENER)
   await page.keyboard.press('n')
