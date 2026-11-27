@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { expect, test } from './test.ts'
 import type { Locator, Page } from '@playwright/test'
-import { open } from './helpers.ts'
+import { open, pickPart } from './helpers.ts'
 import { everyState, seedFolder } from './states.ts'
 
 /*
@@ -30,6 +30,8 @@ interface Probe {
   where: string
   /** The labelled section of a list the button sits in, such as the examples of the Open menu. */
   list: string
+  /** The lesson drafting-table workshop buttons (D154, section 10). */
+  lessonDrafting: boolean
 }
 
 /** Every button on the page, as drawn: its box, its hit area, and where it sits. */
@@ -52,6 +54,7 @@ const probe = (scope: Page | Locator): Promise<Probe[]> =>
         // An example card is a button that holds a map preview. It is a card, not a control.
         card: el.querySelector('[data-testid^="example-preview-"]') !== null,
         onMap: el.closest('.react-flow__viewport') !== null,
+        lessonDrafting: el.closest('.ag-controls') !== null,
         list: el.closest('section[aria-labelledby]')?.getAttribute('aria-labelledby') ?? '',
         where: region?.getAttribute('data-testid') ?? region?.getAttribute('aria-label') ?? region?.tagName.toLowerCase() ?? '',
       }
@@ -59,16 +62,24 @@ const probe = (scope: Page | Locator): Promise<Probe[]> =>
   )
 
 /*
- * Buttons that do not follow the sizes yet. Each belongs to the slice that adopts the shared classes there, and that
- * slice deletes its entry. Nothing here is a size the foundation allows: an entry only says "not yet".
+ * Buttons that do not follow the sizes yet. All slice exemptions are resolved.
  */
-const LATER: { slice: string; reason: string; match: (p: Probe) => boolean }[] = [
-  { slice: '7f', reason: 'the example rows of the Open menu are two-line rows of their own sheet', match: (p) => p.list === 'open-examples' },
-  { slice: '7f', reason: 'the canvas toolbars read their height from the control token in the sweep', match: (p) => p.where === 'Whiteboard tools' && p.name === 'More shapes' },
+const LATER: { slice: string; reason: string; match: (p: Probe) => boolean }[] = []
+
+/**
+ * Allowed exceptions matching Slice 7f (chrome-critique.md section 10 "Do not do"):
+ * The lesson dialog's drafting-table buttons keep their purposeful drafting-table style.
+ */
+const ALLOWED_EXCEPTIONS: { reason: string; match: (p: Probe) => boolean }[] = [
+  {
+    reason: 'the lesson dialog drafting-table buttons keep their purposeful drafting-table style (D154, section 10)',
+    match: (p) => p.lessonDrafting,
+  },
 ]
 
 const later = (p: Probe) => LATER.some((entry) => entry.match(p))
-const controls = (all: Probe[]) => all.filter((p) => !p.card && !p.onMap && !later(p))
+const isException = (p: Probe) => ALLOWED_EXCEPTIONS.some((entry) => entry.match(p))
+const controls = (all: Probe[]) => all.filter((p) => !p.card && !p.onMap && !later(p) && !isException(p))
 const label = (p: Probe) => `${p.where}: ${p.name} (${p.height} x ${p.width})`
 
 async function expectSizes(scope: Page | Locator) {
@@ -386,6 +397,60 @@ test.describe('with a fine pointer', () => {
     const { rest, held } = await press(page, previous)
     expect(held.transform).toBe(rest.transform)
     expect(held.background).toBe(rest.background)
+  })
+
+  test('the link picker: its trigger and rows follow the control sizes', async ({ page }) => {
+    await open(page, REFUND)
+    await pickPart(page, 'refund-request')
+    await page.keyboard.press('l')
+    const picker = page.getByRole('dialog', { name: 'Add link' })
+    await expect(picker).toBeVisible()
+    await settled(picker)
+    await expectSizes(picker)
+    await page.keyboard.press('Escape')
+  })
+
+  test('the StatusKey: its trigger is a small quiet control (24 high) and opens the glyph key popover', async ({ page }) => {
+    await openWithItems(page)
+    const trigger = page.getByRole('button', { name: 'Status key' })
+    await expect(trigger).toBeVisible()
+    expect((await trigger.boundingBox())!.height).toBe(24)
+    await trigger.click()
+    const pop = page.getByRole('dialog', { name: 'Status key' })
+    await expect(pop).toBeVisible()
+    await page.keyboard.press('Escape')
+  })
+
+  test('the command menu: opens with Mod+K, and navigation commands follow unified naming', async ({ page }) => {
+    await open(page, REFUND)
+    await pickPart(page, 'refund-request')
+    await page.keyboard.press('ControlOrMeta+k')
+    const menu = page.getByRole('dialog', { name: 'Command menu' })
+    await expect(menu).toBeVisible()
+    const input = menu.getByRole('combobox')
+    await input.fill('Go to')
+    await expect(menu.getByRole('option', { name: /^Go to Board/ })).toBeVisible()
+    await expect(menu.getByRole('option', { name: /^Go to Overview/ })).toBeVisible()
+    await expect(menu.getByRole('option', { name: /^Go to Map/ })).toBeVisible()
+    await page.keyboard.press('Escape')
+  })
+
+  test('the lesson dialog: the Close button follows control sizes and drafting-table buttons are allowed exceptions', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: /Claude Code/i }).click()
+    await expect(page.locator('[data-detail]')).toBeAttached()
+    const overview = page.getByTestId('overview')
+    if (await overview.isVisible()) await page.getByRole('tab', { name: 'Map' }).click()
+    await pickPart(page, 'permission-check')
+    const sidebar = page.getByRole('complementary', { name: 'Sidebar' })
+    await sidebar.getByRole('region', { name: 'Lesson' }).getByRole('button').click()
+    const dialog = page.getByRole('dialog', { name: 'Approval gate' })
+    await expect(dialog).toBeVisible()
+    await expectSizes(dialog)
+    const approveBtn = dialog.getByRole('button', { name: /Approve/i })
+    await expect(approveBtn).toBeVisible()
+    await dialog.getByRole('button', { name: 'Close' }).click()
+    await expect(dialog).toBeHidden()
   })
 })
 
