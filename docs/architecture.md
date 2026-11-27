@@ -71,6 +71,9 @@ The arrow keys move focus and the selection together, skip a disabled segment, a
 
 `src/styles/controls.test.ts` counts the hand-written `appearance: none` rules and the hand-written 28 px heights outside the three owner files.
 `src/styles/controls.baseline.json` holds the most that it allows, and each change that moves a control onto the shared classes lowers it.
+The remaining menus, command palette, and popover controls read their row heights and button variants from the shared control tokens.
+Rows and controls eliminate hover-in delay transitions so they respond immediately on pointer-enter, while retaining smooth hover-out exits.
+Letter tracking tokens (`--tracking-title`, `--tracking-heading`, `--tracking-label`) apply to titles, section headings, and control labels.
 
 ## The top bar
 
@@ -337,6 +340,7 @@ Every user action with a name is one entry in `COMMANDS` in `src/commands/list.t
 An entry has an ID, a group, a label, an icon, and its keys.
 It also says when the command shows and when it is enabled.
 The command menu (Cmd or Ctrl with K), the top bar buttons, the tooltips, and the keys all read that one list.
+Navigation commands use unified naming under the Go to group, offering Go to Board and Go to Overview on the map, and Go to Map on the Overview page.
 For this reason, a new action needs a change in one place only.
 
 The function `useCommand(id)` gives a button the label, the printed shortcut, the state, and a way to run the command.
@@ -438,7 +442,7 @@ On a screen 760 px wide or less, the sidebar is a bottom sheet with three stops.
 The user drags the sheet by its header only.
 
 Every view in the sidebar aligns its content to two left edges (16 px and 38 px), uses 13 px semibold section headings with trailing chevrons and 20 px between sections, and drops hairlines between sections.
-With nothing selected, the board view shows the title, full goal, one meta line (`boardMeta` in `src/inspector/boardMeta.ts`), walkthroughs, Yours, and Notes.
+With nothing selected, the board view shows the title, full goal, one meta line (`boardMeta` in `src/inspector/boardMeta.ts`), the shared Start here section (`src/overview/StartHere.tsx`, showing walkthrough scenarios and interactive lessons), Yours, and Notes.
 A selected part reads top to bottom: eyebrow (`Part` and its group button, which frames the group), title, summary, source line (always shown, including for the agent's own explanation), a raised Lesson row when the part has a lesson, Explanation (uncut up to 320 px, then cut cleanly between blocks when at least 40 px is hidden via `explanationCut` in `src/inspector/explanationClamp.ts`, followed by Takes in and Gives out), one Connections section (`connectionRows` in `src/inspector/flowRows.ts`, incoming first, with `Add link` in the heading), Open items, Cited (closed by default), and Notes directly above the pinned composer.
 After adding a note by pointer or keyboard, the scroll area brings the new note fully above the composer and holds a 600 ms `--yours-tint` flash; under `prefers-reduced-motion: reduce`, it scrolls immediately without flashing.
 
