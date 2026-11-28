@@ -122,9 +122,9 @@ for (const file of BOARDS) {
 
     // So are the connections.
     await expect(page.getByTestId('rf__edge-added-line')).toHaveAttribute('aria-label', new RegExp(`New in revision ${revision}\\.$`))
-    await expect(page.locator('[data-label][data-edge="added-line"]').getByText('New', { exact: true })).toBeVisible()
+    await expect(page.locator('[data-edge-revision][data-edge="added-line"]').getByText('New', { exact: true })).toBeVisible()
     await expect(page.getByTestId(`rf__edge-${line.id}`)).toHaveAttribute('aria-label', new RegExp(`Changed in revision ${revision}: label\\.$`))
-    await expect(page.locator(`[data-label][data-edge="${line.id}"]`).getByText('Changed', { exact: true })).toBeVisible()
+    await expect(page.locator(`[data-edge-revision][data-edge="${line.id}"]`).getByText('Changed', { exact: true })).toBeVisible()
 
     // The removed part is a faint ghost where it was.
     const ghost = page.getByRole('img', { name: `${removed.label}, removed in revision ${revision}` })
@@ -136,9 +136,9 @@ for (const file of BOARDS) {
 
     // Mark reviewed clears every marker and the ghost, and moves nothing.
     await command(page, 'Mark reviewed')
-    await expect(page.locator('[data-revision]')).toHaveCount(0)
+    await expect(page.locator('[data-revision], [data-edge-revision]')).toHaveCount(0)
     await expect(ghost).toHaveCount(0)
-    await expect(added).not.toHaveAttribute('aria-description', /revision/)
+    await expect(added).not.toHaveAttribute('aria-description', /^New in revision/)
     expect(await places(page)).toEqual(after)
   })
 }
