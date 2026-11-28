@@ -354,15 +354,16 @@ describe('keeping an answer', () => {
     const response = { respondsTo: 'feedback-aaaaaa', status: 'answered' as const, text: 'Yes.', changed: [] }
     const id = (n: number) => `note-${String(n).padStart(6, '0')}`
     const mark = (n: number): Mark => ({ id: `mark-${String(n).padStart(6, '0')}`, kind: 'rect', x: 0, y: 0, width: 10, height: 10, createdAt: at })
-    // More items than the layer keeps answers for: every note answered and kept, and one mark left to answer.
+    // More items than the layer keeps answers for: every note and drawing answered and kept, and one link left to answer.
     const notes = Array.from({ length: LAYER_LIMITS.notes }, (_, n) => ({ id: id(n), kind: 'question' as const, text: 'Why?', target: { type: 'board' as const }, targetFingerprint: 'x', createdAt: at, updatedAt: at }))
-    const marks = Array.from({ length: LAYER_LIMITS.answers - LAYER_LIMITS.notes + 1 }, (_, n) => mark(n))
-    const answered = [...notes.map((n) => n.id), ...marks.slice(0, -1).map((m) => m.id)]
-    const layer: Layer = { ...emptyLayer(board.id), notes, marks, answers: answered.map((x) => ({ id: x, response })), kept: answered }
+    const marks = Array.from({ length: LAYER_LIMITS.answers - LAYER_LIMITS.notes }, (_, n) => mark(n))
+    const link = { id: 'link-aaaaaa', from: board.components[0]!.id, to: board.components[1]!.id, label: '', createdAt: at }
+    const answered = [...notes.map((n) => n.id), ...marks.map((m) => m.id)]
+    const layer: Layer = { ...emptyLayer(board.id), notes, marks, links: [link], answers: answered.map((x) => ({ id: x, response })), kept: answered }
     expect(layer.kept).toHaveLength(LAYER_LIMITS.answers)
+    valid(layer)
 
-    const last = marks.at(-1)!.id
-    const next = receiveAnswers(layer, answering(last, 'answered', 'Yes.'), t1)
+    const next = receiveAnswers(layer, answering(link.id, 'answered', 'Yes.'), t1)
     // The oldest answer made room for the new one, and its kept mark went with it.
     expect(next.answers).toHaveLength(LAYER_LIMITS.answers)
     expect(next.kept).not.toContain(id(0))
