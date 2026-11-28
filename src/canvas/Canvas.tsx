@@ -690,7 +690,7 @@ export function Canvas() {
   const graph = useMemo(
     () =>
       board && rectsNow && geometryNow
-        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user, far, noteStates, revision, arriving)
+        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.lit, links ?? [], noteCounts, cache, held, pushed, user, far, noteStates, revision, arriving)
         : undefined,
     [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, noteStates, cache, pushed, user, far, revision, arriving],
   )
@@ -737,9 +737,10 @@ export function Canvas() {
     [far, board, geometryNow],
   )
   const farTiles = useMemo<Rect[]>(() => (far && rectsNow ? Object.values(rectsNow) : []), [far, rectsNow])
-  // The tiles where a walkthrough starts. A tile filled with the accent (the selected part, or one of a walkthrough step) draws its mark in the color on the accent.
+  // The tiles where a walkthrough starts. A tile filled with the accent (the selected part, or one lit by a walkthrough step) draws its mark in the color on the accent.
   const selectedPart = selection?.type === 'component' ? selection.id : undefined
-  const stepParts = step?.highlight
+  // What the step lights: the parts it names and both ends of the connections it follows. The far layer and the card lighting agree on it.
+  const stepParts = step?.lit
   const farStarts = useMemo<FarStart[]>(
     () =>
       far && board && rectsNow
@@ -750,7 +751,7 @@ export function Canvas() {
         : [],
     [far, board, rectsNow, selectedPart, stepParts],
   )
-  // The tiles whose name tag stays up in the far view: the selected part or proposed part, and the parts of a walkthrough step.
+  // The tiles whose name tag stays up in the far view: the selected part or proposed part, and every part a walkthrough step lights.
   const selectedProposal = selection?.type === 'proposal' ? selection.id : undefined
   const farLit = useMemo<FarLit[]>(
     () =>

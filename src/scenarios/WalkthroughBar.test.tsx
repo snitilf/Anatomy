@@ -17,6 +17,7 @@ beforeAll(() => {
 const refund = JSON.parse(refundRaw) as {
   scenarios: { id: string; title: string; steps: { caption: string; highlight: string[] }[] }[]
   components: { id: string; label: string; lesson?: string }[]
+  relationships: { id: string; from: string; to: string }[]
 }
 const walk = refund.scenarios[0]!
 
@@ -198,7 +199,15 @@ describe('walkthroughs', () => {
       else expect(card).toHaveAttribute('data-dimmed', 'true')
     }
     fireEvent.click(within(bar()).getByRole('button', { name: 'Next' }))
+    // The step lights the parts it names and both ends of the connections it follows.
     const next = new Set(walk.steps[1]!.highlight)
+    for (const id of next) {
+      const r = refund.relationships.find((x) => x.id === id)
+      if (r) {
+        next.add(r.from)
+        next.add(r.to)
+      }
+    }
     for (const el of marked) {
       const card = el.querySelector('[data-highlighted], [data-dimmed]')
       expect(card?.hasAttribute('data-highlighted')).toBe(next.has(el.dataset.id ?? ''))

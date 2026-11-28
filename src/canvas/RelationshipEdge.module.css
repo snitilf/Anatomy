@@ -128,6 +128,13 @@
   pointer-events: all;
 }
 
+/* A connection a walkthrough step follows always names itself, even where its label had no free place. */
+.pill[data-hidden][data-highlighted] {
+  z-index: 2;
+  opacity: 1;
+  pointer-events: all;
+}
+
 /* A faded label keeps its cutout. Only the words step back, so the line never shows through them. */
 .pill[data-dimmed] {
   color: color-mix(in srgb, var(--fg-2) var(--faded-label), transparent);

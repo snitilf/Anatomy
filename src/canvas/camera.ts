@@ -161,6 +161,24 @@ export function clampViewport(viewport: Viewport, limits: Pick<Limits, 'minZoom'
   return { x: axis(viewport.x, x0, x1, 0, map.width), y: axis(viewport.y, y0, y1, top, Math.max(top + 1, map.height - bottom)), zoom }
 }
 
+/**
+ * Whether a box of the board lies wholly inside the free area of the map at this viewport: below the notices and above
+ * the bottom controls, with no room to spare. A card half cut off, or under a control, is out of view. A walkthrough
+ * step whose targets are already in view leaves the camera where it is.
+ */
+export function boxInView(viewport: Viewport, map: Size & { top: number; bottom?: number }, box: Rect): boolean {
+  const left = box.x * viewport.zoom + viewport.x
+  const top = box.y * viewport.zoom + viewport.y
+  const right = left + box.width * viewport.zoom
+  const bottom = top + box.height * viewport.zoom
+  return (
+    left >= -0.5 &&
+    right <= map.width + 0.5 &&
+    top >= map.top - 0.5 &&
+    bottom <= map.height - (map.bottom ?? 0) + 0.5
+  )
+}
+
 export interface Frame {
   /** The rectangles to frame. The whole content when it is left out. */
   box?: Rect
@@ -261,7 +279,6 @@ export function zoomAround(viewport: Viewport, zoom: number, point: { x: number;
 
 /** Space kept between a card that was brought back into view and the edge of the map. */
 const DROP_ROOM = 16
-
 /**
  * A card dropped where it cannot be seen, such as under the inspector or past the edge of the map, is panned back.
  * The card's middle must be inside the free area to leave it alone. Otherwise the view moves just far enough

@@ -9,6 +9,11 @@ export interface PlayingStep {
   highlight: ReadonlySet<string>
   /** Parts the camera frames: the highlighted parts and the ends of highlighted connections. */
   focusParts: string[]
+  /**
+   * Everything the step lights on the map: the parts it names, the connections it follows, and both ends of each, so
+   * the caption never talks about a card that stays dimmed. The camera frames the same parts.
+   */
+  lit: ReadonlySet<string>
 }
 
 /** The step that is playing now, or undefined when no walkthrough plays. */
@@ -18,12 +23,17 @@ export function currentStep(state: { board: Board | undefined; scenario: AppStat
   const scenario = board.scenarios.find((s) => s.id === playing.id)
   const step = scenario?.steps[playing.step]
   if (!scenario || !step) return undefined
+  const highlight = new Set(step.highlight)
+  const framed = focusParts(board, step.highlight)
+  const lit = new Set<string>(highlight)
+  for (const id of framed) lit.add(id)
   return {
     scenario,
     index: playing.step,
     caption: step.caption,
-    highlight: new Set(step.highlight),
-    focusParts: focusParts(board, step.highlight),
+    highlight,
+    focusParts: framed,
+    lit,
   }
 }
 

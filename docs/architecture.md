@@ -312,6 +312,19 @@ Until the reader first presses, types, or scrolls, any change frames it again, f
 Once the reader has moved the view, a new size of the map keeps the middle of the view and the zoom.
 The zoom limits keep the room that the hint took, so dismissing the hint never zooms the view in.
 
+A walkthrough step moves the camera only when the parts it is about lie outside the view.
+The parts it is about are the ones it names and both ends of every connection it follows.
+When they are on screen already, the camera stays where it is.
+When a second step arrives while a glide is in flight, the camera retargets that glide from where it is; it never queues a second move behind the first.
+When the parts are out of view, the camera glides to frame them for about 300 ms, and under reduced motion it moves at once.
+A step that names nothing fits the whole board.
+The map root carries `data-camera`: `settled` while the camera is at rest, `gliding` while a step's glide is in flight, so a test waits on that state instead of on a clock.
+While a walkthrough plays, the step lights what it is about (`lit` in `src/scenarios/step.ts`), so the caption never talks about a card that stays dimmed.
+A followed line draws once from its source to its target and then rests.
+The end of the draw is the `data-drawn` attribute on the line's path: `done` once the draw has finished, `still` when reduced motion skipped it.
+A followed line's label shows whole while it is followed, even where the label had found no free place.
+In the far view, a lit tile that carries its own name gets no name tag above it, and a narrow tile keeps the tag.
+
 The room at the bottom also holds one toast, in the slot above the tool bars where the hint sits (`TOAST_ROOM` and `coveredBottom` in `src/canvas/camera.ts`).
 The fit leaves the same room with the hint and without it, so a toast never lands on a card of a fitted view.
 The map sets `--toast-base` (the toast's distance from the bottom of the window) and `--toast-x` (the middle of the map), and the toaster reads them.

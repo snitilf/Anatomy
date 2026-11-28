@@ -41,6 +41,8 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
         data-start={data.starts.length > 0 && !data.far ? data.startCorner : undefined}
         data-arriving={data.arriving && data.revision === 'new' ? '' : undefined}
+        /* The tile carries its own name in the far view: a walkthrough step then leaves its tag off. */
+        data-tile-name={lines > 0 ? '' : undefined}
         style={{ '--title-lines': heading } as CSSProperties}
       >
         {data.far && mine > 0 && <span className={styles.dot} aria-hidden="true" />}
@@ -85,7 +87,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
       )}
       {/* The name of the part in the far view, where the tile has no text. The card clips its own paint, so it sits beside it. */}
       {data.far && (
-        <div ref={tip} className={styles.tip} aria-hidden="true">
+        <div ref={tip} className={styles.tip} data-name-tag="" aria-hidden="true">
           {data.label}
         </div>
       )}

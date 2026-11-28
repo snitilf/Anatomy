@@ -6,12 +6,14 @@ import { useUi, useUiApi } from '../app/ui'
 import { hasRememberedView, writeHash } from '../app/view'
 import { usePhone } from '../app/usePhone'
 import type { Rect } from '../layout/geometry'
-import { clampViewport, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
+import { clampViewport, boxInView, frameViewport, viewportFor, zoomAround, type Limits } from './camera'
 import { GLIDE_MS, prefersStillness, useCamera } from './cameraContext'
 import { blockRect } from './bundleFrame'
 import { detailFor, FAR_ENTER, labelScale, nextDetail, TITLE_LEVEL_PX, titleScale, type DetailLevel } from './far'
 
-const STEP_MS = 220
+/** How long the camera glides to a walkthrough step whose targets are out of view. */
+const STEP_MS = 300
+/** How long a change of the map's size waits before it keeps the middle of the view. */
 const RESIZE_MS = 150
 
 const sameSize = (a: { width: number; height: number } | undefined, b: { width: number; height: number }) =>
@@ -104,8 +106,11 @@ export function KeepSelectionInView({ takePicked, rectOf }: { takePicked: () => 
 
 /**
  * Frames the map in the room that notices and the controls at the bottom leave free. The first frame shows the whole
- * board (D141). A walkthrough step frames the parts it is about, and the whole board when it names none. A resize of
+ * board (D141). A walkthrough step glides to the parts it is about only when they lie outside the view, and leaves the
+ * camera where it is when they are on screen already; a step that names no parts is the whole board. A resize of
  * the map fits a view the reader has not moved again, and otherwise keeps the middle of the view, once nothing is held.
+ * While the camera glides, the map carries `data-camera="gliding"`, and `data-camera="settled"` once it rests, so a
+ * test waits on that state and never on a clock.
  */
 export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string | undefined; focus: readonly string[]; dragging: boolean; rectOf: (id: string) => Rect | undefined }) {
   const camera = useCamera()
@@ -122,49 +127,72 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
   const started = useRef(false)
   const busy = useRef(dragging)
   const waiting = useRef(false)
+  // Where a glide is going and when it arrives. A step that lands mid-glide is judged where the camera will be, not
+  // halfway there, and a second glide replaces the first instead of queueing behind it.
+  const heading = useRef<{ viewport: Viewport; until: number } | undefined>(undefined)
+  const settleTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     latest.current = { stepKey, focus }
   })
 
-  // A step chosen with the keyboard moves the camera at once: arrow keys repeat, and a glide would lag behind them.
-  const byKeyboard = useRef(false)
+  // The map says when its camera is at rest.
   useEffect(() => {
-    const key = () => {
-      byKeyboard.current = true
-    }
-    const pointer = () => {
-      byKeyboard.current = false
-    }
-    window.addEventListener('keydown', key, true)
-    window.addEventListener('pointerdown', pointer, true)
-    return () => {
-      window.removeEventListener('keydown', key, true)
-      window.removeEventListener('pointerdown', pointer, true)
-    }
-  }, [])
+    if (map) map.setAttribute('data-camera', 'settled')
+  }, [map])
+
+  /** Marks the map's camera state, and arms the timer that ends a glide if nothing else ends it first. */
+  const settle = useCallback(
+    (gliding: boolean, duration = 0) => {
+      if (!map) return
+      window.clearTimeout(settleTimer.current)
+      if (!gliding) {
+        heading.current = undefined
+        map.setAttribute('data-camera', 'settled')
+        return
+      }
+      map.setAttribute('data-camera', 'gliding')
+      settleTimer.current = window.setTimeout(() => {
+        heading.current = undefined
+        map.setAttribute('data-camera', 'settled')
+      }, duration + 60)
+    },
+    [map],
+  )
 
   const fit = useCallback(
-    (animate: boolean) => {
+    (animate: boolean, step: boolean) => {
       const { stepKey: key, focus: parts } = latest.current
       const duration = animate && !prefersStillness() ? STEP_MS : 0
       const focusBox = key !== undefined ? box(parts.map(rectOf).filter((r): r is Rect => r !== undefined)) : undefined
-      // The parts of a step are always fully in frame. They show at the zoom that fits them, which is 0.8 or more when
-      // they fit there, and names show. When they do not fit at 0.8, they are fitted anyway and may land in the far view,
-      // where the spotlight accents the highlighted tiles. A step that names no parts is the whole board, and fitting
-      // the whole board in the far view is deliberate: it is the overview.
-      if (focusBox) camera.frame({ box: focusBox, padding: 0.25, maxZoom: 1 }, duration)
-      else camera.frame({ readable: true }, duration)
+      // A step whose targets are in view moves nothing, not even when a glide to another step is still in flight: that
+      // glide is already on its way to a frame that shows them. The parts of a step are always fully in frame. They
+      // show at the zoom that fits them, which is 0.8 or more when they fit there, and names show. When they do not fit
+      // at 0.8, they are fitted anyway and may land in the far view, where the spotlight accents the lit tiles. A step
+      // that names no parts is the whole board, and fitting the whole board in the far view is deliberate: it is the
+      // overview.
+      const going = heading.current
+      const flying = going !== undefined && performance.now() < going.until
+      if (step && focusBox && boxInView(flying ? going.viewport : flow.getViewport(), camera.size(), focusBox)) {
+        // The glide in flight ends on its own timer. Without one, the camera is at rest already.
+        if (!flying) settle(false)
+        return
+      }
+      const at = focusBox
+        ? camera.frame({ box: focusBox, padding: 0.25, maxZoom: 1 }, duration)
+        : camera.frame({ readable: true }, duration)
+      if (duration > 0) heading.current = { viewport: at, until: performance.now() + duration }
+      settle(duration > 0, duration)
       framed.current = map ? map.getBoundingClientRect() : undefined
     },
-    [camera, map, rectOf],
+    [camera, map, rectOf, flow, settle],
   )
 
   // The first frame waits for the map to have a size.
   useEffect(() => {
     if (started.current || !map || width === 0 || height === 0) return
     started.current = true
-    fit(false)
+    fit(false, false)
     // On a phone, a board opened for the first time whose whole is in the far view opens on the Overview, which lists
     // everything grouped. A view the reader has chosen before wins, and the Map tab still shows the far view.
     if (phone && boardId !== undefined && stepKey === undefined && !hasRememberedView(boardId) && flow.getViewport().zoom < FAR_ENTER) {
@@ -181,7 +209,7 @@ export function Camera({ stepKey, focus, dragging, rectOf }: { stepKey: string |
     shown.current = stepKey
     // A walkthrough that ends frames the whole board.
     if (before === undefined && stepKey === undefined) return
-    fit(!byKeyboard.current)
+    fit(true, true)
   }, [stepKey, fit])
 
   // A new size of the map, such as the sidebar opening, closing, or changing width, keeps what is in the middle of the

@@ -199,7 +199,8 @@
   }
 }
 
-/* The name of a part in the far view: on the tile under the pointer, and on the selected one. */
+/* The name of a part in the far view: on the tile under the pointer, on the selected one, and on every tile a
+   walkthrough step lights, unless the tile carries its own name already (see the rule below). */
 .tip {
   display: none;
 }
@@ -219,7 +220,7 @@
 
 :global([data-far]) :global(.react-flow__node:hover) .tip,
 :global([data-far]) :global(.react-flow__node.selected) .tip,
-/* A walkthrough step names every tile it highlights, since the tiles have no text of their own. */
+/* A walkthrough step names every tile it lights, since the tiles have no text of their own. */
 :global([data-far]) :global(.react-flow__node):has(.card[data-highlighted]) .tip {
   display: block;
   position: absolute;
@@ -243,6 +244,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
+}
+
+/* A lit tile that already carries its own name never also gets a tag above it: a step tag never repeats a card name. */
+:global([data-far]) :global(.react-flow__node):has(.card[data-highlighted][data-tile-name]) .tip {
+  display: none;
 }
 
 :global(.react-flow__node:focus-visible) .card {
