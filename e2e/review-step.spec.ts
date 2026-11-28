@@ -236,9 +236,9 @@ test('Reply opens an empty question on the same part, so Add alone makes no copy
   await expect(field).toHaveValue('')
   await expect(panel.getByRole('radio', { name: 'Question' })).toBeChecked()
 
-  // Add with nothing typed adds nothing.
+  // With nothing typed there is nothing to add, so no copy of the question.
   const notes = panel.getByRole('region', { name: 'Notes' })
-  await panel.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(panel.getByRole('button', { name: 'Add', exact: true })).toBeDisabled()
   await expect(notes.getByText(first.text, { exact: true })).toHaveCount(1)
 
   // A few words make it the follow-up, and it goes to the part like any question.
@@ -361,7 +361,7 @@ test('Keep and Dismiss hand the focus to the next card, and J goes on from there
   const notes = [questionOn(board, 'note-keep00001', 'web-form', 'Who owns the form?'), questionOn(board, 'note-keep00002', 'link-store', long), questionOn(board, 'note-keep00003', 'edge-dns', 'When does DNS change?')]
   await openAnswered(page, { notes }, notes.map((n) => ({ id: n.id, text: `About ${n.text}` })))
   const row = (text: string) => answers(page).getByRole('button', { name: text })
-  const cardOf = (text: string) => answers(page).locator('li').filter({ has: row(text) })
+  const cardOf = (text: string) => answers(page).locator('li').filter({ has: page.getByRole('button', { name: text }) })
 
   await page.keyboard.press('j')
   await expect(row('Who owns the form?')).toBeFocused()
