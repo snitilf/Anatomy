@@ -83,8 +83,9 @@
   user-select: none;
 }
 
+/* The row Enter runs: the press fill, so it stays apart from a row under the pointer. */
 .item[data-selected='true'] {
-  background: var(--hover);
+  background: var(--active);
 }
 
 .item[data-disabled='true'] {

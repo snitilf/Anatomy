@@ -44,7 +44,7 @@ describe('theme', () => {
 })
 
 describe('theme color of the page', () => {
-  const COLORS = { light: '#d8dade', dark: '#0b0c11' }
+  const COLORS = { light: '#dadce0', dark: '#0b0c11' }
   const metas = () => [...document.head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')]
 
   beforeEach(() => {

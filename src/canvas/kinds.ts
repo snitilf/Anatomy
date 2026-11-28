@@ -31,7 +31,7 @@ export const MANUAL_STYLE = { dash: YOURS_DASH, width: 1.25 } as const
 
 /** How a link of the user's is drawn at rest, and how the line looks while it is dragged from a card's dot to another card. */
 export const MANUAL_LINE = {
-  stroke: 'var(--yours)',
+  stroke: 'var(--yours-ink)',
   strokeWidth: MANUAL_STYLE.width,
   strokeDasharray: MANUAL_STYLE.dash,
   strokeLinecap: 'round',

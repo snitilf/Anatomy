@@ -53,7 +53,7 @@ export function LineKey() {
             <ul className={styles.rows} data-yours="">
               <li className={styles.row}>
                 <svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true">
-                  <line x1="2" y1="6" x2="30" y2="6" stroke="var(--yours)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={YOURS_DASH} strokeLinecap="round" />
+                  <line x1="2" y1="6" x2="30" y2="6" stroke="var(--yours-ink)" strokeWidth={MANUAL_STYLE.width} strokeDasharray={YOURS_DASH} strokeLinecap="round" />
                 </svg>
                 <span>Your link</span>
               </li>

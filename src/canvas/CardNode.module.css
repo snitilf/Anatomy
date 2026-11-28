@@ -35,9 +35,10 @@
   box-shadow: var(--shadow-float);
 }
 
+/* The edge is the ink of selection on the map, the color of a selected line too. The fill of --accent is too dark for an edge on a dark card. */
 .card[data-highlighted],
 .card[data-selected] {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   border-style: solid;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
@@ -142,7 +143,7 @@
   width: calc(8px * var(--label-scale, 1));
   height: calc(8px * var(--label-scale, 1));
   border-radius: 50%;
-  background: var(--yours);
+  background: var(--yours-ink);
   box-shadow: 0 0 0 calc(1.5px * var(--label-scale, 1)) var(--raised);
 }
 
@@ -246,7 +247,7 @@
 }
 
 :global(.react-flow__node:focus-visible) .card {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   box-shadow: var(--ring);
 }
 
@@ -392,7 +393,7 @@
   height: 10px;
   min-width: 0;
   min-height: 0;
-  border: 1.5px solid var(--yours);
+  border: 1.5px solid var(--yours-ink);
   border-radius: 50%;
   background: var(--raised);
   opacity: 0;
@@ -400,7 +401,7 @@
 }
 
 .drawHandle:hover {
-  background: var(--yours);
+  background: var(--yours-ink);
 }
 
 /* The dots are beside the card, inside the same map node, so the node is what the pointer is on. */
@@ -481,7 +482,7 @@
   height: calc(100% - var(--edge));
   rx: calc(var(--radius-md) - var(--edge) / 2);
   fill: none;
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-width: var(--edge);
   stroke-dasharray: var(--dash);
   stroke-linecap: round;
@@ -490,12 +491,12 @@
 
 /* The pointer on a part that is not selected deepens its edge. A selected part keeps the accent under the pointer. */
 :global(.react-flow__node:hover:not(:focus-visible)) .yoursEdge:not([data-selected]) rect {
-  stroke: color-mix(in srgb, var(--yours) 80%, var(--fg));
+  stroke: color-mix(in srgb, var(--yours-ink) 80%, var(--fg));
 }
 
 .yoursEdge[data-selected] rect,
 :global(.react-flow__node:focus-visible) .yoursEdge rect {
-  stroke: var(--accent);
+  stroke: var(--accent-line);
 }
 
 /* The far view: a tile in the user's tint, edged with their dash and dot at its size on screen. */

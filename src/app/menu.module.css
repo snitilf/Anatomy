@@ -55,7 +55,7 @@
 }
 
 .item[data-highlighted] {
-  background: var(--hover);
+  background: var(--active);
 }
 
 .icon {

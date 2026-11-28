@@ -86,7 +86,8 @@
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--panel);
+  /* A well: the canvas grey, a clear step down from the white dialog. */
+  background: var(--bg);
   color: var(--fg);
   font-family: var(--font-mono);
   font-size: var(--text-sm);

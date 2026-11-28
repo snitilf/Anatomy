@@ -77,7 +77,7 @@
 }
 
 .item[data-selected='true'] {
-  background: var(--hover);
+  background: var(--active);
 }
 
 .empty {

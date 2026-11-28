@@ -17,9 +17,9 @@
   scale: 0.97;
 }
 
-/* The tool in use: the hover fill and full ink. It changes at once, with no transition. */
+/* The tool in use: the press fill and full ink, a step past the hover fill of the other tools. It changes at once, with no transition. */
 .button[aria-pressed='true'] {
-  background: var(--hover);
+  background: var(--active);
   color: var(--fg);
   transition: none;
 }
@@ -36,7 +36,7 @@
 }
 
 .split[data-active] {
-  background: var(--hover);
+  background: var(--active);
 }
 
 .split .button[aria-pressed='true'] {

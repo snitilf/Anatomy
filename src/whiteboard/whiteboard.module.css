@@ -14,13 +14,13 @@
 }
 
 .pen {
-  fill: var(--yours);
+  fill: var(--yours-ink);
 }
 
 .shape,
 .arrow {
   fill: none;
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -28,7 +28,7 @@
 
 .head {
   fill: none;
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -106,7 +106,7 @@
 /* While an end is dragged: a straight line from the end that stays to the pointer. */
 .ghost {
   fill: none;
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-width: 1.5px;
   stroke-dasharray: 4 4;
   vector-effect: non-scaling-stroke;
@@ -117,7 +117,7 @@
 /* What is drawn while the pointer is down, before it is saved. */
 .preview {
   fill: none;
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -125,7 +125,7 @@
 }
 
 .previewPen {
-  fill: var(--yours);
+  fill: var(--yours-ink);
   pointer-events: none;
 }
 

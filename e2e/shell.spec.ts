@@ -424,6 +424,23 @@ test.describe('on a phone', () => {
     await expect(header).toHaveCSS('box-shadow', 'none')
   })
 
+  test('the content meets the top bar at a line, since the frame and the canvas are close in light', async ({ page }) => {
+    await open(page, SHORTENER)
+    const panel = page.locator('[data-notices]').locator('..')
+    await expect(panel).toHaveCSS('border-top-width', '1px')
+    await expect(panel).toHaveCSS('border-top-style', 'solid')
+    const strong = await page.evaluate(() => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--border-strong)'
+      document.body.append(probe)
+      const color = getComputedStyle(probe).color
+      probe.remove()
+      return color
+    })
+    await expect(panel).toHaveCSS('border-top-color', strong)
+    await expect(panel).toHaveCSS('border-left-width', '0px')
+  })
+
   test('the tabs take the top bar and undo and redo stay in the zoom surface', async ({ page }) => {
     await open(page, SHORTENER)
     await expect(page.getByRole('tab', { name: 'Map' })).toBeVisible()

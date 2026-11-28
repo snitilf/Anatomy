@@ -23,7 +23,7 @@
 }
 
 .unit[data-mine] {
-  --lift-ink: var(--yours);
+  --lift-ink: var(--yours-ink);
 }
 
 .unit[data-on] {
@@ -43,7 +43,7 @@
 
 /* A bundle of only the user's links: their color and their dash and dot, held at its size on screen. */
 .bundle[data-mine] {
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-dasharray: var(--far-dash);
   stroke-linecap: round;
 }
@@ -121,7 +121,7 @@
 }
 
 .arrow[data-mine] svg {
-  fill: var(--yours);
+  fill: var(--yours-ink);
 }
 
 /* The count sits on a cutout in the color of the map, like the label of a line. It is the bundle's button. */
@@ -161,7 +161,7 @@
 }
 
 .yoursTick line {
-  stroke: var(--yours);
+  stroke: var(--yours-ink);
   stroke-width: 1.25;
   stroke-linecap: round;
 }
