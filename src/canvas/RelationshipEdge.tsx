@@ -29,7 +29,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
   const style = KIND_STYLE[data.kind]
   const ends = `${source} ${target}`
   const emphasized = selected || data.active || data.highlighted
-  const ink = data.edited ? 'var(--yours)' : `var(--line-ink, ${LINE_INK})`
+  const ink = data.edited ? 'var(--yours-ink)' : `var(--line-ink, ${LINE_INK})`
   return (
     <>
       {data.ghost && (

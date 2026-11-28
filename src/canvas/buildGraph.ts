@@ -790,7 +790,7 @@ export function assembleGraph(
     const selected = selection?.type === 'relationship' && selection.id === r.id
     const active = selected || bundled.has(r.id) || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
     const highlighted = playing && highlight.has(r.id)
-    const color = active || highlighted ? 'var(--accent-line)' : moved ? 'var(--yours)' : LINE_INK
+    const color = active || highlighted ? 'var(--accent-line)' : moved ? 'var(--yours-ink)' : LINE_INK
     const marked = revision.lines.get(r.id)
     edges.push(
       stable(cache.edges, {
@@ -850,7 +850,7 @@ export function assembleGraph(
         deletable: false,
         hidden: shape.cheap === true,
         interactionWidth: 28,
-        markerEnd: markerFor(active ? 'var(--accent-line)' : 'var(--yours)'),
+        markerEnd: markerFor(active ? 'var(--accent-line)' : 'var(--yours-ink)'),
         ariaLabel: `Your link from ${names.get(l.from) ?? l.from} to ${names.get(l.to) ?? l.to}${l.label === '' ? '' : `: ${l.label}`}`,
         data: {
           linkId: l.id,

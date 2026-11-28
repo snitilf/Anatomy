@@ -72,7 +72,7 @@
   /* Yours: everything the user made. Amber is used for nothing else. */
   --yours: #ae6e00;
   --yours-text: #6d4500;
-  /* The amber of a thin line (the not-sent glyph): darker than --yours so a 1.5px ring holds 3.5 to 1 on the shell and the cards. */
+  /* The amber of a line or a mark: the user's links, edges, dots and drawings on the map, and the not-sent glyph. Darker than --yours so a mark holds 3 to 1 on two group washes and a 1.5px ring holds 3.5 to 1 on the shell and the cards. --yours stays for fills. */
   --yours-ink: #9c6400;
   --yours-tint: rgb(232 166 28 / 0.14);
 
