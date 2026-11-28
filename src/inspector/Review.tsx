@@ -166,17 +166,17 @@ function PendingItem({ board, previous, layer, entry }: { board: Board; previous
       {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
       <AgentAnswer board={board} answer={answer} bare />
       <div className={notes.feedActions}>
-        <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'answerKept', id: entry.item.id })}>
+        <button type="button" className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)} onClick={() => dispatch({ type: 'answerKept', id: entry.item.id })}>
           Keep
         </button>
         <button
           type="button"
-          className={clsx(buttons.button, buttons.quiet, buttons.small)}
+          className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
           onClick={() => dispatch({ type: 'itemsArchived', answers: [{ id: entry.item.id, response: answer }], now: new Date() })}
         >
           Dismiss
         </button>
-        <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={reply}>
+        <button type="button" className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)} onClick={reply}>
           Reply
         </button>
       </div>
