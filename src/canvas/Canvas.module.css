@@ -20,7 +20,7 @@
 
 /* The edge sets its stroke inline, so the focus style must win over it. */
 .canvas :global(.react-flow__edge:focus-visible .react-flow__edge-path) {
-  stroke: var(--accent) !important;
+  stroke: var(--accent-line) !important;
   stroke-width: 2px !important;
 }
 

@@ -61,7 +61,7 @@
   /* The accent marks the agent's content in focus: selection, focus, the primary action. One blue, opposite the amber of the user. */
   --accent: #0863dc;
   --accent-text: #0046a4;
-  /* A selected or hovered connection: its stroke, arrowhead and label. Stronger than every rest line. */
+  /* The ink of selection on the map: a selected or hovered connection (stroke, arrowhead, label) and the edge of a selected card. Stronger than every rest line, and 3 to 1 on a card and on two group washes in both themes. */
   --accent-line: #0051bc;
   --accent-tint: rgb(8 99 220 / 0.1);
   --on-accent: #ffffff;

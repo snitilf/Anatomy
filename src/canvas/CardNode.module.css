@@ -35,9 +35,10 @@
   box-shadow: var(--shadow-float);
 }
 
+/* The edge is the ink of selection on the map, the color of a selected line too. The fill of --accent is too dark for an edge on a dark card. */
 .card[data-highlighted],
 .card[data-selected] {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   border-style: solid;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
@@ -246,7 +247,7 @@
 }
 
 :global(.react-flow__node:focus-visible) .card {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   box-shadow: var(--ring);
 }
 
@@ -495,7 +496,7 @@
 
 .yoursEdge[data-selected] rect,
 :global(.react-flow__node:focus-visible) .yoursEdge rect {
-  stroke: var(--accent);
+  stroke: var(--accent-line);
 }
 
 /* The far view: a tile in the user's tint, edged with their dash and dot at its size on screen. */
