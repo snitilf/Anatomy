@@ -37,7 +37,7 @@ export function partRules(parts: readonly string[]): string {
   // A tile in the far view has no edge to speak of, so it takes a tint of the accent.
   const tiles = parts.map((id) => `[data-hover-scope][data-far] .react-flow__node[data-id="${CSS.escape(id)}"] [data-card]:not([data-selected])`)
   return `${tiles.join(',\n')} { background: color-mix(in srgb, var(--accent) 60%, var(--bg)); }
-${nodes.join(',\n')} { border-color: color-mix(in srgb, var(--accent-line) 70%, transparent); border-style: solid; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent); opacity: 1; }`
+${nodes.join(',\n')} { border-color: color-mix(in srgb, var(--accent-line) 75%, transparent); border-style: solid; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent); opacity: 1; }`
 }
 
 /** An area in the far view, lifted the way the pointer on it lifts it, with a firmer edge. */
