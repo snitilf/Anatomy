@@ -41,10 +41,14 @@ const PRIORITY: readonly ItemState[] = ['relinking', 'answered', 'declined', 'ad
 
 type StateLayer = Pick<Layer, 'answers' | 'sent'> & Partial<Pick<Layer, 'proposals' | 'notes' | 'links' | 'kept'>>
 
+/** The kept answers of the last layer asked about, as a set, so the states of a whole layer do not search the list per item. */
+let kept: [readonly string[], Set<string>] = [[], new Set()]
+const keptSet = (list: readonly string[]) => (kept[0] === list ? kept : (kept = [list, new Set(list)]))[1]
+
 /** The agent's status for the item, when it has answered it. A reply the user kept no longer waits in Review. */
 function answerState(layer: Pick<Layer, 'answers'> & Partial<Pick<Layer, 'kept'>>, id: string): ItemState | undefined {
   const status = layer.answers.find((a) => a.id === id)?.response.status
-  return status === 'answered' && layer.kept?.includes(id) ? 'kept' : status
+  return status === 'answered' && layer.kept && keptSet(layer.kept).has(id) ? 'kept' : status
 }
 
 /** The state of one item that is on the map. */
