@@ -1,7 +1,50 @@
 /// <reference lib="dom" />
 import { expect, type Page } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 
 const STEPS = 60
+
+/** The stand-in repository folder, as the e2e build writes it (see src/workspace/testFolder.ts). */
+const FOLDER_KEY = 'anatomy:test-folder'
+
+export interface FolderFile {
+  revision: number
+  components: { id: string; label: string; summary: string; position?: unknown; lesson?: unknown }[]
+  relationships: { id: string; from: string; to: string; label: string }[]
+  responses?: unknown
+  [key: string]: unknown
+}
+
+/** Opens the stand-in repository folder with `board.json` set to the given board file, the way Open folder does. */
+export async function openStandInFolder(page: Page, file: string): Promise<FolderFile> {
+  const text = await readFile(file, 'utf8')
+  await page.addInitScript(
+    ([key, body]) => {
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify({ name: 'project', files: { 'board.json': { text: body, lastModified: 1 } }, remembered: false }))
+    },
+    [FOLDER_KEY, text] as const,
+  )
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open folder' }).click()
+  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  await page.waitForTimeout(400)
+  return JSON.parse(text) as FolderFile
+}
+
+/** The text of a file in the stand-in folder, as the agent left it. */
+export const standInFileText = (page: Page, name: string) =>
+  page.evaluate(([key, file]) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string }> }).files[file]?.text, [FOLDER_KEY, name] as const)
+
+/** Writes a file into the stand-in folder, as the agent would. */
+export const writeStandInFile = (page: Page, name: string, text: string) =>
+  page.evaluate(
+    ([key, file, body]) => {
+      const stored = JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string; lastModified: number }> }
+      stored.files[file] = { text: body, lastModified: Date.now() }
+      localStorage.setItem(key, JSON.stringify(stored))
+    },
+    [FOLDER_KEY, name, text] as const,
+  )
 
 export interface Spot {
   id: string

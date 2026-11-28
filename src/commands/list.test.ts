@@ -4,6 +4,9 @@ import { initialState } from '../app/state'
 import { createUi } from '../app/ui'
 import type { WorkspaceApi } from '../app/workspaceContext'
 import { parseBoard } from '../board/validate'
+import { addNote } from '../layer/edits'
+import { emptyLayer, type Layer } from '../layer/model'
+import { refundBoard } from '../layer/testBoards'
 import { commandById, COMMANDS, isListed } from './list'
 import type { CommandContext } from './types'
 
@@ -28,17 +31,19 @@ function setPhone(phone: boolean) {
     }) as MediaQueryList
 }
 
-function makeContext(overrides: { hasBoard?: boolean; view?: 'map' | 'overview'; selectedPart?: string } = {}): {
+function makeContext(overrides: { hasBoard?: boolean; view?: 'map' | 'overview'; selectedPart?: string; layer?: Layer; tab?: 'details' | 'review' } = {}): {
   ctx: CommandContext
   dispatch: ReturnType<typeof vi.fn>
 } {
   const uiApi = createUi()
   if (overrides.view) uiApi.setViewState(overrides.view)
+  if (overrides.tab) uiApi.setTab(overrides.tab)
   const dispatch = vi.fn()
   const state = overrides.hasBoard
     ? {
         ...initialState,
         board,
+        ...(overrides.layer ? { layer: overrides.layer } : {}),
         ...(overrides.selectedPart ? { selection: { type: 'component' as const, id: overrides.selectedPart } } : {}),
       }
     : initialState
@@ -111,5 +116,37 @@ describe('unified command naming', () => {
     expect(commandById('view.overview').label).toBe('Go to Overview')
     expect(commandById('view.map').label).toBe('Go to Map')
     expect(commandById('goto.review').label).toBe('Go to Review')
+  })
+})
+
+describe('review step commands', () => {
+  /** A layer with one answered question and one kept answer. */
+  function layer(): Layer {
+    const source = refundBoard()
+    const answered = addNote(emptyLayer(source.id), source, { kind: 'question', text: 'Why?', target: { type: 'board' } }, new Date('2026-01-01T00:00:00.000Z'), 'note-aaaaaa')
+    const kept = addNote(answered, source, { kind: 'question', text: 'Again?', target: { type: 'board' } }, new Date('2026-01-01T00:00:00.000Z'), 'note-bbbbbb')
+    const response = { respondsTo: 'feedback-aaaaaa', status: 'answered' as const, text: 'Because.', changed: [] }
+    return { ...kept, answers: [{ id: 'note-aaaaaa', response }, { id: 'note-bbbbbb', response }], kept: ['note-bbbbbb'] }
+  }
+
+  it('step with J and K only while the Review tab is in front and an answer waits', () => {
+    const on = makeContext({ hasBoard: true, layer: layer(), tab: 'review' })
+    expect(isListed(commandById('review.next'), on.ctx)).toBe(true)
+    expect(isListed(commandById('review.previous'), on.ctx)).toBe(true)
+    expect(commandById('review.next').keys).toEqual(['J'])
+    expect(commandById('review.previous').keys).toEqual(['K'])
+
+    const details = makeContext({ hasBoard: true, layer: layer(), tab: 'details' })
+    expect(isListed(commandById('review.next'), details.ctx)).toBe(false)
+
+    const nothingLeft = makeContext({ hasBoard: true, tab: 'review' })
+    expect(isListed(commandById('review.next'), nothingLeft.ctx)).toBe(false)
+  })
+
+  it('does nothing when the Review tab holds no card for the step', () => {
+    const off = makeContext({ hasBoard: true, layer: layer(), tab: 'review' })
+    // No card is mounted in this test, so the step finds no row and changes nothing.
+    commandById('review.next').run(off.ctx)
+    expect(off.dispatch).not.toHaveBeenCalled()
   })
 })

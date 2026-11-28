@@ -13,6 +13,7 @@ import {
   editLink,
   editNote,
   findItem,
+  keepAnswer,
   moveCards,
   newId,
   receiveAnswers,
@@ -288,6 +289,64 @@ describe('answers from a revision', () => {
     expect(dismissed.answers.map((a) => a.id)).toEqual(['note-bbbbbb'])
     expect(dismissed.archive[0]?.response).toEqual(response)
     expect(deleteNote(dismissed, 'note-bbbbbb').answers).toEqual([])
+  })
+})
+
+describe('keeping an answer', () => {
+  const board = refundBoard()
+
+  /** The next revision of the board, answering one item. */
+  function answering(id: string, status: 'answered' | 'declined', text: string) {
+    const next = clone(board)
+    next.revision = board.revision + 1
+    next.responses = { respondsTo: 'feedback-aaaaaa', items: [{ feedbackId: id, status, text, changed: [] }] }
+    return next
+  }
+
+  it('keeps the item and its answer on the map, and the answer stops waiting', () => {
+    let layer = addNote(emptyLayer(board.id), board, { kind: 'question', text: 'Why?', target: { type: 'board' } }, t0, 'note-aaaaaa')
+    layer = receiveAnswers(layer, answering('note-aaaaaa', 'answered', 'Because.'), t1)
+    const kept = keepAnswer(layer, 'note-aaaaaa')
+    expect(kept).not.toBe(layer)
+    expect(kept.notes).toEqual(layer.notes)
+    expect(kept.answers).toEqual(layer.answers)
+    expect(kept.kept).toEqual(['note-aaaaaa'])
+    expect(keepAnswer(kept, 'note-aaaaaa')).toBe(kept)
+    // An item without an answer cannot be kept.
+    expect(keepAnswer(layer, 'note-zzzzzz')).toBe(layer)
+    valid(kept)
+  })
+
+  it('dismissing or deleting a kept item leaves the kept list, and restoring brings the answer back as one that waits', () => {
+    let layer = addNote(emptyLayer(board.id), board, { kind: 'question', text: 'x?', target: { type: 'board' } }, t0, 'note-aaaaaa')
+    layer = addNote(layer, board, { kind: 'question', text: 'y?', target: { type: 'board' } }, t0, 'note-bbbbbb')
+    const both = answering('note-aaaaaa', 'answered', 'A.')
+    both.responses!.items.push({ feedbackId: 'note-bbbbbb', status: 'answered', text: 'B.', changed: [] })
+    layer = receiveAnswers(layer, both, t1)
+    layer = keepAnswer(layer, 'note-aaaaaa')
+    layer = keepAnswer(layer, 'note-bbbbbb')
+    expect(layer.kept).toEqual(['note-aaaaaa', 'note-bbbbbb'])
+
+    const dismissed = archiveItems(layer, [{ id: 'note-aaaaaa', response: layer.answers[0]!.response }], t1)
+    expect(dismissed.kept).toEqual(['note-bbbbbb'])
+    const restored = restoreArchived(dismissed, 'note-aaaaaa')
+    expect(restored.kept).toEqual(['note-bbbbbb'])
+    expect(restored.answers.some((a) => a.id === 'note-aaaaaa')).toBe(true)
+    expect(deleteNote(restored, 'note-bbbbbb').kept).toEqual([])
+  })
+
+  it('the same revision opening again keeps the kept answers, and a new answer to the same item waits again', () => {
+    let layer = addNote(emptyLayer(board.id), board, { kind: 'question', text: 'Why?', target: { type: 'board' } }, t0, 'note-aaaaaa')
+    const first = answering('note-aaaaaa', 'answered', 'First.')
+    layer = receiveAnswers(layer, first, t1)
+    layer = keepAnswer(layer, 'note-aaaaaa')
+    // Nothing changes when the same revision opens again.
+    expect(receiveAnswers(layer, first, t1)).toBe(layer)
+
+    const second = answering('note-aaaaaa', 'answered', 'Second.')
+    const next = receiveAnswers(layer, second, t1)
+    expect(next.kept).toEqual([])
+    expect(next.answers[0]?.response.text).toBe('Second.')
   })
 })
 
