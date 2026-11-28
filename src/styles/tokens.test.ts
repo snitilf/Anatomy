@@ -171,7 +171,8 @@ describe('light theme surface separation and chroma', () => {
       const base = parseColor(token(light, surface))
       const hover = composite(parseColor(token(light, '--hover')), base)
       const active = composite(parseColor(token(light, '--active')), base)
-      expect(L(base) - L(hover)).toBeGreaterThanOrEqual(0.03)
+      // Above the faint 0.05 hover of before, which stepped 0.034 on a card.
+      expect(L(base) - L(hover)).toBeGreaterThanOrEqual(0.034)
       expect(L(hover) - L(active)).toBeGreaterThanOrEqual(0.015)
     }
   })
@@ -475,6 +476,26 @@ describe('grounds, wells, fields, and tracks', () => {
     expect(failures).toEqual([])
   })
 
+  it('marks the current item of a white menu or tool bar with a fill that stays apart from the hover fill', () => {
+    // The arrow-key row, the picked item, the highlighted menu item, the tool in use, and the active Shape tool. A pointer hover is --hover; these stay.
+    const current = [
+      paintedWith('src/commands/CommandMenu.module.css', ".item[data-selected='true'] {", 'background'),
+      paintedWith('src/inspector/Picker.module.css', ".item[data-selected='true'] {", 'background'),
+      paintedWith('src/app/menu.module.css', '.item[data-highlighted] {', 'background'),
+      paintedWith('src/whiteboard/Toolbar.module.css', ".button[aria-pressed='true'] {", 'background'),
+      paintedWith('src/whiteboard/Toolbar.module.css', '.split[data-active] {', 'background'),
+    ]
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      const raised = parseColor(token(block, '--raised'))
+      for (const fill of current) {
+        const ratio = contrastRatio(over(block, fill, raised), raised)
+        if (ratio < 1.18) failures.push(`${theme}: ${fill} on --raised (${ratio.toFixed(2)}:1)`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
   it('keeps a 1px ring visible on the canvas, for a raised block or a ringed figure with no fill', () => {
     for (const [, block] of themes) {
       const bg = parseColor(token(block, '--bg'))
@@ -502,7 +523,12 @@ describe('the map', () => {
   }
 
   it('draws the edge of a selected card at 3:1 against the card fill, the ground, and one or two group washes', () => {
-    const edges = [paintedWith('src/canvas/CardNode.module.css', '.card[data-highlighted],', 'border-color'), paintedWith('src/canvas/CardNode.module.css', '.yoursEdge[data-selected] rect,', 'stroke')]
+    const edges = [
+      paintedWith('src/canvas/CardNode.module.css', '.card[data-highlighted],', 'border-color'),
+      paintedWith('src/canvas/CardNode.module.css', '.yoursEdge[data-selected] rect,', 'stroke'),
+      paintedWith('src/canvas/CardNode.module.css', ':global(.react-flow__node:focus-visible) .card {', 'border-color'),
+      paintedWith('src/canvas/Canvas.module.css', '.canvas :global(.react-flow__edge:focus-visible .react-flow__edge-path) {', 'stroke'),
+    ]
     const failures: string[] = []
     for (const [theme, block] of themes) {
       for (const edge of edges) {
@@ -510,6 +536,19 @@ describe('the map', () => {
           const ratio = contrastRatio(parseColor(token(block, edge)), ground)
           if (ratio < 3) failures.push(`${theme}: ${edge} on ${name} (${ratio.toFixed(2)}:1)`)
         }
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('draws the lighter ring of a related card, as emphasis.ts writes it, at 3:1 against the card fill, the ground, and one or two group washes', () => {
+    const ring = readSource('src/canvas/emphasis.ts').match(/border-color: color-mix\(in srgb, var\((--[a-z0-9-]+)\) (\d+)%, transparent\)/)
+    if (!ring?.[1] || !ring[2]) throw new Error('No ring in emphasis.ts')
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      for (const [name, ground] of mapGrounds(block)) {
+        const ratio = contrastRatio(composite({ ...parseColor(token(block, ring[1])), a: Number(ring[2]) / 100 }, ground), ground)
+        if (ratio < 3) failures.push(`${theme}: ${ring[1]} at ${ring[2]}% on ${name} (${ratio.toFixed(2)}:1)`)
       }
     }
     expect(failures).toEqual([])
