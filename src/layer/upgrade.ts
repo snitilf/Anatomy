@@ -18,7 +18,8 @@ const overlayV1 = z.strictObject({
 })
 type OverlayV1 = z.infer<typeof overlayV1>
 
-export type LayerResult = { ok: true; layer: Layer } | { ok: false; errors: BoardProblem[] }
+/** `dropped` names the top-level fields a later version wrote, which this version left out. */
+export type LayerResult = { ok: true; layer: Layer; dropped?: string[] } | { ok: false; errors: BoardProblem[] }
 
 function problems(error: z.ZodError): BoardProblem[] {
   return error.issues.map((i) => ({ path: formatPath(i.path), message: i.message }))
@@ -52,7 +53,9 @@ export function readLayer(data: unknown, board?: Board): LayerResult {
   const format = typeof data === 'object' && data !== null ? (data as Record<string, unknown>).format : undefined
   if (format === LAYER_FORMAT) {
     const parsed = layerSchema.safeParse(data)
-    return parsed.success ? { ok: true, layer: parsed.data } : { ok: false, errors: problems(parsed.error) }
+    if (!parsed.success) return { ok: false, errors: problems(parsed.error) }
+    const dropped = Object.keys(data as object).filter((key) => !Object.hasOwn(layerSchema.shape, key))
+    return dropped.length > 0 ? { ok: true, layer: parsed.data, dropped } : { ok: true, layer: parsed.data }
   }
   const old = overlayV1.safeParse(data)
   if (old.success) return { ok: true, layer: upgrade(old.data, board) }

@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ArrowUp,
   BookOpen,
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -14,6 +15,7 @@ import {
   Hand,
   Home,
   Inbox,
+  LayoutGrid,
   LayoutList,
   ListFilter,
   Link2,
@@ -50,7 +52,9 @@ import { blockRect, boundsOf, frameBundle } from '../canvas/bundleFrame'
 import { showView } from '../app/viewActions'
 import { overviewMemory, revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
-import { reviewCounts } from '../notes/review'
+import { hasChanges, reviewCounts } from '../notes/review'
+import { laidOutApart, tidyLayout } from '../layer/places'
+import { stepBack, stepForward } from '../app/history'
 import { toast } from 'sonner'
 import { currentTrail, rememberStep, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
@@ -103,6 +107,14 @@ function overviewRow(): Selection | undefined {
   return id && (type === 'component' || type === 'proposal') ? { type, id } : undefined
 }
 
+
+/** Undo or redo. A step across Tidy layout lays the whole board out differently, so the board is framed again. */
+function step(c: CommandContext, direction: 'undo' | 'redo') {
+  const { board, layer, history } = c.state
+  const to = layer ? (direction === 'undo' ? stepBack(history, layer) : stepForward(history, layer))?.layer : undefined
+  if (board && layer && to && laidOutApart(board, layer, to)) c.camera?.fitAfterLayout()
+  c.dispatch({ type: direction })
+}
 
 /** A step along the graph from the selected part or line, as a command. It is on when there is somewhere to go. */
 const walk = (move: Walk, id: string, label: string, icon: Command['icon'], key: string, keywords: readonly string[]): Command => ({
@@ -195,7 +207,7 @@ export const COMMANDS: readonly Command[] = [
     keys: ['Mod+Z'],
     visible: (c) => hasBoard(c) && onMap(c),
     enabled: (c) => c.state.history.past.length > 0,
-    run: (c) => c.dispatch({ type: 'undo' }),
+    run: (c) => step(c, 'undo'),
   },
   {
     id: 'redo',
@@ -205,7 +217,36 @@ export const COMMANDS: readonly Command[] = [
     keys: ['Mod+Shift+Z', 'Ctrl+Y'],
     visible: (c) => hasBoard(c) && onMap(c),
     enabled: (c) => c.state.history.future.length > 0,
-    run: (c) => c.dispatch({ type: 'redo' }),
+    run: (c) => step(c, 'redo'),
+  },
+  {
+    id: 'layout.tidy',
+    group: 'Board',
+    label: 'Tidy layout',
+    icon: LayoutGrid,
+    keywords: ['arrange', 'auto layout', 'rearrange', 'reset positions', 'clean up'],
+    visible: (c) => hasBoard(c) && onMap(c),
+    run: (c) => {
+      const { board, layer } = c.state
+      if (!board || !layer) return
+      if (tidyLayout(layer, board) === layer) {
+        toast('The layout is already tidy')
+        return
+      }
+      // The board takes a new shape, so it is framed whole once the map has drawn it, and again when the tidy is undone.
+      c.camera?.fitAfterLayout()
+      c.dispatch({ type: 'layoutTidied' })
+      deletedToast('Layout tidied', c.dispatch, c.store, () => c.camera?.fitAfterLayout())
+    },
+  },
+  {
+    id: 'review.done',
+    group: 'Board',
+    label: 'Mark reviewed',
+    icon: CheckCheck,
+    keywords: ['revision', 'changes', 'markers', 'seen'],
+    visible: (c) => hasChanges(c.state.changes),
+    run: (c) => c.dispatch({ type: 'changesDismissed' }),
   },
   {
     id: 'open.folder',

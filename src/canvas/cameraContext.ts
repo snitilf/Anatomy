@@ -20,6 +20,8 @@ export interface Camera {
    * is not fitted.
    */
   refit(opening?: boolean): 'framed' | 'kept' | undefined
+  /** Frames the whole board once the map has drawn its next layout, such as after Tidy layout. */
+  fitAfterLayout(): void
   /** Steps the zoom in or out, resets it to 100%, or fits the whole board. It glides when `animate` and motion is allowed. */
   zoom(command: ZoomCommand, animate?: boolean): void
   /** Where a card is on the map now. */

@@ -3,10 +3,21 @@ import { CircleHelp } from 'lucide-react'
 import { memo, useState, type CSSProperties } from 'react'
 import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from '@xyflow/react'
 import { useAppDispatch } from '../app/store'
-import type { EdgeData } from './buildGraph'
+import type { EdgeData, TabSide } from './buildGraph'
 import { KIND_STYLE, SELECTED_WIDTH, LINE_INK } from './kinds'
 import { LabelCutout } from './LabelCutout'
+import { pillHeight } from './labelPlacement'
 import styles from './RelationshipEdge.module.css'
+
+/** Puts a revision tab against one side of its label, 2 units off it, at the label's scale. */
+function tabTransform(side: TabSide, x: number, y: number, width: number, height: number): string {
+  const at = `translate(${x}px, ${y}px)`
+  const off = (d: number) => `calc(${d}px * var(--label-scale, 1))`
+  if (side === 'above') return `translate(-50%, -100%) ${at} translateY(${off(-(height / 2 + 2))})`
+  if (side === 'below') return `translate(-50%, 0) ${at} translateY(${off(height / 2 + 2)})`
+  if (side === 'left') return `translate(-100%, -50%) ${at} translateX(${off(-(width / 2 + 2))})`
+  return `translate(0, -50%) ${at} translateX(${off(width / 2 + 2)})`
+}
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
   const { id, data, selected, markerEnd, interactionWidth, source, target } = props
@@ -59,6 +70,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-hover={hover || undefined}
           data-kind={data.kind}
           data-edited={data.edited || undefined}
+          data-revision={data.revision}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, ...(data.labelHidden ? {} : { '--label-width': `${data.labelWidth}px` }) } as CSSProperties}
           title={text}
           aria-hidden="true"
@@ -69,6 +81,26 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
             {data.label}
           </LabelCutout>
         </div>
+        {/*
+          What the open revision did to this connection: one word in a tab against its label, on the first side clear of cards.
+          It sits beside the label, not in it, so a selected label that clips its text never clips the tab. The line's name says it to a screen reader.
+        */}
+        {data.revision && (
+          <div
+            className={clsx(styles.revision, 'nodrag nopan')}
+            data-edge-revision={data.revision}
+            data-edge={id}
+            data-hidden={data.labelHidden || undefined}
+            data-moving={data.moving || undefined}
+            data-faded={data.faded || undefined}
+            data-arriving={data.arriving || undefined}
+            data-at={data.revisionAt ?? 'above'}
+            style={{ transform: tabTransform(data.revisionAt ?? 'above', data.labelX, data.labelY, data.labelWidth, pillHeight(data.labelLines)) }}
+            aria-hidden="true"
+          >
+            {data.revision === 'new' ? 'New' : 'Changed'}
+          </div>
+        )}
       </EdgeLabelRenderer>
     </>
   )

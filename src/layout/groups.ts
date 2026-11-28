@@ -1,5 +1,5 @@
 import type { Board } from '../board/schema'
-import { groupAreas } from './cards'
+import { groupAreas } from './groupArea'
 import { inflate, overlaps, type Point, type Rect } from './geometry'
 import { pushApart } from './push'
 

@@ -221,7 +221,19 @@ test.describe('new note visibility and reduced motion', () => {
       })
       .toBe(true)
 
-    // Scroll back to top so the next Add must scroll again.
+    // Scroll back to top so the next Add must scroll again. The smooth scroll to the note may still be running once the note
+    // is in view, and it would carry on past an instant scroll to the top, so wait for it to stand still first.
+    await expect
+      .poll(() =>
+        scroller.evaluate(
+          (el) =>
+            new Promise<boolean>((resolve) => {
+              const at = el.scrollTop
+              requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve(el.scrollTop === at))))
+            }),
+        ),
+      )
+      .toBe(true)
     await scroller.evaluate((el) => el.scrollTo({ top: 0, behavior: 'instant' }))
     await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBe(0)
 

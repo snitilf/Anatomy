@@ -31,6 +31,7 @@ import {
   updateMark,
   updateProposal,
 } from '../layer/edits'
+import { dropRemovedPlaces, holdPlaces, placeRevision, tidyLayout } from '../layer/places'
 import { emptyLayer, type Layer, type Mark, type Note, type Proposal, type Response, type Sent, type Target } from '../layer/model'
 import { emptyHistory, remember, stepBack, stepForward, type History } from './history'
 
@@ -55,6 +56,8 @@ export interface AppState {
   warnings: BoardProblem[]
   openErrors?: { fileName: string; errors: BoardProblem[] }
   selection?: Selection
+  /** The revision had no room for a new part in its group, so the layout was tidied. One undo puts the still layout back. */
+  roomMade?: true
   /** The walkthrough that is playing, and the step it shows. */
   scenario?: { id: string; step: number }
 }
@@ -84,6 +87,8 @@ export type LayerAction =
   | { type: 'itemsArchived'; answers: readonly { id: string; response: Response }[]; now: Date }
   | { type: 'archiveRestored'; id: string }
   | { type: 'archiveDropped'; id: string }
+  /** Lays the board out again, as if it opened for the first time. Marks over a card go with it. */
+  | { type: 'layoutTidied' }
 
 export type Action =
   | LayerAction
@@ -137,10 +142,11 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
     const pushed = a.positions ?? {}
     return moveProposals(moveCards(sized, onBoard(b, pushed)), pushed)
   },
-  markAdded: (l, _b, a) => addMark(l, a.mark),
+  // A mark is stored in board coordinates, so the first one holds the cards where they are drawn.
+  markAdded: (l, b, a) => addMark(holdPlaces(l, b), a.mark),
   markChanged: (l, _b, a) => updateMark(l, a.id, () => a.mark),
   markDeleted: (l, _b, a) => deleteMark(l, a.id),
-  proposalAdded: (l, _b, a) => addProposal(l, a.proposal),
+  proposalAdded: (l, b, a) => addProposal(holdPlaces(l, b), a.proposal),
   proposalChanged: (l, _b, a) => updateProposal(l, a.id, a.change),
   proposalDeleted: (l, _b, a) => deleteProposal(l, a.id),
   reconnected: (l, b, a) => reconnect(l, b, { relationshipId: a.relationshipId, end: a.end, part: a.part }, a.now, a.id).layer,
@@ -148,6 +154,7 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
   itemsArchived: (l, _b, a) => archiveItems(l, a.answers, a.now),
   archiveRestored: (l, _b, a) => restoreArchived(l, a.id),
   archiveDropped: (l, _b, a) => dropArchived(l, a.id),
+  layoutTidied: (l, b) => tidyLayout(l, b),
 }
 
 const isLayerAction = (action: Action): action is LayerAction => Object.hasOwn(EDITS, action.type)
@@ -217,12 +224,22 @@ export function reducer(state: AppState, action: Action): AppState {
       const sameBoard = old !== undefined && old.id === board.id
       const keptLayer = sameBoard && state.layer?.boardId === board.id ? state.layer : undefined
       // The agent's answers in this revision go next to the user's items, and adopted items that landed are archived.
-      const layer = receiveAnswers(action.layer ?? keptLayer ?? emptyLayer(board.id), board, action.now ?? new Date())
-      // A new revision is a barrier: undo never reaches back into the version before it.
-      const next: AppState = { board, layer, warnings: action.warnings, history: emptyHistory }
-      if (sameBoard) {
-        next.previousBoard = old
-        next.changes = diffBoards(old, board)
+      const received = receiveAnswers(action.layer ?? keptLayer ?? emptyLayer(board.id), board, action.now ?? new Date())
+      const was = sameBoard ? old : undefined
+      const changes = was ? diffBoards(was, board) : undefined
+      // A revision that adds, removes, or changes parts or connections keeps every card where it was drawn (D144).
+      const moves = changes !== undefined && [changes.added, changes.removed, changes.changed].some((c) => c.components.length > 0 || c.relationships.length > 0)
+      // Otherwise no ghost is drawn, so the places of removed parts go.
+      const placed = was && moves ? placeRevision(received, was, board) : { layer: dropRemovedPlaces(received, board) }
+      const layer = placed.layer
+      // A new revision is a barrier: undo never reaches back into the version before it. When the layout was tidied to make
+      // room for a new part, one undo goes back to the still layout, with that part where it found a place.
+      const history = placed.untidied ? remember(emptyHistory, placed.untidied) : emptyHistory
+      const next: AppState = { board, layer, warnings: action.warnings, history }
+      if (placed.untidied) next.roomMade = true
+      if (was && changes) {
+        next.previousBoard = was
+        next.changes = changes
         if (selectionExists(board, layer, state.selection)) next.selection = state.selection as Selection
       }
       return next
@@ -240,8 +257,13 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'noticeShown':
       return { ...state, warnings: [{ path: '', message: action.message }] }
     case 'changesDismissed': {
+      // The ghosts go, so the places they kept go too: they would hold new cards off, and leave Tidy layout work to do.
+      // Undo and redo must not bring them back either.
       const { changes: _c, ...rest } = state
-      return rest
+      const board = state.board
+      if (!state.layer || !board) return rest
+      const clean = (l: Layer) => dropRemovedPlaces(l, board)
+      return { ...rest, layer: clean(state.layer), history: { past: state.history.past.map(clean), future: state.history.future.map(clean) } }
     }
     case 'openFailed':
       return { ...state, openErrors: { fileName: action.fileName, errors: action.errors } }

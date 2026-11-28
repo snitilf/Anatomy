@@ -53,8 +53,18 @@
  * On a quiet map, only the labels of the selection, of a walkthrough step, and of the card under the pointer show.
  * The rest are hidden, not faded, so they never cover anything.
  */
-.canvas[data-labels='quiet'] [data-label]:not([data-active], [data-selected], [data-highlighted]) {
+.canvas[data-labels='quiet'] [data-label]:not([data-active], [data-selected], [data-highlighted], [data-revision]) {
   visibility: hidden;
+}
+
+/* The far view reads groups: the tabs of a revision leave it with the labels. */
+.canvas[data-far] [data-edge-revision] {
+  display: none;
+}
+
+/* A removed part's ghost takes no pointer, so what is under it stays in reach. */
+.canvas :global(.react-flow__node-ghost) {
+  pointer-events: none !important;
 }
 
 /* Hand: the map pans from anywhere, cards included. */

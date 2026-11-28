@@ -7,7 +7,7 @@ import { noteBadgeLabel } from '../status/state'
 import { startsLabel } from '../scenarios/starts'
 import { nameLines, titleLines } from './far'
 import { useTipClamp } from './useTipClamp'
-import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type Side } from './buildGraph'
+import { EDGE_IN_HANDLE, EDGE_OUT_HANDLE, SIDE_POSITION, type CardData, type GhostData, type Side } from './buildGraph'
 import styles from './CardNode.module.css'
 
 const SIDES = Object.keys(SIDE_POSITION) as Side[]
@@ -40,6 +40,7 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
         data-count-corner={corner || undefined}
         data-proposal={data.sourceKind === 'agent-proposal' || undefined}
         data-start={data.starts.length > 0 && !data.far ? data.startCorner : undefined}
+        data-arriving={data.arriving && data.revision === 'new' ? '' : undefined}
         style={{ '--title-lines': heading } as CSSProperties}
       >
         {data.far && mine > 0 && <span className={styles.dot} aria-hidden="true" />}
@@ -76,6 +77,12 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           </div>
         )}
       </div>
+      {/* What the open revision did to this part, in a word on a tab across the top edge. The card clips its own paint, so the tab sits beside it. The description says it to a screen reader. */}
+      {data.revision && (
+        <span className={styles.revision} data-revision={data.revision} data-arriving={data.arriving || undefined} aria-hidden="true">
+          {data.revision === 'new' ? 'New' : 'Changed'}
+        </span>
+      )}
       {/* The name of the part in the far view, where the tile has no text. The card clips its own paint, so it sits beside it. */}
       {data.far && (
         <div ref={tip} className={styles.tip} aria-hidden="true">
@@ -94,6 +101,21 @@ export const CardNode = memo(function CardNode({ data, selected }: NodeProps<Nod
           <path d="M9 3 L3 9 M9 6.5 L6.5 9" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" fill="none" />
         </svg>
       </NodeResizeControl>
+    </>
+  )
+})
+
+/** A part the open revision removed: a faint, hollow card with its name struck through, where it was, until the revision is marked reviewed. */
+export const GhostNode = memo(function GhostNode({ data }: NodeProps<Node<GhostData>>) {
+  // The tab stays at full strength, so its word reads as well as the others. Only the card fades.
+  return (
+    <>
+      <div className={styles.ghost} data-ghost="" data-arriving={data.arriving || undefined}>
+        <span className={styles.ghostName}>{data.label}</span>
+      </div>
+      <span className={styles.revision} data-revision="removed" data-arriving={data.arriving || undefined}>
+        Removed
+      </span>
     </>
   )
 })
