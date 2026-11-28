@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ArrowUp,
   BookOpen,
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -14,6 +15,7 @@ import {
   Hand,
   Home,
   Inbox,
+  LayoutGrid,
   LayoutList,
   ListFilter,
   Link2,
@@ -50,7 +52,8 @@ import { blockRect, boundsOf, frameBundle } from '../canvas/bundleFrame'
 import { showView } from '../app/viewActions'
 import { overviewMemory, revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
-import { reviewCounts } from '../notes/review'
+import { hasChanges, reviewCounts } from '../notes/review'
+import { tidyLayout } from '../layer/places'
 import { toast } from 'sonner'
 import { currentTrail, rememberStep, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
@@ -206,6 +209,35 @@ export const COMMANDS: readonly Command[] = [
     visible: (c) => hasBoard(c) && onMap(c),
     enabled: (c) => c.state.history.future.length > 0,
     run: (c) => c.dispatch({ type: 'redo' }),
+  },
+  {
+    id: 'layout.tidy',
+    group: 'Board',
+    label: 'Tidy layout',
+    icon: LayoutGrid,
+    keywords: ['arrange', 'auto layout', 'rearrange', 'reset positions', 'clean up'],
+    visible: (c) => hasBoard(c) && onMap(c),
+    run: (c) => {
+      const { board, layer } = c.state
+      if (!board || !layer) return
+      if (tidyLayout(layer, board) === layer) {
+        toast('The layout is already tidy')
+        return
+      }
+      c.dispatch({ type: 'layoutTidied' })
+      deletedToast('Layout tidied', c.dispatch)
+      // The board takes a new shape, so it is framed whole once the map has drawn it.
+      c.camera?.fitAfterLayout()
+    },
+  },
+  {
+    id: 'review.done',
+    group: 'Board',
+    label: 'Mark reviewed',
+    icon: CheckCheck,
+    keywords: ['revision', 'changes', 'markers', 'seen'],
+    visible: (c) => hasChanges(c.state.changes),
+    run: (c) => c.dispatch({ type: 'changesDismissed' }),
   },
   {
     id: 'open.folder',
