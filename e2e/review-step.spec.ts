@@ -416,6 +416,22 @@ test('J opens the Answers group when it was closed', async ({ page }) => {
   await expect(answers(page).getByRole('button', { name: 'Who owns the form?' })).toBeFocused()
 })
 
+test('on a phone, J raises the sheet and puts the card in front at once', async ({ page }) => {
+  const text = await readFile(SHORTENER, 'utf8')
+  const board = JSON.parse(text) as FolderFile
+  const notes = [questionOn(board, 'note-phone0001', 'web-form', 'Who owns the form?'), questionOn(board, 'note-phone0002', 'link-store', 'Which database?')]
+  await openAnswered(page, { notes }, notes.map((n) => ({ id: n.id, text: 'Noted.' })))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.locator('[data-stop="0"]')).toBeVisible()
+
+  await page.keyboard.press('j')
+  await expect(page.locator('[data-stop="1"]')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Who owns the form?' })).toBeFocused()
+  await expect(card(page, 'web-form').locator('[data-card]')).toHaveAttribute('data-selected')
+  await page.keyboard.press('j')
+  await expect(page.getByRole('button', { name: 'Which database?' })).toBeFocused()
+})
+
 test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' })
 
