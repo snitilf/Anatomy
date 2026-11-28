@@ -18,6 +18,7 @@
 }
 
 .glyph[data-state='sent'],
+.glyph[data-state='kept'],
 .glyph[data-state='declined'] {
   color: var(--fg-3);
 }

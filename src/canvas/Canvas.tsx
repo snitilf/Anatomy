@@ -226,7 +226,7 @@ const CROWDED_LINES = 20
 const CROWDED_RATIO = 1.5
 
 export function Canvas() {
-  const { board, positions, sizes, placed, links, notes, answers, sent, marks, proposals, reconnects, selection, scenario, changes, previousBoard } = useAppStore(
+  const { board, positions, sizes, placed, links, notes, answers, kept, sent, marks, proposals, reconnects, selection, scenario, changes, previousBoard } = useAppStore(
     useShallow((s) => ({
       board: s.board,
       positions: s.layer?.positions,
@@ -237,6 +237,7 @@ export function Canvas() {
       links: s.layer?.links,
       notes: s.layer?.notes,
       answers: s.layer?.answers,
+      kept: s.layer?.kept,
       sent: s.layer?.sent,
       marks: s.layer?.marks,
       proposals: s.layer?.proposals,
@@ -696,7 +697,7 @@ export function Canvas() {
     }
     return counts
   }, [notes])
-  const noteStates = useMemo(() => (board && notes && answers ? partStates(board, { notes, answers, sent, proposals: proposals ?? [] }) : new Map<string, { state: ItemState; count: number }>()), [board, notes, answers, sent, proposals])
+  const noteStates = useMemo(() => (board && notes && answers ? partStates(board, { notes, answers, kept: kept ?? [], sent, proposals: proposals ?? [] }) : new Map<string, { state: ItemState; count: number }>()), [board, notes, answers, kept, sent, proposals])
   /** A text or sticky note being dragged or resized, until it is dropped. */
   const [moving, setMoving] = useState<UserParts['moving']>(undefined)
   const movingRef = useRef(moving)

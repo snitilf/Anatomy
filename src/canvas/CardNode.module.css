@@ -356,6 +356,7 @@
 
 /* The count takes the tone of the glyph beside it. */
 .mine[data-state='sent'],
+.mine[data-state='kept'],
 .mine[data-state='declined'] {
   color: var(--fg-3);
 }

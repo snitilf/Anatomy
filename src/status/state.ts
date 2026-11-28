@@ -6,13 +6,14 @@ import { linkStatus, noteStatus, wasSent } from '../layer/status'
  * Where an item the user made stands in the round trip to the agent. Every place that shows the state reads it from here,
  * so the same state always gets the same glyph and the same word.
  */
-export const ITEM_STATES = ['unsent', 'sent', 'answered', 'adopted', 'declined', 'outdated', 'relinking'] as const
+export const ITEM_STATES = ['unsent', 'sent', 'answered', 'kept', 'adopted', 'declined', 'outdated', 'relinking'] as const
 export type ItemState = (typeof ITEM_STATES)[number]
 
 export const STATE_WORD: Record<ItemState, string> = {
   unsent: 'Not sent',
   sent: 'Sent',
   answered: 'Answered',
+  kept: 'Kept',
   adopted: 'Adopted',
   declined: 'Declined',
   outdated: 'Possibly outdated',
@@ -24,6 +25,7 @@ export const STATE_MEANING: Record<ItemState, string> = {
   unsent: 'Goes out with your next Send.',
   sent: 'Your agent has it, with no answer yet.',
   answered: 'Your agent replied. Read it in Review.',
+  kept: 'You kept the reply. It stays in Details.',
   adopted: 'Your agent used it in the board.',
   declined: 'Your agent chose not to use it.',
   outdated: 'Changed on the board since you wrote it.',
@@ -33,15 +35,16 @@ export const STATE_MEANING: Record<ItemState, string> = {
 /**
  * Which state wins when an item, or the notes on one part, have more than one. An item that cannot be acted on comes first.
  * Then the agent's answer, which is new and which resolves the item. Then a part that changed, then what still has to be
- * sent, then what was sent. The first in this list wins.
+ * sent, then what was sent. A reply the user kept is settled, so it comes last. The first in this list wins.
  */
-const PRIORITY: readonly ItemState[] = ['relinking', 'answered', 'declined', 'adopted', 'outdated', 'unsent', 'sent']
+const PRIORITY: readonly ItemState[] = ['relinking', 'answered', 'declined', 'adopted', 'outdated', 'unsent', 'sent', 'kept']
 
-type StateLayer = Pick<Layer, 'answers' | 'sent'> & Partial<Pick<Layer, 'proposals' | 'notes' | 'links'>>
+type StateLayer = Pick<Layer, 'answers' | 'sent'> & Partial<Pick<Layer, 'proposals' | 'notes' | 'links' | 'kept'>>
 
-/** The agent's status for the item, when it has answered it. */
-function answerState(layer: Pick<Layer, 'answers'>, id: string): ItemState | undefined {
-  return layer.answers.find((a) => a.id === id)?.response.status
+/** The agent's status for the item, when it has answered it. A reply the user kept no longer waits in Review. */
+function answerState(layer: Pick<Layer, 'answers'> & Partial<Pick<Layer, 'kept'>>, id: string): ItemState | undefined {
+  const status = layer.answers.find((a) => a.id === id)?.response.status
+  return status === 'answered' && layer.kept?.includes(id) ? 'kept' : status
 }
 
 /** The state of one item that is on the map. */

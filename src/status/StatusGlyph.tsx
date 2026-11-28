@@ -21,6 +21,13 @@ function Body({ state, id }: { state: ItemState; id: string }): ReactNode {
           <path d="M6.2 4.9 4.3 6.8l1.9 1.9M4.5 6.8h3.1a1.6 1.6 0 0 1 1.6 1.6v.4" />
         </>
       )
+    case 'kept':
+      return (
+        <>
+          <circle cx="7" cy="7" r="5.5" />
+          <path d="m4.6 7.1 1.7 1.7 3.1-3.4" />
+        </>
+      )
     case 'adopted':
       return (
         <>

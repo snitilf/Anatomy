@@ -6,7 +6,7 @@ import { StatusGlyph } from './StatusGlyph'
 import { ITEM_STATES, STATE_MEANING, STATE_WORD } from './state'
 import styles from './StatusKey.module.css'
 
-/** A small button that opens the seven status glyphs, each with its word and what it means. */
+/** A small button that opens the status glyphs, each with its word and what it means. */
 export function StatusKey() {
   return (
     <Popover.Root>
