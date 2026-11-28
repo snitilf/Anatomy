@@ -440,6 +440,23 @@ describe('folder mode', () => {
     }
   })
 
+  it('opens a layer from a later version without the fields it does not know, and keeps the whole file as a backup once', async () => {
+    const at = '2026-01-01T00:00:00.000Z'
+    const later = {
+      format: 'anatomy-layer', schemaVersion: 2, boardId: JSON.parse(refundRaw).id, positions: {}, sizes: {}, links: [], marks: [], proposals: [], reconnects: [], archive: [], answers: [],
+      notes: [{ id: 'note-later01', kind: 'note', text: 'Written by a later version', target: { type: 'board' }, targetFingerprint: 'x', createdAt: at, updatedAt: at }],
+      somethingNew: { kept: true },
+    }
+    const text = JSON.stringify(later)
+    const folder: Folder & { files: Map<string, MemoryFile> } = repo({ [FILES.board]: refundRaw, [FILES.layer]: text })
+    app(memoryFolderAccess(folder))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }))
+    await opened()
+    expect(within(panel().getByRole('region', { name: 'Notes' })).getByText('Written by a later version')).toBeInTheDocument()
+    expect(folder.files.get(FILES.layerBackup)?.text).toBe(text)
+    expect(await screen.findByText(/newer version of Anatomy was kept in layer\.backup\.json/)).toBeInTheDocument()
+  })
+
   it('keeps a layer file it cannot read as a backup and starts a new one', async () => {
     const folder: Folder & { files: Map<string, MemoryFile> } = repo({ [FILES.board]: refundRaw, [FILES.layer]: '{ not json' })
     app(memoryFolderAccess(folder))

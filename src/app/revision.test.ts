@@ -84,8 +84,8 @@ describe('a new revision keeps the map still', () => {
       for (const [id, r] of Object.entries(after)) if (id !== ADDED) expect(gap(added, r), `${ADDED} against ${id}`).toBeGreaterThanOrEqual(48)
       // The place the removed part had is left to its ghost.
       expect(gap(added, before[removed]!)).toBeGreaterThanOrEqual(48)
-      // Beside it, or one column step further along its row when the spot beside it is taken: the widest column gap, a card, and a gap.
-      expect(gap(added, after[anchor]!)).toBeLessThanOrEqual(400 + 240 + 64)
+      // Beside it, or one column step further along its row when the spot beside it is taken: a label's column gap, a card, and a gap.
+      expect(gap(added, after[anchor]!)).toBeLessThanOrEqual(432)
       const group = next.components.find((c) => c.id === ADDED)!.group
       const areas = groupAreas(next, after)
       const areasBefore = groupAreas(next, Object.fromEntries(Object.entries(after).filter(([id]) => id !== ADDED)))
@@ -266,14 +266,6 @@ describe('a revision never spreads a group over another group', () => {
 })
 
 describe('where a new part goes', () => {
-  // The two boards of the review, where the part landed above its source with room to its right.
-  for (const file of ['refund-approval.board.json', 'claude-code-harness.board.json']) {
-    it(`never goes above the part it comes from on ${file}`, () => {
-      const { after, added, anchor } = checkRevision(boards.find((b) => b.name === file)!.board)
-      expect(added.y + added.height, `${ADDED} above ${anchor}`).toBeGreaterThan(after[anchor]!.y)
-    })
-  }
-
   for (const { name, board } of boards) {
     it(`keeps clear of a sticky note, a text mark, and a proposed part on its best spot, on ${name}`, () => {
       const { next, after } = checkRevision(board)
@@ -287,20 +279,86 @@ describe('where a new part goes', () => {
         expect(overlaps(rectsOf(state)[ADDED]!, box), `${kind} on ${name}`).toBe(false)
       }
     })
+  }
+})
 
-    it(`goes along the flow, and above the part it comes from only when the room along the flow is taken, on ${name}`, () => {
-      const { after, added, anchor, next } = checkRevision(board)
-      const a = after[anchor]!
-      if (added.y + added.height > a.y) return
-      // The room to the right of the source, as far as the widest column gap and a card, a track above and below it.
-      const along = { x: a.x + a.width, y: a.y - 48, width: 400 + 240, height: a.height + 96 }
-      const own = next.components.find((c) => c.id === anchor)!.group
-      const taken =
-        Object.entries(after).some(([id, r]) => id !== anchor && id !== ADDED && overlaps(along, r)) ||
-        Object.entries(groupAreas(next, after)).some(([g, area]) => g !== own && overlaps(along, area))
-      expect(taken, `${ADDED} above ${anchor} with room along the flow`).toBe(true)
+/**
+ * Where the new part goes along the flow today, it never goes above its source. On the other boards the source sits in a
+ * full row with a card right beside it and another group below, so the only free spot near it is above, and taking one along
+ * the flow would move cards that were there: sixteen-parts, sixty-parts, sixty-parts-walkthrough, and worst-text.
+ */
+describe('along the flow', () => {
+  for (const file of ['refund-approval.board.json', 'url-shortener.board.json', 'forty-parts.board.json', 'anatomy.board.json', 'claude-code-harness.board.json', 'how-an-llm-works.board.json']) {
+    it(`never goes above the part it comes from on ${file}`, () => {
+      const { after, added, anchor } = checkRevision(boards.find((b) => b.name === file)!.board)
+      expect(added.y + added.height, `${ADDED} above ${anchor}`).toBeGreaterThan(after[anchor]!.y)
     })
   }
+})
+
+/** Every card the user moved a little, so each has a position of its own, and a sticky note on every card. */
+function workedOn(board: Board): AppState {
+  let state = open(board)
+  const rects = rectsOf(state)
+  state = reducer(state, { type: 'cardsMoved', positions: Object.fromEntries(board.components.map((c) => [c.id, { x: rects[c.id]!.x + 8, y: rects[c.id]!.y + 8 }])) })
+  board.components.forEach((c, i) => {
+    const r = rects[c.id]!
+    state = reducer(state, { type: 'markAdded', mark: { id: `mark-onacard${String(i).padStart(3, '0')}`, kind: 'sticky', createdAt: AT, x: r.x + 28, y: r.y + 24, width: 120, height: 64, text: c.label } })
+  })
+  return state
+}
+
+const stickiesOff = (state: AppState, board: Board) => {
+  const rects = rectsOf(state)
+  return state.layer!.marks.flatMap((m, i) => {
+    if (m.kind !== 'sticky') return []
+    const r = rects[board.components[i]!.id]
+    return r && m.x - r.x === 20 && m.y - r.y === 16 ? [] : [board.components[i]!.id]
+  })
+}
+
+function overlapping(rects: Record<string, Rect>): string[] {
+  const ids = Object.keys(rects)
+  const found: string[] = []
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) if (overlaps(rects[ids[i]!]!, rects[ids[j]!]!)) found.push(`${ids[i]} on ${ids[j]}`)
+  return found
+}
+
+describe('a new part with no room', () => {
+  for (const { name, board } of boards) {
+    it(`never spreads a group over another, even over cards the user moved and marked, on ${name}`, () => {
+      const first = workedOn(board)
+      const failures: string[] = []
+      for (const c of board.components) {
+        for (const count of [1, 2, 3]) {
+          const second = open(addTo(board, c.id, count), first)
+          const rects = rectsOf(second)
+          const found = [...spills(second.board!, rects), ...overlapping(rects), ...stickiesOff(second, second.board!).map((id) => `sticky off ${id}`)]
+          if (found.length > 0) failures.push(`${count} beside ${c.id}: ${found.join(', ')}`)
+        }
+      }
+      expect(failures).toEqual([])
+    })
+  }
+
+  const llm = boards.find((b) => b.name === 'how-an-llm-works.board.json')!.board
+  it('tidies the layout, as one step of undo that puts every card back where it was', () => {
+    const first = open(llm)
+    const before = rectsOf(first)
+    const next = addTo(llm, 'sampling', 1)
+    const second = open(next, first)
+    expect(second.roomMade).toBe(true)
+    expect(rectsOf(second)).toEqual(placeCards(next, { positions: {}, sizes: {} }))
+    expect(second.history.past).toHaveLength(1)
+    const back = reducer(second, { type: 'undo' })
+    expect(relativeMove(before, rectsOf(back)).by).toBe(0)
+    for (const id of Object.keys(before)) expect(rectsOf(back)[id], id).toEqual(before[id])
+    expect(back.history.past).toHaveLength(0)
+  })
+
+  it('makes no room on a revision whose new parts fit', () => {
+    expect(checkRevision(llm).second.roomMade).toBeUndefined()
+  })
 })
 
 describe('the places of removed parts', () => {
@@ -319,6 +377,12 @@ describe('the places of removed parts', () => {
   it('go when the board opens again with no revision before it', () => {
     const second = settled()
     expect(strays(reducer(initialState, { type: 'boardOpened', board: second.board!, layer: second.layer!, warnings: [] }))).toEqual([])
+  })
+
+  it('do not come back with an undo after Mark reviewed', () => {
+    let state = reducer(settled(), { type: 'markAdded', mark: away })
+    state = reducer(state, { type: 'changesDismissed' })
+    expect(strays(reducer(state, { type: 'undo' }))).toEqual([])
   })
 
   it('leave nothing for Tidy layout to do once the board is tidy and reviewed', () => {

@@ -190,6 +190,30 @@ test('Tidy layout lays the board out again from the keyboard, and undo puts ever
     .toEqual([])
 })
 
+test('a new part with no room in its group tidies the layout, says so, and Undo puts every card back', async ({ page }, testInfo) => {
+  const file = 'src/examples/how-an-llm-works.board.json'
+  await open(page, file)
+  const before = await places(page)
+  const board = JSON.parse(await readFile(file, 'utf8')) as BoardFile
+  const next = structuredClone(board)
+  next.revision += 1
+  const { position: _p, lesson: _l, ...base } = next.components.find((c) => c.id === 'sampling')!
+  next.components.push({ ...base, id: 'stop-check', label: 'Stop check', summary: 'Decides when the answer is done.' })
+  next.relationships.push({ ...structuredClone(next.relationships[0]!), id: 'sampling-to-stop', from: 'sampling', to: 'stop-check', label: 'each token' })
+  const path = testInfo.outputPath('no-room.board.json')
+  await writeFile(path, JSON.stringify(next))
+  await page.getByLabel('Board file').setInputFiles(path)
+  const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Layout tidied to make room for new parts' })
+  await expect(toast).toBeVisible()
+  await expect(part(page, 'Stop check')).toBeVisible()
+  await toast.getByRole('button', { name: 'Undo' }).click()
+  await expect.poll(async () => {
+    const now = await places(page)
+    return Object.keys(before).every((id) => now[id]?.x === before[id]!.x && now[id]?.y === before[id]!.y)
+  }).toBe(true)
+  await expect(part(page, 'Stop check')).toBeVisible()
+})
+
 test('a sticky note on a card stays on it through a new revision and Tidy layout', async ({ page }, testInfo) => {
   const file = BOARDS[0]!
   await open(page, file)
