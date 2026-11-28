@@ -26,7 +26,7 @@ function Crumb() {
     <OpenMenu
       trigger={
         <button type="button" className={clsx(buttons.button, buttons.quiet, styles.crumb)} aria-label={name}>
-          <BrandMark size={16} className={styles.mark} />
+          <BrandMark className={styles.mark} />
           <span className={styles.crumbText}>{name}</span>
           <ChevronDown className={styles.chevron} size={12} strokeWidth={1.5} aria-hidden="true" />
         </button>

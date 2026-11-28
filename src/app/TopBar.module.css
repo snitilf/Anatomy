@@ -19,12 +19,12 @@
   min-width: 0;
 }
 
-/* The mark and the word, on one line. The mark sits 6px from the word and is as high as its capitals and a little more. */
+/* The mark and the word, on one line. The mark is 16px and sits 4px from the word; its drawing keeps 2px of air, so the stem ends 6px from it. */
 .brand {
   grid-column: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   padding: 0 var(--space-2);
   min-width: 0;
 }

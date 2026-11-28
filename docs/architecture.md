@@ -676,8 +676,13 @@ Sending feedback to a folder still writes `feedback.json` when the text of the `
 ## The icon and the mark
 
 The page has an SVG icon, `public/favicon.svg`, which `index.html` links by a path that Vite rewrites to a relative one, so the hosted copy finds it under `/Anatomy/` and the zip finds it in its folder.
-The file draws in the colors of the tokens and switches with `prefers-color-scheme` inside the SVG.
-The same drawing, a part, a connection, and the part it leads to, is `BrandMark` in `src/app/BrandMark.tsx`, which sits beside the word "Anatomy" on the start screen and stays in the Open menu trigger once a board is open, taking its colors from the tokens.
+The icon is the mark of Anatomy, Blade: an A cut from one solid form, one path in one flat ink with no tile behind it.
+The file carries the two values of `--fg` itself, `#1a1b23` and `#e8e9ef`, and switches between them with `prefers-color-scheme` inside the SVG, because an icon cannot read the tokens of the page.
+If `--fg` changes, change the icon to match.
+The same path is `BrandMark` in `src/app/BrandMark.tsx`, filled with `var(--fg)` so it follows the theme with the text.
+It sits 4 px from the word "Anatomy" on the start screen and stays in the Open menu trigger once a board is open, at 16 px in both places.
+The drawing is fitted to 16 px on a 24 grid: its flat top, its baseline, and its feet fall on whole pixels at 16, 32, 48, and 64 px, and between pixels at 18, 20, and 24 px.
+`src/app/BrandMark.test.tsx` holds the mark to one path and to the same drawing as the icon.
 The page has two `theme-color` tags, one for each color scheme, in the color of the top bar (`--frame`).
 `public/theme.js` and `src/theme/theme.ts` give both tags the color of the theme in use, so the browser bar follows a stored choice and the settings menu.
 `scripts/identity.test.ts` holds the colors of the icon and of the tags to the tokens.

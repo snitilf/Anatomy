@@ -33,15 +33,18 @@ describe('the icon of the page', () => {
     expect(html).not.toContain('href="data:,"')
   })
 
-  it('draws in the colors of the tokens, and switches with the color scheme of the browser', () => {
+  it('draws one path in the text color of each theme, and switches with the color scheme of the browser', () => {
     const svg = read(`public/${attr(icon!, 'href')!.slice(1)}`)
     expect(svg).toMatch(/^<svg[^>]*xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)
-    expect(svg).toContain('@media (prefers-color-scheme: dark)')
-    const colors = new Set([...svg.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((m) => m[0].toLowerCase()))
-    for (const theme of ['light', 'dark'] as const) {
-      expect(colors, `the ${theme} accent`).toContain(token('--accent', theme))
-      expect(colors, `the ${theme} ink`).toContain(token('--fg', theme))
-    }
+    expect(svg).toMatch(/^<svg[^>]*viewBox="0 0 24 24"/)
+    // One flat ink and nothing else: no tile, no background, no border, no second part.
+    expect([...svg.matchAll(/<(path|rect|circle|ellipse|line|polyline|polygon|g|use)\b/g)].map((m) => m[1])).toEqual(['path'])
+    expect(svg).not.toMatch(/stroke/)
+    const [light, dark] = svg.split('@media (prefers-color-scheme: dark)')
+    expect(dark, 'a rule for the dark scheme').toBeDefined()
+    const hex = (text: string) => [...new Set([...text.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((m) => m[0].toLowerCase()))]
+    expect(hex(light!)).toEqual([token('--fg', 'light')])
+    expect(hex(dark!)).toEqual([token('--fg', 'dark')])
     // Nothing in it reaches out: no script, no link, no external image.
     expect(svg).not.toMatch(/<script|href=|url\(|<image|<foreignObject/i)
   })
