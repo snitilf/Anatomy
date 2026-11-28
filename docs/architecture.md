@@ -176,10 +176,14 @@ A part that the revision added has no place yet.
 It takes the nearest free spot along the flow, so a part that a line runs to sits to the right of where the line starts, with room for the label of that line, and never above it while a spot along the flow is free.
 Beside its neighbor it may sit up to 64 units higher or lower, so a gap a few units short still takes it.
 A spot is free when the card keeps 48 units from every card, from the places of the removed parts, and from the user's sticky notes, text, and proposed parts, stays out of the areas of other groups, and its own group's area, grown to take it in, covers no card that it did not cover before.
-A part of a group that finds no free spot still joins its group, and nothing is ever drawn over another group: it takes the best spot beside a member that is clear of cards, and the cards and groups that its grown area covers step aside as blocks, the way a drop pushes them (`settleMoves`).
-This is the one case where a revision moves cards that were already on the map, because a few moved neighbors read better than one group's area drawn over another.
 A part with no neighbor on the map goes to the right of everything.
-A part that the revision moved to another group leaves its place, and any move the user made of it, and is placed like a new part, beside its new group.
+A part that the revision moved to another group leaves its place, and any move the user made of it, and is placed like a new part, beside its new group, and its marks go with it.
+
+The one exception to holding still: the board is tidied, with undo, when a new part has no room.
+When a new or regrouped part finds no free spot in or beside its own group, its group's area would reach over another group.
+The revision then lays the whole board out again, exactly as Tidy layout does, and marks and proposed parts go with the card they cover most.
+The toast "Layout tidied to make room for new parts" says so and offers Undo, and one step of undo, from the toast or the keys, goes back to the still layout with the new part where it found a place.
+The board is framed whole in both.
 Its place is stored with the others when the revision opens, so it never moves later.
 A card whose new text makes it taller pushes aside the held cards that it now covers.
 
@@ -192,7 +196,7 @@ A new or changed connection carries the same tab against its label: above it, or
 New is solid ink and Changed is outlined, so the two differ without color, and the word says it in any case.
 A part that the revision removed stays as a ghost where it was: a faint, hollow card with its name struck through and the tab Removed.
 A ghost takes no pointer and no focus, and a fit frames it with the cards.
-When the revision is marked reviewed, or the board opens again with no revision before it, the places of removed parts go too, so they hold no new card off.
+When the revision is marked reviewed, or the board opens again with no revision before it, the places of removed parts go too, from the layer and from its undo history, so they hold no new card off.
 For a screen reader, the description of a part and the name of a connection start with the same words, for example "Changed in revision 2: summary."
 The far view reads groups, so it shows no tabs and no ghosts.
 
@@ -322,6 +326,7 @@ interface Layer {
 
 The Zod schema in `src/layer/model.ts` is the source of the types.
 A field at the top of the layer that this version does not know, written by a later version, is left out when the layer is read, so the user's work still opens; every field it knows is checked as before.
+In a repository folder, the whole file is then kept once as `layer.backup.json`, since the next save leaves those fields out, and a notice says so.
 It sets a cap on every list, on the points of a stroke (2000), on text lengths, and on coordinates.
 The IDs of the items that the user makes have a prefix:
 
@@ -376,6 +381,7 @@ A step is one of these changes:
 
 Selection, tool, theme, camera, and walkthroughs are not part of the history.
 Opening a revision and sending feedback are barriers, so nothing before them can be undone.
+A revision that was tidied to make room for a new part keeps one step: the still layout before the tidy.
 After an undo or redo, the app selects an item that came back.
 It clears a selection whose item went away.
 
