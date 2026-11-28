@@ -162,7 +162,8 @@ test('send to the agent, get answers in the next revision, dismiss, restore, and
   // The test board has connections with no explanation, so the tool adds one warning line.
   expect(await runTool(page, ['validate'])).toEqual({ code: 0, stdout: expect.stringMatching(/^\.anatomy\/board\.json: valid, revision 1(, 1 warning\nrelationships: .*)?\n$/s) })
   await page.keyboard.press('Escape')
-  await expect(sendButton(page)).toHaveAccessibleName('Send to agent')
+  // Until the agent writes its revision, the button says it is waiting.
+  await expect(sendButton(page)).toHaveAccessibleName('Send to agent, waiting for the agent')
 
   // A second send before the agent answers carries the first items again.
   await addNote(page, 'Note', 'The redirect should be cached.')

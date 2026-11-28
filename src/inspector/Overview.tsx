@@ -20,6 +20,7 @@ import { Group, Heading } from './bits'
 import { boardMeta } from './boardMeta'
 import { partName } from './names'
 import { NotesSection } from './notes'
+import { RevisionChange } from './RevisionChange'
 import { spotOf, spotProps } from './spotlight'
 import { usePanel } from './panelContext'
 import type { Selection } from '../app/state'
@@ -138,6 +139,7 @@ export function Overview({ board }: { board: Board }) {
         <p className={styles.lead}>{board.goal}</p>
         <p className={styles.boardMeta}>{boardMeta(board.components.length, groups, board.relationships.length, board.revision)}</p>
       </div>
+      <RevisionChange target={{ type: 'board' }} />
       <StartHereSection board={board} />
       {layer && <Yours board={board} layer={layer} />}
       <NotesSection target={{ type: 'board' }} />

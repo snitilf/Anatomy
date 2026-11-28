@@ -613,7 +613,7 @@ export function Canvas() {
     toldFor.current = board
     if (!roomMade) return
     camera.zoom('fit')
-    // A frame later, so it lands in front of the toast that says the revision is open.
+    // A frame later, so it comes once the new board is drawn.
     const frame = window.requestAnimationFrame(() => deletedToast('Layout tidied to make room for new parts', dispatch, store, () => camera.fitAfterLayout()))
     return () => window.cancelAnimationFrame(frame)
   }, [board, roomMade, camera, dispatch, store])

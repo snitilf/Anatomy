@@ -235,6 +235,11 @@
     display: none;
   }
 
+  /* The word says it, and the narrow button keeps its room for the top bar's other controls. */
+  .trigger[data-waiting] svg {
+    display: none;
+  }
+
   .short {
     display: inline;
   }

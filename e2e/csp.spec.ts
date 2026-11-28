@@ -127,18 +127,16 @@ for (const [system, stored] of [['light', 'dark'], ['dark', 'light']] as const) 
 }
 
 for (const scheme of ['light', 'dark'] as const) {
-  test(`toasts, hover, and bundle highlights still render in the ${scheme} theme`, async ({ page }, testInfo) => {
+  test(`toasts, hover, and bundle highlights still render in the ${scheme} theme`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme })
     await page.setViewportSize({ width: 1440, height: 900 })
-    // A toast.
+    // A toast: Tidy layout on a board that is laid out already says so in one.
     await open(page, SHORTENER)
-    const next = JSON.parse(await (await import('node:fs/promises')).readFile(SHORTENER, 'utf8')) as { revision: number; components: { summary: string }[] }
-    next.revision = 2
-    next.components[0]!.summary = 'Changed in revision 2'
-    const path = testInfo.outputPath('revision-2.board.json')
-    await (await import('node:fs/promises')).writeFile(path, JSON.stringify(next))
-    await page.getByLabel('Board file').setInputFiles(path)
-    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Revision 2 is open' })
+    await page.keyboard.press('ControlOrMeta+k')
+    const menu = page.getByRole('dialog', { name: 'Command menu' })
+    await menu.getByRole('combobox').fill('Tidy layout')
+    await page.keyboard.press('Enter')
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'The layout is already tidy' })
     await expect(toast).toBeVisible()
     await expect(toast).toHaveAttribute('data-mounted', 'true')
     await toast.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))

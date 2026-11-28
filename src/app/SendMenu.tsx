@@ -8,6 +8,7 @@ import { useCommand } from '../commands/context'
 import { ariaShortcut } from '../commands/keys'
 import { buildFeedback, serializeFeedback, unsentCount, type FeedbackDraft } from '../feedback/build'
 import { summarize } from '../feedback/summary'
+import { waitingForAgent } from '../feedback/waiting'
 import { StatusGlyph } from '../status/StatusGlyph'
 import { newId } from '../layer/edits'
 import { writeAgentFiles } from './agentFiles'
@@ -258,7 +259,9 @@ export function SendMenu({ className }: { className?: string | undefined }) {
     )
   }
 
-  const label = count > 0 ? `${view.label}, ${count} new` : view.label
+  // Sent, and the agent has not written back: the button says so until it does, or until there is something new to send.
+  const waiting = waitingForAgent({ sent: layer.sent, revision: board.revision, unanswered: again, unsent: count })
+  const label = count > 0 ? `${view.label}, ${count} new` : waiting ? `${view.label}, waiting for the agent` : view.label
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Tip label={view.label} keys={view.shortcut} holdWhile={open} consumeReturnFocus={consumeReturnFocus}>
@@ -269,10 +272,12 @@ export function SendMenu({ className }: { className?: string | undefined }) {
               className={clsx(buttons.button, count > 0 && buttons.primary, styles.trigger, className)}
               aria-label={label}
               data-new={count > 0 ? '' : undefined}
+              data-waiting={waiting ? '' : undefined}
               aria-keyshortcuts={ariaShortcut('Mod+Enter')}
             >
-              <span className={styles.long}>{view.label}</span>
-              <span className={styles.short}>Send</span>
+              {waiting && <StatusGlyph state="sent" />}
+              <span className={styles.long}>{waiting ? 'Waiting for the agent' : view.label}</span>
+              <span className={styles.short}>{waiting ? 'Waiting' : 'Send'}</span>
               {count > 0 && <span className={styles.badge}>{count}</span>}
             </button>
           }

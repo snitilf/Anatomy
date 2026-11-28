@@ -62,8 +62,12 @@ Your agent does the thinking, and Anatomy shows it.
    Read .anatomy/feedback.json and answer every item in the next revision of .anatomy/board.json. The format is in .anatomy/README.md.
    ```
 
+   Until the agent writes back, the button reads **Waiting for the agent**.
+   A banner at the top of the map then says what arrived, for example "Revision 2: 5 answers, 1 new part, 1 changed part.", with a **Review** button, and the title of the browser tab counts it while you are in another tab.
    The answers appear next to your marks.
    The map holds still: what the agent added, changed, or removed is marked on it until you mark the revision reviewed.
+   A changed part shows its words before and after in its details.
+   A file that is not a valid board, or whose revision is not higher, is not opened, and a quiet warning says why.
 
 Commit `.anatomy/board.json` with the code it explains.
 Add `.anatomy/layer.json` and `.anatomy/feedback.json` to `.gitignore`, because they hold your own working state.

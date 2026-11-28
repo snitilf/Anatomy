@@ -81,7 +81,7 @@ The top bar (`src/app/TopBar.tsx`) is 40 px high and laid out as a three-zone gr
 The left zone holds the brand mark and source name (which open the Open menu), the breadcrumb trail (`src/app/BoardCrumbs.tsx`), and the save status when it has something to say.
 `measureCrumbRoom` in `src/app/crumbRoom.ts` measures the left zone alone so the trail folds before it crowds the center switch.
 The center zone holds the segmented `Map | Overview` switch (`src/app/ViewTabs.tsx`), which stays fixed in the middle of the bar regardless of title, selection, or count.
-The right zone holds Search, Send to agent (which reserves room for its count chip), the sidebar toggle (which keeps its 28 px slot hidden on the Overview so neighbors do not shift), and Settings.
+The right zone holds Search, Send to agent (which reserves room for its count chip, and reads "Waiting for the agent" after a send until the agent writes back), the sidebar toggle (which keeps its 28 px slot hidden on the Overview so neighbors do not shift), and Settings.
 On a phone, the left zone shows the mark and chevron as the Open menu trigger, the center holds the view switch, and the right holds Search, Send, and Settings.
 The Open menu and the command menu both offer a Start screen action that closes the board and moves focus to the start screen's primary button.
 The start screen's lead line is the page `h1`, and while the map is open a visually hidden `h1` holds the board title instead of the 13 px breadcrumb.
@@ -205,6 +205,36 @@ All of it starts at once, and nothing travels, because the map holds still.
 With reduced motion, everything is at rest from the start.
 A view that the reader left fitted stays fitted: when a revision brings a part or a ghost in beyond it, the whole board is framed again.
 A view that the reader moved stays where it is.
+
+### What arrived: the banner, the count, and the comparison
+
+`revisionSummary(previous, current, feedback)` in `src/layer/revisionSummary.ts` is the one place that counts what a revision did.
+It takes the added, changed, and removed parts and connections from `diffBoards`, the fields of the board's own words that changed from `changedFields`, and the answers from `responses`.
+It counts only the answers to items in `layer.sent`, because the app drops the rest, and none when the revision does not rise.
+`summaryLine` turns it into one sentence, such as "Revision 2: 5 answers, 1 new part, 1 changed part.", and `summaryTotal` into the count for the tab title.
+The Review tab opens with the same sentence.
+The map's markers and the Review list use `changes` from the same `diffBoards`, so nothing is compared twice.
+
+When a revision opens over the same board, the reducer keeps the summary as `revisionNotice`.
+`RevisionBanner` (`src/app/RevisionBanner.tsx`) shows it in the notices at the top of the map, until the user acts: **Review** opens the Review tab and the sidebar, **Dismiss** only closes the banner, and **Mark reviewed** closes it with the markers.
+The banner stays away from the Overview, which says the same in Needs you.
+It replaces the old toast, so the only toast that can come with a revision is the one that offers Undo for a tidied layout.
+`useTabTitle` puts the count in front of the title of the tab, as "(4) Anatomy" and "(99+) Anatomy", for as long as the banner is there, so a revision that arrives in another tab shows in the tab strip.
+
+After a send, the Send button reads **Waiting for the agent** while the revision that was sent is still the one open, some of the items sent have no answer, and the user has nothing new to send (`waitingForAgent` in `src/feedback/waiting.ts`).
+A higher revision ends the wait, and a new note takes the button back as the primary action.
+The wait comes from `layer.sent`, so a reload keeps it.
+
+A changed part, connection, or the board shows what changed in its details, under "Changed in revision N" (`RevisionChange`; the word comparison in `RevisionFields` loads the first time one is opened).
+`fieldChanges` in `src/inspector/fieldChanges.ts` lists the fields that differ in plain words, with the old words and the new.
+`diffText` in `src/inspector/textDiff.ts` compares them by word, with no library, and marks the words that left (struck through) and the words that came (underlined), so the change reads without color.
+It compares a text that has no spaces, such as Chinese or Japanese, by the words a reader sees, never splits an emoji, and marks two texts that share only a few scattered words as one change.
+Long text that did not change is cut to about 80 characters around each change.
+
+When the latest `board.json` cannot be opened, the board that is open stays, and a second quiet notice under the banner says why (`boardProblem`).
+It is one of two: the file is not a valid board ("board.json has 2 problems, so revision 2 stays open", with the first problem), or it is valid and its revision is not higher ("board.json changed but is still revision 2").
+A file that holds the open board unchanged says nothing.
+The notice goes with Dismiss, or when a higher revision opens.
 
 **Tidy layout** in the command menu lays the board out again, as if it opened for the first time (`tidyLayout`).
 The cards that the user moved go back into the layout, and a card that the user resized keeps its size while the cards it covers step aside.
@@ -626,12 +656,14 @@ Otherwise, the app shows "Reopen" with the folder name, because the browser need
 If `board.json` is missing, the app says so and points to "How to make a board".
 
 While the page is visible, the app looks at `board.json` every 2 seconds.
-It also looks at it when the window gains focus.
+While the page is hidden, it keeps looking, every 10 seconds, so a revision that arrives in another tab is found and counted in the tab title.
+It also looks at once when the window gains focus or the page becomes visible.
 Each look compares the modification time and the size of the file.
 The app reads the file only after the file stayed the same for two looks in a row.
 It opens the file only if the file is valid and its `revision` is higher.
 A new revision goes through the update review.
-A look never shows an error.
+A file that was read and not opened keeps the board that is open, and shows a quiet notice once for each change of the file (`onProblem` in `src/workspace/watch.ts`).
+A look that cannot read the folder shows nothing and tries again.
 
 The app writes `README.md`, the topics in `guide/`, `board.schema.json`, and `anatomy.mjs` when the user clicks **Copy prompt** or sends feedback.
 It also writes them once each time a folder that has a `.anatomy` board opens, so a clone or an update of Anatomy does not leave them missing or old.

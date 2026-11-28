@@ -454,12 +454,12 @@ describe('a new version of a board you already have', () => {
     await saved()
 
     await openFile(first.container, modifiedRefund(), 'refund.json')
-    // A new revision does not switch tabs. A toast says so and offers the review.
-    expect(await screen.findByText('Revision 2 is open')).toBeInTheDocument()
+    // A new revision does not switch tabs. A banner says what arrived and offers the review.
+    expect(await screen.findByRole('status', { name: 'Revision update' })).toHaveTextContent(/^Revision 2: /)
     const tab = await panel().findByRole('tab', { name: /Review/ })
     expect(tab).toHaveTextContent('2')
     expect(panel().getByRole('heading', { name: refund.title })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(within(screen.getByRole('status', { name: 'Revision update' })).getByRole('button', { name: 'Review' }))
 
     const changes = panel().getByRole('region', { name: 'Changed in revision 2' })
     expect(within(changes).getByRole('button', { name: part('payout-preview').label })).toBeInTheDocument()

@@ -31,6 +31,7 @@ import {
   updateMark,
   updateProposal,
 } from '../layer/edits'
+import { revisionSummary, summaryTotal, type RevisionSummary } from '../layer/revisionSummary'
 import { dropRemovedPlaces, holdPlaces, placeRevision, tidyLayout } from '../layer/places'
 import { emptyLayer, type Layer, type Mark, type Note, type Proposal, type Response, type Sent, type Target } from '../layer/model'
 import { emptyHistory, remember, stepBack, stepForward, type History } from './history'
@@ -43,6 +44,13 @@ export type Selection = { type: 'board' } | { type: 'component' | 'relationship'
 
 /** The selection of the bundle between two ends, as `bundleGroups` names them. */
 export const bundleSelection = (a: string, b: string): Selection => ({ type: 'bundle', id: bundleKey(a, b), a, b })
+
+/** Why the latest `board.json` was not opened. The board that is open stays as it was. */
+export type BoardProblemNotice =
+  /** The file is not a valid board. `first` is its first problem. */
+  | { kind: 'invalid'; count: number; first: string }
+  /** The file is valid, but its revision (`found`) is not higher than the one open. */
+  | { kind: 'not-rising'; found: number }
 
 export interface AppState {
   board?: Board
@@ -58,6 +66,10 @@ export interface AppState {
   selection?: Selection
   /** The revision had no room for a new part in its group, so the layout was tidied. One undo puts the still layout back. */
   roomMade?: true
+  /** What the latest revision did. It stays until the user reviews or dismisses it. */
+  revisionNotice?: RevisionSummary
+  /** The latest file the agent wrote could not be opened, so this board stays open. */
+  boardProblem?: BoardProblemNotice
   /** The walkthrough that is playing, and the step it shows. */
   scenario?: { id: string; step: number }
 }
@@ -105,6 +117,10 @@ export type Action =
   | { type: 'closed' }
   | { type: 'noticeShown'; message: string }
   | { type: 'changesDismissed' }
+  /** The banner for the latest revision goes. The changes stay for the Review tab. */
+  | { type: 'revisionNoticeDismissed' }
+  /** The latest file could not be opened, or, with `undefined`, it is no longer a problem. */
+  | { type: 'boardProblem'; problem: BoardProblemNotice | undefined }
   /** The feedback was handed to the agent. Nothing before it can be undone. */
   | { type: 'feedbackSent'; sent: Sent }
   | { type: 'undo' }
@@ -240,6 +256,8 @@ export function reducer(state: AppState, action: Action): AppState {
       if (was && changes) {
         next.previousBoard = was
         next.changes = changes
+        const summary = revisionSummary(was, board, received.sent)
+        if (summaryTotal(summary) > 0) next.revisionNotice = summary
         if (selectionExists(board, layer, state.selection)) next.selection = state.selection as Selection
       }
       return next
@@ -259,11 +277,22 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'changesDismissed': {
       // The ghosts go, so the places they kept go too: they would hold new cards off, and leave Tidy layout work to do.
       // Undo and redo must not bring them back either.
-      const { changes: _c, ...rest } = state
+      const { changes: _c, revisionNotice: _n, ...rest } = state
       const board = state.board
       if (!state.layer || !board) return rest
       const clean = (l: Layer) => dropRemovedPlaces(l, board)
       return { ...rest, layer: clean(state.layer), history: { past: state.history.past.map(clean), future: state.history.future.map(clean) } }
+    }
+    case 'revisionNoticeDismissed': {
+      const { revisionNotice: _dropped, ...rest } = state
+      return state.revisionNotice ? rest : state
+    }
+    case 'boardProblem': {
+      if (!state.board) return state
+      const same = JSON.stringify(state.boardProblem) === JSON.stringify(action.problem)
+      if (same) return state
+      const { boardProblem: _dropped, ...rest } = state
+      return action.problem ? { ...rest, boardProblem: action.problem } : rest
     }
     case 'openFailed':
       return { ...state, openErrors: { fileName: action.fileName, errors: action.errors } }

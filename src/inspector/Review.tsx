@@ -8,6 +8,7 @@ import type { Selection } from '../app/state'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
 import { itemsOf, type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
+import { revisionSummary, summaryLine } from '../layer/revisionSummary'
 import { summarizeLayer } from '../layer/status'
 import { adoptedNow, hasChanges, reviewCounts } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
@@ -322,32 +323,16 @@ function Changes({ board, previous, changes }: { board: Board; previous: Board |
   )
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-
-/** One sentence for what the revision did. */
-function summary(board: Board, answers: number, changes: BoardDiff | undefined): string {
-  const clauses: string[] = []
-  if (answers > 0) clauses.push(`answered ${plural(answers, 'item')}`)
-  if (changes) {
-    const count = (pick: (c: BoardDiff['added']) => readonly string[]) => pick(changes.added).length + pick(changes.changed).length + pick(changes.removed).length
-    const parts = count((c) => c.components)
-    const lines = count((c) => c.relationships)
-    if (parts > 0) clauses.push(`changed ${plural(parts, 'part')}`)
-    if (lines > 0) clauses.push(`changed ${plural(lines, 'connection')}`)
-  }
-  if (clauses.length === 0) return `Revision ${board.revision} is open.`
-  return `Revision ${board.revision} ${clauses.join(' and ')}.`
-}
-
 /** Everything that needs a look after a new revision: answers, broken notes and links, and what changed. */
 export function Review() {
   const { board, layer, previous, changes } = useAppStore(useShallow((s) => ({ board: s.board, layer: s.layer, previous: s.previousBoard, changes: s.changes })))
   if (!board || !layer) return null
   const outdated = summarizeLayer(board, layer).outdated
-  const counts = reviewCounts(board, layer, changes)
+  // The same sentence as the banner. Once the changes are marked reviewed, only the answers are left to count.
+  const line = summaryLine(revisionSummary(hasChanges(changes) ? previous : undefined, board, layer.sent)) ?? `Revision ${board.revision} is open.`
   return (
     <div className={styles.view}>
-      <p className={styles.summary}>{summary(board, counts.answers, changes)}</p>
+      <p className={styles.summary}>{line}</p>
       <Answers board={board} previous={previous} layer={layer} />
       <NeedsRelinking board={board} layer={layer} previous={previous} />
       {outdated.length > 0 && (

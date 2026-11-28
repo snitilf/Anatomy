@@ -39,6 +39,15 @@
   display: contents;
 }
 
+/* A board.json that could not be opened: a quiet notice in the page, above the title, so it never covers the title or the goal. */
+.layout > .problem {
+  order: 0;
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-bottom: var(--space-6);
+  box-shadow: none;
+}
+
 /* Narrow and phone order: Head, Needs you, Start here, Scope, Parts, Connections, Open questions, Details. */
 .head {
   order: 1;

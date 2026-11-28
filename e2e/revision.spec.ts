@@ -87,7 +87,7 @@ const places = (page: Page) =>
 
 async function openRevision(page: Page, path: string, revision: number) {
   await page.getByLabel('Board file').setInputFiles(path)
-  await expect(page.getByText(`Revision ${revision} is open`)).toBeVisible()
+  await expect(page.getByRole('status', { name: 'Revision update' })).toContainText(`Revision ${revision}:`)
 }
 
 async function command(page: Page, name: string) {
@@ -206,6 +206,12 @@ test('a new part with no room in its group tidies the layout, says so, and Undo 
   const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Layout tidied to make room for new parts' })
   await expect(toast).toBeVisible()
   await expect(part(page, 'Stop check')).toBeVisible()
+  // The banner and the toast say different things in different places: one toast, and the two never overlap.
+  const banner = page.getByRole('status', { name: 'Revision update' })
+  await expect(banner).toContainText('Revision 2: 1 new part, 1 new connection.')
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(1)
+  const [a, b] = await Promise.all([banner.boundingBox(), toast.boundingBox()])
+  expect(a!.y + a!.height).toBeLessThanOrEqual(b!.y)
   await toast.getByRole('button', { name: 'Undo' }).click()
   await expect.poll(async () => {
     const now = await places(page)

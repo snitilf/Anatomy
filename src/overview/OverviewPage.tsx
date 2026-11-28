@@ -4,6 +4,7 @@ import { Fragment, useCallback, useContext, useLayoutEffect, useMemo, useRef, us
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { ITEM_LABEL } from '../app/labels'
+import { BoardProblem } from '../app/RevisionBanner'
 import rowStyles from '../app/rows.module.css'
 import { useAppStore } from '../app/store'
 import { useUiApi } from '../app/ui'
@@ -412,6 +413,7 @@ export function OverviewPage() {
       }}
     >
       <div className={styles.layout}>
+        <BoardProblem className={styles.problem} />
         <div className={styles.main}>
           {head}
           {needsSection}

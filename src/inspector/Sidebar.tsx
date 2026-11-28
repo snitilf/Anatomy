@@ -1,7 +1,6 @@
 import clsx from 'clsx'
 import { ChevronLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
-import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import { Segmented, type SegmentedOption } from '../app/Segmented'
@@ -9,11 +8,10 @@ import type { Selection } from '../app/state'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { SIDEBAR, useUi, useUiApi } from '../app/ui'
 import { usePhone } from '../app/usePhone'
-import { showView } from '../app/viewActions'
 import { findItem } from '../layer/edits'
 import type { Layer, Target } from '../layer/model'
 import type { Board } from '../board/schema'
-import { hasChanges, reviewCounts } from '../notes/review'
+import { reviewCounts } from '../notes/review'
 import { BundleView } from './BundleView'
 import { ConnectionView } from './ConnectionView'
 import { Overview } from './Overview'
@@ -25,9 +23,6 @@ import { Sheet } from './Sheet'
 import { useSpotlightReset } from './spotlight'
 import styles from './Sidebar.module.css'
 import { LinkView, MarkView, ProposalView } from './YoursViews'
-
-/** One toast at a time says a revision is open, and the Overview can dismiss it by this name. */
-const REVISION_TOAST = 'revision-open'
 
 const selectionKey = (s: Selection | undefined) => (s && s.type !== 'board' ? `${s.type}:${s.id}` : 'board')
 
@@ -123,34 +118,6 @@ function Body({ header }: { header?: ReactNode }) {
   useEffect(() => {
     if (!reviewing) scrollRef.current?.scrollTo?.({ top: 0 })
   }, [key, board?.id, reviewing])
-
-  // A new revision does not switch tabs. A toast says it is open and offers the review.
-  // The Overview says the same in Needs you, so the toast stays away from it and goes when it opens.
-  const view = useUi((u) => u.view)
-  useEffect(() => {
-    if (view === 'overview') toast.dismiss(REVISION_TOAST)
-  }, [view])
-  const revision = useRef(board ? `${board.id}:${board.revision}` : '')
-  useEffect(() => {
-    const now = board ? `${board.id}:${board.revision}` : ''
-    if (revision.current === now) return
-    const sameBoard = revision.current.split(':')[0] === board?.id
-    revision.current = now
-    // Answers count too: a revision can answer the user without changing a part.
-    if (board && sameBoard && ui.store.getState().view === 'map' && (hasChanges(changes) || (board.responses?.items.length ?? 0) > 0)) {
-      toast(`Revision ${board.revision} is open`, {
-        id: REVISION_TOAST,
-        action: {
-          label: 'Review',
-          onClick: () => {
-            showView(ui, board.id, 'map')
-            ui.setSidebarOpen(true)
-            ui.setTab('review')
-          },
-        },
-      })
-    }
-  }, [board, changes, ui])
 
   // A change of view made from inside the panel is also said aloud, because the heading it focuses is not a control.
   const [announced, setAnnounced] = useState('')

@@ -5,6 +5,7 @@ import { parseBoard, type BoardProblem } from '../board/validate'
 import { LESSON_IDS } from '../lessons/catalog'
 import { makeExport, serializeExport } from '../layer/files'
 import { emptyLayer, hasUserWork, serializeLayer, type Layer } from '../layer/model'
+import { diffBoards } from '../layer/diff'
 import { readLayer } from '../layer/upgrade'
 import { openStore, StorageError, type BoardStore, type BoardSummary } from '../workspace/db'
 import { browserFolderAccess, canPickFolders, FILES, FileTooLargeError, type FileName, type FileStamp, type Folder, type FolderAccess } from '../workspace/folder'
@@ -300,6 +301,21 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
             // A new revision of the open board goes through the update review. Anything else opens like the folder itself.
             if (open?.id === next.id) dispatch({ type: 'boardOpened', board: next, warnings, previous: open, now: new Date() })
             else void openFolderLater.current(target)
+          },
+          onProblem: (problem) => {
+            const open = appStore.getState().board
+            if (!open) return
+            if (problem.kind === 'invalid') {
+              const first = problem.errors[0]
+              dispatch({ type: 'boardProblem', problem: { kind: 'invalid', count: problem.errors.length, first: first ? (first.path ? `${first.path}: ${first.message}` : first.message) : '' } })
+              return
+            }
+            // A file that is the board that is open, written again, is no problem. One with other words and the same number is.
+            const differs = problem.board.id === open.id && (() => {
+              const d = diffBoards(open, problem.board)
+              return d.boardChanged || [d.added, d.removed, d.changed].some((c) => c.components.length + c.relationships.length > 0)
+            })()
+            dispatch({ type: 'boardProblem', problem: differs ? { kind: 'not-rising', found: problem.board.revision } : undefined })
           },
         })
       }
