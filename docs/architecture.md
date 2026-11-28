@@ -612,6 +612,7 @@ For an item that is not a note, Reply opens the item's own view, where its words
 The card in front holds the keyboard focus, so the step always starts from it, and its row is pressed the way a finger would: the map selects the item, and the spotlight shows it.
 The card in front shows the whole question, and its Keep, Dismiss, and Reply are described by it for assistive technology.
 After the selection camera has moved, whatever of the item is still off the map is framed (`camera.show`), for every item with a place on the map: a part, both ends of a connection as drawn, a link, a new part, and a drawing.
+Both cameras use one free area, whose bottom is above the bottom controls and the toast slot (`freeBottom` in `src/canvas/camera.ts`), so a part the selection camera brings in is never framed a second time.
 On a phone, the item is framed above the sheet.
 A step opens a closed sidebar, a closed Answers group, and a lowered phone sheet.
 The keys work only while the Review tab is in front, and never while a text field has the focus.
