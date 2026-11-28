@@ -173,9 +173,13 @@ The layout stays a pure function of the board and these places, and never reads 
 
 A part that the revision added has no place yet.
 `placeBeside` in `src/layout/beside.ts` puts it next to a neighbor on the map: a part it is joined to, in its own group first, or else a part of its group.
-It takes the nearest free spot along the flow, so a part that a line runs to sits to the right of where the line starts, with room for the label of that line.
-A spot is free when the card keeps 48 units from every card and from the places of the removed parts, stays out of the areas of other groups, and its own group's area, grown to take it in, covers no card that it did not cover before.
+It takes the nearest free spot along the flow, so a part that a line runs to sits to the right of where the line starts, with room for the label of that line, and never above it while a spot along the flow is free.
+Beside its neighbor it may sit up to 64 units higher or lower, so a gap a few units short still takes it.
+A spot is free when the card keeps 48 units from every card, from the places of the removed parts, and from the user's sticky notes, text, and proposed parts, stays out of the areas of other groups, and its own group's area, grown to take it in, covers no card that it did not cover before.
+A part of a group that finds no free spot still joins its group, and nothing is ever drawn over another group: it takes the best spot beside a member that is clear of cards, and the cards and groups that its grown area covers step aside as blocks, the way a drop pushes them (`settleMoves`).
+This is the one case where a revision moves cards that were already on the map, because a few moved neighbors read better than one group's area drawn over another.
 A part with no neighbor on the map goes to the right of everything.
+A part that the revision moved to another group leaves its place, and any move the user made of it, and is placed like a new part, beside its new group.
 Its place is stored with the others when the revision opens, so it never moves later.
 A card whose new text makes it taller pushes aside the held cards that it now covers.
 
@@ -184,10 +188,11 @@ For this reason, the first mark or proposed part also stores where every card is
 
 The map marks what the revision did until the user marks it reviewed, from the Review tab or the command menu (`revisionMarks` in `src/canvas/revisionMarks.ts`).
 A new or changed part carries a tab across the top edge of its card with the word New or Changed.
-A new or changed connection carries the same tab just above its label.
+A new or changed connection carries the same tab against its label: above it, or below, left, or right when a card is in the way (`tabSide`).
 New is solid ink and Changed is outlined, so the two differ without color, and the word says it in any case.
 A part that the revision removed stays as a ghost where it was: a faint, hollow card with its name struck through and the tab Removed.
 A ghost takes no pointer and no focus, and a fit frames it with the cards.
+When the revision is marked reviewed, or the board opens again with no revision before it, the places of removed parts go too, so they hold no new card off.
 For a screen reader, the description of a part and the name of a connection start with the same words, for example "Changed in revision 2: summary."
 The far view reads groups, so it shows no tabs and no ghosts.
 
@@ -201,7 +206,8 @@ A view that the reader moved stays where it is.
 The cards that the user moved go back into the layout, and a card that the user resized keeps its size while the cards it covers step aside.
 A mark or a proposed part over a card goes with the card that it covers most, and the other marks stay where they are.
 The new places are stored, so the ghosts leave the map, and the whole board is framed once it is drawn.
-It is one step of undo.
+It is one step of undo, and an undo or redo across it frames the board again.
+Its toast closes once history moves, so its Undo never reaches a step before the tidy.
 On a board that is laid out already, it says so and changes nothing.
 
 ### Connections
@@ -315,6 +321,7 @@ interface Layer {
 ```
 
 The Zod schema in `src/layer/model.ts` is the source of the types.
+A field at the top of the layer that this version does not know, written by a later version, is left out when the layer is read, so the user's work still opens; every field it knows is checked as before.
 It sets a cap on every list, on the points of a stroke (2000), on text lengths, and on coordinates.
 The IDs of the items that the user makes have a prefix:
 
