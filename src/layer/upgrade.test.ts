@@ -63,3 +63,12 @@ describe('readLayer', () => {
     expect(readLayer({ ...layer, reconnects: [{ id: 'edit-aaaaaa', relationshipId: 'r', createdAt: iso }] }).ok).toBe(false)
   })
 })
+
+describe('a layer from a later version', () => {
+  it('opens with the fields this version does not know left out, and still checks the ones it knows', () => {
+    const later = { ...emptyLayer('refund-approval'), somethingNew: { a: 1 } }
+    const read = readLayer(later)
+    expect(read).toEqual({ ok: true, layer: emptyLayer('refund-approval') })
+    expect(readLayer({ ...later, positions: { 'a-card': { x: 'left', y: 0 } } }).ok).toBe(false)
+  })
+})

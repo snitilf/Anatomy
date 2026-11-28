@@ -47,7 +47,7 @@ function scrub(value: unknown, gone: ReadonlySet<string>): unknown {
  * Writes the next revision: a part added next to a neighbor, a part removed with everything that names it, a surviving connection
  * with a new label, and a surviving part with a new summary.
  */
-async function revise(file: string, testInfo: TestInfo) {
+async function revise(file: string, testInfo: TestInfo, extra = 0) {
   const board = JSON.parse(await readFile(file, 'utf8')) as BoardFile
   const next = structuredClone(board)
   next.revision += 1
@@ -65,6 +65,10 @@ async function revise(file: string, testInfo: TestInfo) {
   const { position: _p, lesson: _l, ...base } = anchor
   next.components.push({ ...base, id: 'added-in-revision', label: 'Added in revision', summary: 'A part the next revision adds.' })
   next.relationships.push({ ...structuredClone(next.relationships[0]!), id: 'added-line', from: anchor.id, to: 'added-in-revision', label: 'hands over to' })
+  for (let i = 0; i < extra; i++) {
+    next.components.push({ ...base, id: `extra-${i}`, label: `Extra part ${i}`, summary: 'Another part the next revision adds.' })
+    next.relationships.push({ ...structuredClone(next.relationships[0]!), id: `extra-line-${i}`, from: anchor.id, to: `extra-${i}`, label: 'also hands over to' })
+  }
   const path = testInfo.outputPath(`revision-${next.revision}.board.json`)
   await writeFile(path, JSON.stringify(next))
   return { path, board, removed, line, summarized, anchor }
@@ -125,6 +129,15 @@ for (const file of BOARDS) {
     await expect(page.locator('[data-edge-revision][data-edge="added-line"]').getByText('New', { exact: true })).toBeVisible()
     await expect(page.getByTestId(`rf__edge-${line.id}`)).toHaveAttribute('aria-label', new RegExp(`Changed in revision ${revision}: label\\.$`))
     await expect(page.locator(`[data-edge-revision][data-edge="${line.id}"]`).getByText('Changed', { exact: true })).toBeVisible()
+    // A connection's tab never sits on a card.
+    const onCards = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('.react-flow__node-card, .react-flow__node-ghost')].map((n) => n.getBoundingClientRect())
+      return [...document.querySelectorAll<HTMLElement>('[data-edge-revision]')].flatMap((tab) => {
+        const t = tab.getBoundingClientRect()
+        return cards.some((c) => t.left < c.right && t.right > c.left && t.top < c.bottom && t.bottom > c.top) ? [tab.dataset.edge] : []
+      })
+    })
+    expect(onCards).toEqual([])
 
     // The removed part is a faint ghost where it was.
     const ghost = page.getByRole('img', { name: `${removed.label}, removed in revision ${revision}` })
@@ -146,7 +159,7 @@ for (const file of BOARDS) {
 test('Tidy layout lays the board out again from the keyboard, and undo puts every card back', async ({ page }, testInfo) => {
   const file = BOARDS[2]!
   await open(page, file)
-  const { path, board } = await revise(file, testInfo)
+  const { path, board } = await revise(file, testInfo, 3)
   await openRevision(page, path, board.revision + 1)
   const kept = await places(page)
   await command(page, 'Tidy layout')
@@ -160,6 +173,21 @@ test('Tidy layout lays the board out again from the keyboard, and undo puts ever
   await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } })
   await page.keyboard.press('ControlOrMeta+z')
   await expect.poll(async () => JSON.stringify(await places(page))).toBe(JSON.stringify(kept))
+  // The undo closes the toast, so its Undo cannot reach a step before the tidy, and the board is framed whole again.
+  await expect(page.getByText('Layout tidied')).toBeHidden()
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const map = document.querySelector('.react-flow')!.getBoundingClientRect()
+        return [...document.querySelectorAll<HTMLElement>('.react-flow__node-card')]
+          .filter((n) => {
+            const r = n.getBoundingClientRect()
+            return r.left < map.left || r.top < map.top || r.right > map.right || r.bottom > map.bottom
+          })
+          .map((n) => n.dataset.id)
+      }),
+    )
+    .toEqual([])
 })
 
 test('a sticky note on a card stays on it through a new revision and Tidy layout', async ({ page }, testInfo) => {

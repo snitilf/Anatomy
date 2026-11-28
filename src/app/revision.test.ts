@@ -201,3 +201,111 @@ describe('marks stay over the card they covered', () => {
     })
   }
 })
+
+/** Cards that sit under the area of a group they are not in, and pairs of group areas that overlap. */
+function spills(board: Board, rects: Record<string, Rect>): string[] {
+  const areas = groupAreas(board, rects)
+  const found: string[] = []
+  for (const c of board.components) {
+    const r = rects[c.id]
+    if (!r) continue
+    for (const [g, area] of Object.entries(areas)) if (g !== c.group && overlaps(area, r)) found.push(`${c.id} under ${g}`)
+  }
+  const ids = Object.keys(areas)
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) if (overlaps(areas[ids[i]!]!, areas[ids[j]!]!)) found.push(`${ids[i]} over ${ids[j]}`)
+  return found
+}
+
+/** The next revision with `count` new parts in the group of `from`, each joined from it. */
+function addTo(board: Board, from: string, count: number): Board {
+  const next = clone(board)
+  next.revision += 1
+  const anchor = next.components.find((c) => c.id === from)!
+  const { position: _p, lesson: _l, ...base } = anchor
+  for (let i = 0; i < count; i++) {
+    next.components.push({ ...base, id: `extra-${i}`, label: `Extra part ${i}`, summary: 'A part the next revision adds.' })
+    next.relationships.push({ ...(next.relationships[0] ?? { kind: 'sends-data-to', source: { kind: 'agent-explanation' } }), id: `extra-line-${i}`, from, to: `extra-${i}`, label: 'hands over to' } as Board['relationships'][number])
+  }
+  return next
+}
+
+describe('a revision never spreads a group over another group', () => {
+  for (const { name, board } of boards) {
+    it(`adding 1 to 3 parts next to any part of ${name}`, () => {
+      const first = open(board)
+      expect(spills(board, rectsOf(first))).toEqual([])
+      const failures: string[] = []
+      for (const c of board.components) {
+        for (const count of [1, 2, 3]) {
+          const second = open(addTo(board, c.id, count), first)
+          const found = spills(second.board!, rectsOf(second))
+          if (found.length > 0) failures.push(`${count} beside ${c.id}: ${found.join(', ')}`)
+        }
+      }
+      expect(failures).toEqual([])
+    })
+
+    it(`moving a part to another group of ${name}`, () => {
+      const first = open(board)
+      const failures: string[] = []
+      for (const c of board.components) {
+        const other = board.groups.find((g) => g.id !== c.group)
+        if (!other || board.groups.length < 2) continue
+        const next = clone(board)
+        next.revision += 1
+        next.components.find((x) => x.id === c.id)!.group = other.id
+        const second = open(next, first)
+        const rects = rectsOf(second)
+        const found = spills(next, rects)
+        if (found.length > 0) failures.push(`${c.id} to ${other.id}: ${found.join(', ')}`)
+      }
+      expect(failures).toEqual([])
+    })
+  }
+})
+
+describe('where a new part goes', () => {
+  for (const { name, board } of boards) {
+    it(`keeps clear of a sticky note, a text mark, and a proposed part on its best spot, on ${name}`, () => {
+      const { next, after } = checkRevision(board)
+      const best = after[ADDED]!
+      for (const kind of ['sticky', 'text', 'proposal'] as const) {
+        let state = open(board)
+        const box = { x: best.x, y: best.y, width: 200, height: 96 }
+        if (kind === 'proposal') state = reducer(state, { type: 'proposalAdded', proposal: { id: 'part-onthespot', label: 'My idea', summary: '', ...box, createdAt: AT } })
+        else state = reducer(state, { type: 'markAdded', mark: kind === 'sticky' ? { id: 'mark-onthespot', kind, createdAt: AT, ...box, text: 'Here' } : { id: 'mark-onthespot', kind, createdAt: AT, ...box, text: 'Here' } })
+        state = open(next, state)
+        expect(overlaps(rectsOf(state)[ADDED]!, box), `${kind} on ${name}`).toBe(false)
+      }
+    })
+
+    it(`goes along the flow, never above the part it comes from, on ${name}`, () => {
+      const { after, added, anchor } = checkRevision(board)
+      expect(added.y + added.height, `${ADDED} above ${anchor}`).toBeGreaterThan(after[anchor]!.y)
+    })
+  }
+})
+
+describe('the places of removed parts', () => {
+  const { board } = boards[0]!
+  const settled = () => {
+    const { second } = checkRevision(board)
+    expect(Object.keys(second.layer!.placed!).some((id) => !second.board!.components.some((c) => c.id === id))).toBe(true)
+    return second
+  }
+  const strays = (s: AppState) => Object.keys(s.layer!.placed ?? {}).filter((id) => !s.board!.components.some((c) => c.id === id))
+
+  it('go once the revision is marked reviewed', () => {
+    expect(strays(reducer(settled(), { type: 'changesDismissed' }))).toEqual([])
+  })
+
+  it('go when the board opens again with no revision before it', () => {
+    const second = settled()
+    expect(strays(reducer(initialState, { type: 'boardOpened', board: second.board!, layer: second.layer!, warnings: [] }))).toEqual([])
+  })
+
+  it('leave nothing for Tidy layout to do once the board is tidy and reviewed', () => {
+    const tidied = reducer(reducer(settled(), { type: 'layoutTidied' }), { type: 'changesDismissed' })
+    expect(reducer(tidied, { type: 'layoutTidied' })).toBe(tidied)
+  })
+})
