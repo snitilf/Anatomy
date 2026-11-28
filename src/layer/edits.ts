@@ -375,8 +375,7 @@ export function receiveAnswers(layer: Layer, board: Board, now: Date): Layer {
   }
   // The oldest answers make room for new ones, and a kept mark goes with its answer, so the list stays inside its limit.
   answers = answers.slice(-LAYER_LIMITS.answers)
-  const answered = new Set(answers.map((a) => a.id))
-  held = held.filter((id) => answered.has(id))
+  held = held.filter((id) => answers.some((a) => a.id === id))
   const sameKept = held.length === layer.kept.length && held.every((k, i) => k === layer.kept[i])
   const heldLayer = answers.length === layer.answers.length && answers.every((a, i) => a === layer.answers[i]) && sameKept
     ? layer

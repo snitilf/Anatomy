@@ -336,7 +336,7 @@ export function Composer({ target }: { target: Target }) {
   const [applied, setApplied] = useState(asked)
   if (applied !== asked) {
     setApplied(asked)
-    if (draft && text.trim() === '') setKind(draft.kind)
+    if (draft && !text.trim()) setKind(draft.kind)
   }
   const focusedAsked = useRef(asked)
   useEffect(() => {
