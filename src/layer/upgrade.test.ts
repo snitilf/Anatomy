@@ -49,13 +49,15 @@ describe('readLayer', () => {
     expect(readLayer(null).ok).toBe(false)
   })
 
-  it('rejects a __proto__ key, out-of-range numbers, unknown keys, and too many items, without polluting', () => {
+  it('rejects a __proto__ key, out-of-range numbers, unknown keys inside a known field, and too many items, without polluting', () => {
     const layer = emptyLayer('x')
     const direct = JSON.parse('{"format":"anatomy-layer","schemaVersion":2,"boardId":"x","positions":{"__proto__":{"x":1,"y":2}},"sizes":{},"notes":[],"links":[],"marks":[],"proposals":[],"reconnects":[],"archive":[]}')
     expect(readLayer(direct).ok).toBe(false)
     expect(({} as Record<string, unknown>).x).toBeUndefined()
     expect(readLayer({ ...layer, positions: { a: { x: 1e6, y: 0 } } }).ok).toBe(false)
-    expect(readLayer({ ...layer, extra: 1 }).ok).toBe(false)
+    // An unknown key at the top is a field of a later version and is left out. Inside a field this version knows, it is an error.
+    expect(readLayer({ ...layer, positions: { a: { x: 1, y: 2, z: 3 } } }).ok).toBe(false)
+    expect(readLayer({ ...layer, extra: 1 })).toEqual({ ok: true, layer })
     const many = Object.fromEntries(Array.from({ length: LAYER_LIMITS.positions + 1 }, (_, i) => [`c${i}`, { x: 0, y: 0 }]))
     expect(readLayer({ ...layer, positions: many }).ok).toBe(false)
     const points = Array.from({ length: LAYER_LIMITS.strokePoints + 1 }, (_, i) => ({ x: i, y: 0 }))

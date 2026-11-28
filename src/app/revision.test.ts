@@ -84,7 +84,8 @@ describe('a new revision keeps the map still', () => {
       for (const [id, r] of Object.entries(after)) if (id !== ADDED) expect(gap(added, r), `${ADDED} against ${id}`).toBeGreaterThanOrEqual(48)
       // The place the removed part had is left to its ghost.
       expect(gap(added, before[removed]!)).toBeGreaterThanOrEqual(48)
-      expect(gap(added, after[anchor]!)).toBeLessThanOrEqual(400)
+      // Beside it, or one column step further along its row when the spot beside it is taken: the widest column gap, a card, and a gap.
+      expect(gap(added, after[anchor]!)).toBeLessThanOrEqual(400 + 240 + 64)
       const group = next.components.find((c) => c.id === ADDED)!.group
       const areas = groupAreas(next, after)
       const areasBefore = groupAreas(next, Object.fromEntries(Object.entries(after).filter(([id]) => id !== ADDED)))
@@ -265,6 +266,14 @@ describe('a revision never spreads a group over another group', () => {
 })
 
 describe('where a new part goes', () => {
+  // The two boards of the review, where the part landed above its source with room to its right.
+  for (const file of ['refund-approval.board.json', 'claude-code-harness.board.json']) {
+    it(`never goes above the part it comes from on ${file}`, () => {
+      const { after, added, anchor } = checkRevision(boards.find((b) => b.name === file)!.board)
+      expect(added.y + added.height, `${ADDED} above ${anchor}`).toBeGreaterThan(after[anchor]!.y)
+    })
+  }
+
   for (const { name, board } of boards) {
     it(`keeps clear of a sticky note, a text mark, and a proposed part on its best spot, on ${name}`, () => {
       const { next, after } = checkRevision(board)
@@ -279,9 +288,17 @@ describe('where a new part goes', () => {
       }
     })
 
-    it(`goes along the flow, never above the part it comes from, on ${name}`, () => {
-      const { after, added, anchor } = checkRevision(board)
-      expect(added.y + added.height, `${ADDED} above ${anchor}`).toBeGreaterThan(after[anchor]!.y)
+    it(`goes along the flow, and above the part it comes from only when the room along the flow is taken, on ${name}`, () => {
+      const { after, added, anchor, next } = checkRevision(board)
+      const a = after[anchor]!
+      if (added.y + added.height > a.y) return
+      // The room to the right of the source, as far as the widest column gap and a card, a track above and below it.
+      const along = { x: a.x + a.width, y: a.y - 48, width: 400 + 240, height: a.height + 96 }
+      const own = next.components.find((c) => c.id === anchor)!.group
+      const taken =
+        Object.entries(after).some(([id, r]) => id !== anchor && id !== ADDED && overlaps(along, r)) ||
+        Object.entries(groupAreas(next, after)).some(([g, area]) => g !== own && overlaps(along, area))
+      expect(taken, `${ADDED} above ${anchor} with room along the flow`).toBe(true)
     })
   }
 })
