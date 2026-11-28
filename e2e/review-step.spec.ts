@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises'
 import type { Page } from '@playwright/test'
 import { expect, test } from './test.ts'
 import { openStandInFolder, standInFileText, writeStandInFile, type FolderFile } from './helpers.ts'
+import { fingerprintPart, seedFolder, SHORTENER } from './states.ts'
 
 const BOARDS = ['e2e/fixtures/url-shortener.board.json', 'e2e/fixtures/refund-approval.board.json']
 
@@ -219,7 +220,7 @@ test('Dismiss takes the item and its answer off the map, into the archive, and b
   await expect(group.getByText(first.answer)).toBeVisible()
 })
 
-test('Reply opens the note input on the same part, holding the question', async ({ page }) => {
+test('Reply opens an empty question on the same part, so Add alone makes no copy', async ({ page }) => {
   const file = BOARDS[1]!
   const board = await readBoard(file)
   const [first, second] = questionsFor(board)
@@ -228,18 +229,191 @@ test('Reply opens the note input on the same part, holding the question', async 
   await answers(page).locator('li').filter({ hasText: first.text }).getByRole('button', { name: 'Reply' }).click()
   const panel = review(page)
 
-  // The part comes up in Details, and the note input on it is a question holding the words of the first one.
+  // The part comes up in Details, and the note input on it is an empty question.
   await expect(panel.getByRole('heading', { name: first.part.label })).toBeVisible()
   const field = panel.getByRole('textbox', { name: 'Add a question' })
   await expect(field).toBeFocused()
-  await expect(field).toHaveValue(first.text)
+  await expect(field).toHaveValue('')
   await expect(panel.getByRole('radio', { name: 'Question' })).toBeChecked()
 
+  // Add with nothing typed adds nothing.
+  const notes = panel.getByRole('region', { name: 'Notes' })
+  await panel.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(notes.getByText(first.text, { exact: true })).toHaveCount(1)
+
   // A few words make it the follow-up, and it goes to the part like any question.
-  const followUp = `${first.text} Say who tests it.`
+  const followUp = 'Say who tests it.'
   await field.fill(followUp)
   await panel.getByRole('button', { name: 'Add', exact: true }).click()
-  await expect(panel.getByRole('region', { name: 'Notes' }).getByText(followUp)).toBeVisible()
+  await expect(notes.getByText(followUp)).toBeVisible()
+  await expect(notes.getByText(first.text, { exact: true })).toHaveCount(1)
+})
+
+const AT = '2026-11-14T00:00:00.000Z'
+
+/** Opens the shortener with items the agent has already answered, on the map, with the Review tab in front. */
+async function openAnswered(page: Page, items: Record<string, unknown[]>, replies: { id: string; text: string }[]) {
+  const text = await readFile(SHORTENER, 'utf8')
+  const board = JSON.parse(text) as FolderFile
+  const layer = {
+    format: 'anatomy-layer',
+    schemaVersion: 2,
+    boardId: board.id,
+    positions: {},
+    sizes: {},
+    notes: [],
+    links: [],
+    marks: [],
+    proposals: [],
+    reconnects: [],
+    archive: [],
+    ...items,
+    answers: replies.map((r) => ({ id: r.id, response: { respondsTo: 'feedback-step00001', status: 'answered', text: r.text, changed: [] } })),
+  }
+  await seedFolder(page, text, layer)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open folder' }).click()
+  await expect(page.getByRole('tab', { name: 'Map' }).or(page.getByRole('region', { name: 'Sidebar' })).first()).toBeVisible()
+  await page.waitForTimeout(300)
+  // A crowded window opens on the Overview. The steps are on the map.
+  if (await page.getByTestId('overview').isVisible()) await page.getByRole('tab', { name: 'Map' }).click()
+  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
+  await review(page).getByRole('tab', { name: /^Review/ }).click()
+  await expect(answers(page).locator('li')).toHaveCount(replies.length)
+  return board
+}
+
+/** A question about one part, written against the part as it is, so it reads as current. */
+const questionOn = (board: FolderFile, id: string, partId: string, text: string) => ({
+  id,
+  kind: 'question',
+  text,
+  target: { type: 'component', id: partId },
+  targetFingerprint: fingerprintPart(board as unknown as Parameters<typeof fingerprintPart>[0], partId),
+  createdAt: AT,
+  updatedAt: AT,
+})
+
+const node = (id: string) => `.react-flow__node[data-id="${id}"]`
+
+/** Whether every element shows whole inside the map. */
+const wholeInView = (page: Page, selectors: string[]) =>
+  page.evaluate((list) => {
+    const map = document.querySelector('.react-flow')?.getBoundingClientRect()
+    if (!map) return false
+    return list.every((selector) => {
+      const r = document.querySelector(selector)?.getBoundingClientRect()
+      return r !== undefined && r.left >= map.left - 1 && r.right <= map.right + 1 && r.top >= map.top - 1 && r.bottom <= map.bottom + 1
+    })
+  }, selectors)
+
+/** Zooms in and drags the map until some of the elements are off it. */
+async function panOff(page: Page, selectors: string[]) {
+  for (let i = 0; i < 4; i++) await page.keyboard.press('+')
+  const from = await panePoint(page)
+  if (!from) throw new Error('no empty place on the map to drag from')
+  for (let i = 0; i < 5 && (await wholeInView(page, selectors)); i++) {
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    for (let s = 1; s <= 8; s++) {
+      await page.mouse.move(from.x - (420 * s) / 8, from.y + (300 * s) / 8)
+      await page.waitForTimeout(20)
+    }
+    await page.mouse.up()
+    await page.waitForTimeout(100)
+  }
+  expect(await wholeInView(page, selectors), 'the item never left the view').toBe(false)
+}
+
+test('J frames every kind of item with a place on the map: a connection, a link, a drawing, a new part, a moved connection', async ({ page }) => {
+  const items = {
+    notes: [{ id: 'note-step00001', kind: 'question', text: 'Is this lookup cached?', target: { type: 'relationship', id: 'r-redirect-to-store' }, targetFingerprint: 'x', createdAt: AT, updatedAt: AT }],
+    links: [{ id: 'link-step00001', from: 'web-form', to: 'link-cache', label: 'Shares the cache', createdAt: AT }],
+    marks: [{ id: 'mark-step00001', kind: 'rect', x: 0, y: -240, width: 240, height: 120, note: 'Group these two', createdAt: AT }],
+    proposals: [{ id: 'part-step00001', label: 'Rate limiter', summary: '', x: -480, y: 0, width: 200, height: 90, createdAt: AT }],
+    reconnects: [{ id: 'edit-step00001', relationshipId: 'r-visitor-to-domain', to: 'redirect-handler', createdAt: AT }],
+  }
+  await openAnswered(page, items, ['note-step00001', 'link-step00001', 'mark-step00001', 'part-step00001', 'edit-step00001'].map((id) => ({ id, text: 'Noted.' })))
+
+  const steps = [
+    { row: /^Is this lookup cached\?/, show: [node('redirect-handler'), node('link-store')] },
+    { row: /^Shares the cache/, show: [node('web-form'), node('link-cache')] },
+    { row: /^Group these two/, show: ['[data-mark="mark-step00001"]'] },
+    { row: /^Rate limiter/, show: [node('part-step00001')] },
+    { row: /^GET short code/, show: [node('visitor-browser'), node('redirect-handler')] },
+  ]
+  let before: (typeof steps)[number] | undefined
+  for (const step of steps) {
+    await panOff(page, step.show)
+    // The drag took the focus off the card in front; the user comes back to it before the next step.
+    if (before) await answers(page).getByRole('button', { name: before.row }).focus()
+    await page.keyboard.press('j')
+    await expect(answers(page).getByRole('button', { name: step.row })).toBeFocused()
+    await expect.poll(() => wholeInView(page, step.show), { message: `${String(step.row)} is framed` }).toBe(true)
+    before = step
+  }
+})
+
+test('Keep and Dismiss hand the focus to the next card, and J goes on from there', async ({ page }) => {
+  const text = await readFile(SHORTENER, 'utf8')
+  const board = JSON.parse(text) as FolderFile
+  const long = 'Which database holds the links, how is each one keyed, and when does an old link leave the table for good?'
+  const notes = [questionOn(board, 'note-keep00001', 'web-form', 'Who owns the form?'), questionOn(board, 'note-keep00002', 'link-store', long), questionOn(board, 'note-keep00003', 'edge-dns', 'When does DNS change?')]
+  await openAnswered(page, { notes }, notes.map((n) => ({ id: n.id, text: `About ${n.text}` })))
+  const row = (text: string) => answers(page).getByRole('button', { name: text })
+  const cardOf = (text: string) => answers(page).locator('li').filter({ has: row(text) })
+
+  await page.keyboard.press('j')
+  await expect(row('Who owns the form?')).toBeFocused()
+  await page.keyboard.press('j')
+  await expect(row(long)).toBeFocused()
+  // The card in front shows its whole question, not one clipped line.
+  expect(await row(long).evaluate((el) => [...el.querySelectorAll('span')].every((s) => s.scrollWidth <= s.clientWidth + 1))).toBe(true)
+  // Each action says which question it settles.
+  for (const name of ['Keep', 'Dismiss', 'Reply']) await expect(cardOf(long).getByRole('button', { name })).toHaveAccessibleDescription(long)
+
+  // Keep from the keyboard: the next card comes to the front, on the map too.
+  await page.keyboard.press('Tab')
+  await expect(cardOf(long).getByRole('button', { name: 'Keep' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(answers(page).locator('li')).toHaveCount(2)
+  await expect(row('When does DNS change?')).toBeFocused()
+  await expect(card(page, 'edge-dns').locator('[data-card]')).toHaveAttribute('data-selected')
+  // The kept question no longer says its answer waits in Review.
+  await expect(card(page, 'link-store').locator('[role="img"][data-state]')).toHaveAttribute('data-state', 'kept')
+
+  // J goes on from the card in front, around the end.
+  await page.keyboard.press('j')
+  await expect(row('Who owns the form?')).toBeFocused()
+  await page.keyboard.press('k')
+  await expect(row('When does DNS change?')).toBeFocused()
+
+  // Dismiss on the last card: the one before it comes to the front.
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Tab')
+  await expect(cardOf('When does DNS change?').getByRole('button', { name: 'Dismiss' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(answers(page).locator('li')).toHaveCount(1)
+  await expect(row('Who owns the form?')).toBeFocused()
+
+  // The last one kept: nothing is left to step to, and the focus waits on the Review tab, not on the page.
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Enter')
+  await expect(answers(page)).toHaveCount(0)
+  await expect(review(page).getByRole('tab', { name: /^Review/ })).toBeFocused()
+})
+
+test('J opens the Answers group when it was closed', async ({ page }) => {
+  const text = await readFile(SHORTENER, 'utf8')
+  const board = JSON.parse(text) as FolderFile
+  const notes = [questionOn(board, 'note-open00001', 'web-form', 'Who owns the form?')]
+  await openAnswered(page, { notes }, [{ id: notes[0]!.id, text: 'Team A.' }])
+  const toggle = answers(page).getByRole('button', { name: /^Answers/ })
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await page.keyboard.press('j')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(answers(page).getByRole('button', { name: 'Who owns the form?' })).toBeFocused()
 })
 
 test.describe('with reduced motion', () => {

@@ -149,4 +149,12 @@ describe('review step commands', () => {
     commandById('review.next').run(off.ctx)
     expect(off.dispatch).not.toHaveBeenCalled()
   })
+
+  it('opens the Answers group when the user had closed it, so the step has a card to land on', () => {
+    const closed = makeContext({ hasBoard: true, layer: layer(), tab: 'review' })
+    closed.ctx.uiApi.setGroup('answers', false)
+    closed.ctx.ui = closed.ctx.uiApi.store.getState()
+    commandById('review.previous').run(closed.ctx)
+    expect(closed.ctx.uiApi.store.getState().groups.answers).toBe(true)
+  })
 })

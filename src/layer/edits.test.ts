@@ -24,7 +24,7 @@ import {
   simplifyStroke,
   updateMark,
 } from './edits'
-import { emptyLayer, layerSchema, type Layer, type Mark, type Proposal } from './model'
+import { emptyLayer, LAYER_LIMITS, layerSchema, type Layer, type Mark, type Proposal } from './model'
 import { anatomyBoard, clone, refundBoard } from './testBoards'
 
 const t0 = new Date('2026-01-01T00:00:00.000Z')
@@ -347,6 +347,27 @@ describe('keeping an answer', () => {
     const next = receiveAnswers(layer, second, t1)
     expect(next.kept).toEqual([])
     expect(next.answers[0]?.response.text).toBe('Second.')
+  })
+
+  it('never marks more answers as kept than the layer holds answers, so the list stays inside its limit', () => {
+    const at = t0.toISOString()
+    const response = { respondsTo: 'feedback-aaaaaa', status: 'answered' as const, text: 'Yes.', changed: [] }
+    const id = (n: number) => `note-${String(n).padStart(6, '0')}`
+    const mark = (n: number): Mark => ({ id: `mark-${String(n).padStart(6, '0')}`, kind: 'rect', x: 0, y: 0, width: 10, height: 10, createdAt: at })
+    // More items than the layer keeps answers for: every note answered and kept, and one mark left to answer.
+    const notes = Array.from({ length: LAYER_LIMITS.notes }, (_, n) => ({ id: id(n), kind: 'question' as const, text: 'Why?', target: { type: 'board' as const }, targetFingerprint: 'x', createdAt: at, updatedAt: at }))
+    const marks = Array.from({ length: LAYER_LIMITS.answers - LAYER_LIMITS.notes + 1 }, (_, n) => mark(n))
+    const answered = [...notes.map((n) => n.id), ...marks.slice(0, -1).map((m) => m.id)]
+    const layer: Layer = { ...emptyLayer(board.id), notes, marks, answers: answered.map((x) => ({ id: x, response })), kept: answered }
+    expect(layer.kept).toHaveLength(LAYER_LIMITS.answers)
+
+    const last = marks.at(-1)!.id
+    const next = receiveAnswers(layer, answering(last, 'answered', 'Yes.'), t1)
+    // The oldest answer made room for the new one, and its kept mark went with it.
+    expect(next.answers).toHaveLength(LAYER_LIMITS.answers)
+    expect(next.kept).not.toContain(id(0))
+    expect(next.kept.every((k) => next.answers.some((a) => a.id === k))).toBe(true)
+    valid(next)
   })
 })
 
