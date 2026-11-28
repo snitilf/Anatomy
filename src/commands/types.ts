@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import type { AppState } from '../app/state'
-import type { Dispatch } from '../app/store'
+import type { AppStore, Dispatch } from '../app/store'
 import type { UiApi, UiState } from '../app/ui'
 import type { WorkspaceApi } from '../app/workspaceContext'
 import type { Camera } from '../canvas/cameraContext'
@@ -22,6 +22,8 @@ export interface CommandContext {
   state: AppState
   ui: UiState
   dispatch: Dispatch
+  /** The app store, for what must follow the state after the command, such as a toast that closes once history moves on. */
+  store?: AppStore
   uiApi: UiApi
   workspace: WorkspaceApi
   shell: ShellActions

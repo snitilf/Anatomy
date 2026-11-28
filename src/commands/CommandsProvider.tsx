@@ -42,6 +42,7 @@ export function CommandsProvider({ shell, children }: { shell: ShellActions; chi
       state: store.getState(),
       ui: uiApi.store.getState(),
       dispatch,
+      store,
       uiApi,
       workspace: latest.current.workspace,
       shell: latest.current.shell,
