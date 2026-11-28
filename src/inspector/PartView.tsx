@@ -10,6 +10,7 @@ import { Cited, Explanation, Heading, OpenItems, SourceLine } from './bits'
 import { FlowBlock } from './Flow'
 import { usePlainFlow } from './hooks'
 import { NotesSection } from './notes'
+import { RevisionChange } from './RevisionChange'
 import styles from './view.module.css'
 
 /** One raised row for the part's interactive lesson, directly under the summary. The whole row is the button. */
@@ -92,6 +93,7 @@ export function PartView({ board, component }: { board: Board; component: BoardC
         <p className={styles.lead}>{component.summary}</p>
         <SourceLine source={component.source} className={styles.partSource} />
       </div>
+      <RevisionChange target={{ type: 'component', id: component.id }} />
       {component.lesson !== undefined && <Lesson id={component.lesson} part={component.id} />}
       {(component.explanation || hasPlain) && <Explanation source={component.explanation ?? ''} extra={<Takes plain={plain} />} />}
       <FlowBlock partId={component.id} />

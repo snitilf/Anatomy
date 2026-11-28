@@ -11,6 +11,7 @@ import { endsOf } from './flowRows'
 import { partName } from './names'
 import { NotesSection } from './notes'
 import { Picker } from './Picker'
+import { RevisionChange } from './RevisionChange'
 import { partItems } from './pickerItems'
 import styles from './view.module.css'
 
@@ -74,6 +75,7 @@ export function ConnectionView({ board, relationship: r }: { board: Board; relat
           <PartLink id={r.to} name={name(r.to)} />
         </p>
       </div>
+      <RevisionChange target={{ type: 'relationship', id: r.id }} />
       <Props>
         {end('from')}
         <Prop label="Kind">{unknown ? KIND_WORDS.unknown : capital(KIND_WORDS[r.kind])}</Prop>

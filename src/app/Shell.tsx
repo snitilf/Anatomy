@@ -15,8 +15,10 @@ import { LessonHost } from './LessonHost'
 import { ChunkBoundary } from './ChunkBoundary'
 import { Notices } from './Notices'
 import { readFileText } from './openFile'
+import { RevisionBanner } from './RevisionBanner'
 import styles from './Shell.module.css'
 import { useAppDispatch, useAppStore, useAppStoreApi } from './store'
+import { useTabTitle } from './tabTitle'
 import { TipProvider } from './Tip'
 import { TopBar } from './TopBar'
 import { createUi, UiContext, useUi, useUiApi } from './ui'
@@ -99,6 +101,7 @@ function ShellBody() {
   const boardId = useAppStore((s) => s.board?.id)
   const overview = useUi((u) => u.view) === 'overview' && hasBoard
   useViewSync(boardId)
+  useTabTitle()
   const store = useAppStoreApi()
   const scenario = useAppStore((s) => s.scenario !== undefined)
   const dispatch = useAppDispatch()
@@ -250,6 +253,7 @@ function ShellBody() {
           <div className={styles.panel}>
             <div className={styles.notices} data-notices="">
               <Notices />
+              <RevisionBanner />
             </div>
             {hasBoard ? (
               <>

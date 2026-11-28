@@ -1,0 +1,68 @@
+.fields {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  font-weight: var(--weight-medium);
+}
+
+.side {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+}
+
+.which {
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-md);
+}
+
+.text {
+  min-width: 0;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  text-wrap: pretty;
+  /* A whole explanation that was rewritten does not fill the panel. The current text is in the explanation below. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
+}
+
+.none {
+  color: var(--fg-3);
+}
+
+/* The words that left are struck through and the words that came are underlined, so the change reads without color. */
+.text del {
+  color: var(--fg-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.text ins {
+  color: var(--fg);
+  background: var(--hover);
+  border-radius: var(--radius-xs);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
