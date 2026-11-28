@@ -63,6 +63,7 @@ Your agent does the thinking, and Anatomy shows it.
    ```
 
    The answers appear next to your marks.
+   The map holds still: what the agent added, changed, or removed is marked on it until you mark the revision reviewed.
 
 Commit `.anatomy/board.json` with the code it explains.
 Add `.anatomy/layer.json` and `.anatomy/feedback.json` to `.gitignore`, because they hold your own working state.

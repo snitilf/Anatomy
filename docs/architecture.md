@@ -13,7 +13,7 @@ The app stores the two layers separately.
 | Layer | Written by | Contents |
 | --- | --- | --- |
 | Base board | An agent or a person, outside the app | Parts, connections, items, scenarios, and answers to feedback. See [board-format.md](board-format.md). |
-| User layer | The user, inside the app | Moved cards, card sizes, notes, questions, links, drawings, proposed parts, moved connection ends, and resolved items. |
+| User layer | The user, inside the app | Moved cards, card sizes, the places the map holds cards at, notes, questions, links, drawings, proposed parts, moved connection ends, and resolved items. |
 
 The app never edits the base board.
 When a new revision of the base board arrives, the user layer stays.
@@ -91,13 +91,13 @@ The start screen's lead line is the page `h1`, and while the map is open a visua
 Every card has a rect, which is its position and its size.
 The function `placeCards` in `src/layout/cards.ts` gives the rect of every card.
 A position that the user set wins.
-The position in the board comes next, and the layered layout comes last.
+The position in the board comes next, then the place the map holds the card at (see [A new revision](#a-new-revision)), and the layered layout comes last.
 
 A size that the user set wins over the size of the text in the card.
 That text size is `contentSize`: 240 wide, at least 112 tall, on an 8 px grid.
 A resized card stays between 224 by 112 and 480 by 320.
-The app stores only the cards that the user moved or resized.
-The other cards follow the layout each time a board opens.
+The app stores the cards that the user moved or resized.
+Until the map has to hold still, the other cards follow the layout each time a board opens.
 
 A card shows its summary in as many lines as fit (`summaryLinesFor`).
 The count of the user's notes takes no row from the summary: at the full level it sits in the top right corner, beside the first line of the title.
@@ -163,6 +163,46 @@ It pushes them 40 units away, for at most three rounds.
 A pushed card prefers a free spot and its own group area.
 It never lands on a card that has settled.
 The app saves the dropped card and every pushed card in one action, so one undo puts them all back.
+
+### A new revision
+
+A new revision of the open board keeps the map still (D144).
+When a revision adds, removes, or changes parts or connections, `placeRevision` in `src/layer/places.ts` stores where every card was drawn in the layer, as `placed`.
+From then on `placeCards` does not run the layout: every card keeps its place, so no card that survives moves against the others.
+The layout stays a pure function of the board and these places, and never reads the window size.
+
+A part that the revision added has no place yet.
+`placeBeside` in `src/layout/beside.ts` puts it next to a neighbor on the map: a part it is joined to, in its own group first, or else a part of its group.
+It takes the nearest free spot along the flow, so a part that a line runs to sits to the right of where the line starts, with room for the label of that line.
+A spot is free when the card keeps 48 units from every card and from the places of the removed parts, stays out of the areas of other groups, and its own group's area, grown to take it in, covers no card that it did not cover before.
+A part with no neighbor on the map goes to the right of everything.
+Its place is stored with the others when the revision opens, so it never moves later.
+A card whose new text makes it taller pushes aside the held cards that it now covers.
+
+Marks, text, sticky notes, and proposed parts are stored in board coordinates.
+For this reason, the first mark or proposed part also stores where every card is drawn (`holdPlaces`), so a later change to the layout never slides a card out from under them.
+
+The map marks what the revision did until the user marks it reviewed, from the Review tab or the command menu (`revisionMarks` in `src/canvas/revisionMarks.ts`).
+A new or changed part carries a tab across the top edge of its card with the word New or Changed.
+A new or changed connection carries the same tab just above its label.
+New is solid ink and Changed is outlined, so the two differ without color, and the word says it in any case.
+A part that the revision removed stays as a ghost where it was: a faint, hollow card with its name struck through and the tab Removed.
+A ghost takes no pointer and no focus, and a fit frames it with the cards.
+For a screen reader, the description of a part and the name of a connection start with the same words, for example "Changed in revision 2: summary."
+The far view reads groups, so it shows no tabs and no ghosts.
+
+When the revision arrives, what it added comes in where it lands (220 ms, from 96 percent size and no opacity), the tabs fade in with it, and the removed card fades into its ghost.
+All of it starts at once, and nothing travels, because the map holds still.
+With reduced motion, everything is at rest from the start.
+A view that the reader left fitted stays fitted: when a revision brings a part or a ghost in beyond it, the whole board is framed again.
+A view that the reader moved stays where it is.
+
+**Tidy layout** in the command menu lays the board out again, as if it opened for the first time (`tidyLayout`).
+The cards that the user moved go back into the layout, and a card that the user resized keeps its size while the cards it covers step aside.
+A mark or a proposed part over a card goes with the card that it covers most, and the other marks stay where they are.
+The new places are stored, so the ghosts leave the map, and the whole board is framed once it is drawn.
+It is one step of undo.
+On a board that is laid out already, it says so and changes nothing.
 
 ### Connections
 
@@ -262,6 +302,7 @@ interface Layer {
   boardId: string
   positions: Record<string, { x: number; y: number }> // only the cards the user moved, by component ID
   sizes: Record<string, { width: number; height: number }> // only the cards the user resized
+  placed?: Record<string, { x: number; y: number; width: number; height: number }> // where the map holds every card, once it must hold still
   notes: Note[] // note or question about the board, a component, or a relationship
   links: Link[] // a line the user drew between two parts
   marks: Mark[] // whiteboard: stroke, rect, ellipse, arrow, text, sticky
@@ -323,6 +364,7 @@ A step is one of these changes:
 - A drop of one or more cards.
 - A run of arrow keys.
 - A resize.
+- A tidy of the layout.
 - A change to a note, link, mark, proposal, reconnect, or archive.
 
 Selection, tool, theme, camera, and walkthroughs are not part of the history.
