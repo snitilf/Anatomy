@@ -95,8 +95,10 @@
     padding: 0;
   }
 
+  /* No frame around the content on a phone, only a line where it meets the top bar: the frame and the canvas are too close in light to meet without one. */
   .panel {
     border: 0;
+    border-top: 1px solid var(--border-strong);
     border-radius: 0;
   }
 
