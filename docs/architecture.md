@@ -540,7 +540,7 @@ Inert, hidden, and below-the-screen places are skipped.
 If no row can take it, focus goes to the panel heading, then the first control of the panel, then the Overview page, then the Show sidebar button, then Search (`src/app/lessonFocus.ts`).
 Focus never falls to the page.
 Once the user has made something, the Yours list on the board view has a Status key button.
-It opens the seven status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
+It opens the eight status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
 
 ## The Overview page
 
@@ -601,13 +601,19 @@ Declined and answered items keep their answer until the user settles them.
 Each one shows in the Review tab with **Keep**, **Dismiss**, and **Reply**.
 Keep records the answer in `layer.kept`: the item and its answer stay on the map, and the answer no longer waits for a decision.
 The answer stays readable next to the item, and a later revision that answers the same item again clears the mark, so the new answer waits.
+A kept reply has its own state, **Kept**, which points to Details instead of Review, and a part's badge shows it only when nothing else on the part has a state to show.
 Dismissing archives the item and its answer as one step of undo.
-Reply opens the note input on the item's target, holding the item's own words, so a follow-up question starts from what was asked.
+After Keep or Dismiss, the focus goes to the next card, or to the one before when the last card was settled, or to the list heading (the Review tab once the list is gone).
+When the settled item was the one selected on the map, the next card also comes to the front there, as a step would bring it.
+Reply opens an empty note input on the item's target, set to a question when it follows up a question, so Add cannot copy the earlier words.
 For an item that is not a note, Reply opens the item's own view, where its words are edited.
 
-**J** and **K** step through the answers that wait, one card at a time (`stepReview` in `src/commands/list.ts`).
-The card in front holds the keyboard focus, so the step always starts from it, and its row is pressed the way a finger would: the map selects and frames the item, and the spotlight shows it.
-When the selection is already on the item, the map does not move on its own, so the step frames it.
+**J** and **K** step through the answers that wait, one card at a time (`stepReview` and `frontReviewCard` in `src/commands/list.ts`).
+The card in front holds the keyboard focus, so the step always starts from it, and its row is pressed the way a finger would: the map selects the item, and the spotlight shows it.
+The card in front shows the whole question, and its Keep, Dismiss, and Reply are described by it for assistive technology.
+After the selection camera has moved, whatever of the item is still off the map is framed (`camera.show`), for every item with a place on the map: a part, both ends of a connection as drawn, a link, a new part, and a drawing.
+On a phone, the item is framed above the sheet.
+A step opens a closed sidebar and a closed Answers group.
 The keys work only while the Review tab is in front, and never while a text field has the focus.
 
 The app never takes in an answer twice.
