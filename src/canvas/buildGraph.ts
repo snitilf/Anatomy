@@ -7,7 +7,7 @@ import { overlaps, type Point, type Rect } from '../layout/geometry'
 import type { Link, Mark, Proposal, Reconnect } from '../layer/model'
 import { groupBand } from './bands'
 import { clusterOf, connectionsOf, countPairs } from './bundles'
-import { LABEL_GROWTH, LABEL_ROOM, labelFits, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
+import { LABEL_GROWTH, LABEL_ROOM, labelFits, pillHeight, pillRect, placeLabel, RunIndex, textArea, type LabelContext } from './labelPlacement'
 import { labelTint } from './labelTint'
 import { cardCorners, freeCorner, type Corner } from './startMarks'
 import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnectionSteps, type EdgeEnds, type Route, type Side } from './routing'
@@ -129,7 +129,34 @@ export interface EdgeData extends Record<string, unknown> {
   ghost?: string
   /** What the open revision did to this connection, until it is marked reviewed. */
   revision?: RevisionKind | undefined
+  /** Which side of the label the revision's tab sits on: the first that keeps off every card. */
+  revisionAt?: TabSide | undefined
   arriving?: boolean | undefined
+}
+
+export type TabSide = 'above' | 'below' | 'left' | 'right'
+const TAB_SIDES: readonly TabSide[] = ['above', 'below', 'left', 'right']
+/** The tab of a connection, on the board at label scale 1: its height, its width for each word, and its gap from the label. */
+const TAB = { height: 16, gap: 2, width: { new: 34, changed: 60 } } as const
+
+/**
+ * The side of a label that its revision tab takes: the first of above, below, left, and right that keeps off every card,
+ * at the size the label grows to just above the far view, or else at its own size. Above when none is free.
+ */
+export function tabSide(x: number, y: number, width: number, lines: number, kind: RevisionKind, cards: readonly Rect[]): TabSide {
+  const h = pillHeight(lines)
+  const tw = TAB.width[kind]
+  const box = (side: TabSide, s: number): Rect => {
+    if (side === 'above') return { x: x - (tw * s) / 2, y: y - (h / 2 + TAB.gap + TAB.height) * s, width: tw * s, height: TAB.height * s }
+    if (side === 'below') return { x: x - (tw * s) / 2, y: y + (h / 2 + TAB.gap) * s, width: tw * s, height: TAB.height * s }
+    if (side === 'left') return { x: x - (width / 2 + TAB.gap + tw) * s, y: y - (TAB.height * s) / 2, width: tw * s, height: TAB.height * s }
+    return { x: x + (width / 2 + TAB.gap) * s, y: y - (TAB.height * s) / 2, width: tw * s, height: TAB.height * s }
+  }
+  for (const s of [LABEL_ROOM, LABEL_GROWTH, 1]) {
+    const side = TAB_SIDES.find((t) => !cards.some((c) => overlaps(box(t, s), c)))
+    if (side) return side
+  }
+  return 'above'
 }
 
 export interface ProposalData extends Record<string, unknown> {
@@ -748,6 +775,9 @@ export function assembleGraph(
     ]
   })
 
+  // What a connection's revision tab keeps off: every card and every ghost. Worked out on the first marked connection.
+  let obstacles: Rect[] | undefined
+  const tabObstacles = () => (obstacles ??= [...Object.values(rects), ...revision.ghosts.map((g) => g.rect)])
   const edges: Edge[] = []
   for (const r of board.relationships) {
     const original = geometry.edges.get(r.id)
@@ -795,7 +825,9 @@ export function assembleGraph(
           tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true, far && selected),
           edited: moved !== undefined,
           ...(moved ? { ghost: original.path } : {}),
-          ...(marked ? { revision: marked.kind, arriving: arriving.has(r.id) } : {}),
+          ...(marked
+            ? { revision: marked.kind, revisionAt: tabSide(shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, marked.kind, tabObstacles()), arriving: arriving.has(r.id) }
+            : {}),
         },
       } satisfies Edge<EdgeData>),
     )

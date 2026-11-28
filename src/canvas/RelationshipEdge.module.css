@@ -181,8 +181,8 @@
 }
 
 /*
- * What the open revision did to this connection, in a tab just above its label: New in solid ink, Changed outlined, the same
- * tabs the cards carry. It holds its size on screen, and goes with its label: hidden while the label has no place or its
+ * What the open revision did to this connection, in a tab against its label: above it, or below, left, or right when a card
+ * is in the way (`tabSide`). New in solid ink, Changed outlined, the same tabs the cards carry. It holds its size on screen, and goes with its label: hidden while the label has no place or its
  * card moves, and stepping back with it.
  */
 .revision {
@@ -191,7 +191,6 @@
   display: inline-flex;
   align-items: center;
   height: calc(16px * var(--label-scale, 1));
-  margin-top: calc(-2px * var(--label-scale, 1));
   padding: 0 calc(5px * var(--label-scale, 1));
   border: calc(1px * var(--label-scale, 1)) solid var(--card-edge);
   border-radius: calc(var(--radius-xs) * var(--label-scale, 1));
