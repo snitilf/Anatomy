@@ -8,8 +8,12 @@ import { RevisionChange } from './RevisionChange'
 
 const now = new Date('2026-11-28T10:00:00.000Z')
 
-/** The comparison is its own script, so it arrives a moment after the part opens. */
-const arrived = () => screen.findByRole('region', { name: 'Changed in revision 2' })
+/** The word comparison is its own script, so the fields arrive a moment after the part opens. */
+async function arrived() {
+  const region = await screen.findByRole('region', { name: 'Changed in revision 2' })
+  await within(region).findAllByRole('group')
+  return region
+}
 
 function show(edit: (b: Board) => void, target: Parameters<typeof RevisionChange>[0]['target']) {
   const store = createAppStore()

@@ -225,7 +225,7 @@ After a send, the Send button reads **Waiting for the agent** while the revision
 A higher revision ends the wait, and a new note takes the button back as the primary action.
 The wait comes from `layer.sent`, so a reload keeps it.
 
-A changed part, connection, or the board shows what changed in its details, under "Changed in revision N" (`RevisionChange`, loaded the first time one is opened).
+A changed part, connection, or the board shows what changed in its details, under "Changed in revision N" (`RevisionChange`; the word comparison in `RevisionFields` loads the first time one is opened).
 `fieldChanges` in `src/inspector/fieldChanges.ts` lists the fields that differ in plain words, with the old words and the new.
 `diffText` in `src/inspector/textDiff.ts` compares them by word, with no library, and marks the words that left (struck through) and the words that came (underlined), so the change reads without color.
 It compares a text that has no spaces, such as Chinese or Japanese, by the words a reader sees, never splits an emoji, and marks two texts that share only a few scattered words as one change.
