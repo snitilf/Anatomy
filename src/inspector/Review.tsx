@@ -113,6 +113,9 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
   )
 }
 
+/** The quiet text actions under a card: Restore and Delete, Keep, Dismiss, and Reply. */
+const textAction = clsx(buttons.button, buttons.link, buttons.small, notes.textAction)
+
 /** An item that left the map, with the answer it left with, and the way back. */
 function ArchivedItem({ board, previous, layer, entry, deletable = false }: { board: Board; previous: Board | undefined; layer: Layer; entry: ArchiveEntry; deletable?: boolean }) {
   const dispatch = useAppDispatch()
@@ -126,7 +129,7 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
       <div className={notes.feedActions}>
         <button
           type="button"
-          className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
+          className={textAction}
           onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}
         >
           Restore
@@ -134,7 +137,7 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
         {deletable && (
           <button
             type="button"
-            className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
+            className={textAction}
             data-tone="danger"
             onClick={() => {
               dispatch({ type: 'archiveDropped', id: entry.item.id })
@@ -195,25 +198,24 @@ function PendingItem({ board, previous, layer, entry }: { board: Board; previous
     if (entry.type === 'note' || entry.type === 'reconnect') requestAnimationFrame(() => ui.askComposer(entry.type === 'note' ? { kind: entry.item.kind } : undefined))
   }
 
-  const action = clsx(buttons.button, buttons.link, buttons.small, notes.textAction)
   return (
-    <li className={notes.feedItem} data-review-item={entry.item.id}>
+    <li className={notes.feedItem}>
       <ItemRow board={board} layer={layer} entry={entry} status={answer.status} reviewId={entry.item.id} titleId={titleId} />
       {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
       <AgentAnswer board={board} answer={answer} bare />
       <div className={notes.feedActions}>
-        <button type="button" className={action} aria-describedby={titleId} onClick={() => settle({ type: 'answerKept', id: entry.item.id })}>
+        <button type="button" className={textAction} aria-describedby={titleId} onClick={() => settle({ type: 'answerKept', id: entry.item.id })}>
           Keep
         </button>
         <button
           type="button"
-          className={action}
+          className={textAction}
           aria-describedby={titleId}
           onClick={() => settle({ type: 'itemsArchived', answers: [{ id: entry.item.id, response: answer }], now: new Date() })}
         >
           Dismiss
         </button>
-        <button type="button" className={action} aria-describedby={titleId} onClick={reply}>
+        <button type="button" className={textAction} aria-describedby={titleId} onClick={reply}>
           Reply
         </button>
       </div>

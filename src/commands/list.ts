@@ -95,7 +95,7 @@ function overviewRow(): Selection | undefined {
 const pendingOf = (c: CommandContext) => (c.state.layer ? pendingAnswers(c.state.layer) : [])
 
 /** The row of a pending answer's card in the Review tab, when it is mounted. */
-export const reviewRow = (id: string) => document.querySelector<HTMLElement>(`button[data-review-item="${CSS.escape(id)}"]`)
+export const reviewRow = (id: string) => document.querySelector<HTMLElement>(`[data-review-item="${CSS.escape(id)}"]`)
 
 /**
  * Puts one pending answer's card in front: scrolls the card into view, focuses its row, and presses it the way a finger
