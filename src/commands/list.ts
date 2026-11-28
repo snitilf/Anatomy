@@ -103,9 +103,11 @@ export const reviewRow = (id: string) => document.querySelector<HTMLElement>(`bu
  * as both ends of a connection on a wide screen, or a drawing, is then framed.
  */
 export function frontReviewCard(c: CommandContext, id: string) {
-  // A closed sidebar opens for the step, and so does an Answers group the user closed, so the card is mounted.
+  // A closed sidebar opens for the step, and so do an Answers group the user closed and a lowered phone sheet, so the
+  // card is shown and can take the focus.
   if (!c.ui.sidebar.open) c.uiApi.setSidebarOpen(true)
   if (c.ui.groups.answers === false) c.uiApi.setGroup('answers', true)
+  if (!c.ui.sheet && onPhone()) c.uiApi.setSheet(1)
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       const row = reviewRow(id)
@@ -114,10 +116,11 @@ export function frontReviewCard(c: CommandContext, id: string) {
       row.focus()
       row.click()
       requestAnimationFrame(() => {
-        const { selection, scenario } = c.store?.getState() ?? c.state
+        const { selection } = c.store?.getState() ?? c.state
         const box = selection && c.camera?.boxOf(selection)
-        // On a phone the sheet covers the lower half of the map, unless it is pulled all the way up.
-        if (box) c.camera?.show(box, { upper: onPhone() && scenario === undefined && c.uiApi.store.getState().sheet !== 2 })
+        // On a phone the sheet covers the lower half of the map, unless it is pulled all the way up. No walkthrough
+        // plays while the step is on, so the sheet is not lowered for one.
+        if (box) c.camera?.show(box, { upper: onPhone() && c.uiApi.store.getState().sheet !== 2 })
       })
     }),
   )
