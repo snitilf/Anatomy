@@ -85,7 +85,7 @@ describe('watchBoard', () => {
     expect(onBoard).toHaveBeenCalledTimes(1)
   })
 
-  it('checks when the window gains focus, and not while the page is hidden', async () => {
+  it('checks when the window gains focus, and slows down once the page is hidden', async () => {
     let time = 100
     const folder = createMemoryFolder('shop', new Map([[FILES.board, { text: revision(1), lastModified: 100 }]]), { clock: () => ++time })
     const onBoard = vi.fn()
@@ -99,6 +99,7 @@ describe('watchBoard', () => {
     expect(onBoard).toHaveBeenCalledTimes(1)
 
     const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    document.dispatchEvent(new Event('visibilitychange'))
     stat.mockClear()
     await vi.advanceTimersByTimeAsync(6000)
     expect(stat).not.toHaveBeenCalled()
