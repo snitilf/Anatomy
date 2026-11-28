@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { expect, test } from './test.ts'
 
 /** The color of the top bar and its hex, so the theme color of the page is held to what the page looks like. */
@@ -33,7 +33,7 @@ test.describe('the icon of the page', () => {
   })
 
   for (const scheme of ['light', 'dark'] as const) {
-    test(`paints the accent and the ink of the ${scheme} theme when the browser is in that scheme`, async ({ page, request }) => {
+    test(`paints only the ink of the ${scheme} theme when the browser is in that scheme`, async ({ page, request }) => {
       await page.emulateMedia({ colorScheme: scheme })
       await page.goto('/')
       const href = await page.locator('link[rel="icon"]').getAttribute('href')
@@ -49,7 +49,7 @@ test.describe('the icon of the page', () => {
         ctx.drawImage(img, 0, 0, 64, 64)
         const seen = new Set<string>()
         const data = ctx.getImageData(0, 0, 64, 64).data
-        for (let i = 0; i < data.length; i += 4) if (data[i + 3]! > 250) seen.add(`${data[i]},${data[i + 1]},${data[i + 2]}`)
+        for (let i = 0; i < data.length; i += 4) if (data[i + 3] === 255) seen.add(`${data[i]},${data[i + 1]},${data[i + 2]}`)
         const root = getComputedStyle(document.documentElement)
         const rgb = (v: string) => {
           const c = document.createElement('canvas').getContext('2d')!
@@ -57,10 +57,12 @@ test.describe('the icon of the page', () => {
           c.fillRect(0, 0, 1, 1)
           return [...c.getImageData(0, 0, 1, 1).data.slice(0, 3)].join(',')
         }
-        return { seen: [...seen], accent: rgb(root.getPropertyValue('--accent')), ink: rgb(root.getPropertyValue('--fg')) }
+        return { seen: [...seen], corners: [0, 63 * 4, 63 * 64 * 4, (64 * 64 - 1) * 4].map((i) => data[i + 3]), accent: rgb(root.getPropertyValue('--accent')), ink: rgb(root.getPropertyValue('--fg')) }
       }, svg)
-      expect(result.seen).toContain(result.accent)
-      expect(result.seen).toContain(result.ink)
+      // One flat ink, the text color of the theme, on no tile: every solid pixel is the ink, and there is no accent.
+      expect(result.seen).toEqual([result.ink])
+      expect(result.ink).not.toBe(result.accent)
+      expect(result.corners).toEqual([0, 0, 0, 0])
     })
   }
 })
@@ -101,6 +103,23 @@ test.describe('the theme color of the page', () => {
   })
 })
 
+/** The colors the mark is drawn in, as hex, beside the text color and the accent of the theme. */
+const markColors = (mark: Locator) =>
+  mark.evaluate((el) => {
+    const c = document.createElement('canvas').getContext('2d')!
+    const hex = (v: string) => {
+      c.fillStyle = v
+      return c.fillStyle
+    }
+    const root = getComputedStyle(document.documentElement)
+    const shapes = [...el.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon')]
+    return {
+      shapes: shapes.map((s) => ({ tag: s.tagName, fill: hex(getComputedStyle(s).fill), stroke: getComputedStyle(s).stroke })),
+      fg: hex(root.getPropertyValue('--fg')),
+      accent: hex(root.getPropertyValue('--accent')),
+    }
+  })
+
 test.describe('the mark beside the word Anatomy', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`sits on the line of the word, left of it, in the ${scheme} theme`, async ({ page }) => {
@@ -112,29 +131,40 @@ test.describe('the mark beside the word Anatomy', () => {
       await expect(mark).toBeVisible()
       const m = (await mark.boundingBox())!
       const w = (await word.boundingBox())!
-      expect(m.width).toBeGreaterThanOrEqual(16)
-      expect(m.width).toBeLessThanOrEqual(24)
-      expect(Math.abs(m.width - m.height)).toBeLessThanOrEqual(1)
-      // Left of the word, 4 to 10 px from it, and centred on the line of the text.
-      expect(m.x + m.width).toBeLessThan(w.x + 1)
-      expect(w.x - (m.x + m.width)).toBeLessThanOrEqual(10)
-      expect(Math.abs(m.y + m.height / 2 - (w.y + w.height / 2))).toBeLessThanOrEqual(2)
-      // The mark is drawn in the tokens: its accent part is the accent of the theme, and its ink is the text color.
-      const colors = await mark.evaluate((el) => {
-        const fills = [...el.querySelectorAll('[data-part]')].map((p) => [p.getAttribute('data-part'), getComputedStyle(p).fill, getComputedStyle(p).stroke])
-        const root = getComputedStyle(document.documentElement)
-        const c = document.createElement('canvas').getContext('2d')!
-        const hex = (v: string) => {
-          c.fillStyle = v
-          return c.fillStyle
-        }
-        return { fills: fills.map(([k, f, s]) => [k, hex(f!), hex(s!)]), accent: hex(root.getPropertyValue('--accent')), fg: hex(root.getPropertyValue('--fg')) }
-      })
-      const part = (name: string) => colors.fills.find(([k]) => k === name)
-      expect(part('accent')?.[1]).toBe(colors.accent)
-      expect(part('ink')?.[2]).toBe(colors.fg)
+      // 16 px on whole pixels: at 18 or 20 px the flat top and the baseline of the drawing fall between pixels.
+      expect(m.width).toBe(16)
+      expect(m.height).toBe(16)
+      expect(m.x).toBe(Math.round(m.x))
+      expect(m.y).toBe(Math.round(m.y))
+      // Left of the word, 4 px from it (the drawing keeps 2 px of air, so the stem ends 6 px from the word), centred on the line.
+      expect(w.x - (m.x + m.width)).toBeCloseTo(4, 0)
+      expect(Math.abs(m.y + m.height / 2 - (w.y + w.height / 2))).toBeLessThanOrEqual(1)
+      // One flat ink, the text color of the theme: never the accent, never a second part.
+      const colors = await markColors(mark)
+      expect(colors.shapes).toEqual([{ tag: 'path', fill: colors.fg, stroke: 'none' }])
+      expect(colors.fg).not.toBe(colors.accent)
       // A picture beside a word: the screen reader says "Anatomy" once.
       await expect(mark).toHaveAttribute('aria-hidden', 'true')
+    })
+  }
+
+  for (const [width, height] of [
+    [1440, 900],
+    [390, 844],
+  ] as const) {
+    test(`is 16 px in the ink of the theme inside the Open menu trigger at ${width} px`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
+      await page.goto('/')
+      await page.getByRole('button', { name: /Anatomy itself/ }).click()
+      // A phone opens a board on its overview, so wait for the breadcrumb rather than the map.
+      await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toBeVisible()
+      const mark = page.getByRole('banner').getByTestId('brand-mark')
+      await expect(mark).toBeVisible()
+      const m = (await mark.boundingBox())!
+      expect(m.width).toBe(16)
+      expect(m.height).toBe(16)
+      const colors = await markColors(mark)
+      expect(colors.shapes).toEqual([{ tag: 'path', fill: colors.fg, stroke: 'none' }])
     })
   }
 
