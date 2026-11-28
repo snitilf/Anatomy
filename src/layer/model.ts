@@ -185,7 +185,11 @@ export const sent = z.strictObject({
   items: z.array(z.strictObject({ id: z.string().max(64), fingerprint: z.string().min(1).max(64) })).max(LAYER_LIMITS.sentItems),
 })
 
-export const layerSchema = z.strictObject({
+/**
+ * The layer itself is read tolerantly: a field this version does not know, written by a later one, is left out instead of
+ * failing the read, so the user's work still opens. Every field it knows is checked as strictly as before.
+ */
+export const layerSchema = z.object({
   format: z.literal(LAYER_FORMAT),
   schemaVersion: z.literal(LAYER_VERSION),
   boardId,
