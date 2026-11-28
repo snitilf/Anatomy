@@ -12,7 +12,8 @@
   height: var(--size);
   padding: 2px;
   border-radius: var(--radius-sm);
-  background: var(--hover);
+  /* The press fill, so the track is a step of its own on the shell and on the top bar. A pressed segment lays a second one on it. */
+  background: var(--active);
 }
 
 .small {

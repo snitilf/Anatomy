@@ -204,7 +204,8 @@
   position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--panel);
+  /* A well: the canvas grey, a clear step down from the white popover. */
+  background: var(--bg);
 }
 
 .prompt {
