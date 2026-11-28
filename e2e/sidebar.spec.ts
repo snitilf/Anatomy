@@ -5,7 +5,7 @@ import { everyState, seedFolder } from './states.ts'
 
 const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
 const REFUND = 'e2e/fixtures/refund-approval.board.json'
-const STATES = ['Not sent', 'Sent', 'Answered', 'Adopted', 'Declined', 'Possibly outdated', 'Needs relinking']
+const STATES = ['Not sent', 'Sent', 'Answered', 'Kept', 'Adopted', 'Declined', 'Possibly outdated', 'Needs relinking']
 
 async function openStates(page: Page) {
   const { text, layer } = await everyState()
@@ -46,7 +46,7 @@ test.describe('the line key button', () => {
 })
 
 test.describe('the status key', () => {
-  test('lists the seven states with their glyphs, words, and meanings, and a key press opens and closes it', async ({ page }) => {
+  test('lists the eight states with their glyphs, words, and meanings, and a key press opens and closes it', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openStates(page)
     const trigger = page.getByRole('complementary', { name: 'Sidebar' }).getByRole('button', { name: 'Status key' })
