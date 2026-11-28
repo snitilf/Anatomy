@@ -305,7 +305,7 @@ test('after J moves down the list, Shift+Tab leaves from the row that has focus'
   expect(after).not.toBe('part:web-form')
 })
 
-test('the revision toast shows on the map, goes when the Overview opens, and stays away while it is in front', async ({ page }, testInfo) => {
+test('the revision banner shows on the map, stays away from the Overview, and comes back with the newest revision', async ({ page }, testInfo) => {
   const board = JSON.parse(await readFile(SHORTENER, 'utf8')) as { revision: number; components: { summary: string }[] }
   const revise = async (revision: number) => {
     const next = structuredClone(board)
@@ -317,14 +317,16 @@ test('the revision toast shows on the map, goes when the Overview opens, and sta
   }
   await open(page, SHORTENER)
   await revise(2)
-  const toast = page.getByText('Revision 2 is open')
-  await expect(toast).toBeVisible()
+  const banner = page.getByRole('status', { name: 'Revision update' })
+  await expect(banner).toContainText('Revision 2: 1 changed part.')
   await tab(page, 'Overview').click()
-  await expect(toast).toBeHidden()
+  await expect(banner).toBeHidden()
   await expect(page.getByTestId('overview').getByRole('button', { name: /changed in revision 2/ })).toBeVisible()
   await revise(3)
   await page.waitForTimeout(500)
-  await expect(page.getByText('Revision 3 is open')).toHaveCount(0)
+  await expect(banner).toHaveCount(0)
+  await tab(page, 'Map').click()
+  await expect(banner).toContainText('Revision 3: 1 changed part.')
 })
 
 test('a walkthrough step in the far view names the tiles it highlights', async ({ page }, testInfo) => {

@@ -5,7 +5,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import type { Page, TestInfo } from '@playwright/test'
 import { expect, test } from './test.ts'
-import { linkPair, nextFrame, open, pickPart, viewport } from './helpers.ts'
+import { grabbable, linkPair, nextFrame, open, pickPart, viewport } from './helpers.ts'
 
 const REFUND = 'e2e/fixtures/refund-approval.board.json'
 const SHORTENER = 'e2e/fixtures/url-shortener.board.json'
@@ -24,14 +24,37 @@ const WINDOWS = [
   { width: 390, height: 844 },
 ]
 
-/** Loads a second revision of the open board, which makes the revision toast: the widest toast the app shows. */
+/** Moves one card, so that Tidy layout has something to put back. */
+async function moveACard(page: Page) {
+  const spot = await grabbable(page, { dx: 90, dy: 0 })
+  await page.mouse.move(spot.x, spot.y)
+  await page.mouse.down()
+  await page.mouse.move(spot.x + 90, spot.y, { steps: 10 })
+  await page.mouse.up()
+}
+
+/**
+ * Loads a second revision of the open board with one more part and connection, which keeps the map still, so that Tidy layout has
+ * something to do. Opening a file is no touch of the map, so the first-run hint stays.
+ */
 async function revise(page: Page, testInfo: TestInfo, file: string) {
-  const board = JSON.parse(await readFile(file, 'utf8')) as { revision: number; components: { summary: string }[] }
+  const board = JSON.parse(await readFile(file, 'utf8')) as { revision: number; components: { id: string; label: string; summary: string; position?: unknown; lesson?: unknown }[]; relationships: { id: string }[] }
   board.revision += 1
-  board.components[0]!.summary = `Changed in revision ${board.revision}`
+  const { position: _p, lesson: _l, ...base } = board.components[0]!
+  board.components.push({ ...base, id: 'added-in-revision', label: 'Added in revision', summary: 'A part the next revision adds.' })
+  board.relationships.push({ ...structuredClone(board.relationships[0]!), id: 'added-line', from: base.id, to: 'added-in-revision', label: 'hands over to' } as (typeof board.relationships)[number])
   const path = testInfo.outputPath(`revision-${board.revision}.board.json`)
   await writeFile(path, JSON.stringify(board))
   await page.getByLabel('Board file').setInputFiles(path)
+}
+
+/** Makes a toast with a button, the widest the app shows on a board with nothing new in it: Tidy layout, with Undo. */
+async function tidyLayout(page: Page) {
+  await page.keyboard.press('ControlOrMeta+k')
+  const menu = page.getByRole('dialog', { name: 'Command menu' })
+  await menu.getByRole('combobox').fill('Tidy layout')
+  await page.keyboard.press('Enter')
+  await expect(menu).toBeHidden()
 }
 
 for (const size of WINDOWS) {
@@ -54,8 +77,10 @@ for (const size of WINDOWS) {
             await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--toast-floor') !== '')
           }
           await revise(page, testInfo, REFUND)
+          await tidyLayout(page)
           const toast = page.locator('[data-sonner-toast]')
           await expect(toast).toBeVisible()
+          await expect(toast).toContainText('Layout tidied')
           // With reduced motion the toast is at rest once it is mounted.
           await expect(toast).toHaveAttribute('data-mounted', 'true')
 
@@ -166,20 +191,24 @@ test.describe('the room the fit keeps', () => {
 test.describe('a toast with a button', () => {
   test.use({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
 
-  test('Alt+T moves to the toasts, Tab reaches Review, and Enter opens the review', async ({ page }, testInfo) => {
+  test('Alt+T moves to the toasts, Tab reaches Undo, and Enter undoes the tidy', async ({ page }) => {
     await open(page, SHORTENER)
-    await revise(page, testInfo, SHORTENER)
+    await moveACard(page)
+    const moved = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll<HTMLElement>('.react-flow__node-card')].map((n) => [n.dataset.id ?? '', n.style.transform])))
+    await tidyLayout(page)
     const toast = page.locator('[data-sonner-toast]')
     await expect(toast).toBeVisible()
     await page.keyboard.press('Alt+KeyT')
     // The toast takes a stop of its own, and its button is the next.
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
-    const review = toast.getByRole('button', { name: 'Review' })
-    await expect(review).toBeFocused()
+    const undo = toast.getByRole('button', { name: 'Undo' })
+    await expect(undo).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true')
     await expect(toast).toBeHidden()
+    await expect
+      .poll(() => page.evaluate(() => Object.fromEntries([...document.querySelectorAll<HTMLElement>('.react-flow__node-card')].map((n) => [n.dataset.id ?? '', n.style.transform]))))
+      .toEqual(moved)
   })
 })
 
