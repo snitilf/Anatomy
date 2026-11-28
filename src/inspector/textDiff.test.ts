@@ -24,7 +24,7 @@ describe('diffText', () => {
   it('marks only the words that differ, and never part of a word', () => {
     const d = diffText('Checks the refund limit.', 'Checks the new refund limit.')
     expect(marked(d.before)).toEqual([])
-    expect(marked(d.after)).toEqual(['new '])
+    expect(marked(d.after)).toEqual(['new'])
     const e = diffText('Checks the refund limit before payout.', 'Checks the spending cap before payout.')
     expect(marked(e.before)).toEqual(['refund limit'])
     expect(marked(e.after)).toEqual(['spending cap'])
@@ -32,6 +32,19 @@ describe('diffText', () => {
     const f = diffText('The limit applies.', 'The limits apply.')
     expect(marked(f.before)).toEqual(['limit applies'])
     expect(marked(f.after)).toEqual(['limits apply'])
+  })
+
+  it('marks two different texts whole when only a few scattered words are the same', () => {
+    const before = 'Understand how a short link is created in a web form, and what happens when the short code does not exist.'
+    const after = 'Turn a long link into a short one, and count the visits.'
+    const d = diffText(before, after)
+    // The full stop they share stays unmarked.
+    expect(marked(d.before)).toEqual([before.slice(0, -1)])
+    expect(marked(d.after)).toEqual([after.slice(0, -1)])
+    // The same words, with one phrase changed, stay marked as that one phrase.
+    const e = diffText('Understand how a short link is created, and what is stored where.', 'Understand how a short link is created, and what is cached where.')
+    expect(marked(e.before)).toEqual(['stored'])
+    expect(marked(e.after)).toEqual(['cached'])
   })
 
   it('keeps every character of both texts', () => {
