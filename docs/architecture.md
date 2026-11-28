@@ -350,6 +350,7 @@ interface Layer {
   reconnects: Reconnect[] // { relationshipId, from?, to? }: moved ends of an agent connection
   archive: ArchiveEntry[] // items the agent resolved or the user dismissed, each with its answer, restorable
   answers: Answer[] // { id, response }: the agent's latest answer to an item still on the map
+  kept: string[] // answers the user kept, by item ID: the item and its answer stay on the map, and the answer no longer waits in the Review tab
   sent?: Sent // what was sent to the agent so far, with a fingerprint per item
 }
 ```
@@ -596,16 +597,25 @@ For this reason, a later revision without answers does not lose it.
 
 An adopted item moves to the archive when the answer names what changed and every named ID is on the board.
 Otherwise, it stays with its answer.
-Declined and answered items keep their answer until the user dismisses them.
-Dismissing them archives them as one step of undo.
+Declined and answered items keep their answer until the user settles them.
+Each one shows in the Review tab with **Keep**, **Dismiss**, and **Reply**.
+Keep records the answer in `layer.kept`: the item and its answer stay on the map, and the answer no longer waits for a decision.
+The answer stays readable next to the item, and a later revision that answers the same item again clears the mark, so the new answer waits.
+Dismissing archives the item and its answer as one step of undo.
+Reply opens the note input on the item's target, holding the item's own words, so a follow-up question starts from what was asked.
+For an item that is not a note, Reply opens the item's own view, where its words are edited.
+
+**J** and **K** step through the answers that wait, one card at a time (`stepReview` in `src/commands/list.ts`).
+The card in front holds the keyboard focus, so the step always starts from it, and its row is pressed the way a finger would: the map selects and frames the item, and the spotlight shows it.
+When the selection is already on the item, the map does not move on its own, so the step frames it.
+The keys work only while the Review tab is in front, and never while a text field has the focus.
 
 The app never takes in an answer twice.
 For this reason, an item restored from the archive stays restored when the same revision opens again.
 
 The Review tab lists these things:
 
-- The answers.
-- The items that the agent adopted in this revision.
+- The answers that wait for a decision, each with Keep, Dismiss, and Reply, and the adopted items of this revision under them.
 - Each moved connection with its old ends.
 - The ends that the user asked for, and whether the board now has them.
 - The rest of the archive, which the user can restore.
