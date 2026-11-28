@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -99,6 +99,30 @@ function token(block: Record<string, string>, name: string): string {
 
 const light = extractThemeBlock(":root[data-theme='light']")
 const dark = extractThemeBlock(":root[data-theme='dark']")
+const themes = [
+  ['light', light],
+  ['dark', dark],
+] as const
+
+function readSource(path: string): string {
+  return readFileSync(resolve(process.cwd(), path), 'utf8')
+}
+
+/** The token a component's rule paints a property with, as in `border: 1px solid var(--border);`. The rule is found by its first selector line. */
+function paintedWith(path: string, selector: string, property: string): string {
+  const css = readSource(path)
+  const start = css.indexOf(`\n${selector}`)
+  if (start === -1) throw new Error(`Missing rule ${selector} in ${path}`)
+  const body = css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start))
+  const declaration = body.match(new RegExp(`(?:^|;|\\n)\\s*${property}\\s*:[^;]*?var\\((--[a-z0-9-]+)\\)`))
+  if (!declaration?.[1]) throw new Error(`No ${property} token in ${selector} in ${path}`)
+  return declaration[1]
+}
+
+/** An alpha fill or a line laid over a ground, as the page paints it. */
+function over(block: Record<string, string>, name: string, ground: Rgba): Rgba {
+  return composite(parseColor(token(block, name)), ground)
+}
 
 // A group wash is the text color at a small share over the ground, as `GroupNode.module.css` draws it.
 function wash(block: Record<string, string>, share: '--wash-share' | '--wash-share-2'): Rgba {
@@ -154,11 +178,6 @@ describe('light theme surface separation and chroma', () => {
 })
 
 describe('accent', () => {
-  const themes = [
-    ['light', light],
-    ['dark', dark],
-  ] as const
-
   it('is a blue, clear of violet, and opposite the amber of the user', () => {
     for (const [, block] of themes) {
       const yours = rgbToOklch(parseColor(token(block, '--yours')))
@@ -300,10 +319,6 @@ describe('contrast matrix', () => {
     // A faded label keeps its cutout and steps back only by the color of its words: the label ink at `--faded-label`
     // over the cutout. The cutout is the map color with the group areas under the label painted again on it,
     // so it is the ground, one group wash, or two overlapping ones. `--yours-text` fades the same way while a sidebar row is pointed at.
-    const themes = [
-      ['light', light],
-      ['dark', dark],
-    ] as const
     const inks = ['--fg-2', '--yours-text'] as const
     const grounds = ['--bg', '--wash-share', '--wash-share-2'] as const
 
@@ -365,11 +380,11 @@ describe('contrast matrix', () => {
   })
 
   it('keeps dark theme contrast and values intact', () => {
-    // Dark theme values stay unchanged.
+    // Dark theme values stay unchanged, except the card, which lost its violet cast next to the blue accent.
     expect(token(dark, '--bg')).toBe('#181920')
     expect(token(dark, '--panel')).toBe('#12131a')
     expect(token(dark, '--frame')).toBe('#0b0c11')
-    expect(token(dark, '--raised')).toBe('#2e3141')
+    expect(token(dark, '--raised')).toBe('#2e323e')
     expect(token(dark, '--yours')).toBe('#e8a33d')
     expect(token(dark, '--yours-text')).toBe('#f0b45a')
     expect(token(dark, '--yours-ink')).toBe('#e8a33d')
@@ -406,5 +421,125 @@ describe('contrast matrix', () => {
     const onAccent = parseColor(token(dark, '--on-accent'))
     expect(contrastRatio(onAccent, parseColor(token(dark, '--accent')))).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio(onAccent, parseColor(token(dark, '--danger-fill')))).toBeGreaterThanOrEqual(4.5)
+  })
+})
+
+describe('grounds, wells, fields, and tracks', () => {
+  it('paints a prompt well that reads as a well on the dialog or popover around it', () => {
+    const wells = [paintedWith('src/app/HowToDialog.module.css', '.prompt {', 'background'), paintedWith('src/app/SendMenu.module.css', '.promptBox {', 'background')]
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      for (const well of wells) {
+        const ratio = contrastRatio(parseColor(token(block, well)), parseColor(token(block, '--raised')))
+        if (ratio < 1.2) failures.push(`${theme}: ${well} on --raised (${ratio.toFixed(2)}:1)`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('gives a text field in the sidebar an edge that reads against the shell and the field', () => {
+    const fields = [
+      ['src/inspector/view.module.css', '.input,'],
+      ['src/inspector/notes.module.css', '.textarea {'],
+      ['src/inspector/notes.module.css', '.compose {'],
+      ['src/inspector/Flow.module.css', '.input {'],
+    ] as const
+    const failures: string[] = []
+    for (const [path, selector] of fields) {
+      const field = paintedWith(path, selector, 'background')
+      const edge = paintedWith(path, selector, 'border')
+      for (const [theme, block] of themes) {
+        const fill = parseColor(token(block, field))
+        const line = over(block, edge, fill)
+        const onShell = contrastRatio(line, parseColor(token(block, '--panel')))
+        const onField = contrastRatio(line, fill)
+        if (onShell < 1.35 || onField < 1.35) failures.push(`${theme}: ${path} ${selector} ${edge} (${onShell.toFixed(2)}:1 on the shell, ${onField.toFixed(2)}:1 on the field)`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('draws a segmented track as a step on the shell and the top bar, and its thumb as a step on the track', () => {
+    const track = paintedWith('src/app/Segmented.module.css', '.track {', 'background')
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      for (const ground of ['--panel', '--frame'] as const) {
+        const under = parseColor(token(block, ground))
+        const fill = over(block, track, under)
+        const step = contrastRatio(fill, under)
+        const thumb = contrastRatio(parseColor(token(block, '--raised')), fill)
+        if (step < 1.15) failures.push(`${theme}: ${track} on ${ground} (${step.toFixed(2)}:1)`)
+        if (thumb < 1.2) failures.push(`${theme}: thumb on ${track} on ${ground} (${thumb.toFixed(2)}:1)`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('keeps a 1px ring visible on the canvas, for a raised block or a ringed figure with no fill', () => {
+    for (const [, block] of themes) {
+      const bg = parseColor(token(block, '--bg'))
+      expect(contrastRatio(over(block, '--border', bg), bg)).toBeGreaterThanOrEqual(1.2)
+      expect(contrastRatio(over(block, '--border-strong', bg), bg)).toBeGreaterThanOrEqual(1.4)
+    }
+  })
+
+  it('keeps the dark card a cool slate, without a violet cast next to the blue accent', () => {
+    const raised = rgbToOklch(parseColor(token(dark, '--raised')))
+    expect(raised.C).toBeLessThanOrEqual(0.023)
+    expect(raised.H).toBeGreaterThanOrEqual(262)
+    expect(raised.H).toBeLessThanOrEqual(280)
+  })
+})
+
+describe('the map', () => {
+  function mapGrounds(block: Record<string, string>): Array<[string, Rgba]> {
+    return [
+      ['--raised', parseColor(token(block, '--raised'))],
+      ['--bg', parseColor(token(block, '--bg'))],
+      ['--wash-share', wash(block, '--wash-share')],
+      ['--wash-share-2', wash(block, '--wash-share-2')],
+    ]
+  }
+
+  it('draws the edge of a selected card at 3:1 against the card fill, the ground, and one or two group washes', () => {
+    const edges = [paintedWith('src/canvas/CardNode.module.css', '.card[data-highlighted],', 'border-color'), paintedWith('src/canvas/CardNode.module.css', '.yoursEdge[data-selected] rect,', 'stroke')]
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      for (const edge of edges) {
+        for (const [name, ground] of mapGrounds(block)) {
+          const ratio = contrastRatio(parseColor(token(block, edge)), ground)
+          if (ratio < 3) failures.push(`${theme}: ${edge} on ${name} (${ratio.toFixed(2)}:1)`)
+        }
+      }
+    }
+    expect(failures).toEqual([])
+  })
+
+  it("draws the user's marks (lines, arrowheads, edges, dots, drawings) at 3:1 on the card, the ground, and one or two group washes", () => {
+    // A share of amber mixed into a fill (a tile, a sticky note) is a fill, not a mark, and words have their own 4.5:1 tests.
+    const marks = new Set<string>()
+    for (const dir of ['src/canvas', 'src/whiteboard']) {
+      for (const file of readdirSync(resolve(process.cwd(), dir))) {
+        if (!/\.(css|ts|tsx)$/.test(file) || /\.test\.tsx?$/.test(file)) continue
+        for (const line of readSource(`${dir}/${file}`).split('\n')) {
+          if (line.includes('color-mix(')) continue
+          for (const match of line.matchAll(/var\((--yours[a-z-]*)\)/g)) {
+            const name = match[1]
+            if (name && name !== '--yours-text' && name !== '--yours-tint') marks.add(name)
+          }
+        }
+      }
+    }
+    expect(marks.size).toBeGreaterThan(0)
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      for (const mark of marks) {
+        for (const [name, ground] of mapGrounds(block)) {
+          const ratio = contrastRatio(parseColor(token(block, mark)), ground)
+          if (ratio < 3) failures.push(`${theme}: ${mark} on ${name} (${ratio.toFixed(2)}:1)`)
+        }
+      }
+    }
+    expect(failures).toEqual([])
   })
 })

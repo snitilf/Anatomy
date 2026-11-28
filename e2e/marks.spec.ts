@@ -49,7 +49,8 @@ const systemColor = (page: Page, name: string) =>
     return color
   }, name)
 
-const accent = (page: Page) => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()).then(hexToRgb)
+/** The ink of a selection on the map: a selected card's edge and a selected line. */
+const accent = (page: Page) => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent-line').trim()).then(hexToRgb)
 
 const proposalEdge = '.react-flow__node[data-id="part-ratelimit1"] svg rect'
 const userLink = '.react-flow__edge g[data-mine] path.react-flow__edge-path'
