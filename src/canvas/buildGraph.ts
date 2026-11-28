@@ -14,6 +14,7 @@ import { Drawn, lineHitsCards, Obstacles, planEdges, RIP_UP_PASSES, routeConnect
 import { LINE_INK } from './kinds'
 import type { ItemState } from '../status/state'
 import { flowStartsOf, startsLabel } from '../scenarios/starts'
+import { NO_MARKS, type RevisionKind, type RevisionMarks } from './revisionMarks'
 
 /** Edge IDs of the user's links start with this. A board ID cannot contain a colon, so they never clash. */
 export const MANUAL_PREFIX = 'manual:'
@@ -68,6 +69,15 @@ export interface CardData extends Record<string, unknown> {
   startCorner: Corner
   /** How many summary lines fit on the card at its size. */
   summaryLines: number
+  /** What the open revision did to this part, until it is marked reviewed. */
+  revision?: RevisionKind | undefined
+  /** The revision has just arrived: the card or its tab comes in. */
+  arriving?: boolean | undefined
+}
+/** A part the open revision removed, drawn where it was. */
+export interface GhostData extends Record<string, unknown> {
+  label: string
+  arriving: boolean
 }
 export interface ManualEdgeData extends Record<string, unknown> {
   linkId: string
@@ -117,6 +127,9 @@ export interface EdgeData extends Record<string, unknown> {
   /** The user moved an end: the line is drawn where the user wants it, and `ghost` is the original, dimmed. */
   edited: boolean
   ghost?: string
+  /** What the open revision did to this connection, until it is marked reviewed. */
+  revision?: RevisionKind | undefined
+  arriving?: boolean | undefined
 }
 
 export interface ProposalData extends Record<string, unknown> {
@@ -149,6 +162,9 @@ export interface UserParts {
 
 /** Text and sticky notes sit above the ink layer, which sits above the cards and the connection labels. */
 export const MARK_NODE_Z = 1160
+
+/** The node of a removed part's ghost is named apart from the parts, so it never takes the place of one that comes back. */
+export const GHOST_PREFIX = 'ghost:'
 
 const NO_USER_PARTS: UserParts = { proposals: [], reconnects: [], marks: [] }
 
@@ -496,6 +512,7 @@ function stable<T extends Node | Edge>(cache: Map<string, T>, next: T): T {
 const MARKER_BOX = 20
 /** One empty list for every part that no walkthrough starts at, so such cards compare equal from one build to the next. */
 const NO_STARTS: readonly string[] = []
+const NO_IDS: ReadonlySet<string> = new Set()
 /** The label scales a start mark is checked at: from 100 percent down to the far end of the title level. */
 const START_SCALES = [1, 1.2, 1.4, 1.7, 2, LABEL_ROOM]
 const markers = new Map<string, EdgeMarker>()
@@ -527,6 +544,10 @@ export function assembleGraph(
   far = false,
   /** The state of the notes on each part, for the badge. A part with notes and no entry shows as not sent. */
   noteStates: ReadonlyMap<string, { state: ItemState; count: number }> = new Map(),
+  /** What the open revision added, changed, and removed, until it is marked reviewed. */
+  revision: RevisionMarks = NO_MARKS,
+  /** The parts, lines, and ghosts of a revision that has just arrived, which come in. */
+  arriving: ReadonlySet<string> = NO_IDS,
 ): { nodes: Node[]; edges: Edge[] } {
   const playing = highlight !== undefined && highlight.size > 0
   const names = new Map([...board.components.map((c) => [c.id, c.label] as const), ...user.proposals.map((p) => [p.id, p.label] as const)])
@@ -613,6 +634,7 @@ export function assembleGraph(
     const rect = rects[c.id] ?? { x: 0, y: 0, width: 0, height: 0 }
     const starts = flows.get(c.id) ?? NO_STARTS
     // The count of notes sits in the top right corner of a card with no lesson, so the start mark keeps out of it.
+    const marked = revision.parts.get(c.id)
     const countAtTopRight = (noteCounts.get(c.id) ?? 0) > 0 && c.lesson === undefined
     const corners = cardCorners(countAtTopRight)
     return stable(cache.nodes, {
@@ -642,6 +664,7 @@ export function assembleGraph(
         starts,
         startCorner: starts.length > 0 ? (freeCorner(rect, corners, START_SCALES, labelsAt) ?? corners[0]!) : 'tr',
         summaryLines: summaryLinesFor(c, rect, noteCounts.get(c.id) ?? 0),
+        ...(marked ? { revision: marked.kind, arriving: arriving.has(c.id) } : {}),
       },
       selected: c.id === selectedPart,
       ...(c.id === held ? { className: 'held' } : pushed?.has(c.id) ? { className: 'pushed' } : {}),
@@ -652,9 +675,31 @@ export function assembleGraph(
       // The name is the part and its group. The summary is the description, so a screen reader does not read it as the name.
       ariaLabel: groupLabel.get(c.group ?? '') ? `${c.label}, in ${groupLabel.get(c.group ?? '')}` : c.label,
       // After the summary, a part that a walkthrough starts at says so, since the marker on its corner is a picture.
-      domAttributes: { 'aria-description': starts.length > 0 ? `${c.summary} ${startsLabel(starts)}.` : c.summary } as NonNullable<Node['domAttributes']>,
+      // A revision marker comes first, so it is heard before the summary it may be about.
+      domAttributes: { 'aria-description': `${marked ? `${marked.words} ` : ''}${starts.length > 0 ? `${c.summary} ${startsLabel(starts)}.` : c.summary}` } as NonNullable<Node['domAttributes']>,
     } satisfies Node<CardData>)
   })
+
+  const ghosts = far
+    ? []
+    : revision.ghosts.map((g) =>
+        stable(cache.nodes, {
+          id: `${GHOST_PREFIX}${g.id}`,
+          type: 'ghost',
+          position: { x: g.rect.x, y: g.rect.y },
+          width: g.rect.width,
+          height: g.rect.height,
+          measured: { width: g.rect.width, height: g.rect.height },
+          data: { label: g.label, arriving: arriving.has(g.id) },
+          selectable: false,
+          draggable: false,
+          focusable: false,
+          connectable: false,
+          deletable: false,
+          ariaRole: 'img',
+          ariaLabel: `${g.label}, removed in revision ${board.revision}`,
+        } satisfies Node<GhostData>),
+      )
 
   const selectedProposal = selection?.type === 'proposal' ? selection.id : undefined
   const proposals = user.proposals.flatMap((p) => {
@@ -716,6 +761,7 @@ export function assembleGraph(
     const active = selected || bundled.has(r.id) || (selectedPart !== undefined && (from === selectedPart || to === selectedPart))
     const highlighted = playing && highlight.has(r.id)
     const color = active || highlighted ? 'var(--accent-line)' : moved ? 'var(--yours)' : LINE_INK
+    const marked = revision.lines.get(r.id)
     edges.push(
       stable(cache.edges, {
         id: r.id,
@@ -730,7 +776,7 @@ export function assembleGraph(
         hidden: shape.cheap === true,
         interactionWidth: 28,
         markerEnd: markerFor(color),
-        ariaLabel: `${names.get(from) ?? from} ${r.kind === 'unknown' ? 'connects to' : KIND_WORDS[r.kind]} ${names.get(to) ?? to}: ${r.label}${moved ? '. You moved its end.' : ''}`,
+        ariaLabel: `${names.get(from) ?? from} ${r.kind === 'unknown' ? 'connects to' : KIND_WORDS[r.kind]} ${names.get(to) ?? to}: ${r.label}${moved ? '. You moved its end.' : ''}${marked ? `. ${marked.words}` : ''}`,
         data: {
           relationshipId: r.id,
           label: r.label,
@@ -749,6 +795,7 @@ export function assembleGraph(
           tint: labelTint(geometry.groups, shape.labelX, shape.labelY, shape.labelWidth, shape.labelLines, shape.labelHidden === true, far && selected),
           edited: moved !== undefined,
           ...(moved ? { ghost: original.path } : {}),
+          ...(marked ? { revision: marked.kind, arriving: arriving.has(r.id) } : {}),
         },
       } satisfies Edge<EdgeData>),
     )
@@ -792,7 +839,7 @@ export function assembleGraph(
     )
   }
 
-  const nodes = [...groups, ...cards, ...proposals, ...notes]
+  const nodes = [...groups, ...ghosts, ...cards, ...proposals, ...notes]
   forget(cache.nodes, nodes)
   forget(cache.edges, edges)
   return { nodes, edges }

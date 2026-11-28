@@ -58,7 +58,8 @@ import { useRouteBox } from './useRouteBox'
 import { sharedBundles, type Bundle } from './bundleRoutes'
 import { frameArea } from './groupFrame'
 import { FarLayer, type FarGroup, type FarLit, type FarStart } from './FarLayer'
-import { CardNode } from './CardNode'
+import { CardNode, GhostNode } from './CardNode'
+import { NO_MARKS, revisionMarks } from './revisionMarks'
 import styles from './Canvas.module.css'
 import { GroupNode } from './GroupNode'
 import { MapHint } from './MapHint'
@@ -70,7 +71,7 @@ import { partRules, stepBackRules } from './emphasis'
 import { ZoomBar } from './ZoomBar'
 import { partStates, type ItemState } from '../status/state'
 
-const nodeTypes: NodeTypes = { card: CardNode, 'group-area': GroupNode, proposal: ProposalNode, 'mark-text': TextNode, 'mark-sticky': StickyNode }
+const nodeTypes: NodeTypes = { card: CardNode, ghost: GhostNode, 'group-area': GroupNode, proposal: ProposalNode, 'mark-text': TextNode, 'mark-sticky': StickyNode }
 const edgeTypes: EdgeTypes = { relationship: RelationshipEdge, 'manual-link': ManualEdge }
 const ARIA_LABELS = {
   'node.a11yDescription.keyboardDisabled': 'Press Enter to select this part. Then use the arrow keys to move it. Press Escape to go back to the overview.',
@@ -172,6 +173,13 @@ function solveInSlices(view: View, reuse: boolean, bundles: boolean, done: (geom
   return () => window.cancelAnimationFrame(frame)
 }
 
+/** How long a frame of the next layout waits for that layout to be drawn. */
+const FIT_WAIT_MS = 1000
+
+/** How long the arrival of a revision runs: the longest of its fades, with a frame to spare. */
+const ARRIVE_MS = 300
+const NO_ARRIVALS: ReadonlySet<string> = new Set()
+
 const DROP_PAN_MS = 160
 /** How long cards glide when a drop pushes them aside. */
 const PUSH_MS = 150
@@ -217,11 +225,14 @@ const CROWDED_LINES = 20
 const CROWDED_RATIO = 1.5
 
 export function Canvas() {
-  const { board, positions, sizes, links, notes, answers, sent, marks, proposals, reconnects, selection, scenario } = useAppStore(
+  const { board, positions, sizes, placed, links, notes, answers, sent, marks, proposals, reconnects, selection, scenario, changes, previousBoard } = useAppStore(
     useShallow((s) => ({
       board: s.board,
       positions: s.layer?.positions,
       sizes: s.layer?.sizes,
+      placed: s.layer?.placed,
+      changes: s.changes,
+      previousBoard: s.previousBoard,
       links: s.layer?.links,
       notes: s.layer?.notes,
       answers: s.layer?.answers,
@@ -233,7 +244,7 @@ export function Canvas() {
       scenario: s.scenario,
     })),
   )
-  const stored = useMemo(() => (positions && sizes ? { positions, sizes } : undefined), [positions, sizes])
+  const stored = useMemo(() => (positions && sizes ? { positions, sizes, placed } : undefined), [positions, sizes, placed])
   const dispatch = useAppDispatch()
   const store = useAppStoreApi()
   const uiApi = useUiApi()
@@ -358,6 +369,9 @@ export function Canvas() {
   // put it now, or the map changes size. From then on the lowest zoom is Fit's.
   const bottomFloor = useRef(0)
   const measuredSize = useRef({ width: 0, height: 0 })
+  /** A frame of the next layout that is wanted (`fitAfterLayout`): the layout solved when it was asked, and until when. */
+  const fitPending = useRef<{ after: unknown; until: number } | undefined>(undefined)
+  const solvedRef = useRef<unknown>(undefined)
   // Toasts sit in the slot above the bottom controls, centered on the map. The toaster reads these two values. The map stays
   // mounted, hidden, under the Overview, where a toast goes in the middle of the window, so they are only set on the map.
   const screen = useUi((u) => u.view)
@@ -437,14 +451,18 @@ export function Canvas() {
         : undefined,
     [solved, bundlesFor],
   )
+  // What the open revision added, changed, and removed, until it is marked reviewed (D144).
+  const revision = useMemo(() => (board ? revisionMarks(board, previousBoard, changes, { placed }) : NO_MARKS), [board, previousBoard, changes, placed])
+  // The ghosts of removed parts are on the map until the revision is marked reviewed, so a fit frames them too.
+  const ghostRects = useMemo(() => revision.ghosts.map((g) => g.rect), [revision])
   const baseBounds = useMemo(
-    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
-    [board, solved, marks, proposals],
+    () => (board && solved ? contentBounds([...Object.values(solved), ...ghostRects], Object.values(groupAreas(board, solved)), marks, proposals) : undefined),
+    [board, solved, ghostRects, marks, proposals],
   )
   // The opening view frames the parts. A mark drawn far from them does not pull it off the board.
   const basePartsBounds = useMemo(
-    () => (board && solved ? contentBounds(Object.values(solved), Object.values(groupAreas(board, solved)), [], proposals) : undefined),
-    [board, solved, proposals],
+    () => (board && solved ? contentBounds([...Object.values(solved), ...ghostRects], Object.values(groupAreas(board, solved)), [], proposals) : undefined),
+    [board, solved, ghostRects, proposals],
   )
   const { box: routes, resolveNow } = useRouteBox(routesBox, far, mayReachFar(baseBounds, mapSize), board)
   const bounds = useMemo(() => fitBounds(baseBounds, () => routes, mapSize), [baseBounds, routes, mapSize])
@@ -454,6 +472,7 @@ export function Canvas() {
   const basePartsBoundsRef = useRef(basePartsBounds)
   const resolveNowRef = useRef(resolveNow)
   useLayoutEffect(() => {
+    solvedRef.current = solved
     boundsRef.current = bounds
     baseBoundsRef.current = baseBounds
     basePartsBoundsRef.current = basePartsBounds
@@ -550,6 +569,9 @@ export function Canvas() {
       move,
       frame,
       refit,
+      fitAfterLayout: () => {
+        fitPending.current = { after: solvedRef.current, until: performance.now() + FIT_WAIT_MS }
+      },
       zoom,
       rectOf: (id: string) => viewRef.current?.rects[id],
       scene: () => sceneRef.current,
@@ -581,9 +603,29 @@ export function Canvas() {
     if (hold.current) return
     camera.refit(stillOpening())
   }, [mapSize, stillOpening, camera])
+  const framedFor = useRef(board)
   useEffect(() => {
-    camera.refit(stillOpening())
-  }, [basePartsBounds, stillOpening, camera])
+    const arrived = framedFor.current !== board
+    framedFor.current = board
+    // A layout asked to be framed once it is drawn, such as Tidy layout. A request no layout answered soon is dropped.
+    const pending = fitPending.current
+    if (pending && performance.now() > pending.until) fitPending.current = undefined
+    else if (pending && basePartsBounds && solved !== pending.after) {
+      fitPending.current = undefined
+      camera.zoom('fit')
+      return
+    }
+    if (camera.refit(stillOpening()) !== 'kept' || !arrived || !basePartsBounds) return
+    // A view the reader left fitted stays fitted when a revision brings a part or a ghost in beyond it: the whole board
+    // is framed again, so nothing new lands out of sight. A view the reader moved is left where it is.
+    const flow = flowRef.current
+    if (!flow) return
+    const { x, y, zoom } = flow.getViewport()
+    const room = camera.size()
+    const b = basePartsBounds
+    const out = b.x * zoom + x < -1 || b.y * zoom + y < room.top - 1 || (b.x + b.width) * zoom + x > room.width + 1 || (b.y + b.height) * zoom + y > room.height - (room.bottom ?? 0) + 1
+    if (out) camera.zoom('fit')
+  }, [board, solved, basePartsBounds, stillOpening, camera])
   const slot = useContext(CameraSlotContext)
   useEffect(() => {
     slot.set(camera)
@@ -619,12 +661,24 @@ export function Canvas() {
   const held = interaction && heldOf(interaction)
   const rectsNow = shown?.rects
   const geometryNow = shown?.geometry
+  /** What a revision that has just arrived brings in. It comes in once, where it lands, and never again on a later render. */
+  const [arriving, setArriving] = useState<ReadonlySet<string>>(NO_ARRIVALS)
+  const arrivedFor = useRef(board)
+  useLayoutEffect(() => {
+    if (arrivedFor.current === board) return
+    arrivedFor.current = board
+    const ids = [...revision.parts.keys(), ...revision.lines.keys(), ...revision.ghosts.map((g) => g.id)]
+    if (ids.length === 0 || prefersStillness()) return
+    setArriving(new Set(ids))
+    const timer = window.setTimeout(() => setArriving(NO_ARRIVALS), ARRIVE_MS)
+    return () => window.clearTimeout(timer)
+  }, [board, revision])
   const graph = useMemo(
     () =>
       board && rectsNow && geometryNow
-        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user, far, noteStates)
+        ? assembleGraph(board, rectsNow, geometryNow, selection, step?.highlight, links ?? [], noteCounts, cache, held, pushed, user, far, noteStates, revision, arriving)
         : undefined,
-    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, noteStates, cache, pushed, user, far],
+    [board, rectsNow, geometryNow, held, selection, step, links, noteCounts, noteStates, cache, pushed, user, far, revision, arriving],
   )
 
   // What arrow ends attach to: every card, and every connection's drawn line, where the user's moved line wins.

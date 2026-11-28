@@ -533,3 +533,140 @@
     stroke: Highlight;
   }
 }
+
+/*
+ * What the open revision did to a part: a tab across the top edge of the card with one word, New, Changed, or Removed.
+ * The word carries the meaning, so it reads without color, and the three tabs differ in fill as well: New is solid ink,
+ * Changed and Removed are outlined. Like a label it holds its size on screen (`--label-scale`). It sits beside the card,
+ * which clips its own paint, and steps back with the card when another part is selected.
+ */
+.revision {
+  position: absolute;
+  top: 0;
+  left: calc(10px * var(--label-scale, 1));
+  z-index: 1;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: calc(16px * var(--label-scale, 1));
+  padding: 0 calc(5px * var(--label-scale, 1));
+  translate: 0 -50%;
+  border: calc(1px * var(--label-scale, 1)) solid var(--card-edge);
+  border-radius: calc(var(--radius-xs) * var(--label-scale, 1));
+  background: var(--raised);
+  color: var(--fg-2);
+  font-size: calc(var(--text-xs) * var(--label-scale, 1));
+  line-height: 1;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 120ms var(--ease-out);
+}
+
+/* A start mark in the top left corner keeps its place: the tab moves past it. */
+.card[data-start='tl'] ~ .revision {
+  left: calc(24px * var(--label-scale, 1));
+}
+
+.revision[data-revision='new'] {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--raised);
+}
+
+.card[data-dimmed] ~ .revision {
+  opacity: 0.5;
+}
+
+.card[data-faded] ~ .revision {
+  opacity: var(--spot-card);
+}
+
+/*
+ * A part the revision removed: hollow and faint where it was, its name struck through. A solid edge, not the dashed one of a
+ * proposal. It takes no pointer and no focus; it goes when the revision is marked reviewed.
+ */
+.ghost {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-md);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ghostName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--fg-2);
+  font-size: calc(var(--text-md) * var(--title-scale, 1));
+  line-height: calc(var(--leading-md) * var(--title-scale, 1));
+  font-weight: var(--weight-medium);
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}
+
+:global([data-detail='title']) .ghost {
+  justify-content: center;
+  text-align: center;
+}
+
+:global([data-detail='title']) .ghostName {
+  line-height: calc(17px * var(--title-scale, 1));
+}
+
+/* The far view reads groups, not parts: ghosts and tabs leave it. */
+:global([data-far]) .ghost,
+:global([data-far]) .revision {
+  display: none;
+}
+
+/*
+ * A revision arrives: what it added comes in where it lands, the tabs of what it changed fade in with it, and what it
+ * removed fades from a card into its ghost. All at once and short: the map holds still, so nothing travels.
+ */
+.card[data-arriving] {
+  animation: arrive 220ms var(--ease-out) both;
+}
+
+.revision[data-arriving] {
+  animation: tab-in 180ms var(--ease-out) both;
+}
+
+.ghost[data-arriving] {
+  animation: fade-to-ghost 240ms var(--ease-out) both;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes tab-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-to-ghost {
+  from {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card[data-arriving],
+  .revision[data-arriving],
+  .ghost[data-arriving] {
+    animation: none;
+  }
+}

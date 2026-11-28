@@ -6,6 +6,7 @@ import { useAppDispatch } from '../app/store'
 import type { EdgeData } from './buildGraph'
 import { KIND_STYLE, SELECTED_WIDTH, LINE_INK } from './kinds'
 import { LabelCutout } from './LabelCutout'
+import { pillHeight } from './labelPlacement'
 import styles from './RelationshipEdge.module.css'
 
 export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<Edge<EdgeData>>) {
@@ -59,6 +60,7 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
           data-hover={hover || undefined}
           data-kind={data.kind}
           data-edited={data.edited || undefined}
+          data-revision={data.revision}
           style={{ transform: `translate(-50%, -50%) translate(${data.labelX}px, ${data.labelY}px)`, ...(data.labelHidden ? {} : { '--label-width': `${data.labelWidth}px` }) } as CSSProperties}
           title={text}
           aria-hidden="true"
@@ -69,6 +71,25 @@ export const RelationshipEdge = memo(function RelationshipEdge(props: EdgeProps<
             {data.label}
           </LabelCutout>
         </div>
+        {/*
+          What the open revision did to this connection: one word in a tab just above the middle of its label. It sits beside
+          the label, not in it, so a selected label that clips its text never clips the tab. The line's name says it to a screen reader.
+        */}
+        {data.revision && (
+          <div
+            className={clsx(styles.revision, 'nodrag nopan')}
+            data-edge-revision={data.revision}
+            data-edge={id}
+            data-hidden={data.labelHidden || undefined}
+            data-moving={data.moving || undefined}
+            data-faded={data.faded || undefined}
+            data-arriving={data.arriving || undefined}
+            style={{ transform: `translate(-50%, -100%) translate(${data.labelX}px, ${data.labelY}px) translateY(calc(${-pillHeight(data.labelLines) / 2}px * var(--label-scale, 1)))` }}
+            aria-hidden="true"
+          >
+            {data.revision === 'new' ? 'New' : 'Changed'}
+          </div>
+        )}
       </EdgeLabelRenderer>
     </>
   )
