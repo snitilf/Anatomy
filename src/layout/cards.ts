@@ -137,7 +137,7 @@ export function placeCards(board: Board, placement: CardPlacement): Record<strin
   }
   const sizeOf = (id: string) => sizes.get(id) ?? { ...CARD_SIZE }
   const held = placement.placed
-  if (held && board.components.some((c) => !c.position && !own(placement.positions, c.id) && own(held, c.id))) return placeHeld(board, placement, held, sizeOf)
+  if (held && holds(board, held)) return placeHeld(board, placement, held, sizeOf).rects
 
   const out: Record<string, Rect> = {}
   const fixed = new Set<string>()
@@ -185,7 +185,7 @@ export function placeCards(board: Board, placement: CardPlacement): Record<strin
  * with no place yet, which a revision added, go beside a neighbor, clear of every card and of the places the removed parts
  * had (their ghosts).
  */
-function placeHeld(board: Board, placement: CardPlacement, held: Readonly<Record<string, Rect>>, sizeOf: (id: string) => Size): Record<string, Rect> {
+function placeHeld(board: Board, placement: CardPlacement, held: Readonly<Record<string, Rect>>, sizeOf: (id: string) => Size): { rects: Record<string, Rect>; crowded: string[] } {
   const out: Record<string, Rect> = {}
   const pending: string[] = []
   const free = new Set<string>()
@@ -216,12 +216,26 @@ function placeHeld(board: Board, placement: CardPlacement, held: Readonly<Record
       }
     }
   }
-  if (pending.length === 0) return out
+  if (pending.length === 0) return { rects: out, crowded: [] }
   const ids = new Set(board.components.map((c) => c.id))
   const ghosts = Object.entries(held)
     .filter(([id]) => !ids.has(id))
     .map(([, r]) => r)
-  // A card that had to make room for a new one moves too, so the result holds every card that moved.
-  for (const [id, p] of Object.entries(placeBeside(board, out, pending, sizeOf, [...ghosts, ...(placement.avoid ?? [])]))) out[id] = { x: p.x, y: p.y, ...sizeOf(id) }
-  return out
+  const beside = placeBeside(board, out, pending, sizeOf, [...ghosts, ...(placement.avoid ?? [])])
+  for (const [id, p] of Object.entries(beside.at)) out[id] = { x: p.x, y: p.y, ...sizeOf(id) }
+  return { rects: out, crowded: beside.crowded }
+}
+
+/** The map holds still once any card of the board has a held place, whatever the user moved since. */
+const holds = (board: Board, held: Readonly<Record<string, Rect>>) => board.components.some((c) => own(held, c.id))
+
+/**
+ * `placeCards`, and the parts of a group that found no free spot near their group, so their group's area reaches over
+ * another group. A revision that has any lays the board out again instead (`placeRevision`).
+ */
+export function placeKept(board: Board, placement: CardPlacement): { rects: Record<string, Rect>; crowded: string[] } {
+  const held = placement.placed
+  if (!held || !holds(board, held)) return { rects: placeCards(board, placement), crowded: [] }
+  const sizes = new Map(board.components.map((c) => [c.id, own(placement.sizes, c.id) ?? contentSize(c)]))
+  return placeHeld(board, placement, held, (id) => sizes.get(id) ?? { ...CARD_SIZE })
 }

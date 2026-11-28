@@ -3,7 +3,6 @@ import { narrowest } from '../canvas/labelPlacement'
 import { measuringByTable } from '../canvas/textMeasure'
 import { inflate, overlaps, type Point, type Rect, type Size } from './geometry'
 import { groupAreas, groupPadding } from './groupArea'
-import { settleMoves } from './groups'
 
 /** The clear room a card that a revision adds keeps from every other card: one track of lines and its margins. */
 const CLEAR = 48
@@ -50,20 +49,26 @@ interface Anchor {
  * own group first, or else a part of its group. The card takes the nearest free spot along the flow, so a card a line runs
  * to sits to the right of where the line starts. A spot is free when the card keeps clear of every card and of `keepOut`
  * (the places the removed parts had), stays out of other groups' areas, and its own group's area, grown to take it in,
- * covers no card or area that it did not cover before. Cards already placed stay, unless a card has to make room.
- * A card of a group with no free spot nearby makes room in its group, and the cards it covers step aside (`makeRoom`).
- * A card with no neighbor on the map goes to the right of everything. Returns the top-left corner of each card placed,
- * and of each card that stepped aside.
+ * covers no card or area that it did not cover before. Cards already placed never move.
+ * A card with no free spot near goes to the right of everything. Returns the top-left corner of each card placed, and the
+ * parts of a group among them that found no free spot near the group, which a revision answers by tidying the layout.
  */
-export function placeBeside(board: Board, placed: Readonly<Record<string, Rect>>, pending: readonly string[], sizeOf: (id: string) => Size, keepOut: readonly Rect[] = []): Record<string, Point> {
+export function placeBeside(board: Board, placed: Readonly<Record<string, Rect>>, pending: readonly string[], sizeOf: (id: string) => Size, keepOut: readonly Rect[] = []): Beside {
   return measuringByTable(() => place(board, placed, pending, sizeOf, keepOut))
 }
 
-function place(board: Board, placed: Readonly<Record<string, Rect>>, pending: readonly string[], sizeOf: (id: string) => Size, keepOut: readonly Rect[]): Record<string, Point> {
+/** Where each card went, and the parts of a group that found no free spot near it, so their group's area reaches over others. */
+export interface Beside {
+  at: Record<string, Point>
+  crowded: string[]
+}
+
+function place(board: Board, placed: Readonly<Record<string, Rect>>, pending: readonly string[], sizeOf: (id: string) => Size, keepOut: readonly Rect[]): Beside {
   const rects: Record<string, Rect> = { ...placed }
   const groupOf = new Map(board.components.map((c) => [c.id, c.group]))
   const pad = groupPadding(board)
   const out: Record<string, Point> = {}
+  const crowded: string[] = []
 
   const lastMember = (id: string): Anchor | undefined => {
     const group = groupOf.get(id)
@@ -144,25 +149,6 @@ function place(board: Board, placed: Readonly<Record<string, Rect>>, pending: re
     return spots.map((s) => s.r)
   }
 
-  /**
-   * A card of a group with no free spot near its neighbors still joins its group: it takes the best spot beside a member
-   * that is clear of cards, and the cards and groups its grown area now covers step aside as blocks, the way a drop
-   * pushes them. Moving a few neighbors is better than an area drawn over another group (an exception to D144).
-   */
-  const makeRoom = (id: string, size: Size, anchor: Anchor): Rect | undefined => {
-    const spots = spotsBeside(size, anchor)
-    const r = spots.find((s) => free(id, s, true)) ?? spots[0]
-    if (!r) return undefined
-    rects[id] = r
-    for (const [other, p] of Object.entries(settleMoves(board, rects, [id]))) {
-      const was = rects[other]
-      if (!was || other === id) continue
-      rects[other] = { ...was, x: p.x, y: p.y }
-      out[other] = { x: p.x, y: p.y }
-    }
-    return r
-  }
-
   /** To the right of everything on the map, top first. */
   const atTheEnd = (id: string, size: Size): Rect => {
     const all = [...Object.values(rects), ...keepOut]
@@ -187,11 +173,11 @@ function place(board: Board, placed: Readonly<Record<string, Rect>>, pending: re
       spot = spotsBeside(size, anchor).find((r) => free(id, r))
       if (spot) break
     }
-    const group = groupOf.get(id)
-    const member = group !== undefined ? (anchors.find((a) => groupOf.get(a.id) === group) ?? lastMember(id)) : undefined
-    const r = spot ?? (member ? makeRoom(id, size, member) : undefined) ?? atTheEnd(id, size)
+    // A part of a group with members on the map and no free spot near: its area would reach over another group.
+    if (!spot && lastMember(id)) crowded.push(id)
+    const r = spot ?? atTheEnd(id, size)
     rects[id] = r
     out[id] = { x: r.x, y: r.y }
   }
-  return out
+  return { at: out, crowded }
 }

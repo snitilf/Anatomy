@@ -20,6 +20,7 @@ import { sameRects, solve } from './solve'
 import { currentStep } from '../scenarios/step'
 import { flowStartsOf } from '../scenarios/starts'
 import { toast } from 'sonner'
+import { deletedToast } from '../notes/undoToast'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { useUi, useUiApi } from '../app/ui'
@@ -603,6 +604,17 @@ export function Canvas() {
     if (hold.current) return
     camera.refit(stillOpening())
   }, [mapSize, stillOpening, camera])
+  // A revision with no room for a new part in its group arrives tidied. The board is framed whole, and the toast says why
+  // and offers the still layout back. It closes once history moves.
+  const roomMade = useAppStore((s) => s.roomMade)
+  const toldFor = useRef(board)
+  useEffect(() => {
+    if (toldFor.current === board) return
+    toldFor.current = board
+    if (!roomMade) return
+    camera.zoom('fit')
+    deletedToast('Layout tidied to make room for new parts', dispatch, store, () => camera.fitAfterLayout())
+  }, [board, roomMade, camera, dispatch, store])
   const framedFor = useRef(board)
   useEffect(() => {
     const arrived = framedFor.current !== board

@@ -1,5 +1,5 @@
 import type { Board } from '../board/schema'
-import { groupAreas, placeCards } from '../layout/cards'
+import { groupAreas, placeCards, placeKept } from '../layout/cards'
 import { contains, overlaps, type Point, type Rect } from '../layout/geometry'
 import { pushApart } from '../layout/push'
 import type { Layer, Mark, MarkEnd, Proposal } from './model'
@@ -13,23 +13,40 @@ export function holdPlaces(layer: Layer, board: Board): Layer {
   return layer.placed ? layer : { ...layer, placed: placeCards(board, layer) }
 }
 
+/** A revision placed over a layer, and, when the layout had to be tidied to make room, the layer as it was before the tidy. */
+export interface PlacedRevision {
+  layer: Layer
+  untidied?: Layer
+}
+
 /**
  * A new revision of the board opens over this layer, which belongs to `previous`. Every card keeps the place it had, the
  * cards the revision added go beside a neighbor, clear of the user's sticky notes, text, and proposed parts, and the parts
  * it removed keep their places for their ghosts until the revision is marked reviewed. A part the revision moved to
- * another group leaves its place, and the user's move of it, and is placed like a new part, beside its new group.
+ * another group leaves its place, and the user's move of it, and is placed like a new part, beside its new group; its marks
+ * go with it. When a new or regrouped part finds no free spot in or beside its group, its group's area would reach over
+ * another group, so the board is laid out again as Tidy layout does, and `untidied` is the still layout, one undo away.
  */
-export function placeRevision(layer: Layer, previous: Board, board: Board): Layer {
+export function placeRevision(layer: Layer, previous: Board, board: Board): PlacedRevision {
   const was = placeCards(previous, layer)
   const groupWas = new Map(previous.components.map((c) => [c.id, c.group]))
   const regrouped = new Set(board.components.filter((c) => groupWas.has(c.id) && groupWas.get(c.id) !== c.group).map((c) => c.id))
   const held = Object.fromEntries(Object.entries(was).filter(([id]) => !regrouped.has(id)))
   const positions = Object.fromEntries(Object.entries(layer.positions).filter(([id]) => !regrouped.has(id)))
   const avoid = [...layer.marks.flatMap((m) => (m.kind === 'sticky' || m.kind === 'text' ? [boxOf(m) as Rect] : [])), ...layer.proposals]
-  const now = placeCards(board, { positions, sizes: layer.sizes, placed: held, avoid })
+  const now = placeKept(board, { positions, sizes: layer.sizes, placed: held, avoid })
   const kept = new Set(board.components.map((c) => c.id))
   const removed = Object.fromEntries(Object.entries(was).filter(([id]) => !kept.has(id)))
-  return { ...layer, positions: regrouped.size > 0 ? positions : layer.positions, placed: { ...now, ...removed } }
+  const still: Layer = {
+    ...layer,
+    positions: regrouped.size > 0 ? positions : layer.positions,
+    placed: { ...now.rects, ...removed },
+    marks: layer.marks.map((m) => follow(m, was, now.rects)),
+    proposals: layer.proposals.map((p) => followProposal(p, was, now.rects)),
+  }
+  if (now.crowded.length === 0) return { layer: still }
+  const tidied = tidyLayout(still, board)
+  return tidied === still ? { layer: still } : { layer: tidied, untidied: still }
 }
 
 /** Whether a card sits somewhere else in one layer than in the other: a step of undo across Tidy layout, for one. */

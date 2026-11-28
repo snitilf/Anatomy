@@ -56,6 +56,8 @@ export interface AppState {
   warnings: BoardProblem[]
   openErrors?: { fileName: string; errors: BoardProblem[] }
   selection?: Selection
+  /** The revision had no room for a new part in its group, so the layout was tidied. One undo puts the still layout back. */
+  roomMade?: true
   /** The walkthrough that is playing, and the step it shows. */
   scenario?: { id: string; step: number }
 }
@@ -228,9 +230,13 @@ export function reducer(state: AppState, action: Action): AppState {
       // A revision that adds, removes, or changes parts or connections keeps every card where it was drawn (D144).
       const moves = changes !== undefined && [changes.added, changes.removed, changes.changed].some((c) => c.components.length > 0 || c.relationships.length > 0)
       // Otherwise no ghost is drawn, so the places of removed parts go.
-      const layer = was && moves ? placeRevision(received, was, board) : dropRemovedPlaces(received, board)
-      // A new revision is a barrier: undo never reaches back into the version before it.
-      const next: AppState = { board, layer, warnings: action.warnings, history: emptyHistory }
+      const placed = was && moves ? placeRevision(received, was, board) : { layer: dropRemovedPlaces(received, board) }
+      const layer = placed.layer
+      // A new revision is a barrier: undo never reaches back into the version before it. When the layout was tidied to make
+      // room for a new part, one undo goes back to the still layout, with that part where it found a place.
+      const history = placed.untidied ? remember(emptyHistory, placed.untidied) : emptyHistory
+      const next: AppState = { board, layer, warnings: action.warnings, history }
+      if (placed.untidied) next.roomMade = true
       if (was && changes) {
         next.previousBoard = was
         next.changes = changes
@@ -252,8 +258,12 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, warnings: [{ path: '', message: action.message }] }
     case 'changesDismissed': {
       // The ghosts go, so the places they kept go too: they would hold new cards off, and leave Tidy layout work to do.
+      // Undo and redo must not bring them back either.
       const { changes: _c, ...rest } = state
-      return state.layer && state.board ? { ...rest, layer: dropRemovedPlaces(state.layer, state.board) } : rest
+      const board = state.board
+      if (!state.layer || !board) return rest
+      const clean = (l: Layer) => dropRemovedPlaces(l, board)
+      return { ...rest, layer: clean(state.layer), history: { past: state.history.past.map(clean), future: state.history.future.map(clean) } }
     }
     case 'openFailed':
       return { ...state, openErrors: { fileName: action.fileName, errors: action.errors } }
