@@ -31,6 +31,7 @@ import {
   updateMark,
   updateProposal,
 } from '../layer/edits'
+import { holdPlaces, placeRevision, tidyLayout } from '../layer/places'
 import { emptyLayer, type Layer, type Mark, type Note, type Proposal, type Response, type Sent, type Target } from '../layer/model'
 import { emptyHistory, remember, stepBack, stepForward, type History } from './history'
 
@@ -84,6 +85,8 @@ export type LayerAction =
   | { type: 'itemsArchived'; answers: readonly { id: string; response: Response }[]; now: Date }
   | { type: 'archiveRestored'; id: string }
   | { type: 'archiveDropped'; id: string }
+  /** Lays the board out again, as if it opened for the first time. Marks over a card go with it. */
+  | { type: 'layoutTidied' }
 
 export type Action =
   | LayerAction
@@ -137,10 +140,11 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
     const pushed = a.positions ?? {}
     return moveProposals(moveCards(sized, onBoard(b, pushed)), pushed)
   },
-  markAdded: (l, _b, a) => addMark(l, a.mark),
+  // A mark is stored in board coordinates, so the first one holds the cards where they are drawn.
+  markAdded: (l, b, a) => addMark(holdPlaces(l, b), a.mark),
   markChanged: (l, _b, a) => updateMark(l, a.id, () => a.mark),
   markDeleted: (l, _b, a) => deleteMark(l, a.id),
-  proposalAdded: (l, _b, a) => addProposal(l, a.proposal),
+  proposalAdded: (l, b, a) => addProposal(holdPlaces(l, b), a.proposal),
   proposalChanged: (l, _b, a) => updateProposal(l, a.id, a.change),
   proposalDeleted: (l, _b, a) => deleteProposal(l, a.id),
   reconnected: (l, b, a) => reconnect(l, b, { relationshipId: a.relationshipId, end: a.end, part: a.part }, a.now, a.id).layer,
@@ -148,6 +152,7 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
   itemsArchived: (l, _b, a) => archiveItems(l, a.answers, a.now),
   archiveRestored: (l, _b, a) => restoreArchived(l, a.id),
   archiveDropped: (l, _b, a) => dropArchived(l, a.id),
+  layoutTidied: (l, b) => tidyLayout(l, b),
 }
 
 const isLayerAction = (action: Action): action is LayerAction => Object.hasOwn(EDITS, action.type)
@@ -217,12 +222,17 @@ export function reducer(state: AppState, action: Action): AppState {
       const sameBoard = old !== undefined && old.id === board.id
       const keptLayer = sameBoard && state.layer?.boardId === board.id ? state.layer : undefined
       // The agent's answers in this revision go next to the user's items, and adopted items that landed are archived.
-      const layer = receiveAnswers(action.layer ?? keptLayer ?? emptyLayer(board.id), board, action.now ?? new Date())
+      const received = receiveAnswers(action.layer ?? keptLayer ?? emptyLayer(board.id), board, action.now ?? new Date())
+      const was = sameBoard ? old : undefined
+      const changes = was ? diffBoards(was, board) : undefined
+      // A revision that adds, removes, or changes parts or connections keeps every card where it was drawn (D144).
+      const moves = changes !== undefined && [changes.added, changes.removed, changes.changed].some((c) => c.components.length > 0 || c.relationships.length > 0)
+      const layer = was && moves ? placeRevision(received, was, board) : received
       // A new revision is a barrier: undo never reaches back into the version before it.
       const next: AppState = { board, layer, warnings: action.warnings, history: emptyHistory }
-      if (sameBoard) {
-        next.previousBoard = old
-        next.changes = diffBoards(old, board)
+      if (was && changes) {
+        next.previousBoard = was
+        next.changes = changes
         if (selectionExists(board, layer, state.selection)) next.selection = state.selection as Selection
       }
       return next

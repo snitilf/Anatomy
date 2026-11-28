@@ -15,6 +15,7 @@ export const LAYER_LIMITS = {
   links: 200,
   positions: 500,
   sizes: 500,
+  placed: 500,
   marks: 500,
   strokePoints: 2000,
   proposals: 60,
@@ -57,6 +58,7 @@ const extent = z.number().finite().min(0).max(LAYER_LIMITS.extent)
 const point = z.strictObject({ x: coordinate, y: coordinate })
 const size = z.strictObject({ width: extent, height: extent })
 const box = { x: coordinate, y: coordinate, width: extent, height: extent }
+const rect = z.strictObject(box)
 const isoDate = z.iso.datetime()
 const text = (max: number) => z.string().trim().min(1, 'must not be empty').max(max)
 
@@ -191,6 +193,12 @@ export const layerSchema = z.strictObject({
   positions: byComponent(point, LAYER_LIMITS.positions),
   /** Only the cards the user resized. */
   sizes: byComponent(size, LAYER_LIMITS.sizes),
+  /**
+   * Where every card was drawn the last time the map had to hold still: when a new revision opened, when the layout was
+   * tidied, or when the first mark went on the map. Cards keep these places, so the map does not reshuffle under the user's
+   * work. A part a revision removed keeps its place here until the next revision, for its ghost. Missing until then.
+   */
+  placed: byComponent(rect, LAYER_LIMITS.placed).optional(),
   notes: z.array(note).max(LAYER_LIMITS.notes),
   links: z.array(link).max(LAYER_LIMITS.links),
   marks: z.array(mark).max(LAYER_LIMITS.marks),

@@ -1,6 +1,7 @@
 import type { Board } from '../board/schema'
 import { autoLayout } from './autoLayout'
-import type { Point, Rect, Size } from './geometry'
+import { placeBeside } from './beside'
+import { overlaps, type Point, type Rect, type Size } from './geometry'
 import { groupAreas } from './groupArea'
 import { pushApart } from './push'
 
@@ -29,10 +30,12 @@ export const CARD_TEXT = {
   foot: 16,
 } as const
 
-/** What the user changed about where cards sit and how big they are. Both are keyed by component ID. */
+/** What the user changed about where cards sit and how big they are, and where the map last held them. All keyed by component ID. */
 export interface CardPlacement {
   positions: Readonly<Record<string, Point>>
   sizes: Readonly<Record<string, Size>>
+  /** Where each card was drawn when the map last had to hold still (`placed` in the layer). A card with a place here keeps it. */
+  placed?: Readonly<Record<string, Rect>> | undefined
 }
 
 const own = <T,>(record: Readonly<Record<string, T>>, id: string): T | undefined => (Object.hasOwn(record, id) ? record[id] : undefined)
@@ -117,10 +120,12 @@ function layered(board: Board, natural: ReadonlyMap<string, Size>, unplaced: Rea
 const BESIDE_GAP = 160
 
 /**
- * Where every card sits and how big it is. A position the user set wins, then the board's position, then the layered
- * layout. When no card has a board position, the layout places every card. When some do, the rest are laid out as a
- * block to the right of them. A card the layout placed never stays under a card with a fixed position: it is pushed
- * aside. Nothing is stored: the auto-placed cards follow the layout every time, so a new revision lays them out again.
+ * Where every card sits and how big it is. A position the user set wins, then the board's position, then the place the
+ * map last held the card at (`placed`), then the layered layout. When no card has a held place, the layout places every
+ * card: when no card has a board position either it places them all, and when some do, the rest are laid out as a block
+ * to the right of them. A card the layout placed never stays under a card with a fixed position: it is pushed aside.
+ * When cards have held places, the layout does not run: those cards stay, and a card without one is placed beside a
+ * neighbor (`placeBeside`), so a new revision never reshuffles the map.
  */
 export function placeCards(board: Board, placement: CardPlacement): Record<string, Rect> {
   const sizes = new Map<string, Size>()
@@ -129,6 +134,8 @@ export function placeCards(board: Board, placement: CardPlacement): Record<strin
     sizes.set(c.id, size ? { width: size.width, height: size.height } : contentSize(c))
   }
   const sizeOf = (id: string) => sizes.get(id) ?? { ...CARD_SIZE }
+  const held = placement.placed
+  if (held && board.components.some((c) => !c.position && !own(placement.positions, c.id) && own(held, c.id))) return placeHeld(board, placement, held, sizeOf)
 
   const out: Record<string, Rect> = {}
   const fixed = new Set<string>()
@@ -167,5 +174,51 @@ export function placeCards(board: Board, placement: CardPlacement): Record<strin
     const r = out[id]
     if (r && pending.has(id)) out[id] = { ...r, x: p.x, y: p.y }
   }
+  return out
+}
+
+/**
+ * The cards of a map that holds still. Every card keeps the place the user, the board, or the map gave it. A card that its
+ * new text made larger than its held place pushes aside the held cards it now covers, so cards never overlap. The cards
+ * with no place yet, which a revision added, go beside a neighbor, clear of every card and of the places the removed parts
+ * had (their ghosts).
+ */
+function placeHeld(board: Board, placement: CardPlacement, held: Readonly<Record<string, Rect>>, sizeOf: (id: string) => Size): Record<string, Rect> {
+  const out: Record<string, Rect> = {}
+  const pending: string[] = []
+  const free = new Set<string>()
+  for (const c of board.components) {
+    const kept = own(held, c.id)
+    const at = own(placement.positions, c.id) ?? c.position ?? kept
+    if (!at) {
+      pending.push(c.id)
+      continue
+    }
+    out[c.id] = { x: at.x, y: at.y, ...sizeOf(c.id) }
+    if (!own(placement.positions, c.id) && !c.position) free.add(c.id)
+  }
+  const grown = [...free].filter((id) => {
+    const was = own(held, id) as Rect
+    const now = out[id] as Rect
+    return now.width > was.width || now.height > was.height
+  })
+  if (grown.length > 0) {
+    const covered = new Set([...free].filter((id) => !grown.includes(id) && grown.some((g) => overlaps(out[g] as Rect, out[id] as Rect))))
+    if (covered.size > 0) {
+      const groupOf = new Map(board.components.map((c) => [c.id, c.group]))
+      const pinned = new Set(Object.keys(out).filter((id) => !covered.has(id)))
+      const pushed = pushApart(out, pinned, { groupOf: (id) => groupOf.get(id), areas: groupAreas(board, out) })
+      for (const [id, p] of Object.entries(pushed)) {
+        const r = out[id]
+        if (r && covered.has(id)) out[id] = { ...r, x: p.x, y: p.y }
+      }
+    }
+  }
+  if (pending.length === 0) return out
+  const ids = new Set(board.components.map((c) => c.id))
+  const ghosts = Object.entries(held)
+    .filter(([id]) => !ids.has(id))
+    .map(([, r]) => r)
+  for (const [id, p] of Object.entries(placeBeside(board, out, pending, sizeOf, ghosts))) out[id] = { x: p.x, y: p.y, ...sizeOf(id) }
   return out
 }
