@@ -15,15 +15,38 @@ export function holdPlaces(layer: Layer, board: Board): Layer {
 
 /**
  * A new revision of the board opens over this layer, which belongs to `previous`. Every card keeps the place it had, the
- * cards the revision added go beside a neighbor, and the parts it removed keep their places for their ghosts until the next
- * revision.
+ * cards the revision added go beside a neighbor, clear of the user's sticky notes, text, and proposed parts, and the parts
+ * it removed keep their places for their ghosts until the revision is marked reviewed. A part the revision moved to
+ * another group leaves its place, and the user's move of it, and is placed like a new part, beside its new group.
  */
 export function placeRevision(layer: Layer, previous: Board, board: Board): Layer {
   const was = placeCards(previous, layer)
-  const now = placeCards(board, { ...layer, placed: was })
+  const groupWas = new Map(previous.components.map((c) => [c.id, c.group]))
+  const regrouped = new Set(board.components.filter((c) => groupWas.has(c.id) && groupWas.get(c.id) !== c.group).map((c) => c.id))
+  const held = Object.fromEntries(Object.entries(was).filter(([id]) => !regrouped.has(id)))
+  const positions = Object.fromEntries(Object.entries(layer.positions).filter(([id]) => !regrouped.has(id)))
+  const avoid = [...layer.marks.flatMap((m) => (m.kind === 'sticky' || m.kind === 'text' ? [boxOf(m) as Rect] : [])), ...layer.proposals]
+  const now = placeCards(board, { positions, sizes: layer.sizes, placed: held, avoid })
   const kept = new Set(board.components.map((c) => c.id))
   const removed = Object.fromEntries(Object.entries(was).filter(([id]) => !kept.has(id)))
-  return { ...layer, placed: { ...now, ...removed } }
+  return { ...layer, positions: regrouped.size > 0 ? positions : layer.positions, placed: { ...now, ...removed } }
+}
+
+/** Whether a card sits somewhere else in one layer than in the other: a step of undo across Tidy layout, for one. */
+export function laidOutApart(board: Board, a: Layer, b: Layer): boolean {
+  if (a.placed === b.placed) return false
+  const one = placeCards(board, a)
+  const two = placeCards(board, b)
+  return board.components.some((c) => one[c.id]?.x !== two[c.id]?.x || one[c.id]?.y !== two[c.id]?.y)
+}
+
+/** The layer without the places of parts that are no longer on the board, which only a ghost needed. Itself when there are none. */
+export function dropRemovedPlaces(layer: Layer, board: Board): Layer {
+  const placed = layer.placed
+  if (!placed) return layer
+  const ids = new Set(board.components.map((c) => c.id))
+  if (Object.keys(placed).every((id) => ids.has(id))) return layer
+  return { ...layer, placed: Object.fromEntries(Object.entries(placed).filter(([id]) => ids.has(id))) }
 }
 
 /** The box a mark covers. An arrow has none: its ends are placed one by one. */

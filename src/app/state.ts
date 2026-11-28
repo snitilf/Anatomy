@@ -31,7 +31,7 @@ import {
   updateMark,
   updateProposal,
 } from '../layer/edits'
-import { holdPlaces, placeRevision, tidyLayout } from '../layer/places'
+import { dropRemovedPlaces, holdPlaces, placeRevision, tidyLayout } from '../layer/places'
 import { emptyLayer, type Layer, type Mark, type Note, type Proposal, type Response, type Sent, type Target } from '../layer/model'
 import { emptyHistory, remember, stepBack, stepForward, type History } from './history'
 
@@ -227,7 +227,8 @@ export function reducer(state: AppState, action: Action): AppState {
       const changes = was ? diffBoards(was, board) : undefined
       // A revision that adds, removes, or changes parts or connections keeps every card where it was drawn (D144).
       const moves = changes !== undefined && [changes.added, changes.removed, changes.changed].some((c) => c.components.length > 0 || c.relationships.length > 0)
-      const layer = was && moves ? placeRevision(received, was, board) : received
+      // Otherwise no ghost is drawn, so the places of removed parts go.
+      const layer = was && moves ? placeRevision(received, was, board) : dropRemovedPlaces(received, board)
       // A new revision is a barrier: undo never reaches back into the version before it.
       const next: AppState = { board, layer, warnings: action.warnings, history: emptyHistory }
       if (was && changes) {
@@ -250,8 +251,9 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'noticeShown':
       return { ...state, warnings: [{ path: '', message: action.message }] }
     case 'changesDismissed': {
+      // The ghosts go, so the places they kept go too: they would hold new cards off, and leave Tidy layout work to do.
       const { changes: _c, ...rest } = state
-      return rest
+      return state.layer && state.board ? { ...rest, layer: dropRemovedPlaces(state.layer, state.board) } : rest
     }
     case 'openFailed':
       return { ...state, openErrors: { fileName: action.fileName, errors: action.errors } }

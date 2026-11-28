@@ -36,6 +36,8 @@ export interface CardPlacement {
   sizes: Readonly<Record<string, Size>>
   /** Where each card was drawn when the map last had to hold still (`placed` in the layer). A card with a place here keeps it. */
   placed?: Readonly<Record<string, Rect>> | undefined
+  /** Room a card without a place keeps clear of, such as the user's sticky notes when a revision opens. */
+  avoid?: readonly Rect[] | undefined
 }
 
 const own = <T,>(record: Readonly<Record<string, T>>, id: string): T | undefined => (Object.hasOwn(record, id) ? record[id] : undefined)
@@ -219,6 +221,7 @@ function placeHeld(board: Board, placement: CardPlacement, held: Readonly<Record
   const ghosts = Object.entries(held)
     .filter(([id]) => !ids.has(id))
     .map(([, r]) => r)
-  for (const [id, p] of Object.entries(placeBeside(board, out, pending, sizeOf, ghosts))) out[id] = { x: p.x, y: p.y, ...sizeOf(id) }
+  // A card that had to make room for a new one moves too, so the result holds every card that moved.
+  for (const [id, p] of Object.entries(placeBeside(board, out, pending, sizeOf, [...ghosts, ...(placement.avoid ?? [])]))) out[id] = { x: p.x, y: p.y, ...sizeOf(id) }
   return out
 }
