@@ -20,6 +20,7 @@ import {
   editLink,
   editNote,
   findItem,
+  keepAnswer,
   moveCards,
   moveProposals,
   receiveAnswers,
@@ -97,6 +98,8 @@ export type LayerAction =
   | { type: 'reconnected'; relationshipId: string; end: 'from' | 'to'; part: string; id: string; now: Date }
   | { type: 'reconnectDeleted'; id: string }
   | { type: 'itemsArchived'; answers: readonly { id: string; response: Response }[]; now: Date }
+  /** The user keeps an item with its answer: both stay, and the answer leaves the review. */
+  | { type: 'answerKept'; id: string }
   | { type: 'archiveRestored'; id: string }
   | { type: 'archiveDropped'; id: string }
   /** Lays the board out again, as if it opened for the first time. Marks over a card go with it. */
@@ -168,6 +171,7 @@ const EDITS: { [T in LayerAction['type']]: Edit<T> } = {
   reconnected: (l, b, a) => reconnect(l, b, { relationshipId: a.relationshipId, end: a.end, part: a.part }, a.now, a.id).layer,
   reconnectDeleted: (l, _b, a) => deleteReconnect(l, a.id),
   itemsArchived: (l, _b, a) => archiveItems(l, a.answers, a.now),
+  answerKept: (l, _b, a) => keepAnswer(l, a.id),
   archiveRestored: (l, _b, a) => restoreArchived(l, a.id),
   archiveDropped: (l, _b, a) => dropArchived(l, a.id),
   layoutTidied: (l, b) => tidyLayout(l, b),

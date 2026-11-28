@@ -4,20 +4,20 @@ import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import rowsCss from '../app/rows.module.css'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
-import type { Selection } from '../app/state'
+import { useUiApi } from '../app/ui'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
-import { itemsOf, type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
+import { type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
 import { revisionSummary, summaryLine } from '../layer/revisionSummary'
 import { summarizeLayer } from '../layer/status'
-import { adoptedNow, hasChanges, reviewCounts } from '../notes/review'
+import { adoptedNow, hasChanges, pendingAnswers, reviewCounts, selectionOf } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
 import { StatusGlyph, StatusWord } from '../status/StatusGlyph'
 import type { ItemState } from '../status/state'
 import { answerFor } from './answers'
 import { Group, SubHead } from './bits'
 import { partName } from './names'
-import { AgentAnswer, ItemAnswer, NoteBlock } from './notes'
+import { AgentAnswer, NoteBlock } from './notes'
 import notes from './notes.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
@@ -41,19 +41,14 @@ function itemWords(board: Board, layer: Layer, entry: Item): string {
   }
 }
 
-/** Where an item sits, so a press on it selects that on the map. */
-function selectionOf(entry: Item): Selection {
-  switch (entry.type) {
-    case 'note':
-      return entry.item.target.type === 'board' ? { type: 'board' } : { type: entry.item.target.type, id: entry.item.target.id }
-    case 'reconnect':
-      return { type: 'relationship', id: entry.item.relationshipId }
-    default:
-      return { type: entry.type, id: entry.item.id }
-  }
-}
-
-function ItemRow({ board, layer, entry, status, live = true }: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean }) {
+function ItemRow({
+  board,
+  layer,
+  entry,
+  status,
+  live = true,
+  reviewId,
+}: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean; reviewId?: string }) {
   const { choose } = usePanel()
   const content = (
     <>
@@ -69,7 +64,13 @@ function ItemRow({ board, layer, entry, status, live = true }: { board: Board; l
   )
   if (!live) return <p className={clsx(rowsCss.row, rowsCss.sm, styles.staticRow)}>{content}</p>
   return (
-    <button type="button" className={clsx(rowsCss.row, rowsCss.sm)} onClick={() => choose(selectionOf(entry))} {...spotProps(spotOf(selectionOf(entry)))}>
+    <button
+      type="button"
+      className={clsx(rowsCss.row, rowsCss.sm)}
+      data-review-item={reviewId}
+      onClick={() => choose(selectionOf(entry))}
+      {...spotProps(spotOf(selectionOf(entry)))}
+    >
       {content}
     </button>
   )
@@ -140,19 +141,58 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
   )
 }
 
-function Answers({ board, previous, layer }: { board: Board; previous: Board | undefined; layer: Layer }) {
-  const answered = itemsOf(layer).filter((e) => answerFor(layer, e.item.id))
-  const adopted = adoptedNow(board, layer)
-  if (answered.length + adopted.length === 0) return null
+/**
+ * One answer that waits for a decision: the user's words, the agent's answer, and the three ways to settle it.
+ * Keep leaves both on the map, Dismiss archives them, and Reply writes a follow-up where the item lives.
+ */
+function PendingItem({ board, previous, layer, entry }: { board: Board; previous: Board | undefined; layer: Layer; entry: Item }) {
+  const dispatch = useAppDispatch()
+  const ui = useUiApi()
+  const answer = answerFor(layer, entry.item.id)
+  if (!answer) return null
+
+  function reply() {
+    const selection = selectionOf(entry)
+    dispatch({ type: 'select', selection })
+    ui.setTab('details')
+    // The view of the item comes up first; then the note field on it takes the words.
+    if (entry.type === 'note') requestAnimationFrame(() => ui.askComposer({ text: entry.item.text, kind: entry.item.kind }))
+    else if (entry.type === 'reconnect') requestAnimationFrame(() => ui.askComposer())
+  }
+
   return (
-    <Group name="answers" title="Answers" count={answered.length + adopted.length}>
+    <li className={notes.feedItem} data-review-item={entry.item.id}>
+      <ItemRow board={board} layer={layer} entry={entry} status={answer.status} reviewId={entry.item.id} />
+      {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
+      <AgentAnswer board={board} answer={answer} bare />
+      <div className={notes.feedActions}>
+        <button type="button" className={clsx(buttons.button, buttons.small)} onClick={() => dispatch({ type: 'answerKept', id: entry.item.id })}>
+          Keep
+        </button>
+        <button
+          type="button"
+          className={clsx(buttons.button, buttons.quiet, buttons.small)}
+          onClick={() => dispatch({ type: 'itemsArchived', answers: [{ id: entry.item.id, response: answer }], now: new Date() })}
+        >
+          Dismiss
+        </button>
+        <button type="button" className={clsx(buttons.button, buttons.quiet, buttons.small)} onClick={reply}>
+          Reply
+        </button>
+      </div>
+    </li>
+  )
+}
+
+function Answers({ board, previous, layer }: { board: Board; previous: Board | undefined; layer: Layer }) {
+  const pending = pendingAnswers(layer)
+  const adopted = adoptedNow(board, layer)
+  if (pending.length + adopted.length === 0) return null
+  return (
+    <Group name="answers" title="Answers" count={pending.length + adopted.length}>
       <ul className={notes.feed}>
-        {answered.map((entry) => (
-          <li key={entry.item.id} className={notes.feedItem}>
-            <ItemRow board={board} layer={layer} entry={entry} {...(answerFor(layer, entry.item.id) ? { status: answerFor(layer, entry.item.id)!.status } : {})} />
-            {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
-            <ItemAnswer board={board} id={entry.item.id} bare />
-          </li>
+        {pending.map((entry) => (
+          <PendingItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />
         ))}
         {adopted.map((entry) => (
           <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />

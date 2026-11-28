@@ -5,8 +5,10 @@ import {
   ArrowUp,
   BookOpen,
   CheckCheck,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Circle,
   Copy,
   Download,
@@ -52,7 +54,7 @@ import { blockRect, boundsOf, frameBundle } from '../canvas/bundleFrame'
 import { showView } from '../app/viewActions'
 import { overviewMemory, revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
-import { hasChanges, reviewCounts } from '../notes/review'
+import { hasChanges, pendingAnswers, reviewCounts, selectionOf, stepAnswer } from '../notes/review'
 import { laidOutApart, tidyLayout } from '../layer/places'
 import { stepBack, stepForward } from '../app/history'
 import { toast } from 'sonner'
@@ -105,6 +107,36 @@ function overviewRow(): Selection | undefined {
   const row = document.activeElement?.closest<HTMLElement>('[data-row][data-type]')
   const { type, id } = row?.dataset ?? {}
   return id && (type === 'component' || type === 'proposal') ? { type, id } : undefined
+}
+
+/** The answers that wait for a decision, or nothing when the layer has none. */
+const pendingOf = (c: CommandContext) => (c.state.layer ? pendingAnswers(c.state.layer) : [])
+
+/** Whether two selections point at the same thing. An item never selects a bundle, so the ids settle it. */
+const sameSelection = (a: Selection | undefined, b: Selection): boolean => a !== undefined && a.type === b.type && (a.type === 'board' || a.id === (b as { id: string }).id)
+
+/**
+ * Steps through the answers that wait in the Review tab. The card in front holds the keyboard focus, so it is the one
+ * the step comes from; its row is pressed the way a finger would, so the map selects and frames the item. When the
+ * selection is already on that item, the map does not move on its own, so the step frames it.
+ */
+function stepReview(c: CommandContext, move: 1 | -1) {
+  const entry = stepAnswer(pendingOf(c), document.activeElement?.closest('li')?.querySelector('[data-review-item]')?.getAttribute('data-review-item') ?? undefined, move)
+  if (!entry) return
+  const framed = sameSelection(c.state.selection, selectionOf(entry))
+  // A closed sidebar opens for the step, and the tab mounts its cards before the step finds one.
+  if (!c.ui.sidebar.open) c.uiApi.setSidebarOpen(true)
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const row = document.querySelector<HTMLButtonElement>(`button[data-review-item="${CSS.escape(entry.item.id)}"]`)
+      if (!row) return
+      row.closest('li')?.scrollIntoView({ block: 'nearest' })
+      row.focus()
+      row.click()
+      const box = selectionBox(c)
+      if (framed && box) c.camera?.frame({ box, padding: 0.25, maxZoom: 1 })
+    }),
+  )
 }
 
 
@@ -364,6 +396,27 @@ export const COMMANDS: readonly Command[] = [
       c.uiApi.setSidebarOpen(true)
       c.uiApi.setTab('review')
     },
+  },
+  {
+    id: 'review.next',
+    group: 'Go to',
+    label: 'Next answer',
+    icon: ChevronDown,
+    keys: ['J'],
+    keywords: ['review', 'step', 'answers', 'revision'],
+    // Only while the Review tab is in front: the step walks the cards it holds.
+    visible: (c) => onMap(c) && !playing(c) && c.ui.tab === 'review' && pendingOf(c).length > 0,
+    run: (c) => stepReview(c, 1),
+  },
+  {
+    id: 'review.previous',
+    group: 'Go to',
+    label: 'Previous answer',
+    icon: ChevronUp,
+    keys: ['K'],
+    keywords: ['review', 'step', 'answers', 'revision'],
+    visible: (c) => onMap(c) && !playing(c) && c.ui.tab === 'review' && pendingOf(c).length > 0,
+    run: (c) => stepReview(c, -1),
   },
   {
     id: 'walkthrough.next',

@@ -125,11 +125,11 @@ async function panAway(page: Page, id: string) {
 
 /** One step of the walkthrough asserts: the card in front holds the focus, and the map holds the part. */
 async function stepIs(page: Page, q: Pending) {
-  const row = answers(page).getByRole('button', { name: re(q.text) })
+  const row = answers(page).getByRole('button', { name: q.text })
   await expect(row).toBeFocused()
   await expect(answers(page).getByText(q.text)).toBeInViewport()
   await expect(answers(page).getByText(q.answer)).toBeInViewport()
-  await expect(card(page, q.part.id)).toHaveAttribute('data-selected', '')
+  await expect(card(page, q.part.id).locator('[data-card]')).toHaveAttribute('data-selected')
   await expect(card(page, q.part.id)).toBeInViewport()
 }
 
@@ -157,7 +157,8 @@ for (const file of BOARDS) {
     await stepIs(page, first)
 
     // The keys stay quiet while a field has the focus.
-    await page.locator('.react-flow__node-card').first().click()
+    await page.keyboard.press('Shift+Digit1')
+    await part(page, second.part.label).click()
     const field = review(page).getByRole('textbox', { name: /^Add a (note|question)$/ })
     await field.click()
     await page.keyboard.type('jk')
@@ -228,7 +229,7 @@ test('Reply opens the note input on the same part, holding the question', async 
   const panel = review(page)
 
   // The part comes up in Details, and the note input on it is a question holding the words of the first one.
-  await expect(panel.getByRole('heading', { name: re(first.part.label) })).toBeVisible()
+  await expect(panel.getByRole('heading', { name: first.part.label })).toBeVisible()
   const field = panel.getByRole('textbox', { name: 'Add a question' })
   await expect(field).toBeFocused()
   await expect(field).toHaveValue(first.text)
@@ -252,7 +253,7 @@ test.describe('with reduced motion', () => {
     await panAway(page, first.part.id)
 
     await page.keyboard.press('j')
-    await expect(answers(page).getByRole('button', { name: re(first.text) })).toBeFocused()
+    await expect(answers(page).getByRole('button', { name: first.text })).toBeFocused()
     const state = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && a instanceof CSSAnimation).length)
     expect(state).toBe(0)
     await expect(card(page, first.part.id)).toBeInViewport()
