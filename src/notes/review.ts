@@ -25,6 +25,9 @@ export function selectionOf(entry: Item): Selection {
   }
 }
 
+/** Whether two selections point at the same thing. An item never selects a bundle, so the ids settle it. */
+export const sameSelection = (a: Selection | undefined, b: Selection): boolean => a !== undefined && a.type === b.type && (a.type === 'board' || a.id === (b as { id: string }).id)
+
 /** The items whose answers still wait for a decision: answered, and not kept. */
 export function pendingAnswers(layer: Layer): Item[] {
   const kept = new Set(layer.kept)

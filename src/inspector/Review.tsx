@@ -1,16 +1,20 @@
 import clsx from 'clsx'
 import { ArrowRight } from 'lucide-react'
+import { useId } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import rowsCss from '../app/rows.module.css'
+import type { Action } from '../app/state'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
 import { useUiApi } from '../app/ui'
+import { useCommands } from '../commands/context'
+import { frontReviewCard, reviewRow } from '../commands/list'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
 import { type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
 import { revisionSummary, summaryLine } from '../layer/revisionSummary'
 import { summarizeLayer } from '../layer/status'
-import { adoptedNow, hasChanges, pendingAnswers, reviewCounts, selectionOf } from '../notes/review'
+import { adoptedNow, hasChanges, pendingAnswers, reviewCounts, sameSelection, selectionOf } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
 import { StatusGlyph, StatusWord } from '../status/StatusGlyph'
 import type { ItemState } from '../status/state'
@@ -48,12 +52,16 @@ function ItemRow({
   status,
   live = true,
   reviewId,
-}: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean; reviewId?: string }) {
+  titleId,
+}: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean; reviewId?: string; titleId?: string }) {
   const { choose } = usePanel()
   const content = (
     <>
       <span className={styles.rowMain}>
-        <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
+        {/* A card that waits for a decision shows the whole of what the user wrote. */}
+        <span id={titleId} className={clsx(styles.rowTitle, reviewId && styles.wraps)}>
+          {itemWords(board, layer, entry)}
+        </span>
       </span>
       {status && (
         <span className={styles.rowEnd}>
@@ -66,7 +74,7 @@ function ItemRow({
   return (
     <button
       type="button"
-      className={clsx(rowsCss.row, rowsCss.sm)}
+      className={clsx(rowsCss.row, rowsCss.sm, reviewId && styles.multiRow)}
       data-review-item={reviewId}
       onClick={() => choose(selectionOf(entry))}
       {...spotProps(spotOf(selectionOf(entry)))}
@@ -147,36 +155,65 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
  */
 function PendingItem({ board, previous, layer, entry }: { board: Board; previous: Board | undefined; layer: Layer; entry: Item }) {
   const dispatch = useAppDispatch()
+  const store = useAppStoreApi()
   const ui = useUiApi()
+  const { context } = useCommands()
+  const titleId = useId()
   const answer = answerFor(layer, entry.item.id)
   if (!answer) return null
+
+  /**
+   * Keeps or dismisses the item, and hands the focus on: to the next card, or the one before when this was the last, or to
+   * the list when none is left. When this item was the one on the map, the next card comes to the front there too.
+   */
+  function settle(action: Action) {
+    const pending = pendingAnswers(layer)
+    const at = pending.findIndex((e) => e.item.id === entry.item.id)
+    const next = pending[at + 1] ?? pending[at - 1]
+    const onMap = sameSelection(store.getState().selection, selectionOf(entry))
+    dispatch(action)
+    if (next && onMap) {
+      frontReviewCard(context(), next.item.id)
+      return
+    }
+    // Without a card left, the heading of the list, or the Review tab once the list is gone.
+    requestAnimationFrame(() =>
+      (
+        (next && reviewRow(next.item.id)) ??
+        document.querySelector<HTMLElement>('[aria-label=Answers] [aria-expanded]') ??
+        document.querySelector<HTMLElement>('[aria-label=Sidebar] [aria-selected=true]')
+      )?.focus(),
+    )
+  }
 
   function reply() {
     const selection = selectionOf(entry)
     dispatch({ type: 'select', selection })
     ui.setTab('details')
-    // The view of the item comes up first; then the note field on it takes the words.
-    if (entry.type === 'note') requestAnimationFrame(() => ui.askComposer({ text: entry.item.text, kind: entry.item.kind }))
-    else if (entry.type === 'reconnect') requestAnimationFrame(() => ui.askComposer())
+    // The view of the item comes up first; then the note field on it opens empty, as a question when it follows one up.
+    // The Composer is not mounted while Review is in front, so no words of an earlier draft are in it to keep.
+    if (entry.type === 'note' || entry.type === 'reconnect') requestAnimationFrame(() => ui.askComposer(entry.type === 'note' ? { kind: entry.item.kind } : undefined))
   }
 
+  const action = clsx(buttons.button, buttons.link, buttons.small, notes.textAction)
   return (
     <li className={notes.feedItem} data-review-item={entry.item.id}>
-      <ItemRow board={board} layer={layer} entry={entry} status={answer.status} reviewId={entry.item.id} />
+      <ItemRow board={board} layer={layer} entry={entry} status={answer.status} reviewId={entry.item.id} titleId={titleId} />
       {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
       <AgentAnswer board={board} answer={answer} bare />
       <div className={notes.feedActions}>
-        <button type="button" className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)} onClick={() => dispatch({ type: 'answerKept', id: entry.item.id })}>
+        <button type="button" className={action} aria-describedby={titleId} onClick={() => settle({ type: 'answerKept', id: entry.item.id })}>
           Keep
         </button>
         <button
           type="button"
-          className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
-          onClick={() => dispatch({ type: 'itemsArchived', answers: [{ id: entry.item.id, response: answer }], now: new Date() })}
+          className={action}
+          aria-describedby={titleId}
+          onClick={() => settle({ type: 'itemsArchived', answers: [{ id: entry.item.id, response: answer }], now: new Date() })}
         >
           Dismiss
         </button>
-        <button type="button" className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)} onClick={reply}>
+        <button type="button" className={action} aria-describedby={titleId} onClick={reply}>
           Reply
         </button>
       </div>
