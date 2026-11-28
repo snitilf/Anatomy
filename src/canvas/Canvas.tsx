@@ -36,7 +36,7 @@ import { Editor, type Typed } from '../whiteboard/Editor'
 import { EndHandles, type EndHandle } from '../whiteboard/EndHandles'
 import { partUnder } from '../whiteboard/pointer'
 import { endDropAction, type Drop, type EndRef } from '../whiteboard/endDrop'
-import { arrowEnds, attachAt, pointAlong, translateMark, type Scene } from '../whiteboard/geometry'
+import { arrowEnds, attachAt, markBounds, pointAlong, translateMark, type Scene } from '../whiteboard/geometry'
 import { InkLayer } from '../whiteboard/InkLayer'
 import { ProposalNode, StickyNode, TextNode } from '../whiteboard/nodes'
 import { STICKY_MAX, STICKY_MIN, STICKY_SIZE } from '../whiteboard/sizes'
@@ -46,13 +46,13 @@ import { heldId as heldOf, IDLE, isBusy, isHolding, next, pendingMoves, reusesLi
 import { onTextMeasured } from './textMeasure'
 import { assembleGraph, editedId, GraphCache, MANUAL_PREFIX, MARK_PREFIX, moveCard, type Geometry, type UserParts } from './buildGraph'
 import { MANUAL_LINE } from './kinds'
-import { contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, toastPlace, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
+import { boxInView, contentBounds, coveredBottom, coveredTop, fitBounds, mayReachFar, frameViewport, MAX_ZOOM, type Frame, moveCamera, stepZoom, toastPlace, viewportShowing, zoomAround, zoomLimits, type Limits } from './camera'
 import { CameraContext, CameraSlotContext, GLIDE_MS, prefersStillness, type Camera as CameraApi } from './cameraContext'
 import { Camera, DetailMode, KeepInLimits, KeepSelectionInView, LabelMode, LabelScale, WheelZoom } from './CameraControls'
 import { hiddenDetailText, type DetailLevel } from './far'
 import { bundleSelection } from '../app/state'
 import { usePhone } from '../app/usePhone'
-import { frameConnection } from './bundleFrame'
+import { blockRect, boundsOf, frameConnection } from './bundleFrame'
 import { bundleWords, type BundleWords } from './bundleWords'
 import { bundleGroups, connectionsOf } from './bundles'
 import { useRouteBox } from './useRouteBox'
@@ -532,6 +532,18 @@ export function Canvas() {
       last.fitted = options.box ? undefined : { options, at, room, board: viewRef.current?.board.id }
       return at
     }
+    const show: CameraApi['show'] = (box, { padding = 0.25, maxZoom = 1, upper = false } = {}) => {
+      const flow = flowRef.current
+      if (!flow) return false
+      const room = size()
+      const area = upper ? { ...room, height: room.height / 2, bottom: 0 } : room
+      if (boxInView(flow.getViewport(), area, box)) return false
+      release()
+      last.fitted = undefined
+      // Set directly: placing it would center a board that fits the map on the whole map, under the sheet.
+      void flow.setViewport(frameViewport(current(), area, { box, padding, maxZoom }), { duration: 0 })
+      return true
+    }
     const refit: CameraApi['refit'] = (opening = false) => {
       const flow = flowRef.current
       const fitted = last.fitted
@@ -564,20 +576,43 @@ export function Canvas() {
       else viewport = move(zoomAround(now(), command === 'reset' ? 1 : step, middle), duration)
       glide.heading = duration > 0 ? { viewport, until: performance.now() + duration } : undefined
     }
+    const rectOf = (id: string) => viewRef.current?.rects[id]
     return {
       limits: fresh,
       size,
       move,
       frame,
+      show,
       refit,
       fitAfterLayout: () => {
         fitPending.current = { after: solvedRef.current, until: performance.now() + FIT_WAIT_MS }
       },
       zoom,
-      rectOf: (id: string) => viewRef.current?.rects[id],
+      rectOf,
+      boxOf: (s) => {
+        const { board: shown, layer } = store.getState()
+        if (!shown || s.type === 'board') return undefined
+        if (s.type === 'component') return rectOf(s.id)
+        if (s.type === 'bundle') return boundsOf([blockRect(shown, rectOf, s.a), blockRect(shown, rectOf, s.b)])
+        if (s.type === 'relationship') {
+          const r = shown.relationships.find((x) => x.id === s.id)
+          const moved = layer?.reconnects.find((x) => x.relationshipId === s.id)
+          return r && boundsOf([rectOf(moved?.from ?? r.from), rectOf(moved?.to ?? r.to)])
+        }
+        if (s.type === 'link') {
+          const l = layer?.links.find((x) => x.id === s.id)
+          return l && boundsOf([rectOf(l.from), rectOf(l.to)])
+        }
+        if (s.type === 'proposal') {
+          const p = layer?.proposals.find((x) => x.id === s.id)
+          return p && { x: p.x, y: p.y, width: p.width, height: p.height }
+        }
+        const m = layer?.marks.find((x) => x.id === s.id)
+        return m && markBounds(m, sceneRef.current)
+      },
       scene: () => sceneRef.current,
     }
-  }, [measureMap])
+  }, [measureMap, store])
   // A fitted view stays fitted while the reader leaves it alone: a new size of the map frames the whole board again.
   // Until the reader first presses, types, or scrolls, so does any other change, such as the hint coming in, or the
   // fonts loading and the map being built again with its labels measured in them. A new revision is not part of it.

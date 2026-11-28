@@ -50,17 +50,16 @@ import { EXAMPLES, openExample } from '../app/examples'
 import type { Selection } from '../app/state'
 import { copyText } from '../app/clipboard'
 import { trailOf } from '../app/crumbs'
-import { blockRect, boundsOf, frameBundle } from '../canvas/bundleFrame'
+import { frameBundle } from '../canvas/bundleFrame'
 import { showView } from '../app/viewActions'
 import { overviewMemory, revealRow } from '../overview/memory'
 import { setThemeMode, getThemeMode, type ThemeMode } from '../theme/theme'
-import { hasChanges, pendingAnswers, reviewCounts, selectionOf, stepAnswer } from '../notes/review'
+import { hasChanges, pendingAnswers, reviewCounts, stepAnswer } from '../notes/review'
 import { laidOutApart, tidyLayout } from '../layer/places'
 import { stepBack, stepForward } from '../app/history'
 import { toast } from 'sonner'
 import { currentTrail, rememberStep, walkStep, type Walk } from './walk'
 import { deletedToast } from '../notes/undoToast'
-import type { Rect } from '../layout/geometry'
 import { onPhone } from '../app/usePhone'
 import type { Tool } from '../whiteboard/tools'
 import type { Command, CommandContext } from './types'
@@ -79,27 +78,10 @@ const deletable = (c: CommandContext) => {
   return s && (s.type === 'link' || s.type === 'mark' || s.type === 'proposal') ? s : undefined
 }
 
-/** The box around the selection on the map: a part, or both ends of a connection or link. */
-function selectionBox(c: CommandContext): Rect | undefined {
+/** The box around the selection on the map. */
+const selectionBox = (c: CommandContext) => {
   const s = selected(c)
-  const { board, layer } = c.state
-  if (!s || !board || !c.camera) return undefined
-  const at = c.camera.rectOf
-  if (s.type === 'component') return at(s.id)
-  if (s.type === 'bundle') return boundsOf([blockRect(board, at, s.a), blockRect(board, at, s.b)])
-  if (s.type === 'relationship') {
-    const r = board.relationships.find((x) => x.id === s.id)
-    return r ? boundsOf([at(r.from), at(r.to)]) : undefined
-  }
-  if (s.type === 'link') {
-    const l = layer?.links.find((x) => x.id === s.id)
-    return l ? boundsOf([at(l.from), at(l.to)]) : undefined
-  }
-  if (s.type === 'proposal') {
-    const p = layer?.proposals.find((x) => x.id === s.id)
-    return p ? { x: p.x, y: p.y, width: p.width, height: p.height } : undefined
-  }
-  return undefined
+  return s && c.camera?.boxOf(s)
 }
 
 /** The part that has focus in the Overview's list, as a selection. */
@@ -112,33 +94,40 @@ function overviewRow(): Selection | undefined {
 /** The answers that wait for a decision, or nothing when the layer has none. */
 const pendingOf = (c: CommandContext) => (c.state.layer ? pendingAnswers(c.state.layer) : [])
 
-/** Whether two selections point at the same thing. An item never selects a bundle, so the ids settle it. */
-const sameSelection = (a: Selection | undefined, b: Selection): boolean => a !== undefined && a.type === b.type && (a.type === 'board' || a.id === (b as { id: string }).id)
+/** The row of a pending answer's card in the Review tab, when it is mounted. */
+export const reviewRow = (id: string) => document.querySelector<HTMLElement>(`button[data-review-item="${CSS.escape(id)}"]`)
 
 /**
- * Steps through the answers that wait in the Review tab. The card in front holds the keyboard focus, so it is the one
- * the step comes from; its row is pressed the way a finger would, so the map selects and frames the item. When the
- * selection is already on that item, the map does not move on its own, so the step frames it.
+ * Puts one pending answer's card in front: scrolls the card into view, focuses its row, and presses it the way a finger
+ * would, so the map selects the item. The selection camera moves first; whatever of the item it leaves off the map, such
+ * as both ends of a connection on a wide screen, or a drawing, is then framed.
  */
-function stepReview(c: CommandContext, move: 1 | -1) {
-  const entry = stepAnswer(pendingOf(c), document.activeElement?.closest('li')?.querySelector('[data-review-item]')?.getAttribute('data-review-item') ?? undefined, move)
-  if (!entry) return
-  const framed = sameSelection(c.state.selection, selectionOf(entry))
-  // A closed sidebar opens for the step, and the tab mounts its cards before the step finds one.
+export function frontReviewCard(c: CommandContext, id: string) {
+  // A closed sidebar opens for the step, and so does an Answers group the user closed, so the card is mounted.
   if (!c.ui.sidebar.open) c.uiApi.setSidebarOpen(true)
+  if (c.ui.groups.answers === false) c.uiApi.setGroup('answers', true)
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      const row = document.querySelector<HTMLButtonElement>(`button[data-review-item="${CSS.escape(entry.item.id)}"]`)
+      const row = reviewRow(id)
       if (!row) return
       row.closest('li')?.scrollIntoView({ block: 'nearest' })
       row.focus()
       row.click()
-      const box = selectionBox(c)
-      if (framed && box) c.camera?.frame({ box, padding: 0.25, maxZoom: 1 })
+      requestAnimationFrame(() => {
+        const { selection, scenario } = c.store?.getState() ?? c.state
+        const box = selection && c.camera?.boxOf(selection)
+        // On a phone the sheet covers the lower half of the map, unless it is pulled all the way up.
+        if (box) c.camera?.show(box, { upper: onPhone() && scenario === undefined && c.uiApi.store.getState().sheet !== 2 })
+      })
     }),
   )
 }
 
+/** Steps through the answers that wait in the Review tab, from the card that holds the keyboard focus. */
+function stepReview(c: CommandContext, move: 1 | -1) {
+  const entry = stepAnswer(pendingOf(c), document.activeElement?.closest('li')?.querySelector('[data-review-item]')?.getAttribute('data-review-item') ?? undefined, move)
+  if (entry) frontReviewCard(c, entry.item.id)
+}
 
 /** Undo or redo. A step across Tidy layout lays the whole board out differently, so the board is framed again. */
 function step(c: CommandContext, direction: 'undo' | 'redo') {

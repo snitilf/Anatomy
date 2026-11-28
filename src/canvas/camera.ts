@@ -253,6 +253,14 @@ export function stepZoom(zoom: number, direction: 1 | -1, limits: Pick<Limits, '
   return next ?? (direction > 0 ? limits.maxZoom : limits.minZoom)
 }
 
+/** Whether all of a box shows in the free part of the map: inside its sides, below the notices, and above the bottom controls. */
+export function boxInView(viewport: Viewport, map: Size & { top: number; bottom?: number }, box: Rect): boolean {
+  const { x, y, zoom } = viewport
+  const left = box.x * zoom + x
+  const top = box.y * zoom + y
+  return left >= 0 && top >= map.top && left + box.width * zoom <= map.width && top + box.height * zoom <= map.height - (map.bottom ?? 0)
+}
+
 /** The viewport after zooming to a level around a point of the map, such as its middle or the pointer. */
 export function zoomAround(viewport: Viewport, zoom: number, point: { x: number; y: number }): Viewport {
   const ratio = zoom / viewport.zoom
