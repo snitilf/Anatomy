@@ -613,7 +613,9 @@ export function Canvas() {
     toldFor.current = board
     if (!roomMade) return
     camera.zoom('fit')
-    deletedToast('Layout tidied to make room for new parts', dispatch, store, () => camera.fitAfterLayout())
+    // A frame later, so it lands in front of the toast that says the revision is open.
+    const frame = window.requestAnimationFrame(() => deletedToast('Layout tidied to make room for new parts', dispatch, store, () => camera.fitAfterLayout()))
+    return () => window.cancelAnimationFrame(frame)
   }, [board, roomMade, camera, dispatch, store])
   const framedFor = useRef(board)
   useEffect(() => {
