@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
+import { boxInView, clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
 
 const map = { width: 1000, height: 700 }
 const board = { x: 0, y: 0, width: 2000, height: 1000 }
@@ -121,6 +121,41 @@ describe('opening a board with many parts', () => {
     const middle = (map.width / 2 - view.x) / view.zoom
     expect(middle).toBeGreaterThan(900)
     expect(middle).toBeLessThan(1100)
+  })
+})
+
+describe('boxInView', () => {
+  // The free area of the map: notices cover the top strip and the controls at the bottom cover the lower one.
+  const area = { width: 1000, height: 700, top: 40, bottom: 60 }
+  const view = { x: 0, y: 0, zoom: 1 }
+
+  it('says a box inside the free area is in view', () => {
+    expect(boxInView(view, area, { x: 20, y: 100, width: 200, height: 100 })).toBe(true)
+  })
+
+  it('says a box that touches an edge of the map is out of view', () => {
+    expect(boxInView(view, area, { x: -1, y: 100, width: 200, height: 100 })).toBe(false)
+    expect(boxInView(view, area, { x: 900, y: 100, width: 101, height: 100 })).toBe(false)
+  })
+
+  it('says a box under the notices or the bottom controls is out of view, even inside the map', () => {
+    expect(boxInView(view, area, { x: 20, y: 30, width: 200, height: 100 })).toBe(false)
+    expect(boxInView(view, area, { x: 20, y: 650, width: 200, height: 100 })).toBe(false)
+  })
+
+  it('says a box only partly inside is out of view', () => {
+    expect(boxInView(view, area, { x: 950, y: 100, width: 200, height: 100 })).toBe(false)
+  })
+
+  it('reads the box at the zoom and pan of the view it is given', () => {
+    // A box in the middle of a wide board, seen from a view that is zoomed to half and panned onto it.
+    expect(boxInView({ x: -500, y: -250, zoom: 0.5 }, area, { x: 1000, y: 980, width: 400, height: 200 })).toBe(true)
+    // The same box, seen from a view that is panned off it.
+    expect(boxInView({ x: -700, y: -250, zoom: 0.5 }, area, { x: 1000, y: 980, width: 400, height: 200 })).toBe(false)
+  })
+
+  it('counts a box flush with the edge of the free area as in view', () => {
+    expect(boxInView(view, area, { x: 0, y: 40, width: 200, height: 600 })).toBe(true)
   })
 })
 
