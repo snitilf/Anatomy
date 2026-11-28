@@ -131,7 +131,7 @@ test('a changed part shows its words before and after in the details, until the 
 
   await page.getByRole('group', { name: new RegExp(`^${part.label}(,|$)`) }).click()
   const panel = page.getByRole('complementary')
-  const change = panel.getByRole('region', { name: 'Changed in revision 2' })
+  const change = panel.getByRole('region', { name: 'Changed in revision 2, before and after' })
   const summary = change.getByRole('group', { name: 'Summary' })
   await expect(summary).toContainText('Before')
   await expect(summary).toContainText(was)
@@ -141,7 +141,7 @@ test('a changed part shows its words before and after in the details, until the 
 
   // The board's own change shows at the top of the board view.
   await panel.getByRole('button', { name: 'Board' }).click()
-  const goal = panel.getByRole('region', { name: 'Changed in revision 2' }).getByRole('group', { name: 'Goal' })
+  const goal = panel.getByRole('region', { name: 'Changed in revision 2, before and after' }).getByRole('group', { name: 'Goal' })
   await expect(goal.locator('ins')).toContainText('and count the visits')
 
   // Mark reviewed clears it.
@@ -149,7 +149,7 @@ test('a changed part shows its words before and after in the details, until the 
   const menu = page.getByRole('dialog', { name: 'Command menu' })
   await menu.getByRole('combobox').fill('Mark reviewed')
   await page.keyboard.press('Enter')
-  await expect(panel.getByRole('region', { name: 'Changed in revision 2' })).toHaveCount(0)
+  await expect(panel.getByRole('region', { name: 'Changed in revision 2, before and after' })).toHaveCount(0)
   await expect(banner(page)).toHaveCount(0)
 })
 
@@ -180,6 +180,53 @@ test('a board with a problem, or a revision that did not rise, keeps the open bo
   await writeFile(page, 'board.json', JSON.stringify({ ...same, revision: 2 }))
   await expect(banner(page)).toHaveText(/Revision 2: 1 changed part\./, { timeout: 15_000 })
   await expect(problem(page)).toHaveCount(0)
+})
+
+for (const size of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'phone', width: 390, height: 844 },
+]) {
+  test(`on the Overview at ${size.name} width, a file problem sits in the page and never covers the title or the goal`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height })
+    const board = await openFolder(page)
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    const overview = page.getByTestId('overview')
+    await expect(overview.getByRole('heading', { level: 1 })).toBeVisible()
+    const broken = structuredClone(board) as Partial<BoardFile>
+    delete broken.goal
+    broken.revision = 2
+    await writeFile(page, 'board.json', JSON.stringify(broken))
+    await expect(problem(page)).toContainText('board.json has 1 problem, so revision 1 stays open.', { timeout: 15_000 })
+    // It is part of the page, so it scrolls with the page, and its box is clear of the title and the goal.
+    await expect(overview.getByRole('status', { name: 'Board file problem' })).toBeVisible()
+    const note = (await problem(page).boundingBox())!
+    for (const part of [overview.getByRole('heading', { level: 1 }), overview.locator('p').filter({ hasText: board.goal }).first()]) {
+      const box = (await part.boundingBox())!
+      const apart = note.y + note.height <= box.y + 0.5 || box.y + box.height <= note.y + 0.5
+      expect(apart, `the notice (${note.y}, ${note.height}) and ${JSON.stringify(box)} overlap`).toBe(true)
+    }
+    // Dismiss closes it and the page closes up.
+    await problem(page).getByRole('button', { name: 'Dismiss' }).click()
+    await expect(problem(page)).toHaveCount(0)
+    // On the map it floats as before, and the Overview does not carry a second copy.
+    await writeFile(page, 'board.json', JSON.stringify({ ...broken, revision: 3 }))
+    await expect(problem(page)).toHaveCount(1, { timeout: 15_000 })
+    await page.getByRole('tab', { name: 'Map' }).click()
+    await expect(problem(page)).toHaveCount(1)
+    await expect(overview).toHaveCount(0)
+  })
+}
+
+test('opening the Review tab by hand takes the banner away, and the tab keeps its heading', async ({ page }) => {
+  const board = await openFolder(page)
+  const next = structuredClone(board)
+  next.revision = 2
+  next.components[0]!.summary = 'A different summary.'
+  await writeFile(page, 'board.json', JSON.stringify(next, null, 2))
+  await expect(banner(page)).toBeVisible({ timeout: 15_000 })
+  await page.getByRole('tab', { name: /^Review/ }).click()
+  await expect(banner(page)).toHaveCount(0)
+  await expect(page.getByRole('complementary').getByRole('region', { name: 'Changed in revision 2', exact: true })).toBeVisible()
 })
 
 test.describe('with reduced motion', () => {

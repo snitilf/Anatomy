@@ -103,6 +103,20 @@ describe('the first script', () => {
     expect(loadedAtStart().has(map!.fileName), 'the map loads at start').toBe(false)
   })
 
+  it('keeps Zod in the first script alone, behind its jitless setup, so the Content Security Policy never sees new Function', () => {
+    // Zod builds a parser with `new Function` unless `src/cli/jitless.ts` turned that off first, and the page's policy blocks it.
+    // Imports run in order, so the setting is safe only while Zod is in the first script, which starts with that module.
+    // A shared script that the bundler splits off holds Zod before the setting runs. Its names survive minifying as strings.
+    const zod = /\$ZodType|ZodError/
+    expect(zod.test(entry.code), 'Zod is in the first script').toBe(true)
+    expect(entry.code.includes('jitless:!0'), 'the first script sets Zod to jitless').toBe(true)
+    for (const name of loadedAtStart()) {
+      const chunk = chunks.find((c) => c.fileName === name)
+      if (!chunk) continue
+      expect(zod.test(chunk.code), `${name} loads at start and holds Zod, before the first script can turn off its code generation`).toBe(false)
+    }
+  })
+
   it('stays under its byte budget, with every script it loads at start', () => {
     const atStart = [...loadedAtStart()].map((name) => chunks.find((c) => c.fileName === name)).filter((c) => c !== undefined)
     const bytes = [entry, ...atStart].reduce((sum, chunk) => sum + Buffer.byteLength(chunk.code), 0)

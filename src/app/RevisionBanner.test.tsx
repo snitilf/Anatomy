@@ -106,6 +106,33 @@ describe('the revision banner', () => {
     expect(screen.getByRole('status', { name: 'Revision update' })).toBeInTheDocument()
   })
 
+  it('goes when the Review tab opens by hand, because the tab says the same', () => {
+    const store = arrived()
+    mount(store)
+    act(() => {
+      ui.setTab('details')
+      ui.setSidebarOpen(true)
+    })
+    expect(screen.getByRole('status', { name: 'Revision update' })).toBeInTheDocument()
+    act(() => ui.setTab('review'))
+    expect(screen.queryByRole('status', { name: 'Revision update' })).not.toBeInTheDocument()
+    expect(document.title).toBe('Anatomy')
+    // A newer revision that arrives while the tab is open does not repeat it either.
+    const board = store.store.getState().board!
+    act(() => store.dispatch({ type: 'boardOpened', board: revised(board), warnings: [], previous: board, now }))
+    expect(screen.queryByRole('status', { name: 'Revision update' })).not.toBeInTheDocument()
+  })
+
+  it('stays when the Review tab is selected but the sidebar is closed', () => {
+    const store = arrived()
+    mount(store)
+    act(() => {
+      ui.setSidebarOpen(false)
+      ui.setTab('review')
+    })
+    expect(screen.getByRole('status', { name: 'Revision update' })).toBeInTheDocument()
+  })
+
   it('puts the count in the title of the tab while it waits', () => {
     const store = arrived()
     mount(store)
@@ -127,6 +154,18 @@ describe('the revision banner', () => {
     expect(screen.getByRole('status', { name: 'Board file problem' })).toHaveTextContent('board.json has 1 problem, so revision 1 stays open.')
     fireEvent.click(within(screen.getByRole('status', { name: 'Board file problem' })).getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByRole('status', { name: 'Board file problem' })).not.toBeInTheDocument()
+  })
+
+  it('leaves a file problem to the Overview page, which shows it in its own flow', () => {
+    const store = createAppStore()
+    store.dispatch({ type: 'boardOpened', board: refundBoard(), warnings: [], now })
+    mount(store)
+    act(() => store.dispatch({ type: 'boardProblem', problem: { kind: 'invalid', count: 1, first: 'goal: is required' } }))
+    expect(screen.getByRole('status', { name: 'Board file problem' })).toBeInTheDocument()
+    act(() => ui.setViewState('overview'))
+    expect(screen.queryByRole('status', { name: 'Board file problem' })).not.toBeInTheDocument()
+    act(() => ui.setViewState('map'))
+    expect(screen.getByRole('status', { name: 'Board file problem' })).toBeInTheDocument()
   })
 
   it('says why a revision that did not rise was not opened', () => {

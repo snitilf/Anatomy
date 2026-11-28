@@ -10,7 +10,7 @@ const now = new Date('2026-11-28T10:00:00.000Z')
 
 /** The word comparison is its own script, so the fields arrive a moment after the part opens. */
 async function arrived() {
-  const region = await screen.findByRole('region', { name: 'Changed in revision 2' })
+  const region = await screen.findByRole('region', { name: 'Changed in revision 2, before and after' })
   await within(region).findAllByRole('group')
   return region
 }
@@ -34,6 +34,15 @@ function show(edit: (b: Board) => void, target: Parameters<typeof RevisionChange
 
 describe('the before and after of a changed part', () => {
   const id = refundBoard().components[0]!.id
+
+  it('shows its heading only together with the fields, never an empty heading while the comparison loads', async () => {
+    show((b) => void (b.components[0]!.summary = 'A first change.'), { type: 'component', id })
+    expect(screen.queryByText('Changed in revision 2')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    const group = await arrived()
+    expect(within(group).getByRole('heading', { name: 'Changed in revision 2' })).toBeInTheDocument()
+    expect(within(group).getAllByRole('group').length).toBeGreaterThan(0)
+  })
 
   it('shows the old and the new words of each field, with the changed words marked', async () => {
     const was = refundBoard().components[0]!.summary
