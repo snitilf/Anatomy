@@ -61,8 +61,12 @@ function asStorageError(error: unknown): StorageError {
   return error instanceof StorageError ? error : new StorageError('failed', 'Could not use browser storage.', { cause: error })
 }
 
-/** Reads the user layer from the folder. A file that cannot be used is kept as a backup and an empty layer starts. */
-async function readFolderLayer(folder: Folder, board: Board): Promise<{ layer: Layer; backedUp: boolean }> {
+/**
+ * Reads the user layer from the folder. A file that cannot be used is kept as a backup and an empty layer starts. A file
+ * from a later version opens without the fields this version does not know, and the whole file is kept as a backup, since
+ * the next save leaves those fields out.
+ */
+async function readFolderLayer(folder: Folder, board: Board): Promise<{ layer: Layer; backedUp: boolean; keptNewer?: boolean }> {
   const file = await folder.read(FILES.layer)
   if (!file) return { layer: emptyLayer(board.id), backedUp: false }
   let result
@@ -71,7 +75,11 @@ async function readFolderLayer(folder: Folder, board: Board): Promise<{ layer: L
   } catch {
     result = undefined
   }
-  if (result?.ok && result.layer.boardId === board.id) return { layer: result.layer, backedUp: false }
+  if (result?.ok && result.layer.boardId === board.id) {
+    if (!result.dropped) return { layer: result.layer, backedUp: false }
+    await folder.write(FILES.layerBackup, file.text)
+    return { layer: result.layer, backedUp: false, keptNewer: true }
+  }
   await folder.write(FILES.layerBackup, file.text)
   return { layer: emptyLayer(board.id), backedUp: true }
 }
@@ -340,6 +348,7 @@ export function WorkspaceProvider({ children, folderAccess }: { children: ReactN
       markPersisted({ sink: sinkRef.current, board: parsed.board, json: JSON.stringify(found.layer) })
       dispatch({ type: 'boardOpened', board: parsed.board, layer: found.layer, warnings: parsed.warnings, now: new Date() })
       if (found.backedUp) notice(`${FILES.layer} could not be read, so it was kept as ${FILES.layerBackup} and a new one starts.`)
+      if (found.keptNewer) notice(`Some saved work from a newer version of Anatomy was kept in ${FILES.layerBackup}.`)
       watch(file.stamp)
       refreshAgentFiles(target)
     },

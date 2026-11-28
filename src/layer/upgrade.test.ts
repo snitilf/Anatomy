@@ -57,7 +57,7 @@ describe('readLayer', () => {
     expect(readLayer({ ...layer, positions: { a: { x: 1e6, y: 0 } } }).ok).toBe(false)
     // An unknown key at the top is a field of a later version and is left out. Inside a field this version knows, it is an error.
     expect(readLayer({ ...layer, positions: { a: { x: 1, y: 2, z: 3 } } }).ok).toBe(false)
-    expect(readLayer({ ...layer, extra: 1 })).toEqual({ ok: true, layer })
+    expect(readLayer({ ...layer, extra: 1 })).toEqual({ ok: true, layer, dropped: ['extra'] })
     const many = Object.fromEntries(Array.from({ length: LAYER_LIMITS.positions + 1 }, (_, i) => [`c${i}`, { x: 0, y: 0 }]))
     expect(readLayer({ ...layer, positions: many }).ok).toBe(false)
     const points = Array.from({ length: LAYER_LIMITS.strokePoints + 1 }, (_, i) => ({ x: i, y: 0 }))
@@ -70,7 +70,7 @@ describe('a layer from a later version', () => {
   it('opens with the fields this version does not know left out, and still checks the ones it knows', () => {
     const later = { ...emptyLayer('refund-approval'), somethingNew: { a: 1 } }
     const read = readLayer(later)
-    expect(read).toEqual({ ok: true, layer: emptyLayer('refund-approval') })
+    expect(read).toEqual({ ok: true, layer: emptyLayer('refund-approval'), dropped: ['somethingNew'] })
     expect(readLayer({ ...later, positions: { 'a-card': { x: 'left', y: 0 } } }).ok).toBe(false)
   })
 })
