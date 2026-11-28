@@ -208,3 +208,19 @@ describe('boxInView', () => {
     expect(boxInView({ x: -2000, y: 0, zoom: 1 }, map, { x: 100, y: 100, width: 200, height: 100 })).toBe(false)
   })
 })
+
+describe('one free area for both cameras', () => {
+  it('a part brought in from below stops above the bottom controls, where the framing check holds it', () => {
+    const map = { width: 1000, height: 800, top: 0, bottom: 104 }
+    const card = { x: 400, y: 900, width: 200, height: 100 }
+    const next = viewportFor({ x: 0, y: 0, zoom: 1 }, map, card)!
+    expect(next.y + card.y + card.height).toBe(800 - 104)
+    expect(boxInView(next, map, card)).toBe(true)
+  })
+
+  it('keeps the select room where the bottom controls take less', () => {
+    const map = { width: 1000, height: 800, top: 0, bottom: 20 }
+    const card = { x: 400, y: 900, width: 200, height: 100 }
+    expect(viewportFor({ x: 0, y: 0, zoom: 1 }, map, card)!.y + card.y + card.height).toBe(800 - SELECT_ROOM)
+  })
+})

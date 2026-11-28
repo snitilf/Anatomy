@@ -432,6 +432,47 @@ test('on a phone, J raises the sheet and puts the card in front at once', async 
   await expect(page.getByRole('button', { name: 'Which database?' })).toBeFocused()
 })
 
+test('a part brought in from below the map moves the camera once', async ({ page }) => {
+  const text = await readFile(SHORTENER, 'utf8')
+  const board = JSON.parse(text) as FolderFile
+  const notes = [questionOn(board, 'note-below0001', 'edge-dns', 'When does DNS change?')]
+  await openAnswered(page, { notes }, [{ id: notes[0]!.id, text: 'Rarely.' }])
+
+  // Pan with Space held until the card's top sits under the bottom of the map.
+  const at = await page.evaluate(() => {
+    const map = document.querySelector('.react-flow')!.getBoundingClientRect()
+    const r = document.querySelector('.react-flow__node-card[data-id="edge-dns"]')!.getBoundingClientRect()
+    return { dy: map.bottom + 60 - r.top, x: map.left + map.width / 2, y: map.top + map.height / 2 }
+  })
+  const from = at.dy > 0 ? at.y - 300 : at.y + 300
+  await page.keyboard.down('Space')
+  await page.mouse.move(at.x, from)
+  await page.mouse.down()
+  for (let s = 1; s <= 10; s++) await page.mouse.move(at.x, from + (at.dy * s) / 10)
+  await page.mouse.up()
+  await page.keyboard.up('Space')
+  await page.waitForTimeout(200)
+  expect(await wholeInView(page, [node('edge-dns')])).toBe(false)
+
+  // Every transform the map takes from the key press on.
+  await page.evaluate(() => {
+    const w = window as unknown as { moves: string[] }
+    w.moves = []
+    const tick = () => {
+      const t = document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? ''
+      if (w.moves.at(-1) !== t) w.moves.push(t)
+      if (w.moves.length < 10) requestAnimationFrame(tick)
+    }
+    tick()
+  })
+  await page.keyboard.press('j')
+  await expect(answers(page).getByRole('button', { name: 'When does DNS change?' })).toBeFocused()
+  await page.waitForTimeout(500)
+  const moves = await page.evaluate(() => (window as unknown as { moves: string[] }).moves)
+  expect(moves, 'the view before the step, and one move').toHaveLength(2)
+  expect(await wholeInView(page, [node('edge-dns')])).toBe(true)
+})
+
 test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' })
 
