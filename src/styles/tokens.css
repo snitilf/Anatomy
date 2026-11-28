@@ -91,7 +91,7 @@
   --bg: #181920;
   --panel: #12131a;
   --frame: #0b0c11;
-  /* A cool slate: less chroma than the grounds would suggest, so a card does not read violet next to the blue accent. */
+  /* A cool slate with little chroma, so a card does not read violet next to the blue accent. */
   --raised: #2e323e;
   --hover: rgb(232 233 239 / 0.05);
   --active: rgb(232 233 239 / 0.08);
