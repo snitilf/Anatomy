@@ -187,8 +187,8 @@ for (const size of [
   { name: 'phone', width: 390, height: 844 },
 ]) {
   test(`on the Overview at ${size.name} width, a file problem sits in the page and never covers the title or the goal`, async ({ page }) => {
-    await page.setViewportSize({ width: size.width, height: size.height })
     const board = await openFolder(page)
+    await page.setViewportSize({ width: size.width, height: size.height })
     await page.getByRole('tab', { name: 'Overview' }).click()
     const overview = page.getByTestId('overview')
     await expect(overview.getByRole('heading', { level: 1 })).toBeVisible()

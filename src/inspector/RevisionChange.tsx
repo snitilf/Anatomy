@@ -2,11 +2,12 @@ import { lazy, Suspense } from 'react'
 import { useAppStore } from '../app/store'
 import { Group } from './bits'
 import { fieldChanges } from './fieldChanges'
+import { loadRevisionFields } from './loadRevisionFields'
 
 type Target = { type: 'board' } | { type: 'component' | 'relationship'; id: string }
 
-/** The word comparison loads the first time a changed part is opened, so a board that never changes does not carry it. */
-const Fields = lazy(() => import('./RevisionFields'))
+/** The word comparison loads when a revision arrives or a changed part opens, so a board that never changes does not carry it. */
+const Fields = lazy(loadRevisionFields)
 
 /**
  * What the latest revision changed in the part, connection, or board that is open, field by field: how it read before and how it
@@ -20,10 +21,11 @@ export function RevisionChange({ target }: { target: Target }) {
   const fields = changed && board && previous ? fieldChanges(previous, board, target) : []
   if (!board || fields.length === 0) return null
   return (
-    <Group name="revision-change" title={`Changed in revision ${board.revision}`}>
-      <Suspense fallback={null}>
+    // The whole group waits for the comparison, so its heading never shows with nothing under it.
+    <Suspense fallback={null}>
+      <Group name="revision-change" title={`Changed in revision ${board.revision}`} label={`Changed in revision ${board.revision}, before and after`}>
         <Fields fields={fields} />
-      </Suspense>
-    </Group>
+      </Group>
+    </Suspense>
   )
 }
