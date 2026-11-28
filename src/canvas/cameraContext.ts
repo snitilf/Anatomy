@@ -1,4 +1,5 @@
 import type { Viewport } from '@xyflow/react'
+import type { Selection } from '../app/state'
 import { createContext, useContext } from 'react'
 import type { Rect } from '../layout/geometry'
 import type { Scene } from '../whiteboard/geometry'
@@ -14,6 +15,11 @@ export interface Camera {
   /** Frames the whole content, or a box of it. */
   frame(options?: Frame, duration?: number): Viewport
   /**
+   * Frames a box at once when any of it is off the free part of the map, and leaves a box that shows whole alone.
+   * `upper` frames it in the upper half, above a phone's sheet. Returns whether the camera moved.
+   */
+  show(box: Rect, options?: { padding?: number; maxZoom?: number; upper?: boolean }): boolean
+  /**
    * Keeps a fitted view fitted: while the view is still the last whole-board frame and nothing else has moved the camera
    * since, frames the whole board again when the map has a new size, or always while the board is still `opening`.
    * Returns `framed` when it framed the board again, `kept` when the view was fitted already, and nothing when the view
@@ -26,6 +32,11 @@ export interface Camera {
   zoom(command: ZoomCommand, animate?: boolean): void
   /** Where a card is on the map now. */
   rectOf(id: string): Rect | undefined
+  /**
+   * The box around something selected on the map: a part, both ends of a connection as drawn (a moved end where the user
+   * moved it) or of a link or bundle, a new part, or a drawing. Nothing for the board.
+   */
+  boxOf(selection: Selection): Rect | undefined
   /** Every card and every drawn line, as the map shows them now. */
   scene(): Scene
 }

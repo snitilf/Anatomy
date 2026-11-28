@@ -65,6 +65,7 @@ Your agent does the thinking, and Anatomy shows it.
    Until the agent writes back, the button reads **Waiting for the agent**.
    A banner at the top of the map then says what arrived, for example "Revision 2: 5 answers, 1 new part, 1 changed part.", with a **Review** button, and the title of the browser tab counts it while you are in another tab.
    The answers appear next to your marks.
+   In the **Review** tab, each answer sits next to your words with **Keep**, **Dismiss**, and **Reply**, and **J** and **K** step through them one at a time while the map follows.
    The map holds still: what the agent added, changed, or removed is marked on it until you mark the revision reviewed.
    A changed part shows its words before and after in its details.
    A file that is not a valid board, or whose revision is not higher, is not opened, and a quiet warning says why.

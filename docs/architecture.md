@@ -350,6 +350,7 @@ interface Layer {
   reconnects: Reconnect[] // { relationshipId, from?, to? }: moved ends of an agent connection
   archive: ArchiveEntry[] // items the agent resolved or the user dismissed, each with its answer, restorable
   answers: Answer[] // { id, response }: the agent's latest answer to an item still on the map
+  kept: string[] // answers the user kept, by item ID: the item and its answer stay on the map, and the answer no longer waits in the Review tab
   sent?: Sent // what was sent to the agent so far, with a fingerprint per item
 }
 ```
@@ -539,7 +540,7 @@ Inert, hidden, and below-the-screen places are skipped.
 If no row can take it, focus goes to the panel heading, then the first control of the panel, then the Overview page, then the Show sidebar button, then Search (`src/app/lessonFocus.ts`).
 Focus never falls to the page.
 Once the user has made something, the Yours list on the board view has a Status key button.
-It opens the seven status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
+It opens the eight status glyphs, each with its word and what it means (`src/status/StatusKey.tsx`).
 
 ## The Overview page
 
@@ -596,16 +597,32 @@ For this reason, a later revision without answers does not lose it.
 
 An adopted item moves to the archive when the answer names what changed and every named ID is on the board.
 Otherwise, it stays with its answer.
-Declined and answered items keep their answer until the user dismisses them.
-Dismissing them archives them as one step of undo.
+Declined and answered items keep their answer until the user settles them.
+Each one shows in the Review tab with **Keep**, **Dismiss**, and **Reply**.
+Keep records the answer in `layer.kept`: the item and its answer stay on the map, and the answer no longer waits for a decision.
+The answer stays readable next to the item, and a later revision that answers the same item again clears the mark, so the new answer waits.
+A kept reply has its own state, **Kept**, which points to Details instead of Review, and a part's badge shows it only when nothing else on the part has a state to show.
+Dismissing archives the item and its answer as one step of undo.
+After Keep or Dismiss, the focus goes to the next card, or to the one before when the last card was settled, or to the list heading (the Review tab once the list is gone).
+When the settled item was the one selected on the map, the next card also comes to the front there, as a step would bring it.
+Reply opens an empty note input on the item's target, set to a question when it follows up a question, so Add cannot copy the earlier words.
+For an item that is not a note, Reply opens the item's own view, where its words are edited.
+
+**J** and **K** step through the answers that wait, one card at a time (`stepReview` and `frontReviewCard` in `src/commands/list.ts`).
+The card in front holds the keyboard focus, so the step always starts from it, and its row is pressed the way a finger would: the map selects the item, and the spotlight shows it.
+The card in front shows the whole question, and its Keep, Dismiss, and Reply are described by it for assistive technology.
+After the selection camera has moved, whatever of the item is still off the map is framed (`camera.show`), for every item with a place on the map: a part, both ends of a connection as drawn, a link, a new part, and a drawing.
+Both cameras use one free area, whose bottom is above the bottom controls and the toast slot (`freeBottom` in `src/canvas/camera.ts`), so a part the selection camera brings in is never framed a second time.
+On a phone, the item is framed above the sheet.
+A step opens a closed sidebar, a closed Answers group, and a lowered phone sheet.
+The keys work only while the Review tab is in front, and never while a text field has the focus.
 
 The app never takes in an answer twice.
 For this reason, an item restored from the archive stays restored when the same revision opens again.
 
 The Review tab lists these things:
 
-- The answers.
-- The items that the agent adopted in this revision.
+- The answers that wait for a decision, each with Keep, Dismiss, and Reply, and the adopted items of this revision under them.
 - Each moved connection with its old ends.
 - The ends that the user asked for, and whether the board now has them.
 - The rest of the archive, which the user can restore.

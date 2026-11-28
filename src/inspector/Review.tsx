@@ -1,23 +1,27 @@
 import clsx from 'clsx'
 import { ArrowRight } from 'lucide-react'
+import { useId } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import buttons from '../app/buttons.module.css'
 import rowsCss from '../app/rows.module.css'
+import type { Action } from '../app/state'
 import { useAppDispatch, useAppStore, useAppStoreApi } from '../app/store'
-import type { Selection } from '../app/state'
+import { useUiApi } from '../app/ui'
+import { useCommands } from '../commands/context'
+import { frontReviewCard, reviewRow } from '../commands/list'
 import type { Board } from '../board/schema'
 import type { BoardDiff } from '../layer/diff'
-import { itemsOf, type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
+import { type ArchiveEntry, type Item, type Layer, type Reconnect } from '../layer/model'
 import { revisionSummary, summaryLine } from '../layer/revisionSummary'
 import { summarizeLayer } from '../layer/status'
-import { adoptedNow, hasChanges, reviewCounts } from '../notes/review'
+import { adoptedNow, hasChanges, pendingAnswers, reviewCounts, sameSelection, selectionOf } from '../notes/review'
 import { deletedToast } from '../notes/undoToast'
 import { StatusGlyph, StatusWord } from '../status/StatusGlyph'
 import type { ItemState } from '../status/state'
 import { answerFor } from './answers'
 import { Group, SubHead } from './bits'
 import { partName } from './names'
-import { AgentAnswer, ItemAnswer, NoteBlock } from './notes'
+import { AgentAnswer, NoteBlock } from './notes'
 import notes from './notes.module.css'
 import { usePanel } from './panelContext'
 import { Picker } from './Picker'
@@ -41,24 +45,23 @@ function itemWords(board: Board, layer: Layer, entry: Item): string {
   }
 }
 
-/** Where an item sits, so a press on it selects that on the map. */
-function selectionOf(entry: Item): Selection {
-  switch (entry.type) {
-    case 'note':
-      return entry.item.target.type === 'board' ? { type: 'board' } : { type: entry.item.target.type, id: entry.item.target.id }
-    case 'reconnect':
-      return { type: 'relationship', id: entry.item.relationshipId }
-    default:
-      return { type: entry.type, id: entry.item.id }
-  }
-}
-
-function ItemRow({ board, layer, entry, status, live = true }: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean }) {
+function ItemRow({
+  board,
+  layer,
+  entry,
+  status,
+  live = true,
+  reviewId,
+  titleId,
+}: { board: Board; layer: Layer; entry: Item; status?: ItemState; live?: boolean; reviewId?: string; titleId?: string }) {
   const { choose } = usePanel()
   const content = (
     <>
       <span className={styles.rowMain}>
-        <span className={styles.rowTitle}>{itemWords(board, layer, entry)}</span>
+        {/* A card that waits for a decision shows the whole of what the user wrote. */}
+        <span id={titleId} className={clsx(styles.rowTitle, reviewId && styles.wraps)}>
+          {itemWords(board, layer, entry)}
+        </span>
       </span>
       {status && (
         <span className={styles.rowEnd}>
@@ -69,7 +72,13 @@ function ItemRow({ board, layer, entry, status, live = true }: { board: Board; l
   )
   if (!live) return <p className={clsx(rowsCss.row, rowsCss.sm, styles.staticRow)}>{content}</p>
   return (
-    <button type="button" className={clsx(rowsCss.row, rowsCss.sm)} onClick={() => choose(selectionOf(entry))} {...spotProps(spotOf(selectionOf(entry)))}>
+    <button
+      type="button"
+      className={clsx(rowsCss.row, rowsCss.sm, reviewId && styles.multiRow)}
+      data-review-item={reviewId}
+      onClick={() => choose(selectionOf(entry))}
+      {...spotProps(spotOf(selectionOf(entry)))}
+    >
       {content}
     </button>
   )
@@ -104,6 +113,9 @@ function ReconnectOutcome({ board, previous, layer, reconnect }: { board: Board;
   )
 }
 
+/** The quiet text actions under a card: Restore and Delete, Keep, Dismiss, and Reply. */
+const textAction = clsx(buttons.button, buttons.link, buttons.small, notes.textAction)
+
 /** An item that left the map, with the answer it left with, and the way back. */
 function ArchivedItem({ board, previous, layer, entry, deletable = false }: { board: Board; previous: Board | undefined; layer: Layer; entry: ArchiveEntry; deletable?: boolean }) {
   const dispatch = useAppDispatch()
@@ -117,7 +129,7 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
       <div className={notes.feedActions}>
         <button
           type="button"
-          className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
+          className={textAction}
           onClick={() => dispatch({ type: 'archiveRestored', id: entry.item.id })}
         >
           Restore
@@ -125,7 +137,7 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
         {deletable && (
           <button
             type="button"
-            className={clsx(buttons.button, buttons.link, buttons.small, notes.textAction)}
+            className={textAction}
             data-tone="danger"
             onClick={() => {
               dispatch({ type: 'archiveDropped', id: entry.item.id })
@@ -140,19 +152,86 @@ function ArchivedItem({ board, previous, layer, entry, deletable = false }: { bo
   )
 }
 
-function Answers({ board, previous, layer }: { board: Board; previous: Board | undefined; layer: Layer }) {
-  const answered = itemsOf(layer).filter((e) => answerFor(layer, e.item.id))
-  const adopted = adoptedNow(board, layer)
-  if (answered.length + adopted.length === 0) return null
+/**
+ * One answer that waits for a decision: the user's words, the agent's answer, and the three ways to settle it.
+ * Keep leaves both on the map, Dismiss archives them, and Reply writes a follow-up where the item lives.
+ */
+function PendingItem({ board, previous, layer, entry }: { board: Board; previous: Board | undefined; layer: Layer; entry: Item }) {
+  const dispatch = useAppDispatch()
+  const store = useAppStoreApi()
+  const ui = useUiApi()
+  const { context } = useCommands()
+  const titleId = useId()
+  const answer = answerFor(layer, entry.item.id)
+  if (!answer) return null
+
+  /**
+   * Keeps or dismisses the item, and hands the focus on: to the next card, or the one before when this was the last, or to
+   * the list when none is left. When this item was the one on the map, the next card comes to the front there too.
+   */
+  function settle(action: Action) {
+    const pending = pendingAnswers(layer)
+    const at = pending.findIndex((e) => e.item.id === entry.item.id)
+    const next = pending[at + 1] ?? pending[at - 1]
+    const onMap = sameSelection(store.getState().selection, selectionOf(entry))
+    dispatch(action)
+    if (next && onMap) {
+      frontReviewCard(context(), next.item.id)
+      return
+    }
+    // Without a card left, the heading of the list, or the Review tab once the list is gone.
+    requestAnimationFrame(() =>
+      (
+        (next && reviewRow(next.item.id)) ??
+        document.querySelector<HTMLElement>('[aria-label=Answers] [aria-expanded]') ??
+        document.querySelector<HTMLElement>('[aria-label=Sidebar] [aria-selected=true]')
+      )?.focus(),
+    )
+  }
+
+  function reply() {
+    const selection = selectionOf(entry)
+    dispatch({ type: 'select', selection })
+    ui.setTab('details')
+    // The view of the item comes up first; then the note field on it opens empty, as a question when it follows one up.
+    // The Composer is not mounted while Review is in front, so no words of an earlier draft are in it to keep.
+    if (entry.type === 'note' || entry.type === 'reconnect') requestAnimationFrame(() => ui.askComposer(entry.type === 'note' ? { kind: entry.item.kind } : undefined))
+  }
+
   return (
-    <Group name="answers" title="Answers" count={answered.length + adopted.length}>
+    <li className={notes.feedItem}>
+      <ItemRow board={board} layer={layer} entry={entry} status={answer.status} reviewId={entry.item.id} titleId={titleId} />
+      {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
+      <AgentAnswer board={board} answer={answer} bare />
+      <div className={notes.feedActions}>
+        <button type="button" className={textAction} aria-describedby={titleId} onClick={() => settle({ type: 'answerKept', id: entry.item.id })}>
+          Keep
+        </button>
+        <button
+          type="button"
+          className={textAction}
+          aria-describedby={titleId}
+          onClick={() => settle({ type: 'itemsArchived', answers: [{ id: entry.item.id, response: answer }], now: new Date() })}
+        >
+          Dismiss
+        </button>
+        <button type="button" className={textAction} aria-describedby={titleId} onClick={reply}>
+          Reply
+        </button>
+      </div>
+    </li>
+  )
+}
+
+function Answers({ board, previous, layer }: { board: Board; previous: Board | undefined; layer: Layer }) {
+  const pending = pendingAnswers(layer)
+  const adopted = adoptedNow(board, layer)
+  if (pending.length + adopted.length === 0) return null
+  return (
+    <Group name="answers" title="Answers" count={pending.length + adopted.length}>
       <ul className={notes.feed}>
-        {answered.map((entry) => (
-          <li key={entry.item.id} className={notes.feedItem}>
-            <ItemRow board={board} layer={layer} entry={entry} {...(answerFor(layer, entry.item.id) ? { status: answerFor(layer, entry.item.id)!.status } : {})} />
-            {entry.type === 'reconnect' && <ReconnectOutcome board={board} previous={previous} layer={layer} reconnect={entry.item} />}
-            <ItemAnswer board={board} id={entry.item.id} bare />
-          </li>
+        {pending.map((entry) => (
+          <PendingItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />
         ))}
         {adopted.map((entry) => (
           <ArchivedItem key={entry.item.id} board={board} previous={previous} layer={layer} entry={entry} />

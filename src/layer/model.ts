@@ -176,6 +176,9 @@ export const archiveEntry = z.discriminatedUnion('type', [
 /** The agent's latest answer to one of the user's items that is still on the map. */
 export const answer = z.strictObject({ id: z.string().max(64), response })
 
+/** Answers the user kept: the item stays on the map with its answer, and the answer no longer waits for a decision. */
+export const keptIds = z.array(z.string().max(64)).max(LAYER_LIMITS.answers).default([])
+
 /** What the last sends to the agent contained, so the next send holds only what is new or changed. */
 export const sent = z.strictObject({
   feedbackId: ownId('feedback'),
@@ -211,6 +214,8 @@ export const layerSchema = z.object({
   archive: z.array(archiveEntry).max(LAYER_LIMITS.archive),
   /** Answers the agent gave to items still on the map. Layers written before answers were kept have none. */
   answers: z.array(answer).max(LAYER_LIMITS.answers).default([]),
+  /** The answers the user kept, by item ID. The answer stays next to its item and stops waiting in the Review tab. */
+  kept: keptIds,
   sent: sent.optional(),
 })
 
@@ -246,6 +251,7 @@ export function emptyLayer(boardId: string): Layer {
     reconnects: [],
     archive: [],
     answers: [],
+    kept: [],
   }
 }
 

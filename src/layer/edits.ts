@@ -61,12 +61,13 @@ function mapItem<K extends ItemType>(layer: Layer, type: K, id: string, change: 
   return withList(layer, type, items.map((x, i) => (i === at ? after : x)))
 }
 
-/** Removes one item, and the agent's answer to it. */
+/** Removes one item, and the agent's answer to it, and the mark that the answer was kept. */
 function removeItem(layer: Layer, type: ItemType, id: string): Layer {
   const items: readonly Entry[] = list(layer, type)
   if (!items.some((x) => x.id === id)) return layer
   const removed = withList(layer, type, items.filter((x) => x.id !== id))
-  return layer.answers.some((a) => a.id === id) ? { ...removed, answers: layer.answers.filter((a) => a.id !== id) } : removed
+  if (!layer.answers.some((a) => a.id === id) && !layer.kept.includes(id)) return removed
+  return { ...removed, answers: layer.answers.filter((a) => a.id !== id), kept: layer.kept.filter((k) => k !== id) }
 }
 
 /** Finds any of the user's items by ID. */
@@ -342,28 +343,44 @@ export function adoptionLanded(board: Board, response: Response): boolean {
   return response.changed.every((id) => ids.has(id))
 }
 
+/** The user keeps their item with its answer: both stay on the map, and the answer stops waiting for a decision. */
+export function keepAnswer(layer: Layer, id: string): Layer {
+  if (!layer.answers.some((a) => a.id === id) || layer.kept.includes(id)) return layer
+  return { ...layer, kept: [...layer.kept, id] }
+}
+
 /**
  * Takes in the answers of a revision. Each answer is kept next to its item, and an adopted item that landed on the board
  * moves to the archive. An answer already taken in is skipped, so an item the user restored stays restored when the same
- * revision opens again. Answers to items the user no longer has are dropped. Nothing is ever deleted.
+ * revision opens again. Answers to items the user no longer has are dropped, and so is the mark of a kept answer whose
+ * item or answer is gone. A new answer to a kept item waits again. Nothing is ever deleted.
  */
 export function receiveAnswers(layer: Layer, board: Board, now: Date): Layer {
   const live = new Set(itemsOfLayer(layer).map((x) => x.id))
   let answers = layer.answers.filter((a) => live.has(a.id))
+  let held = layer.kept.filter((id) => live.has(id))
   const toArchive: { id: string; response: Response }[] = []
   for (const r of board.responses?.items ?? []) {
     if (!live.has(r.feedbackId)) continue
     const response: Response = { respondsTo: board.responses?.respondsTo ?? '', status: r.status, text: r.text, changed: r.changed }
     const known = answers.find((a) => a.id === r.feedbackId)
     if (known && sameResponse(known.response, response)) continue
+    // The new answer asks for its own decision, so the old one's mark goes.
+    held = held.filter((k) => k !== r.feedbackId)
     if (adoptionLanded(board, response)) {
       toArchive.push({ id: r.feedbackId, response })
       continue
     }
     answers = [...answers.filter((a) => a.id !== r.feedbackId), { id: r.feedbackId, response }]
   }
-  const kept = answers.length === layer.answers.length && answers.every((a, i) => a === layer.answers[i]) ? layer : { ...layer, answers: answers.slice(-LAYER_LIMITS.answers) }
-  return toArchive.length === 0 ? kept : archiveItems(kept, toArchive, now)
+  // The oldest answers make room for new ones, and a kept mark goes with its answer, so the list stays inside its limit.
+  answers = answers.slice(-LAYER_LIMITS.answers)
+  held = held.filter((id) => answers.some((a) => a.id === id))
+  const sameKept = held.length === layer.kept.length && held.every((k, i) => k === layer.kept[i])
+  const heldLayer = answers.length === layer.answers.length && answers.every((a, i) => a === layer.answers[i]) && sameKept
+    ? layer
+    : { ...layer, answers, ...(sameKept ? {} : { kept: held }) }
+  return toArchive.length === 0 ? heldLayer : archiveItems(heldLayer, toArchive, now)
 }
 
 function itemsOfLayer(layer: Layer): Entry[] {
@@ -385,7 +402,7 @@ export function archiveItems(layer: Layer, answers: readonly { id: string; respo
   return added.length === 0 ? layer : { ...next, archive: [...next.archive, ...added] }
 }
 
-/** Puts an archived item back on the map, with the answer it had, so the same answer does not archive it again. */
+/** Puts an archived item back on the map, with the answer it had, so the same answer does not archive it again. It waits for a decision again. */
 export function restoreArchived(layer: Layer, id: string): Layer {
   const entry = layer.archive.find((e) => e.item.id === id)
   if (!entry || findItem(layer, id)) return layer
@@ -394,6 +411,7 @@ export function restoreArchived(layer: Layer, id: string): Layer {
     ...back,
     archive: layer.archive.filter((e) => e !== entry),
     answers: [...layer.answers.filter((a) => a.id !== id), { id, response: entry.response }].slice(-LAYER_LIMITS.answers),
+    kept: layer.kept.filter((k) => k !== id),
   }
 }
 

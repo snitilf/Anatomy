@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import { useStore, type StoreApi } from 'zustand'
 import { createStore } from 'zustand/vanilla'
+import type { Note } from '../layer/model'
 import type { Editing, Tool } from '../whiteboard/tools'
 import { viewFromHash, type View } from './view'
 
@@ -31,6 +32,8 @@ export interface UiState {
   linkPicker: number
   /** Set when a command asks for the note composer. */
   composer: number
+  /** The kind a reply starts as: a follow-up to a question is a question. */
+  composerDraft?: { kind: Note['kind'] } | undefined
   /** The whiteboard tool in use. */
   tool: Tool
   /** Space is held: the map pans from anywhere, whatever the tool. */
@@ -95,7 +98,8 @@ export interface UiApi {
   setLineKeyOpen(open: boolean): void
   setSheet(stop: UiState['sheet']): void
   askLinkPicker(): void
-  askComposer(): void
+  /** Opens the note composer. A reply sets the kind it starts as, unless the user has words in it already. */
+  askComposer(draft?: { kind: Note['kind'] }): void
   setTool(tool: Tool): void
   setSpaceHand(held: boolean): void
   setEditing(editing: Editing | undefined): void
@@ -143,7 +147,7 @@ export function createUi(): UiApi {
     setLineKeyOpen: (lineKeyOpen) => store.setState({ lineKeyOpen }),
     setSheet: (sheet) => store.setState({ sheet }),
     askLinkPicker: () => store.setState((s) => ({ linkPicker: s.linkPicker + 1 })),
-    askComposer: () => store.setState((s) => ({ composer: s.composer + 1 })),
+    askComposer: (draft) => store.setState((s) => ({ composer: s.composer + 1, composerDraft: draft })),
     setTool: (tool) => store.setState({ tool }),
     setSpaceHand: (spaceHand) => store.setState({ spaceHand }),
     setEditing: (editing) => store.setState({ editing }),

@@ -37,7 +37,7 @@ function cyrb53(text: string): string {
 
 const fingerprintValue = (value: unknown) => cyrb53(canonical(value))
 
-function fingerprintPart(board: Board, id: string): string {
+export function fingerprintPart(board: Board, id: string): string {
   const c = board.components.find((x) => x.id === id)!
   return fingerprintValue({ label: c.label, summary: c.summary, explanation: c.explanation, group: c.group, inputs: c.inputs ?? [], outputs: c.outputs ?? [], source: { references: [], ...c.source } })
 }

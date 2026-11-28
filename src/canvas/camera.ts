@@ -253,6 +253,17 @@ export function stepZoom(zoom: number, direction: 1 | -1, limits: Pick<Limits, '
   return next ?? (direction > 0 ? limits.maxZoom : limits.minZoom)
 }
 
+/** The lowest line of the free part of the map: above the bottom controls and the toast slot. Both selection cameras stop there. */
+export const freeBottom = (map: Size & { bottom?: number }) => map.height - (map.bottom ?? 0)
+
+/** Whether all of a box shows in the free part of the map: inside its sides, below the notices, and above the bottom controls. */
+export function boxInView(viewport: Viewport, map: Size & { top: number; bottom?: number }, box: Rect): boolean {
+  const { x, y, zoom } = viewport
+  const left = box.x * zoom + x
+  const top = box.y * zoom + y
+  return left >= 0 && top >= map.top && left + box.width * zoom <= map.width && top + box.height * zoom <= freeBottom(map)
+}
+
 /** The viewport after zooming to a level around a point of the map, such as its middle or the pointer. */
 export function zoomAround(viewport: Viewport, zoom: number, point: { x: number; y: number }): Viewport {
   const ratio = zoom / viewport.zoom
@@ -295,15 +306,16 @@ export const LEGIBLE_ZOOM = 0.8
 
 /**
  * Where the camera goes to show a part that was chosen away from the map. The part ends at least `SELECT_ROOM` from
- * the edges of the map, never flush against one. When it is smaller than `LEGIBLE_WIDTH` on screen, or the screen is
+ * the edges of the map, never flush against one, and above the bottom controls (`freeBottom`), where the framing of a
+ * step looks for it, so a step moves the camera once. When it is smaller than `LEGIBLE_WIDTH` on screen, or the screen is
  * narrow, the zoom is raised to `LEGIBLE_ZOOM` and the part is centered. Returns undefined when nothing needs to move.
  */
-export function viewportFor(viewport: Viewport, map: Size & { top: number }, card: Rect, narrow = false): Viewport | undefined {
+export function viewportFor(viewport: Viewport, map: Size & { top: number; bottom?: number }, card: Rect, narrow = false): Viewport | undefined {
   const { x, y } = viewport
   const small = card.width * viewport.zoom < LEGIBLE_WIDTH
   const zoom = narrow || small ? Math.max(viewport.zoom, LEGIBLE_ZOOM) : viewport.zoom
   if (zoom !== viewport.zoom) {
-    const room = map.height - map.top
+    const room = freeBottom(map) - map.top
     return { x: map.width / 2 - (card.x + card.width / 2) * zoom, y: map.top + room / 2 - (card.y + card.height / 2) * zoom, zoom }
   }
   const left = card.x * zoom + x
@@ -317,7 +329,7 @@ export function viewportFor(viewport: Viewport, map: Size & { top: number }, car
     return high > max ? max - high : 0
   }
   const dx = shift(left, right, SELECT_ROOM, map.width - SELECT_ROOM)
-  const dy = shift(top, bottom, map.top + SELECT_ROOM, map.height - SELECT_ROOM)
+  const dy = shift(top, bottom, map.top + SELECT_ROOM, Math.min(map.height - SELECT_ROOM, freeBottom(map)))
   if (dx === 0 && dy === 0) return undefined
   return { x: x + dx, y: y + dy, zoom }
 }

@@ -4,55 +4,19 @@
  * Send button waits for the agent, a changed part shows its words before and after, and a file that cannot be opened leaves
  * the open board alone with a quiet warning.
  */
-import { readFile } from 'node:fs/promises'
 import type { Page } from '@playwright/test'
 import { expect, test } from './test.ts'
+import { openStandInFolder, standInFileText, writeStandInFile, type FolderFile } from './helpers.ts'
 
-const KEY = 'anatomy:test-folder'
 const BOARD = 'e2e/fixtures/url-shortener.board.json'
 
-interface Part {
-  id: string
-  label: string
-  summary: string
-  position?: unknown
-  lesson?: unknown
-}
-interface BoardFile {
-  revision: number
-  goal: string
-  components: Part[]
-  relationships: { id: string; from: string; to: string; label: string }[]
-  responses?: unknown
-}
+type BoardFile = FolderFile & { goal: string }
 
-const fileText = (page: Page, name: string) =>
-  page.evaluate(([key, file]) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string }> }).files[file]?.text, [KEY, name] as const)
-
-/** Writes a file into the stand-in folder, as the agent would. */
-const writeFile = (page: Page, name: string, text: string) =>
-  page.evaluate(
-    ([key, file, body]) => {
-      const stored = JSON.parse(localStorage.getItem(key) ?? '{}') as { files: Record<string, { text: string; lastModified: number }> }
-      stored.files[file] = { text: body, lastModified: Date.now() }
-      localStorage.setItem(key, JSON.stringify(stored))
-    },
-    [KEY, name, text] as const,
-  )
+const fileText = (page: Page, name: string) => standInFileText(page, name)
+const writeFile = (page: Page, name: string, text: string) => writeStandInFile(page, name, text)
 
 async function openFolder(page: Page, file = BOARD) {
-  const text = await readFile(file, 'utf8')
-  await page.addInitScript(
-    ([key, body]) => {
-      if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify({ name: 'shortener', files: { 'board.json': { text: body, lastModified: 1 } }, remembered: false }))
-    },
-    [KEY, text] as const,
-  )
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Open folder' }).click()
-  await expect(page.locator('.react-flow__node-card').first()).toBeVisible()
-  await page.waitForTimeout(400)
-  return JSON.parse(text) as BoardFile
+  return (await openStandInFolder(page, file)) as BoardFile
 }
 
 const sendButton = (page: Page) => page.getByRole('banner').getByRole('button', { name: /^Send to agent/ })

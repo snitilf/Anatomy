@@ -331,10 +331,17 @@ export function Composer({ target }: { target: Target }) {
   const [text, setText] = useState('')
   const [focused, setFocused] = useState(false)
   const asked = useUi((u) => u.composer)
-  const seen = useRef(asked)
+  const draft = useUi((u) => u.composerDraft)
+  // A reply arrives with the kind of the item it follows up on. Words the user already has in the field stay as they are.
+  const [applied, setApplied] = useState(asked)
+  if (applied !== asked) {
+    setApplied(asked)
+    if (draft && !text.trim()) setKind(draft.kind)
+  }
+  const focusedAsked = useRef(asked)
   useEffect(() => {
-    if (asked === seen.current) return
-    seen.current = asked
+    if (asked === focusedAsked.current) return
+    focusedAsked.current = asked
     field.current?.focus()
   }, [asked])
   const empty = text.trim().length === 0

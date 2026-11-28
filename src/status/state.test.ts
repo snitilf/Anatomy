@@ -79,3 +79,26 @@ describe('STATE_MEANING', () => {
     expect(new Set(ITEM_STATES.map((s) => STATE_MEANING[s])).size).toBe(ITEM_STATES.length)
   })
 })
+
+describe('kept answers', () => {
+  const answered = (id: string) => ({ id, response: { respondsTo: 'feedback-aaaaaa', status: 'answered' as const, text: 'ok', changed: [] } })
+
+  it('an answer the user kept reads as kept, and its meaning does not send the user to Review', () => {
+    const n = note('note-aaaaaa')
+    expect(itemState(board, layerWith([n], { answers: [answered(n.id)], kept: [n.id] }), { type: 'note', item: n })).toBe('kept')
+    expect(itemState(board, layerWith([n], { answers: [answered(n.id)] }), { type: 'note', item: n })).toBe('answered')
+    expect(STATE_MEANING.kept).not.toMatch(/Review/)
+    expect(STATE_WORD.kept).toBe('Kept')
+  })
+
+  it('a part shows an answer that waits before one that was kept, and counts only the one that waits', () => {
+    const a = note('note-aaaaaa')
+    const b = note('note-bbbbbb')
+    const answers = [answered(a.id), answered(b.id)]
+    expect(partStates(board, layerWith([a, b], { answers, kept: [a.id] })).get(part.id)).toEqual({ state: 'answered', count: 1 })
+    expect(partStates(board, layerWith([a, b], { answers, kept: [a.id, b.id] })).get(part.id)).toEqual({ state: 'kept', count: 2 })
+    // Something still to send wins over an answer that is settled.
+    const fresh = note('note-cccccc')
+    expect(partStates(board, layerWith([a, fresh], { answers: [answered(a.id)], kept: [a.id] })).get(part.id)).toEqual({ state: 'unsent', count: 1 })
+  })
+})

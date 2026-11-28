@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
+import { boxInView, clampViewport, contentBounds, fitBounds, frameViewport, LEGIBLE_ZOOM, MAX_ZOOM, SELECT_ROOM, PAN_MARGIN, stepZoom, viewportFor, viewportShowing, zoomLimits } from './camera'
 
 const map = { width: 1000, height: 700 }
 const board = { x: 0, y: 0, width: 2000, height: 1000 }
@@ -190,5 +190,37 @@ describe('framing with a floor zoom', () => {
     expect(view.zoom).toBeCloseTo(0.8, 6)
     expect(200 * view.zoom + view.x).toBeGreaterThanOrEqual(0)
     expect(200 * view.zoom + view.x).toBeLessThan(map.width / 2)
+  })
+})
+
+describe('boxInView', () => {
+  const map = { width: 800, height: 600, top: 40, bottom: 60 }
+  it('holds a box that shows whole in the free part of the map', () => {
+    expect(boxInView({ x: 0, y: 0, zoom: 1 }, map, { x: 100, y: 100, width: 200, height: 100 })).toBe(true)
+    // Zoomed and panned: the same box at twice the size, moved.
+    expect(boxInView({ x: -100, y: -100, zoom: 2 }, map, { x: 100, y: 100, width: 200, height: 100 })).toBe(true)
+  })
+
+  it('does not hold a box with any of it past an edge, under the notices, or under the bottom controls', () => {
+    expect(boxInView({ x: 0, y: 0, zoom: 1 }, map, { x: 700, y: 100, width: 200, height: 100 })).toBe(false)
+    expect(boxInView({ x: 0, y: 0, zoom: 1 }, map, { x: 100, y: 10, width: 200, height: 100 })).toBe(false)
+    expect(boxInView({ x: 0, y: 0, zoom: 1 }, map, { x: 100, y: 480, width: 200, height: 100 })).toBe(false)
+    expect(boxInView({ x: -2000, y: 0, zoom: 1 }, map, { x: 100, y: 100, width: 200, height: 100 })).toBe(false)
+  })
+})
+
+describe('one free area for both cameras', () => {
+  it('a part brought in from below stops above the bottom controls, where the framing check holds it', () => {
+    const map = { width: 1000, height: 800, top: 0, bottom: 104 }
+    const card = { x: 400, y: 900, width: 200, height: 100 }
+    const next = viewportFor({ x: 0, y: 0, zoom: 1 }, map, card)!
+    expect(next.y + card.y + card.height).toBe(800 - 104)
+    expect(boxInView(next, map, card)).toBe(true)
+  })
+
+  it('keeps the select room where the bottom controls take less', () => {
+    const map = { width: 1000, height: 800, top: 0, bottom: 20 }
+    const card = { x: 400, y: 900, width: 200, height: 100 }
+    expect(viewportFor({ x: 0, y: 0, zoom: 1 }, map, card)!.y + card.y + card.height).toBe(800 - SELECT_ROOM)
   })
 })
