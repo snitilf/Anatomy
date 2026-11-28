@@ -123,18 +123,84 @@ describe('light theme surface separation and chroma', () => {
     expect(panel.C).toBeLessThanOrEqual(0.007)
     expect(frame.C).toBeLessThanOrEqual(0.007)
 
-    // Cool slate-violet hue family (D38 / D122).
+    // Cool grey hue family.
     expect(bg.H).toBeGreaterThanOrEqual(250)
     expect(bg.H).toBeLessThanOrEqual(290)
     expect(panel.H).toBeGreaterThanOrEqual(250)
     expect(panel.H).toBeLessThanOrEqual(290)
     expect(frame.H).toBeGreaterThanOrEqual(250)
     expect(frame.H).toBeLessThanOrEqual(290)
+  })
 
-    // Strict elevation order: frame < panel < bg < raised.
-    expect(frame.L).toBeLessThan(panel.L)
-    expect(panel.L).toBeLessThan(bg.L)
-    expect(bg.L).toBeLessThan(rgbToOklch(parseColor(token(light, '--raised'))).L)
+  it('steps from the frame to the canvas, the shell, and the cards, each step wide enough to see without a border', () => {
+    const L = (name: string) => rgbToOklch(parseColor(token(light, name))).L
+    expect(L('--bg') - L('--frame')).toBeGreaterThanOrEqual(0.03)
+    expect(L('--panel') - L('--bg')).toBeGreaterThanOrEqual(0.04)
+    expect(L('--raised') - L('--panel')).toBeGreaterThanOrEqual(0.02)
+  })
+
+  it('shows a group area, a hover, and a press as a step of their own on the ground under them', () => {
+    const L = (color: Rgba) => rgbToOklch(color).L
+    const bg = parseColor(token(light, '--bg'))
+    expect(L(bg) - L(wash(light, '--wash-share'))).toBeGreaterThanOrEqual(0.035)
+    for (const surface of ['--bg', '--panel', '--frame', '--raised'] as const) {
+      const base = parseColor(token(light, surface))
+      const hover = composite(parseColor(token(light, '--hover')), base)
+      const active = composite(parseColor(token(light, '--active')), base)
+      expect(L(base) - L(hover)).toBeGreaterThanOrEqual(0.03)
+      expect(L(hover) - L(active)).toBeGreaterThanOrEqual(0.015)
+    }
+  })
+})
+
+describe('accent', () => {
+  const themes = [
+    ['light', light],
+    ['dark', dark],
+  ] as const
+
+  it('is a blue, clear of violet, and opposite the amber of the user', () => {
+    for (const [, block] of themes) {
+      const yours = rgbToOklch(parseColor(token(block, '--yours')))
+      for (const name of ['--accent', '--accent-text', '--accent-line', '--accent-tint', '--focus']) {
+        const hue = rgbToOklch({ ...parseColor(token(block, name)), a: 1 }).H
+        expect(hue).toBeGreaterThanOrEqual(250)
+        expect(hue).toBeLessThanOrEqual(264)
+        const apart = Math.abs(hue - yours.H)
+        expect(Math.min(apart, 360 - apart)).toBeGreaterThanOrEqual(150)
+      }
+    }
+  })
+
+  it('holds 3:1 as a selection edge and as a focus ring on every ground a card or a control sits on', () => {
+    const failures: string[] = []
+    for (const [theme, block] of themes) {
+      const grounds: Array<[string, Rgba]> = [
+        ['--bg', parseColor(token(block, '--bg'))],
+        ['--panel', parseColor(token(block, '--panel'))],
+        ['--frame', parseColor(token(block, '--frame'))],
+        ['--wash-share', wash(block, '--wash-share')],
+      ]
+      for (const [name, ground] of grounds) {
+        const edge = contrastRatio(parseColor(token(block, '--accent')), ground)
+        if (edge < 3) failures.push(`${theme}: --accent on ${name} (${edge.toFixed(2)}:1)`)
+        const ring = contrastRatio(composite(parseColor(token(block, '--focus')), ground), ground)
+        if (ring < 3) failures.push(`${theme}: --focus on ${name} (${ring.toFixed(2)}:1)`)
+      }
+      const raised = parseColor(token(block, '--raised'))
+      const ring = contrastRatio(composite(parseColor(token(block, '--focus')), raised), raised)
+      if (ring < 3) failures.push(`${theme}: --focus on --raised (${ring.toFixed(2)}:1)`)
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('keeps the words of a selected connection at 4.5:1 on the ground and on a single and an overlapping group wash', () => {
+    for (const [, block] of themes) {
+      const line = parseColor(token(block, '--accent-line'))
+      expect(contrastRatio(line, parseColor(token(block, '--bg')))).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(line, wash(block, '--wash-share'))).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(line, wash(block, '--wash-share-2'))).toBeGreaterThanOrEqual(4.5)
+    }
   })
 })
 

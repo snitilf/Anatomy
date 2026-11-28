@@ -16,26 +16,29 @@
   --row-md: 32px;
 }
 
-/* Every neutral shares the cool slate-violet family at low chroma: frame, shell, canvas, cards, in that order in both themes. */
+/*
+ * Every neutral is a cool grey at low chroma. The light theme steps up from the frame to the canvas, the shell, and the cards.
+ * The dark theme steps up from the frame to the shell, the canvas, and the cards.
+ */
 :root,
 :root[data-theme='light'] {
-  /* Surfaces: the shell (panel) recedes, the canvas sits above it, cards and floating bars are the highest plane. */
-  --bg: #e6e7ea;
-  --panel: #dfe1e5;
-  /* The frame around the content panel: one step darker than the shell. The top bar sits on it. */
-  --frame: #d8dade;
+  /* Surfaces: the canvas is the work surface, the shell (panel) is paper beside it, cards and floating bars are the highest plane. Each step is wide enough to see without a border. */
+  --bg: #e7e8eb;
+  --panel: #f6f7f9;
+  /* The frame around the content panel: the darkest ground. The top bar sits on it. */
+  --frame: #dadce0;
   --raised: #ffffff;
-  --hover: rgb(26 27 35 / 0.05);
-  --active: rgb(26 27 35 / 0.08);
-  --border: rgb(26 27 35 / 0.09);
-  --border-strong: rgb(26 27 35 / 0.16);
+  --hover: rgb(26 27 35 / 0.06);
+  --active: rgb(26 27 35 / 0.09);
+  --border: rgb(26 27 35 / 0.12);
+  --border-strong: rgb(26 27 35 / 0.2);
   /* The outline of a card: a real edge against the canvas and the group wash. */
   --card-edge: rgb(26 27 35 / 0.52);
   /* The hairline around a group area. */
-  --group-edge: color-mix(in srgb, var(--fg) 18%, transparent);
+  --group-edge: color-mix(in srgb, var(--fg) 22%, transparent);
   --card-shadow: 0 1px 2px rgb(20 22 30 / 0.07);
   /* How much of the label color a faded label keeps. A faded label still passes 4.5 to 1 on the ground and on one or two group washes, and stays well behind a lit label in --fg. */
-  --faded-label: 90%;
+  --faded-label: 92%;
   /* How much of a line is left when it steps back (a part is selected, a card is hovered, a walkthrough plays). Every agent line has one ink, so one share serves them all. */
   --fade-line: 0.62;
   /* A selection is a spotlight: what is not touching it steps much further back than the fade above. */
@@ -45,8 +48,8 @@
   /* Connection ink: a share of the text color, never a hue. */
   --line: color-mix(in srgb, var(--fg) 60%, transparent);
   /* The wash of a group area, and of two that overlap. */
-  --wash-share: 5.2%;
-  --wash-share-2: 10.1%;
+  --wash-share: 6.5%;
+  --wash-share-2: 12.6%;
   /* How much amber a sticky note takes from the card color. */
   --sticky-mix: 22%;
 
@@ -55,16 +58,16 @@
   --fg-2: #484b58;
   --fg-3: #4a4d5b;
 
-  /* The accent marks the agent's content in focus: selection, focus, the primary action. */
-  --accent: #4d51cb;
-  --accent-text: #3c3fa9;
+  /* The accent marks the agent's content in focus: selection, focus, the primary action. One blue, opposite the amber of the user. */
+  --accent: #0863dc;
+  --accent-text: #0046a4;
   /* A selected or hovered connection: its stroke, arrowhead and label. Stronger than every rest line. */
-  --accent-line: #3a3eb8;
-  --accent-tint: rgb(91 95 214 / 0.1);
+  --accent-line: #0051bc;
+  --accent-tint: rgb(8 99 220 / 0.1);
   --on-accent: #ffffff;
 
   /* The alignment guides while a card moves: a faint teal, in no other use. */
-  --guide: rgb(29 151 163 / 0.7);
+  --guide: rgb(0 150 136 / 0.7);
 
   /* Yours: everything the user made. Amber is used for nothing else. */
   --yours: #ae6e00;
@@ -77,9 +80,9 @@
   --danger-tint: rgb(179 34 43 / 0.08);
   --danger-fill: #b3222b;
 
-  --focus: rgb(91 95 214 / 0.85);
+  --focus: rgb(8 99 220 / 0.9);
   --scrim: rgb(26 27 35 / 0.32);
-  --shadow-float: 0 1px 2px rgb(20 22 30 / 0.06), 0 8px 24px -4px rgb(20 22 30 / 0.11);
+  --shadow-float: 0 1px 2px rgb(20 22 30 / 0.08), 0 8px 24px -4px rgb(20 22 30 / 0.14);
 
   color-scheme: light;
 }
@@ -110,13 +113,13 @@
   --fg-2: #c8cbd5;
   --fg-3: #b7bac4;
 
-  --accent: #5e63e0;
-  --accent-text: #afb3ff;
-  --accent-line: #9ea2ff;
-  --accent-tint: rgb(110 116 240 / 0.16);
+  --accent: #1f6fe6;
+  --accent-text: #92c1ff;
+  --accent-line: #77b0ff;
+  --accent-tint: rgb(53 129 246 / 0.16);
   --on-accent: #ffffff;
 
-  --guide: rgb(58 163 174 / 0.6);
+  --guide: rgb(46 170 156 / 0.6);
 
   --yours: #e8a33d;
   --yours-text: #f0b45a;
@@ -127,7 +130,7 @@
   --danger-tint: rgb(242 115 123 / 0.1);
   --danger-fill: #c42f3a;
 
-  --focus: rgb(130 136 255 / 0.85);
+  --focus: rgb(92 158 255 / 0.85);
   --scrim: rgb(8 8 14 / 0.6);
   --shadow-float: 0 1px 2px rgb(6 6 12 / 0.35), 0 12px 32px -6px rgb(6 6 12 / 0.5);
 
